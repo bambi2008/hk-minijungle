@@ -161,6 +161,7 @@ const flowerProgress = document.querySelector("#flowerProgress");
 const pestProgress = document.querySelector("#pestProgress");
 const logNotes = document.querySelector("#logNotes");
 
+const defaultDocumentTitle = document.title;
 const historyKey = "growClinicLogs";
 const tasksKey = "growClinicTasks";
 const reminderPlanKey = "growClinicReminderPlan";
@@ -1685,6 +1686,14 @@ function followupLoopInstruction(state = getFormState(), findings = latestFindin
   };
 }
 
+function updateCustomerFollowupCue(loop = null) {
+  const due = loop
+    ? isCustomerModeActive() && loop.due && !loop.disabled
+    : isCustomerModeActive() && isReminderDue(firstPendingReminder(getReminderPlan()));
+  document.title = due ? `该复查了 · ${defaultDocumentTitle}` : defaultDocumentTitle;
+  if (due && readiness) readiness.textContent = "该复查了";
+}
+
 function renderFollowupLoop(state = getFormState(), findings = latestFindings) {
   if (!followupLoopTitle || !followupLoopSteps) return;
   const loop = followupLoopInstruction(state, findings);
@@ -1697,6 +1706,7 @@ function renderFollowupLoop(state = getFormState(), findings = latestFindings) {
   followupLoopUploadBtn.textContent = loop.disabled ? "等待诊断" : loop.due ? "现在拍复查照" : "上传复查照";
   followupLoopCard.classList.toggle("due", loop.due && !loop.disabled);
   document.body.classList.toggle("customer-followup-due", document.body.classList.contains("customer-mode") && loop.due && !loop.disabled);
+  updateCustomerFollowupCue(loop);
   followupLoopSteps.innerHTML = "";
   loop.steps.forEach((step, index) => {
     const item = document.createElement("div");
@@ -1877,6 +1887,7 @@ function setMode(mode) {
   if (latestState && latestFindings.length) {
     renderDiagnosis(latestState, latestFindings);
   }
+  updateCustomerFollowupCue();
 }
 
 function firstSentence(text) {

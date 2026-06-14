@@ -218,10 +218,13 @@ const requiredJsSnippets = [
   "function syncCustomerIntakeState",
   "function isReminderDue",
   "function relativeDueText",
+  "const defaultDocumentTitle",
   "let customerTimeRefreshId",
   "function currentDiagnosisSnapshot",
   "function refreshCustomerTimeState",
   "function startCustomerTimeRefresh",
+  "function updateCustomerFollowupCue",
+  "document.title = due",
   "setInterval(refreshCustomerTimeState",
   "document.addEventListener(\"visibilitychange\"",
   "还有 ${days} 天",
@@ -333,6 +336,7 @@ const requiredCssSnippets = [
   "body.customer-mode #reset-tasks-btn",
   "body.customer-mode.customer-photo-rescue-needed .customer-photo-rescue-card",
   "body.customer-mode.customer-photo-rescue-needed .task-block",
+  "body.customer-mode.customer-followup-due .status-pill",
   ".auto-photo-type-badge"
 ];
 

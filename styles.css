@@ -129,6 +129,12 @@ h3 {
   font-weight: 700;
 }
 
+body.customer-mode.customer-followup-due .status-pill {
+  border-color: #d7a238;
+  color: #6b4300;
+  background: #fff4d9;
+}
+
 .form-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
