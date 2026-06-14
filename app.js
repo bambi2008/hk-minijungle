@@ -7,6 +7,10 @@ const customerNextAction = document.querySelector("#customer-next-action");
 const confidenceValue = document.querySelector("#confidence-value");
 const confidenceBar = document.querySelector("#confidence-bar");
 const confidenceLabel = document.querySelector("#confidence-label");
+const customerJourney = document.querySelector("#customer-journey");
+const customerJourneyKicker = document.querySelector("#customer-journey-kicker");
+const customerJourneyTitle = document.querySelector("#customer-journey-title");
+const customerJourneyList = document.querySelector("#customer-journey-list");
 const confidenceDecisionCard = document.querySelector("#confidence-decision-card");
 const confidenceTierStatus = document.querySelector("#confidence-tier-status");
 const confidenceTierTitle = document.querySelector("#confidence-tier-title");
@@ -1935,6 +1939,111 @@ function syncCustomerIntakeState(state = getFormState()) {
   );
 }
 
+function customerJourneyModel(state, findings) {
+  const started = customerHasStarted(state);
+  const hasPhoto = capturedPhotoTypes.size > 0 || state.hasPhoto;
+  const decision = diagnosisConfidenceDecision(state, findings);
+  const rescue = customerPhotoRescuePlan(state);
+  const labels = {
+    today: "今天",
+    soon: "24-48 小时内",
+    week: "3-7 天内"
+  };
+  const taskState = getTaskState();
+  const pendingTask = taskEntries(buildTasks(state, findings), labels)
+    .find((entry) => !isTaskDone(taskState[entry.id]));
+  const plan = getReminderPlan();
+  const pendingReminder = firstPendingReminder(plan);
+  const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  const hasFollowupLog = getLogs().length > 0;
+  const nextPhoto = nextPhotoSuggestion();
+
+  let title = "等待第一张照片";
+  let kicker = "当前状态";
+  if (!started) {
+    title = "先拍照";
+  } else if (rescue) {
+    title = rescue.title;
+  } else if (followupDue) {
+    title = "现在拍复查照";
+    kicker = "复查到期";
+  } else if (pendingTask) {
+    title = "今天只做当前动作";
+  } else if (pendingReminder) {
+    title = "等待下一次复查";
+  } else if (hasFollowupLog) {
+    title = "已完成复查";
+  } else {
+    title = decision.title || "诊断已生成";
+  }
+
+  const photoStatus = !started ? "current" : hasPhoto ? "done" : "current";
+  const diagnosisStatus = !started ? "wait" : decision.tier === "blocked" || decision.tier === "photo" ? "current" : "done";
+  const actionStatus = !started || diagnosisStatus === "current"
+    ? "wait"
+    : pendingTask
+      ? "current"
+      : "done";
+  const followupStatus = followupDue
+    ? "current"
+    : hasFollowupLog
+      ? "done"
+      : pendingReminder
+        ? "wait"
+        : "wait";
+
+  return {
+    kicker,
+    title,
+    steps: [
+      {
+        label: "拍照",
+        status: photoStatus,
+        detail: hasPhoto
+          ? `已获得 ${capturedPhotoTypes.size || 1} 张`
+          : nextPhoto.type
+            ? nextPhoto.action
+            : "拍一张整株照"
+      },
+      {
+        label: "诊断",
+        status: diagnosisStatus,
+        detail: decision.status || "等待判断"
+      },
+      {
+        label: "当前动作",
+        status: actionStatus,
+        detail: pendingTask ? firstSentence(pendingTask.text) : actionStatus === "done" ? "动作已完成" : "等待处方"
+      },
+      {
+        label: "复查",
+        status: followupStatus,
+        detail: followupDue
+          ? "现在上传复查照"
+          : pendingReminder?.dueAt
+            ? dueLabel(pendingReminder.dueAt)
+            : hasFollowupLog
+              ? "已记录"
+              : "等待提醒"
+      }
+    ]
+  };
+}
+
+function renderCustomerJourney(state = getFormState(), findings = latestFindings) {
+  if (!customerJourney || !customerJourneyList) return;
+  const model = customerJourneyModel(state, findings);
+  customerJourneyKicker.textContent = model.kicker;
+  customerJourneyTitle.textContent = model.title;
+  customerJourneyList.innerHTML = "";
+  model.steps.forEach((step) => {
+    const item = document.createElement("div");
+    item.className = `customer-journey-step ${step.status}`;
+    item.innerHTML = `<span>${step.label}</span><strong>${step.detail}</strong>`;
+    customerJourneyList.appendChild(item);
+  });
+}
+
 function renderCustomerSummary(state, findings) {
   if (document.body.classList.contains("customer-mode") && !customerHasStarted(state)) {
     customerTitle.textContent = "拍一张照片就能开始";
@@ -2147,6 +2256,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
   renderFollowupLoop(state, findings);
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
+  renderCustomerJourney(state, findings);
   renderTasks(state, findings);
 
   if (!plan) return;
@@ -4845,6 +4955,7 @@ function renderDiagnosis(state, findings) {
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerJourney(state, findings);
   renderConfidenceDecision(state, findings);
   renderPhotoQuality();
   renderCustomerPhotoRescue(state);

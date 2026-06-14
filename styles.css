@@ -1337,6 +1337,79 @@ button {
   font-size: 1rem;
 }
 
+.customer-journey {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid #d9e8de;
+  padding-top: 12px;
+}
+
+.customer-journey-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.customer-journey-head span {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.customer-journey-head strong {
+  color: var(--ink);
+  font-size: 0.95rem;
+}
+
+.customer-journey-list {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.customer-journey-step {
+  min-height: 58px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 8px;
+  background: #fff;
+}
+
+.customer-journey-step span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 800;
+}
+
+.customer-journey-step strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.3;
+}
+
+.customer-journey-step.current {
+  border-color: #d8b15d;
+  background: #fff8e8;
+}
+
+.customer-journey-step.current strong {
+  color: #7a5310;
+}
+
+.customer-journey-step.done {
+  border-color: #cfe2d6;
+  background: #f1faf4;
+}
+
+.customer-journey-step.done strong {
+  color: var(--green-dark);
+}
+
 .confidence-meter {
   border-left: 3px solid var(--blue);
   padding-left: 12px;
@@ -2891,6 +2964,7 @@ li {
   .metrics-strip,
   .confidence-decision-card,
   .confidence-tier-list,
+  .customer-journey-list,
   .active-case-card,
   .case-list,
   .case-trend-card,
