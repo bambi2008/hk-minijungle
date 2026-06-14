@@ -12,6 +12,12 @@ const customerJourney = document.querySelector("#customer-journey");
 const customerJourneyKicker = document.querySelector("#customer-journey-kicker");
 const customerJourneyTitle = document.querySelector("#customer-journey-title");
 const customerJourneyList = document.querySelector("#customer-journey-list");
+const customerPlanCompact = document.querySelector("#customer-plan-compact");
+const customerCompactJudgement = document.querySelector("#customer-compact-judgement");
+const customerCompactReason = document.querySelector("#customer-compact-reason");
+const customerCompactAction = document.querySelector("#customer-compact-action");
+const customerCompactFollowup = document.querySelector("#customer-compact-followup");
+const customerCompactActionBtn = document.querySelector("#customer-compact-action-btn");
 const confidenceDecisionCard = document.querySelector("#confidence-decision-card");
 const confidenceTierStatus = document.querySelector("#confidence-tier-status");
 const confidenceTierTitle = document.querySelector("#confidence-tier-title");
@@ -2214,10 +2220,72 @@ function customerPrimaryActionModel(state, findings) {
 }
 
 function renderCustomerPrimaryAction(state = getFormState(), findings = latestFindings) {
-  if (!customerPrimaryActionBtn) return;
   const model = customerPrimaryActionModel(state, findings);
-  customerPrimaryActionBtn.textContent = model.label;
-  customerPrimaryActionBtn.dataset.action = model.action;
+  [customerPrimaryActionBtn, customerCompactActionBtn].filter(Boolean).forEach((button) => {
+    button.textContent = model.label;
+    button.dataset.action = model.action;
+  });
+}
+
+function customerCompactPlanModel(state, findings) {
+  const started = customerHasStarted(state);
+  const actionModel = customerPrimaryActionModel(state, findings);
+  if (!started) {
+    return {
+      judgement: "等待第一张照片",
+      reason: `先选择${cropNames[state.crop]}，再拍一张清晰照片。`,
+      action: actionModel.label,
+      followup: "诊断后自动安排"
+    };
+  }
+
+  const plan = getReminderPlan();
+  const pendingReminder = firstPendingReminder(plan);
+  const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  if (plan?.actionCompletedAt && pendingReminder) {
+    return {
+      judgement: followupDue ? "该复查了" : "等待复查",
+      reason: followupDue
+        ? "现在拍同角度复查照，我会判断有没有变好。"
+        : plan.actionFollowupReason || "当前动作已经完成，先不要叠加新动作。",
+      action: actionModel.label,
+      followup: followupDue ? "现在" : relativeDueText(pendingReminder.dueAt)
+    };
+  }
+
+  const rescue = customerPhotoRescuePlan(state);
+  if (rescue) {
+    return {
+      judgement: rescue.kicker,
+      reason: rescue.message,
+      action: rescue.button,
+      followup: "补拍后重新安排"
+    };
+  }
+
+  const top = findings[0];
+  const task = currentCustomerTask(state, findings);
+  const pending = firstPendingReminder();
+  const firstReminder = buildReminders(state, findings)[0];
+  return {
+    judgement: top.title,
+    reason: firstSentence(top.why),
+    action: task ? firstSentence(task.text) : actionModel.label,
+    followup: pending?.dueAt
+      ? relativeDueText(pending.dueAt)
+      : firstReminder
+        ? firstReminder.label
+        : "完成动作后自动安排"
+  };
+}
+
+function renderCustomerCompactPlan(state = getFormState(), findings = latestFindings) {
+  if (!customerPlanCompact || !customerCompactJudgement) return;
+  const model = customerCompactPlanModel(state, findings);
+  customerCompactJudgement.textContent = model.judgement;
+  customerCompactReason.textContent = model.reason;
+  customerCompactAction.textContent = model.action;
+  customerCompactFollowup.textContent = model.followup;
 }
 
 function renderCustomerSummary(state, findings) {
@@ -2456,6 +2524,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
 
@@ -5162,6 +5231,7 @@ function renderDiagnosis(state, findings) {
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderConfidenceDecision(state, findings);
   renderPhotoQuality();
@@ -5236,6 +5306,7 @@ function refreshCustomerTimeState() {
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
 }
@@ -5481,8 +5552,8 @@ customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
 
 followupLoopUploadBtn.addEventListener("click", openFollowupUpload);
 
-customerPrimaryActionBtn.addEventListener("click", () => {
-  const action = customerPrimaryActionBtn.dataset.action;
+function handleCustomerPrimaryAction(event) {
+  const action = event.currentTarget.dataset.action;
   if (action === "guided-photo") {
     openGuidedPhotoUpload();
     return;
@@ -5517,7 +5588,10 @@ customerPrimaryActionBtn.addEventListener("click", () => {
     return;
   }
   focusCustomerTarget(mainRisk);
-});
+}
+
+customerPrimaryActionBtn.addEventListener("click", handleCustomerPrimaryAction);
+customerCompactActionBtn.addEventListener("click", handleCustomerPrimaryAction);
 
 plantPhoto.addEventListener("change", () => {
   const file = plantPhoto.files && plantPhoto.files[0];

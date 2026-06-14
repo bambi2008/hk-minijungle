@@ -1397,6 +1397,43 @@ button {
   margin-top: 10px;
 }
 
+.customer-plan-compact {
+  display: none;
+}
+
+.customer-plan-cell {
+  border: 1px solid #d9e5df;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+.customer-plan-cell.primary {
+  background: #f2faf5;
+}
+
+.customer-plan-cell span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.customer-plan-cell strong {
+  display: block;
+  margin-top: 5px;
+  color: var(--ink);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.customer-plan-cell p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .soft-focus {
   outline: 2px solid rgba(216, 177, 93, 0.8);
   outline-offset: 3px;
@@ -1685,6 +1722,7 @@ body.customer-mode .confidence-decision-card,
 body.customer-mode .customer-detail,
 body.customer-mode .customer-next,
 body.customer-mode .confidence-meter,
+body.customer-mode .customer-journey,
 body.customer-mode .status-pill,
 body.customer-mode #reset-tasks-btn {
   display: none;
@@ -1809,8 +1847,27 @@ body.customer-mode .customer-summary h2 {
   font-size: 1.22rem;
 }
 
+body.customer-mode .customer-plan-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  border: 1px solid #cfe2d6;
+  border-radius: 8px;
+  padding: 12px;
+  background: #fff;
+}
+
+body.customer-mode .customer-plan-compact .customer-primary-action {
+  grid-column: 1 / -1;
+  margin-top: 0;
+}
+
 body.customer-mode .result-grid {
-  grid-template-columns: 1fr;
+  display: none;
+}
+
+body.customer-mode .followup-panel {
+  display: none;
 }
 
 body.customer-mode .task-block {
@@ -3057,6 +3114,7 @@ li {
   .metrics-strip,
   .confidence-decision-card,
   .confidence-tier-list,
+  .customer-plan-compact,
   .customer-journey-list,
   .customer-photo-rescue-actions,
   .active-case-card,
