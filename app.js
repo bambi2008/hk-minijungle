@@ -1940,19 +1940,26 @@ function syncCustomerIntakeState(state = getFormState()) {
   );
 }
 
+function customerTaskLabels() {
+  return {
+    today: "今天",
+    soon: "24-48 小时内",
+    week: "3-7 天内"
+  };
+}
+
+function currentCustomerTask(state = getFormState(), findings = latestFindings) {
+  const taskState = getTaskState();
+  return taskEntries(buildTasks(state, findings), customerTaskLabels())
+    .find((entry) => !isTaskDone(taskState[entry.id])) || null;
+}
+
 function customerJourneyModel(state, findings) {
   const started = customerHasStarted(state);
   const hasPhoto = capturedPhotoTypes.size > 0 || state.hasPhoto;
   const decision = diagnosisConfidenceDecision(state, findings);
   const rescue = customerPhotoRescuePlan(state);
-  const labels = {
-    today: "今天",
-    soon: "24-48 小时内",
-    week: "3-7 天内"
-  };
-  const taskState = getTaskState();
-  const pendingTask = taskEntries(buildTasks(state, findings), labels)
-    .find((entry) => !isTaskDone(taskState[entry.id]));
+  const pendingTask = currentCustomerTask(state, findings);
   const plan = getReminderPlan();
   const pendingReminder = firstPendingReminder(plan);
   const followupDue = pendingReminder && isReminderDue(pendingReminder);
@@ -2052,21 +2059,14 @@ function customerPrimaryActionModel(state, findings) {
   const plan = getReminderPlan();
   const pendingReminder = firstPendingReminder(plan);
   const followupDue = pendingReminder && isReminderDue(pendingReminder);
-  const labels = {
-    today: "今天",
-    soon: "24-48 小时内",
-    week: "3-7 天内"
-  };
-  const taskState = getTaskState();
-  const pendingTask = taskEntries(buildTasks(state, findings), labels)
-    .find((entry) => !isTaskDone(taskState[entry.id]));
+  const pendingTask = currentCustomerTask(state, findings);
 
   if (followupDue) return { label: "现在拍复查照", action: "followup" };
   if (!started) return { label: "拍照开始", action: "guided-photo" };
   if (rescue || decision.tier === "photo" || decision.tier === "blocked") {
     return { label: rescue?.button || decision.next || "按提示拍照", action: "suggested-photo" };
   }
-  if (pendingTask) return { label: "查看当前动作", action: "current-task" };
+  if (pendingTask) return { label: "我已完成，安排复查", action: "complete-current-task" };
   if (pendingReminder) return { label: "查看复查提醒", action: "followup-panel" };
   if (getLogs().length) return { label: "查看复查结果", action: "progress" };
   return { label: "查看诊断结果", action: "diagnosis" };
@@ -2293,6 +2293,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
   renderFollowupLoop(state, findings);
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
+  renderCustomerSummary(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
 
@@ -5294,8 +5295,17 @@ customerPrimaryActionBtn.addEventListener("click", () => {
     openFollowupUpload();
     return;
   }
-  if (action === "current-task") {
-    focusCustomerTarget(document.querySelector(".customer-task-focus"));
+  if (action === "complete-current-task") {
+    const state = getFormState();
+    const findings = latestFindings.length ? latestFindings : diagnose(state);
+    const task = currentCustomerTask(state, findings);
+    if (!task) {
+      focusCustomerTarget(customerReminderCard);
+      return;
+    }
+    const record = setTaskCompletion(task.id, task.text, true);
+    refreshAfterCustomerAction(state, findings, task.text, record);
+    focusCustomerTarget(customerReminderCard);
     return;
   }
   if (action === "followup-panel") {
