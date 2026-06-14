@@ -1970,6 +1970,7 @@ function customerHasStarted(state = getFormState()) {
     smartConcern.value !== "unknown" ||
     hasRunSmartDiagnosis ||
     plan?.items?.length ||
+    getCustomerArchiveRecord()?.reportId ||
     getLogs().length ||
     Object.keys(getTaskState()).length
   );
@@ -4879,7 +4880,7 @@ function updateCropHint() {
   cropHint.textContent = cropConstraints[cropSelect.value] || "";
 }
 
-async function loadReportIntoForm(id) {
+async function loadReportIntoForm(id, options = {}) {
   try {
     const report = await fetchReport(id);
     if (report.deviceKey) document.querySelector("#growDevice").value = report.deviceKey;
@@ -4889,7 +4890,16 @@ async function loadReportIntoForm(id) {
     if (report.photoType) {
       const photoTypeInput = document.querySelector(`input[name="photoType"][value="${report.photoType}"]`);
       if (photoTypeInput) photoTypeInput.checked = true;
+      requestedPhotoType = report.photoType;
     }
+    capturedPhotoTypes = new Set(report.photoQuality?.captured?.length
+      ? report.photoQuality.captured
+      : report.photoType
+        ? [report.photoType]
+        : []);
+    hasRunSmartDiagnosis = true;
+    latestPhotoTypeDetection = report.photoTypeDetection || null;
+    latestVisionResult = report.vision || null;
 
     if (report.sensor) {
       document.querySelector("#sensorMoisture").value = report.sensor.moisture ?? "";
@@ -4922,10 +4932,32 @@ async function loadReportIntoForm(id) {
     updateDeviceProfile();
     dbDetail.value = report.report || "";
     runDiagnosis();
-    dbStatus.textContent = `已载入历史报告：${report.id}`;
+    if (options.resume && customerArchiveStatus) {
+      setCustomerArchiveStatus("已恢复上次植物档案，继续照看即可。", "saved");
+    }
+    dbStatus.textContent = options.resume ? `已恢复植物档案：${report.id}` : `已载入历史报告：${report.id}`;
+    return report;
   } catch {
-    dbStatus.textContent = "载入历史报告失败。";
+    if (options.resume && customerArchiveStatus) {
+      setCustomerArchiveStatus("上次档案暂时没有恢复成功，可以重新拍照开始。", "failed");
+    }
+    dbStatus.textContent = options.resume ? "恢复植物档案失败。" : "载入历史报告失败。";
+    return null;
   }
+}
+
+async function restoreCustomerArchiveOnStartup() {
+  if (!isCustomerModeActive()) return null;
+  const record = getCustomerArchiveRecord();
+  if (!record?.reportId) {
+    renderCustomerArchiveStatus(getFormState(), latestFindings);
+    return null;
+  }
+  setCustomerArchiveStatus("正在恢复上次植物档案。", "saving");
+  const report = await loadReportIntoForm(record.reportId, { resume: true });
+  if (!report) return null;
+  renderCustomerCompactPlan(latestState || getFormState(), latestFindings);
+  return report;
 }
 
 function renderHistory() {
@@ -5747,6 +5779,7 @@ resetPhotoCheckBtn.addEventListener("click", () => {
   requestedPhotoType = "plant";
   localStorage.removeItem(reminderPlanKey);
   localStorage.removeItem(baselinePhotoKey);
+  localStorage.removeItem(customerAutoArchiveKey);
   latestVisionResult = null;
   latestPhotoTypeDetection = null;
   photoSignals = {
@@ -5943,6 +5976,7 @@ document.addEventListener("visibilitychange", () => {
 newCaseBtn.addEventListener("click", () => {
   const next = createCaseState(getFormState());
   setActiveCase(next);
+  localStorage.removeItem(customerAutoArchiveKey);
   renderActiveCase();
   caseDetail.value = "";
   if (caseTimeline) caseTimeline.innerHTML = "<div class=\"case-empty-timeline\">新病例还没有诊断记录。</div>";
@@ -5981,6 +6015,7 @@ applyNotificationChannelConfig();
 applyDeviceTemplate({ force: true });
 runDiagnosis();
 setMode(localStorage.getItem("growClinicMode") || "customer");
+restoreCustomerArchiveOnStartup();
 startCustomerTimeRefresh();
 loadReports();
 loadCases();
