@@ -1868,12 +1868,16 @@ function firstSentence(text) {
 }
 
 function customerHasStarted(state = getFormState()) {
+  const plan = getReminderPlan();
   return Boolean(
     state.hasPhoto ||
     capturedPhotoTypes.size > 0 ||
     state.photoType !== "none" ||
     smartConcern.value !== "unknown" ||
-    hasRunSmartDiagnosis
+    hasRunSmartDiagnosis ||
+    plan?.items?.length ||
+    getLogs().length ||
+    Object.keys(getTaskState()).length
   );
 }
 
@@ -1885,6 +1889,8 @@ function photoQualityProblems(signals = photoSignals) {
 
 function customerPhotoRescuePlan(state = getFormState()) {
   if (!customerHasStarted(state)) return null;
+  const plan = getReminderPlan();
+  if (plan?.actionCompletedAt && firstPendingReminder(plan)) return null;
   const suggestion = nextPhotoSuggestion();
   if (!suggestion.type || suggestion.title === "照片已够用") return null;
   const qualityProblems = photoQualityProblems();
@@ -1964,12 +1970,13 @@ function customerJourneyModel(state, findings) {
   const started = customerHasStarted(state);
   const hasPhoto = capturedPhotoTypes.size > 0 || state.hasPhoto;
   const decision = diagnosisConfidenceDecision(state, findings);
-  const rescue = customerPhotoRescuePlan(state);
   const pendingTask = currentCustomerTask(state, findings);
   const plan = getReminderPlan();
   const pendingReminder = firstPendingReminder(plan);
   const followupDue = pendingReminder && isReminderDue(pendingReminder);
   const hasFollowupLog = getLogs().length > 0;
+  const waitingForActionFollowup = isWaitingForActionFollowup(plan);
+  const rescue = waitingForActionFollowup || followupDue ? null : customerPhotoRescuePlan(state);
   const nextPhoto = nextPhotoSuggestion();
 
   let title = "等待第一张照片";
@@ -1981,6 +1988,9 @@ function customerJourneyModel(state, findings) {
   } else if (followupDue) {
     title = "现在拍复查照";
     kicker = "复查到期";
+  } else if (waitingForActionFollowup) {
+    title = "等待下一次复查";
+    kicker = "动作已完成";
   } else if (pendingTask) {
     title = "今天只做当前动作";
   } else if (pendingReminder) {
@@ -2060,11 +2070,12 @@ function renderCustomerJourney(state = getFormState(), findings = latestFindings
 
 function customerPrimaryActionModel(state, findings) {
   const started = customerHasStarted(state);
-  const rescue = customerPhotoRescuePlan(state);
   const decision = diagnosisConfidenceDecision(state, findings);
   const plan = getReminderPlan();
   const pendingReminder = firstPendingReminder(plan);
   const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  const waitingForActionFollowup = isWaitingForActionFollowup(plan);
+  const rescue = waitingForActionFollowup || followupDue ? null : customerPhotoRescuePlan(state);
   const pendingTask = currentCustomerTask(state, findings);
 
   if (followupDue) return { label: "现在拍复查照", action: "followup" };
@@ -2095,6 +2106,27 @@ function renderCustomerSummary(state, findings) {
     confidenceLabel.textContent = "等待第一张照片。";
     confidenceBar.style.width = "0%";
     confidenceBar.classList.remove("medium", "high");
+    return;
+  }
+
+  const plan = getReminderPlan();
+  const pendingReminder = firstPendingReminder(plan);
+  const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  if (plan?.actionCompletedAt && pendingReminder) {
+    customerTitle.textContent = followupDue ? "该复查了" : "动作已完成，等待复查";
+    customerMessage.textContent = followupDue
+      ? "现在拍一张同角度复查照，我会自动判断有没有变好。"
+      : plan.actionFollowupReason || "系统已经按你完成动作的时间重新安排复查。";
+    customerNextAction.textContent = followupDue
+      ? `拍${pendingReminder.photo || "复查照"}`
+      : `${dueLabel(pendingReminder.dueAt)} 复查`;
+    renderCustomerPrimaryAction(state, findings);
+    const score = confidenceScore();
+    confidenceValue.textContent = `${score}%`;
+    confidenceLabel.textContent = followupDue ? "等待复查照片确认变化。" : "处方已执行，等待复查验证。";
+    confidenceBar.style.width = `${score}%`;
+    confidenceBar.classList.toggle("medium", score >= 60 && score < 85);
+    confidenceBar.classList.toggle("high", score >= 85);
     return;
   }
 
