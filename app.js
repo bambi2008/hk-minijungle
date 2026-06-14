@@ -27,6 +27,7 @@ const customerPhotoRescueBtn = document.querySelector("#customer-photo-rescue-bt
 const smartDiagnoseBtn = document.querySelector("#smart-diagnose-btn");
 const smartConcern = document.querySelector("#smartConcern");
 const quickPhotoBtn = document.querySelector("#quick-photo-btn");
+const cropQuickButtons = Array.from(document.querySelectorAll("[data-crop-choice]"));
 const steps = Array.from(document.querySelectorAll(".step"));
 const sampleBtn = document.querySelector("#sample-btn");
 const sampleBasilBtn = document.querySelector("#sample-basil-btn");
@@ -782,6 +783,27 @@ function renderAutoIntakeCard(state = getFormState()) {
     item.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
     autoIntakeList.appendChild(item);
   });
+}
+
+function renderCropQuickChoices(state = getFormState()) {
+  if (!cropQuickButtons.length) return;
+  cropQuickButtons.forEach((button) => {
+    const selected = button.dataset.cropChoice === state.crop;
+    button.classList.toggle("active", selected);
+    button.setAttribute("aria-pressed", String(selected));
+  });
+  if (quickPhotoBtn) quickPhotoBtn.textContent = `拍${cropNames[state.crop]}照片`;
+}
+
+function chooseCustomerCrop(cropKey) {
+  if (!cropNames[cropKey]) return;
+  cropSelect.value = cropKey;
+  autoFillCustomerIntake({ forceStage: true });
+  updateCropHint();
+  updateDeviceProfile();
+  renderCropQuickChoices(getFormState());
+  runDiagnosis();
+  quickPhotoBtn?.focus();
 }
 
 function applyDevicePlan() {
@@ -5092,6 +5114,7 @@ function renderDiagnosis(state, findings) {
   const top = findings[0];
   const device = currentDevice(state);
   syncCustomerIntakeState(state);
+  renderCropQuickChoices(state);
   readiness.textContent = customerHasStarted(state) ? "已生成" : "等待照片";
   mainRisk.textContent = top.title;
   mainSummary.textContent = `${cropNames[state.crop]} / ${mediumNames[state.medium]} / ${device.name}：${top.why}`;
@@ -5368,6 +5391,9 @@ editAutoIntakeBtn.addEventListener("click", () => {
 
 customerModeBtn.addEventListener("click", () => setMode("customer"));
 expertModeBtn.addEventListener("click", () => setMode("expert"));
+cropQuickButtons.forEach((button) => {
+  button.addEventListener("click", () => chooseCustomerCrop(button.dataset.cropChoice));
+});
 smartDiagnoseBtn.addEventListener("click", smartDiagnose);
 smartConcern.addEventListener("change", () => {
   autoFillCustomerIntake({ forceStage: true });

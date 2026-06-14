@@ -160,6 +160,27 @@ if (missing.length) {
   process.exit(1);
 }
 
+const requiredHtmlSnippets = [
+  "id=\"crop-quick-start\"",
+  "id=\"crop-choice-tomato\"",
+  "id=\"crop-choice-basil\"",
+  "id=\"crop-choice-rosemary\"",
+  "id=\"crop-choice-strawberry\"",
+  "id=\"crop-choice-pepper\"",
+  "data-crop-choice=\"tomato\"",
+  "data-crop-choice=\"basil\"",
+  "data-crop-choice=\"rosemary\"",
+  "data-crop-choice=\"strawberry\"",
+  "data-crop-choice=\"pepper\""
+];
+
+const missingHtmlSnippets = requiredHtmlSnippets.filter((snippet) => !html.includes(snippet));
+
+if (missingHtmlSnippets.length) {
+  console.error(`Missing expected customer start HTML: ${missingHtmlSnippets.join(", ")}`);
+  process.exit(1);
+}
+
 const requiredJsSnippets = [
   "function buildCustomerActions",
   "function pathwayCustomerAction",
@@ -179,6 +200,13 @@ const requiredJsSnippets = [
   "function renderDeviceCropPlan",
   "function autoFillCustomerIntake",
   "function renderAutoIntakeCard",
+  "const cropQuickButtons",
+  "function renderCropQuickChoices",
+  "function chooseCustomerCrop",
+  "[data-crop-choice]",
+  "cropQuickButtons.forEach",
+  "button.dataset.cropChoice",
+  "拍${cropNames[state.crop]}照片",
   "function detectUploadedPhotoType",
   "function applyPhotoTypeDetection",
   "function scorePhotoTypeKeywords",
@@ -334,6 +362,10 @@ const requiredCssSnippets = [
   "body.customer-mode .confidence-decision-card",
   "body.customer-mode .customer-next",
   ".customer-primary-action",
+  ".crop-quick-start",
+  ".crop-choice-grid",
+  ".crop-choice-button.active",
+  "body.customer-mode .crop-quick-start",
   ".soft-focus",
   ".customer-journey-list",
   "body.customer-mode .confidence-meter",

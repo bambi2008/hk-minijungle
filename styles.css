@@ -164,6 +164,40 @@ body.customer-mode.customer-followup-due .status-pill {
   font-size: 0.92rem;
 }
 
+.crop-quick-start {
+  display: none;
+}
+
+.crop-quick-start > span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--green-dark);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.crop-choice-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.crop-choice-button {
+  border: 1px solid #cfe2d6;
+  border-radius: 8px;
+  padding: 10px 8px;
+  color: var(--ink);
+  background: #fff;
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.crop-choice-button.active {
+  border-color: #75ad89;
+  color: var(--green-dark);
+  background: #edf7f1;
+}
+
 #quick-photo-btn {
   display: none;
 }
@@ -1704,16 +1738,21 @@ body.customer-mode .smart-panel {
   grid-template-columns: 1fr;
 }
 
+body.customer-mode .crop-quick-start {
+  display: block;
+  order: 1;
+}
+
 body.customer-mode #quick-photo-btn {
   display: block;
 }
 
 body.customer-mode .smart-panel label {
-  order: 2;
+  display: none;
 }
 
 body.customer-mode #quick-photo-btn {
-  order: 1;
+  order: 2;
   width: 100%;
 }
 
@@ -2981,6 +3020,7 @@ li {
 
   .form-grid,
   .smart-panel,
+  .crop-choice-grid,
   .advanced-grid,
   .stepper,
   .followup-grid,
