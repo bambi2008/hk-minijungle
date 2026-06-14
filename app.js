@@ -4,6 +4,7 @@ const expertModeBtn = document.querySelector("#expert-mode-btn");
 const customerTitle = document.querySelector("#customer-title");
 const customerMessage = document.querySelector("#customer-message");
 const customerNextAction = document.querySelector("#customer-next-action");
+const customerPrimaryActionBtn = document.querySelector("#customer-primary-action-btn");
 const confidenceValue = document.querySelector("#confidence-value");
 const confidenceBar = document.querySelector("#confidence-bar");
 const confidenceLabel = document.querySelector("#confidence-label");
@@ -2044,11 +2045,46 @@ function renderCustomerJourney(state = getFormState(), findings = latestFindings
   });
 }
 
+function customerPrimaryActionModel(state, findings) {
+  const started = customerHasStarted(state);
+  const rescue = customerPhotoRescuePlan(state);
+  const decision = diagnosisConfidenceDecision(state, findings);
+  const plan = getReminderPlan();
+  const pendingReminder = firstPendingReminder(plan);
+  const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  const labels = {
+    today: "今天",
+    soon: "24-48 小时内",
+    week: "3-7 天内"
+  };
+  const taskState = getTaskState();
+  const pendingTask = taskEntries(buildTasks(state, findings), labels)
+    .find((entry) => !isTaskDone(taskState[entry.id]));
+
+  if (followupDue) return { label: "现在拍复查照", action: "followup" };
+  if (!started) return { label: "拍照开始", action: "guided-photo" };
+  if (rescue || decision.tier === "photo" || decision.tier === "blocked") {
+    return { label: rescue?.button || decision.next || "按提示拍照", action: "suggested-photo" };
+  }
+  if (pendingTask) return { label: "查看当前动作", action: "current-task" };
+  if (pendingReminder) return { label: "查看复查提醒", action: "followup-panel" };
+  if (getLogs().length) return { label: "查看复查结果", action: "progress" };
+  return { label: "查看诊断结果", action: "diagnosis" };
+}
+
+function renderCustomerPrimaryAction(state = getFormState(), findings = latestFindings) {
+  if (!customerPrimaryActionBtn) return;
+  const model = customerPrimaryActionModel(state, findings);
+  customerPrimaryActionBtn.textContent = model.label;
+  customerPrimaryActionBtn.dataset.action = model.action;
+}
+
 function renderCustomerSummary(state, findings) {
   if (document.body.classList.contains("customer-mode") && !customerHasStarted(state)) {
     customerTitle.textContent = "拍一张照片就能开始";
     customerMessage.textContent = "先不用选择作物、设备或填写参数。我会从照片和一个可选困扰里自动判断下一步。";
     customerNextAction.textContent = "拍照开始";
+    renderCustomerPrimaryAction(state, findings);
     confidenceValue.textContent = "0%";
     confidenceLabel.textContent = "等待第一张照片。";
     confidenceBar.style.width = "0%";
@@ -2077,6 +2113,7 @@ function renderCustomerSummary(state, findings) {
   } else {
     customerNextAction.textContent = top.action;
   }
+  renderCustomerPrimaryAction(state, findings);
   confidenceValue.textContent = `${score}%`;
   confidenceLabel.textContent = confidenceMessage(score);
   confidenceBar.style.width = `${score}%`;
@@ -5222,16 +5259,54 @@ function openSuggestedPhotoUpload() {
   plantPhoto.click();
 }
 
-quickPhotoBtn.addEventListener("click", openGuidedPhotoUpload);
-guidedPhotoUploadBtn.addEventListener("click", openGuidedPhotoUpload);
-customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
-
-followupLoopUploadBtn.addEventListener("click", () => {
+function openFollowupUpload() {
   const loop = followupLoopInstruction();
   if (loop.key) checkDay.value = loop.key;
   requestedPhotoType = loop.type || "plant";
   setPhotoType(requestedPhotoType);
   followupPhoto.click();
+}
+
+function focusCustomerTarget(target) {
+  if (!target) return;
+  target.scrollIntoView({ behavior: "smooth", block: "center" });
+  target.classList.add("soft-focus");
+  window.setTimeout(() => target.classList.remove("soft-focus"), 1200);
+}
+
+quickPhotoBtn.addEventListener("click", openGuidedPhotoUpload);
+guidedPhotoUploadBtn.addEventListener("click", openGuidedPhotoUpload);
+customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
+
+followupLoopUploadBtn.addEventListener("click", openFollowupUpload);
+
+customerPrimaryActionBtn.addEventListener("click", () => {
+  const action = customerPrimaryActionBtn.dataset.action;
+  if (action === "guided-photo") {
+    openGuidedPhotoUpload();
+    return;
+  }
+  if (action === "suggested-photo") {
+    openSuggestedPhotoUpload();
+    return;
+  }
+  if (action === "followup") {
+    openFollowupUpload();
+    return;
+  }
+  if (action === "current-task") {
+    focusCustomerTarget(document.querySelector(".customer-task-focus"));
+    return;
+  }
+  if (action === "followup-panel") {
+    focusCustomerTarget(followupLoopCard);
+    return;
+  }
+  if (action === "progress") {
+    focusCustomerTarget(customerProgressCard);
+    return;
+  }
+  focusCustomerTarget(mainRisk);
 });
 
 plantPhoto.addEventListener("change", () => {

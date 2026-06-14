@@ -1337,6 +1337,16 @@ button {
   font-size: 1rem;
 }
 
+.customer-primary-action {
+  width: 100%;
+  margin-top: 10px;
+}
+
+.soft-focus {
+  outline: 2px solid rgba(216, 177, 93, 0.8);
+  outline-offset: 3px;
+}
+
 .customer-journey {
   grid-column: 1 / -1;
   display: grid;
