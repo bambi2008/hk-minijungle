@@ -2414,6 +2414,70 @@ body.expert-mode .customer-progress-card {
   font-weight: 700;
 }
 
+.case-route-assessment {
+  display: grid;
+  gap: 7px;
+  margin-top: 10px;
+  border-left: 3px solid var(--green);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: #f4faf6;
+}
+
+.case-route-assessment.worse {
+  border-left-color: #c95f48;
+  background: #fff6f3;
+}
+
+.case-route-assessment.better {
+  border-left-color: var(--green);
+  background: #f1faf4;
+}
+
+.case-route-assessment.same {
+  border-left-color: #d0b36a;
+  background: #fffaf0;
+}
+
+.case-route-assessment span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.case-route-assessment strong {
+  display: block;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: 0.86rem;
+}
+
+.case-route-assessment p {
+  margin: 4px 0 0;
+}
+
+.case-route-assessment em {
+  color: var(--green-dark);
+  font-size: 0.76rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
+.case-route-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.case-route-evidence span {
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--muted);
+  font-size: 0.7rem;
+}
+
 .case-timeline-content p {
   margin: 8px 0;
   color: var(--muted);

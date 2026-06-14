@@ -211,6 +211,12 @@ function reportLatestProgress(report) {
   };
 }
 
+function reportRouteAssessment(report) {
+  if (report.routeAssessment) return report.routeAssessment;
+  const logs = Array.isArray(report.logs) ? report.logs : [];
+  return logs.slice().reverse().find((log) => log?.routeAssessment)?.routeAssessment || null;
+}
+
 function reportTrendPoint(report) {
   const confidenceRaw = report.photoQuality?.confidence;
   const confidence = Number.isFinite(Number(confidenceRaw)) ? Math.max(0, Math.min(100, Number(confidenceRaw))) : 50;
@@ -459,6 +465,7 @@ function groupReportsByCase(reports) {
           confidence: report.photoQuality?.confidence ?? null,
           decision: report.photoQuality?.decision?.status || null,
           next: report.photoQuality?.decision?.next || null,
+          routeAssessment: reportRouteAssessment(report),
           followupCount: report.reminderPlan?.items?.length || 0,
           ...reportTrendPoint(report)
         }));

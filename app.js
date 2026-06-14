@@ -2927,6 +2927,26 @@ function trendReminderHtml(reminder) {
   `;
 }
 
+function routeAssessmentHtml(assessment) {
+  if (!assessment) return "";
+  const state = assessment.state || "same";
+  const evidence = (assessment.evidence || [])
+    .slice(0, 3)
+    .map((item) => `<span>${item}</span>`)
+    .join("");
+  return `
+    <div class="case-route-assessment ${state}">
+      <div>
+        <span>复查路径判断</span>
+        <strong>${assessment.routeTitle || "复查路径"} · ${assessment.title || "等待判断"}</strong>
+        <p>${assessment.message || "系统会根据同角度复查照判断变化方向。"}</p>
+      </div>
+      ${evidence ? `<div class="case-route-evidence">${evidence}</div>` : ""}
+      <em>${assessment.next || "按下一次提醒继续复查。"}</em>
+    </div>
+  `;
+}
+
 async function loadCases() {
   try {
     const params = new URLSearchParams();
@@ -3014,6 +3034,7 @@ function renderCaseTimeline(item) {
           <span>风险分 ${entry.riskScore ?? "-"}</span>
           <span>复查 ${entry.followupCount || 0}</span>
         </div>
+        ${routeAssessmentHtml(entry.routeAssessment)}
         <p>${entry.next || "按处方任务和复查节点继续追踪。"}</p>
         <button type="button" class="mini-button" data-report-id="${entry.id}">查看报告</button>
       </div>
@@ -3053,7 +3074,7 @@ async function viewCase(id) {
       "",
       "## 时间线",
       ...item.timeline.map((entry, index) =>
-        `${index + 1}. ${entry.createdAt} / ${entry.eventType === "followup" ? "复查" : "诊断"} / ${entry.topRisk || "-"} / ${entry.decision || "-"} / ${entry.confidence ?? "-"}% / 风险分 ${entry.riskScore ?? "-"} / 复查 ${entry.followupCount}`
+        `${index + 1}. ${entry.createdAt} / ${entry.eventType === "followup" ? "复查" : "诊断"} / ${entry.topRisk || "-"} / ${entry.decision || "-"} / ${entry.confidence ?? "-"}% / 风险分 ${entry.riskScore ?? "-"} / 复查 ${entry.followupCount}${entry.routeAssessment ? ` / 路径判断：${entry.routeAssessment.routeTitle} · ${entry.routeAssessment.title} / 下一步：${entry.routeAssessment.next}` : ""}`
       )
     ];
     caseDetail.value = lines.join("\n");
