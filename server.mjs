@@ -11,7 +11,9 @@ const portArgIndex = process.argv.indexOf("--port");
 const cliPort = portArgIndex >= 0 ? process.argv[portArgIndex + 1] : null;
 const port = Number(cliPort || process.env.PORT || 8004);
 const host = "127.0.0.1";
-const dataDir = join(root, "data");
+const dataDir = process.env.GROW_CLINIC_DATA_DIR
+  ? normalize(process.env.GROW_CLINIC_DATA_DIR)
+  : join(root, "data");
 const dbPath = join(dataDir, "diagnosis-reports.json");
 const notificationPath = join(dataDir, "notification-jobs.json");
 const sqlitePath = join(dataDir, "grow-clinic.sqlite");
@@ -1777,7 +1779,13 @@ const server = createServer(async (req, res) => {
   }
 });
 
-export { server };
+function closeStorage() {
+  if (!sqliteDb) return;
+  sqliteDb.close();
+  sqliteDb = null;
+}
+
+export { server, closeStorage };
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   server.listen(port, host, () => {

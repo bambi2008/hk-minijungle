@@ -1,6 +1,11 @@
-import { server } from "./server.mjs";
+import { mkdtemp, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 const host = "127.0.0.1";
+const testDataDir = await mkdtemp(join(tmpdir(), "grow-clinic-api-"));
+process.env.GROW_CLINIC_DATA_DIR = testDataDir;
+const { server, closeStorage } = await import("./server.mjs");
 
 await new Promise((resolve) => server.listen(0, host, resolve));
 const { port } = server.address();
@@ -443,4 +448,6 @@ try {
   console.log("api-test-ok");
 } finally {
   await new Promise((resolve) => server.close(resolve));
+  closeStorage();
+  await rm(testDataDir, { recursive: true, force: true });
 }
