@@ -1252,6 +1252,20 @@ function dueLabel(dateString) {
   });
 }
 
+function relativeDueText(dateString) {
+  const target = Date.parse(dateString);
+  if (!Number.isFinite(target)) return "时间待定";
+  const delta = target - Date.now();
+  if (delta <= 0) return "已到期";
+  const minutes = Math.ceil(delta / (60 * 1000));
+  if (minutes < 60) return `还有 ${minutes} 分钟`;
+  const hours = Math.ceil(minutes / 60);
+  if (hours < 24) return `还有 ${hours} 小时`;
+  const days = Math.ceil(hours / 24);
+  if (days <= 14) return `还有 ${days} 天`;
+  return dueLabel(dateString);
+}
+
 function ensureReminderPlan(state, findings) {
   const reminders = buildReminders(state, findings);
   const signature = reminderSignature(state, findings);
@@ -1720,11 +1734,12 @@ function customerReminderSummary(state = getFormState(), findings = latestFindin
   if (plan?.actionCompletedAt && pending?.dueAt) {
     return {
       kicker: "动作已完成",
-      title: `我会在 ${dueLabel(pending.dueAt)} 提醒你复查`,
+      title: `我会在 ${relativeDueText(pending.dueAt)} 提醒你复查`,
       message: plan.actionFollowupReason || "不用手动计算时间，我已经按你完成动作的时间重新安排。",
       meta: [
         pending.task || "按提醒复查",
         pending.photo ? `拍 ${pending.photo}` : "同角度拍照",
+        `复查时间 ${dueLabel(pending.dueAt)}`,
         `完成 ${dueLabel(plan.actionCompletedAt)}`
       ]
     };
@@ -2045,7 +2060,7 @@ function customerJourneyModel(state, findings) {
         detail: followupDue
           ? "现在上传复查照"
           : pendingReminder?.dueAt
-            ? dueLabel(pendingReminder.dueAt)
+            ? relativeDueText(pendingReminder.dueAt)
             : hasFollowupLog
               ? "已记录"
               : "等待提醒"
@@ -2119,7 +2134,7 @@ function renderCustomerSummary(state, findings) {
       : plan.actionFollowupReason || "系统已经按你完成动作的时间重新安排复查。";
     customerNextAction.textContent = followupDue
       ? `拍${pendingReminder.photo || "复查照"}`
-      : `${dueLabel(pendingReminder.dueAt)} 复查`;
+      : `${relativeDueText(pendingReminder.dueAt)}复查`;
     renderCustomerPrimaryAction(state, findings);
     const score = confidenceScore();
     confidenceValue.textContent = `${score}%`;
@@ -2337,7 +2352,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
 
   if (!plan) return;
   const pending = firstPendingReminder(plan);
-  const when = pending?.dueAt ? dueLabel(pending.dueAt) : "下一次提醒";
+  const when = pending?.dueAt ? relativeDueText(pending.dueAt) : "下一次提醒";
   customerReminderKicker.textContent = "动作已完成";
   customerReminderTitle.textContent = `我会在 ${when} 提醒你复查`;
   customerReminderMessage.textContent = plan.actionFollowupReason || "不用手动计算时间，我已经按你完成动作的时间重新安排。";
@@ -2345,6 +2360,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
   [
     pending?.task || "按提醒复查",
     pending?.photo ? `拍 ${pending.photo}` : "同角度拍照",
+    pending?.dueAt ? `复查时间 ${dueLabel(pending.dueAt)}` : "",
     pending?.success ? `看 ${pending.success}` : "",
     record?.completedAt ? `完成 ${dueLabel(record.completedAt)}` : ""
   ].filter(Boolean).slice(0, 3).forEach((item) => {
@@ -2375,7 +2391,7 @@ function renderCustomerTaskFocus(state, findings, groups, labels, taskState) {
     const done = document.createElement("div");
     done.className = "customer-action-empty";
     done.innerHTML = waitingForFollowup
-      ? `<strong>当前动作已完成</strong><span>${reminder?.dueAt ? `${dueLabel(reminder.dueAt)} 复查，拍 ${reminder.photo || "同角度照片"}。` : "等复查提醒到了，直接拍一张同角度照片。"}</span>`
+      ? `<strong>当前动作已完成</strong><span>${reminder?.dueAt ? `${relativeDueText(reminder.dueAt)}复查，拍 ${reminder.photo || "同角度照片"}。` : "等复查提醒到了，直接拍一张同角度照片。"}</span>`
       : "<strong>今天的动作都完成了</strong><span>等复查提醒到了，直接拍一张同角度照片。</span>";
     group.appendChild(done);
     taskList.appendChild(group);
