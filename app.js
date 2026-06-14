@@ -2352,9 +2352,28 @@ function shortReportId(id) {
   return text.length > 8 ? text.slice(-8) : text;
 }
 
+function relativePastText(dateString) {
+  const target = Date.parse(dateString);
+  if (!Number.isFinite(target)) return "时间待定";
+  const delta = Date.now() - target;
+  if (delta < 60 * 1000) return "刚刚";
+  const minutes = Math.floor(delta / (60 * 1000));
+  if (minutes < 60) return `${minutes} 分钟前`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} 小时前`;
+  const days = Math.floor(hours / 24);
+  if (days <= 14) return `${days} 天前`;
+  return dueLabel(dateString);
+}
+
+function dossierChip(text, tone = "neutral") {
+  return text ? { text, tone } : null;
+}
+
 function customerPlantDossierModel(state, findings) {
   if (!customerHasStarted(state)) return null;
   const actionModel = customerPrimaryActionModel(state, findings);
+  const compactPlan = customerCompactPlanModel(state, findings);
   const record = getCustomerArchiveRecord();
   const plan = getReminderPlan();
   const pendingReminder = firstPendingReminder(plan);
@@ -2364,9 +2383,25 @@ function customerPlantDossierModel(state, findings) {
   const crop = cropNames[state.crop] || "这棵植物";
   const stage = stageNames[state.stage] || "阶段待定";
   const medium = mediumNames[state.medium] || "介质待定";
-  const device = currentDevice(state).name;
-  const archiveLabel = record?.reportId ? `已建档 ${shortReportId(record.reportId)}` : "本次诊断未入档";
-  const meta = [stage, medium, device, archiveLabel];
+  const actionChip = compactPlan.action
+    ? `当前：${compactPlan.action}`
+    : `下一步：${actionModel.label}`;
+  const followupChip = followupDue
+    ? "复查：现在"
+    : pendingReminder?.dueAt
+      ? `复查：${relativeDueText(pendingReminder.dueAt)}`
+      : compactPlan.followup
+        ? `复查：${compactPlan.followup}`
+        : "";
+  const updatedChip = record?.savedAt ? `更新：${relativePastText(record.savedAt)}` : "";
+  const archiveChip = record?.reportId ? `档案 ${shortReportId(record.reportId)}` : "待自动建档";
+  const meta = [
+    dossierChip(actionChip, followupDue ? "warning" : "primary"),
+    dossierChip(followupChip, followupDue ? "warning" : "neutral"),
+    dossierChip(updatedChip, "neutral"),
+    dossierChip(`${stage} / ${medium}`, "neutral"),
+    dossierChip(archiveChip, "subtle")
+  ];
 
   if (followupDue) {
     return {
@@ -2417,9 +2452,10 @@ function renderCustomerPlantDossier(state = getFormState(), findings = latestFin
   customerDossierContinueBtn.textContent = model.actionLabel || "继续照看";
   customerDossierContinueBtn.dataset.action = model.action || "diagnosis";
   customerDossierMeta.innerHTML = "";
-  model.meta.filter(Boolean).slice(0, 4).forEach((item) => {
+  model.meta.filter(Boolean).slice(0, 5).forEach((item) => {
     const chip = document.createElement("span");
-    chip.textContent = item;
+    chip.textContent = typeof item === "string" ? item : item.text;
+    if (item.tone) chip.dataset.tone = item.tone;
     customerDossierMeta.appendChild(chip);
   });
 }

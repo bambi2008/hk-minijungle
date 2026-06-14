@@ -1461,9 +1461,29 @@ button {
   font-weight: 700;
 }
 
+.customer-dossier-meta span[data-tone="primary"] {
+  color: #fff;
+  background: var(--green);
+}
+
+.customer-dossier-meta span[data-tone="warning"] {
+  color: #6b4300;
+  background: #fff4d9;
+}
+
+.customer-dossier-meta span[data-tone="subtle"] {
+  color: var(--muted);
+  background: #f6faf7;
+}
+
 .customer-plant-dossier[data-state="due"] .customer-dossier-meta span {
   color: #6b4300;
   background: #fff4d9;
+}
+
+.customer-plant-dossier[data-state="due"] .customer-dossier-meta span[data-tone="primary"] {
+  color: #fff;
+  background: var(--green);
 }
 
 .customer-dossier-actions {
