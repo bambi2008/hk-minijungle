@@ -1882,6 +1882,16 @@ body.customer-mode #quick-photo-btn {
   display: block;
 }
 
+body.customer-mode.customer-dossier-active .crop-quick-start,
+body.customer-mode.customer-dossier-active #quick-photo-btn {
+  display: none;
+}
+
+body.customer-mode.customer-dossier-active .smart-panel {
+  border-color: #d9e5df;
+  background: #fff;
+}
+
 body.customer-mode .smart-panel label {
   display: none;
 }

@@ -5,6 +5,8 @@ const customerTitle = document.querySelector("#customer-title");
 const customerMessage = document.querySelector("#customer-message");
 const customerNextAction = document.querySelector("#customer-next-action");
 const customerPrimaryActionBtn = document.querySelector("#customer-primary-action-btn");
+const customerStartTitle = document.querySelector("#customer-start-title");
+const customerStartMessage = document.querySelector("#customer-start-message");
 const confidenceValue = document.querySelector("#confidence-value");
 const confidenceBar = document.querySelector("#confidence-bar");
 const confidenceLabel = document.querySelector("#confidence-label");
@@ -817,6 +819,41 @@ function renderCropQuickChoices(state = getFormState()) {
     button.setAttribute("aria-pressed", String(selected));
   });
   if (quickPhotoBtn) quickPhotoBtn.textContent = `拍${cropNames[state.crop]}照片`;
+}
+
+function hasCustomerDossierContext(state = getFormState()) {
+  if (!document.body.classList.contains("customer-mode")) return false;
+  const plan = getReminderPlan();
+  return Boolean(
+    customerHasStarted(state) &&
+    (
+      getCustomerArchiveRecord()?.reportId ||
+      plan?.items?.length ||
+      getLogs().length ||
+      Object.keys(getTaskState()).length ||
+      capturedPhotoTypes.size > 0 ||
+      state.hasPhoto
+    )
+  );
+}
+
+function renderCustomerStartPanel(state = getFormState(), findings = latestFindings) {
+  if (!customerStartTitle || !customerStartMessage) return;
+  if (!hasCustomerDossierContext(state)) {
+    customerStartTitle.textContent = "先拍一张植物照片";
+    customerStartMessage.textContent = "不需要先填表。照片不清晰时，我会提示补拍；信息够用后直接给你下一步。";
+    renderCropQuickChoices(state);
+    return;
+  }
+
+  const plan = getReminderPlan();
+  const pendingReminder = firstPendingReminder(plan);
+  const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  const action = customerPrimaryActionModel(state, findings);
+  customerStartTitle.textContent = `${cropNames[state.crop] || "当前植物"}已在照看中`;
+  customerStartMessage.textContent = followupDue
+    ? `右侧档案卡已经切到复查状态，直接${action.label}。`
+    : `不用重新选择作物或重新开始；右侧档案卡会告诉你现在该做什么。`;
 }
 
 function chooseCustomerCrop(cropKey) {
@@ -2085,10 +2122,12 @@ function renderCustomerPhotoRescue(state = getFormState()) {
 }
 
 function syncCustomerIntakeState(state = getFormState()) {
+  const customerMode = document.body.classList.contains("customer-mode");
   document.body.classList.toggle(
     "customer-intake-empty",
-    document.body.classList.contains("customer-mode") && !customerHasStarted(state)
+    customerMode && !customerHasStarted(state)
   );
+  document.body.classList.toggle("customer-dossier-active", customerMode && hasCustomerDossierContext(state));
 }
 
 function customerTaskLabels() {
@@ -5450,6 +5489,7 @@ function renderDiagnosis(state, findings) {
   const top = findings[0];
   const device = currentDevice(state);
   syncCustomerIntakeState(state);
+  renderCustomerStartPanel(state, findings);
   renderCropQuickChoices(state);
   readiness.textContent = customerHasStarted(state) ? "已生成" : "等待照片";
   mainRisk.textContent = top.title;
