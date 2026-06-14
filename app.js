@@ -19,6 +19,13 @@ const customerCompactAction = document.querySelector("#customer-compact-action")
 const customerCompactFollowup = document.querySelector("#customer-compact-followup");
 const customerCompactActionBtn = document.querySelector("#customer-compact-action-btn");
 const customerArchiveStatus = document.querySelector("#customer-archive-status");
+const customerPlantDossier = document.querySelector("#customer-plant-dossier");
+const customerDossierKicker = document.querySelector("#customer-dossier-kicker");
+const customerDossierTitle = document.querySelector("#customer-dossier-title");
+const customerDossierMessage = document.querySelector("#customer-dossier-message");
+const customerDossierMeta = document.querySelector("#customer-dossier-meta");
+const customerDossierContinueBtn = document.querySelector("#customer-dossier-continue-btn");
+const customerDossierNewBtn = document.querySelector("#customer-dossier-new-btn");
 const confidenceDecisionCard = document.querySelector("#confidence-decision-card");
 const confidenceTierStatus = document.querySelector("#confidence-tier-status");
 const confidenceTierTitle = document.querySelector("#confidence-tier-title");
@@ -222,6 +229,13 @@ const mediumNames = {
   rockwool: "岩棉",
   soil: "土培",
   water: "水培/DWC"
+};
+
+const stageNames = {
+  seedling: "幼苗期",
+  vegetative: "营养生长期",
+  flowering: "开花期",
+  fruiting: "结果期"
 };
 
 const cropOrder = ["tomato", "basil", "rosemary", "strawberry", "pepper"];
@@ -2291,6 +2305,84 @@ function renderCustomerCompactPlan(state = getFormState(), findings = latestFind
   customerCompactAction.textContent = model.action;
   customerCompactFollowup.textContent = model.followup;
   renderCustomerArchiveStatus(state, findings);
+}
+
+function shortReportId(id) {
+  if (!id) return "";
+  const text = String(id);
+  return text.length > 8 ? text.slice(-8) : text;
+}
+
+function customerPlantDossierModel(state, findings) {
+  if (!customerHasStarted(state)) return null;
+  const actionModel = customerPrimaryActionModel(state, findings);
+  const record = getCustomerArchiveRecord();
+  const plan = getReminderPlan();
+  const pendingReminder = firstPendingReminder(plan);
+  const followupDue = pendingReminder && isReminderDue(pendingReminder);
+  const waitingForActionFollowup = isWaitingForActionFollowup(plan);
+  const top = findings[0] || diagnose(state)[0];
+  const crop = cropNames[state.crop] || "这棵植物";
+  const stage = stageNames[state.stage] || "阶段待定";
+  const medium = mediumNames[state.medium] || "介质待定";
+  const device = currentDevice(state).name;
+  const archiveLabel = record?.reportId ? `已建档 ${shortReportId(record.reportId)}` : "本次诊断未入档";
+  const meta = [stage, medium, device, archiveLabel];
+
+  if (followupDue) {
+    return {
+      state: "due",
+      kicker: "该复查了",
+      title: `${crop}档案`,
+      message: `现在拍${pendingReminder.photo || "同角度复查照"}，我会自动判断有没有变好。`,
+      action: actionModel.action,
+      actionLabel: actionModel.label,
+      meta
+    };
+  }
+
+  if (waitingForActionFollowup && pendingReminder) {
+    return {
+      state: "waiting",
+      kicker: "等待复查",
+      title: `${crop}档案`,
+      message: `${relativeDueText(pendingReminder.dueAt)}复查；这段时间先保持当前动作，不要叠加新调整。`,
+      action: actionModel.action,
+      actionLabel: actionModel.label,
+      meta
+    };
+  }
+
+  return {
+    state: record?.reportId ? "saved" : "active",
+    kicker: record?.reportId ? "已恢复当前植物" : "当前诊断",
+    title: `${crop}档案`,
+    message: top ? `当前判断：${top.title}。` : "继续拍照后会自动生成判断。",
+    action: actionModel.action,
+    actionLabel: actionModel.label,
+    meta
+  };
+}
+
+function renderCustomerPlantDossier(state = getFormState(), findings = latestFindings) {
+  if (!customerPlantDossier) return;
+  const model = document.body.classList.contains("customer-mode")
+    ? customerPlantDossierModel(state, findings)
+    : null;
+  customerPlantDossier.hidden = !model;
+  if (!model) return;
+  customerPlantDossier.dataset.state = model.state;
+  customerDossierKicker.textContent = model.kicker;
+  customerDossierTitle.textContent = model.title;
+  customerDossierMessage.textContent = model.message;
+  customerDossierContinueBtn.textContent = model.actionLabel || "继续照看";
+  customerDossierContinueBtn.dataset.action = model.action || "diagnosis";
+  customerDossierMeta.innerHTML = "";
+  model.meta.filter(Boolean).slice(0, 4).forEach((item) => {
+    const chip = document.createElement("span");
+    chip.textContent = item;
+    customerDossierMeta.appendChild(chip);
+  });
 }
 
 function getCustomerArchiveRecord() {
@@ -4957,6 +5049,7 @@ async function restoreCustomerArchiveOnStartup() {
   const report = await loadReportIntoForm(record.reportId, { resume: true });
   if (!report) return null;
   renderCustomerCompactPlan(latestState || getFormState(), latestFindings);
+  renderCustomerPlantDossier(latestState || getFormState(), latestFindings);
   return report;
 }
 
@@ -5368,6 +5461,7 @@ function renderDiagnosis(state, findings) {
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerPlantDossier(state, findings);
   renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderConfidenceDecision(state, findings);
@@ -5444,6 +5538,7 @@ function refreshCustomerTimeState() {
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerPlantDossier(state, findings);
   renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
@@ -5690,8 +5785,7 @@ customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
 
 followupLoopUploadBtn.addEventListener("click", openFollowupUpload);
 
-function handleCustomerPrimaryAction(event) {
-  const action = event.currentTarget.dataset.action;
+function runCustomerPrimaryAction(action) {
   if (action === "guided-photo") {
     openGuidedPhotoUpload();
     return;
@@ -5728,8 +5822,55 @@ function handleCustomerPrimaryAction(event) {
   focusCustomerTarget(mainRisk);
 }
 
+function handleCustomerPrimaryAction(event) {
+  runCustomerPrimaryAction(event.currentTarget.dataset.action);
+}
+
+function resetCustomerPlantDossier() {
+  form.reset();
+  capturedPhotoTypes = new Set();
+  hasRunSmartDiagnosis = false;
+  requestedPhotoType = "plant";
+  customerAutoArchiveInFlightSignature = null;
+  latestVisionResult = null;
+  latestPhotoTypeDetection = null;
+  latestMatchedPathways = [];
+  photoSignals = {
+    greenRatio: null,
+    yellowRatio: null,
+    darkRatio: null,
+    brightness: null,
+    contrast: null,
+    width: null,
+    height: null
+  };
+  localStorage.removeItem(reminderPlanKey);
+  localStorage.removeItem(baselinePhotoKey);
+  localStorage.removeItem(customerAutoArchiveKey);
+  localStorage.removeItem(historyKey);
+  localStorage.removeItem(tasksKey);
+  localStorage.removeItem(activeCaseKey);
+  setPhotoType("none");
+  if (plantPhoto) plantPhoto.value = "";
+  if (followupPhoto) followupPhoto.value = "";
+  photoPreview.removeAttribute("src");
+  photoPreview.classList.remove("visible");
+  document.body.classList.remove("has-plant-photo", "customer-followup-due");
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "等待自动识别";
+  if (photoHint) photoHint.textContent = "上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。";
+  if (caseDetail) caseDetail.value = "";
+  if (caseTimeline) caseTimeline.innerHTML = "<div class=\"case-empty-timeline\">新植物还没有诊断记录。</div>";
+  if (caseStatus) caseStatus.textContent = "已准备记录新植物。";
+  updateDeviceProfile();
+  setCustomerArchiveStatus("拍完首张照片后自动建档。", "waiting");
+  runDiagnosis();
+  focusCustomerTarget(document.querySelector(".customer-summary"));
+}
+
 customerPrimaryActionBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerCompactActionBtn.addEventListener("click", handleCustomerPrimaryAction);
+customerDossierContinueBtn.addEventListener("click", handleCustomerPrimaryAction);
+customerDossierNewBtn.addEventListener("click", resetCustomerPlantDossier);
 
 plantPhoto.addEventListener("change", () => {
   const file = plantPhoto.files && plantPhoto.files[0];
