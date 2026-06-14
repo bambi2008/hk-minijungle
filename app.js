@@ -143,6 +143,7 @@ const followupLoopPhoto = document.querySelector("#followup-loop-photo");
 const followupLoopSuccess = document.querySelector("#followup-loop-success");
 const followupLoopSteps = document.querySelector("#followup-loop-steps");
 const followupLoopVerdict = document.querySelector("#followup-loop-verdict");
+const followupLoopTarget = document.querySelector("#followup-loop-target");
 const followupLoopUploadBtn = document.querySelector("#followup-loop-upload-btn");
 const customerReminderCard = document.querySelector("#customer-reminder-card");
 const customerReminderKicker = document.querySelector("#customer-reminder-kicker");
@@ -1694,19 +1695,53 @@ function updateCustomerFollowupCue(loop = null) {
   if (due && readiness) readiness.textContent = "该复查了";
 }
 
+function followupPhotoTarget(loop = followupLoopInstruction()) {
+  const type = loop?.type || "plant";
+  return {
+    type,
+    label: photoTypeLabel(type),
+    key: loop?.key || "auto",
+    photo: loop?.photo || "同角度复查照"
+  };
+}
+
+function renderFollowupPhotoTarget(loop) {
+  if (!followupLoopTarget) return;
+  if (!loop || loop.disabled) {
+    followupLoopTarget.textContent = "完成诊断后，我会自动决定下次复查要拍哪一类照片。";
+    return;
+  }
+  const target = followupPhotoTarget(loop);
+  followupLoopTarget.textContent = loop.due
+    ? `点击按钮后会直接进入${target.label}复查照，不需要重新选择照片类型。`
+    : `到期后会自动要求拍${target.label}复查照。`;
+}
+
+function applyFollowupPhotoTarget(loop = followupLoopInstruction()) {
+  const target = followupPhotoTarget(loop);
+  if (target.key) checkDay.value = target.key;
+  requestedPhotoType = target.type;
+  setPhotoType(target.type);
+  if (photoHint) photoHint.textContent = `本次复查已锁定为${target.label}，请尽量按同角度、同光线拍摄。`;
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `复查照片：${target.label}`;
+  return target;
+}
+
 function renderFollowupLoop(state = getFormState(), findings = latestFindings) {
   if (!followupLoopTitle || !followupLoopSteps) return;
   const loop = followupLoopInstruction(state, findings);
+  const target = followupPhotoTarget(loop);
   followupLoopTitle.textContent = loop.title;
   followupLoopTime.textContent = loop.time;
   followupLoopPhoto.textContent = loop.photo;
   followupLoopSuccess.textContent = loop.success;
   followupLoopVerdict.textContent = loop.verdict;
   followupLoopUploadBtn.disabled = loop.disabled;
-  followupLoopUploadBtn.textContent = loop.disabled ? "等待诊断" : loop.due ? "现在拍复查照" : "上传复查照";
+  followupLoopUploadBtn.textContent = loop.disabled ? "等待诊断" : loop.due ? `拍${target.label}复查照` : "上传复查照";
   followupLoopCard.classList.toggle("due", loop.due && !loop.disabled);
   document.body.classList.toggle("customer-followup-due", document.body.classList.contains("customer-mode") && loop.due && !loop.disabled);
   updateCustomerFollowupCue(loop);
+  renderFollowupPhotoTarget(loop);
   followupLoopSteps.innerHTML = "";
   loop.steps.forEach((step, index) => {
     const item = document.createElement("div");
@@ -2105,7 +2140,10 @@ function customerPrimaryActionModel(state, findings) {
   const rescue = waitingForActionFollowup || followupDue ? null : customerPhotoRescuePlan(state);
   const pendingTask = currentCustomerTask(state, findings);
 
-  if (followupDue) return { label: "现在拍复查照", action: "followup" };
+  if (followupDue) {
+    const type = reminderPhotoType(pendingReminder, state);
+    return { label: `拍${photoTypeLabel(type)}复查照`, action: "followup" };
+  }
   if (!started) return { label: "拍照开始", action: "guided-photo" };
   if (rescue || decision.tier === "photo" || decision.tier === "blocked") {
     return { label: rescue?.button || decision.next || "按提示拍照", action: "suggested-photo" };
@@ -5358,9 +5396,7 @@ function openSuggestedPhotoUpload() {
 
 function openFollowupUpload() {
   const loop = followupLoopInstruction();
-  if (loop.key) checkDay.value = loop.key;
-  requestedPhotoType = loop.type || "plant";
-  setPhotoType(requestedPhotoType);
+  applyFollowupPhotoTarget(loop);
   followupPhoto.click();
 }
 

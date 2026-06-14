@@ -70,6 +70,7 @@ const requiredIds = [
   "followup-loop-success",
   "followup-loop-steps",
   "followup-loop-verdict",
+  "followup-loop-target",
   "followup-loop-upload-btn",
   "customer-reminder-card",
   "customer-reminder-kicker",
@@ -224,7 +225,13 @@ const requiredJsSnippets = [
   "function refreshCustomerTimeState",
   "function startCustomerTimeRefresh",
   "function updateCustomerFollowupCue",
+  "function followupPhotoTarget",
+  "function renderFollowupPhotoTarget",
+  "function applyFollowupPhotoTarget",
   "document.title = due",
+  "`拍${target.label}复查照`",
+  "`拍${photoTypeLabel(type)}复查照`",
+  "本次复查已锁定为",
   "setInterval(refreshCustomerTimeState",
   "document.addEventListener(\"visibilitychange\"",
   "还有 ${days} 天",
@@ -337,6 +344,8 @@ const requiredCssSnippets = [
   "body.customer-mode.customer-photo-rescue-needed .customer-photo-rescue-card",
   "body.customer-mode.customer-photo-rescue-needed .task-block",
   "body.customer-mode.customer-followup-due .status-pill",
+  ".followup-loop-target",
+  "body.customer-mode.customer-followup-due .followup-loop-target",
   ".auto-photo-type-badge"
 ];
 

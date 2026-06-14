@@ -850,6 +850,21 @@ body.customer-mode.customer-followup-due .customer-progress-card {
   font-weight: 600;
 }
 
+.followup-loop-target {
+  margin: 8px 0 0;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: var(--green-dark);
+  background: #edf7f1;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+body.customer-mode.customer-followup-due .followup-loop-target {
+  color: #6b4300;
+  background: #fff4d9;
+}
+
 .customer-reminder-card {
   border: 1px solid #d9e5df;
   border-radius: 8px;
