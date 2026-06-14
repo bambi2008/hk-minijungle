@@ -185,6 +185,7 @@ let knowledgeGraphPathways = [];
 let latestMatchedPathways = [];
 let latestVisionResult = null;
 let latestPhotoTypeDetection = null;
+let customerTimeRefreshId = null;
 
 const cropNames = {
   tomato: "矮生番茄",
@@ -5110,6 +5111,31 @@ function runDiagnosis() {
   renderDiagnosis(state, diagnose(state));
 }
 
+function currentDiagnosisSnapshot() {
+  const state = latestState || getFormState();
+  const findings = latestFindings.length ? latestFindings : diagnose(state);
+  return { state, findings };
+}
+
+function refreshCustomerTimeState() {
+  if (!isCustomerModeActive()) return;
+  const plan = getReminderPlan();
+  if (!plan?.items?.length && !getLogs().length) return;
+  const { state, findings } = currentDiagnosisSnapshot();
+  renderReminderSchedule(state, findings);
+  renderFollowupLoop(state, findings);
+  renderCustomerReminderSummary(state, findings);
+  renderCustomerProgressSummary(state);
+  renderCustomerSummary(state, findings);
+  renderCustomerJourney(state, findings);
+  renderTasks(state, findings);
+}
+
+function startCustomerTimeRefresh() {
+  if (customerTimeRefreshId) return;
+  customerTimeRefreshId = window.setInterval(refreshCustomerTimeState, 60 * 1000);
+}
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   hasRunSmartDiagnosis = true;
@@ -5616,6 +5642,9 @@ saveNotificationChannelsBtn.addEventListener("click", () => {
 });
 refreshNotificationsBtn.addEventListener("click", loadNotifications);
 syncCaseNotificationsBtn.addEventListener("click", syncCaseNotifications);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) refreshCustomerTimeState();
+});
 newCaseBtn.addEventListener("click", () => {
   const next = createCaseState(getFormState());
   setActiveCase(next);
@@ -5657,6 +5686,7 @@ applyNotificationChannelConfig();
 applyDeviceTemplate({ force: true });
 runDiagnosis();
 setMode(localStorage.getItem("growClinicMode") || "customer");
+startCustomerTimeRefresh();
 loadReports();
 loadCases();
 loadNotifications();
