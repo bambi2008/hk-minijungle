@@ -1,0 +1,3564 @@
+[
+  {
+    "id": "ef7eb5dc-0684-443a-b51d-0b29e65602e8",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780833454256",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "fd61b07a-30ef-4ba3-898e-b339d694fdbf",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780836978760",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "1459307e-4e29-4763-9f8d-cba4c4342701",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780838649852",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "00719c56-e809-4c17-b975-4840f5c83db5",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780840400595",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "5dd9f982-f228-4838-a92b-6f80054e05ee",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780840500628",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "43e405f0-0bdc-4c4b-8c82-612ea52479d4",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780841326532",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "b85a5359-53bd-4ca5-9500-b02702857a34",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780842037690",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "45e3ca78-700f-4b04-9e51-f51d1504ecb9",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780843293651",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "d73c037e-86f8-4e2e-b54a-0a91ce53c2f9",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780846510710",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "2f59bea6-5cba-4a35-8527-34938801b890",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780897910946",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "df859fe8-bcee-4271-a55e-ee21faadbd09",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780898063337",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "ad43ddf0-27e3-4bca-9a13-6eb9d5f0f9a5",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780899750015",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "1937f826-c2ca-4498-a40e-9c9dd8e624cd",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780908831493",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "99743611-2c97-4026-b277-26e2d0fae11a",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780932487052",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "c8f93c03-22e4-4f2d-9e16-c5a3f9dfb09f",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780934178328",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "eee613fb-f2b1-4c94-9f32-67377f681045",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780942068874",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "d79c3d78-10c2-4f42-86f9-a7dd0581c7e6",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780947649957",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "8985dde6-bc43-431e-87b5-b18450373104",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780952252404",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "4c6361bd-336a-4158-8624-966f12d14368",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780964636298",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "0e1986ea-04cd-4b73-afeb-47708d81b7bb",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780966978332",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "21de4b41-ec1a-4689-a96f-a87f500e7e8a",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781142113573",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "c668f9a4-43d4-45a7-bb4a-5a3870ff1a5c",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781143232803",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "4e7be65b-e4b4-4b13-add1-938e84cf1fd9",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781144349482",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "7b268835-84c9-4283-8ec1-74721cfb5249",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781145529400",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "c4c9c683-aeda-4cf6-88f1-aa0b6f17d1d8",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781146155181",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "b549b10d-b2ac-43f0-b62c-10f9a47613ae",
+    "createdAt": "2026-01-01T00:00:00.000Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781404205307",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "高优先级",
+    "photoQuality": {
+      "confidence": 42,
+      "decision": {
+        "status": "需要复查",
+        "next": "补拍根区并复查"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots"
+        },
+        {
+          "key": "48h",
+          "label": "48h",
+          "task": "check leaves"
+        }
+      ]
+    },
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "7a2bca20-7fac-4048-b209-3931c056cac7",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780833454256",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T11:57:34.561Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "30e952e9-2171-45a3-b0b7-6fc24e153d96",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780836978760",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T12:56:19.116Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "a129e250-d64e-4273-9ae7-9b21359f038b",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780838649852",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T13:24:10.219Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "46097a57-5d70-4139-a05e-8baf586b39df",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780840400595",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T13:53:20.974Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "1f48e17c-b0d4-465c-9478-35357be59a1b",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780840500628",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T13:55:01.072Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "b537f7a0-98a2-4fb7-8fd6-c60dd3e87ea5",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780841326532",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T14:08:46.943Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "69022d2b-b56e-4a74-ab6a-b47084fcd773",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780842037690",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T14:20:38.109Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "c96c7f1e-54fb-4381-b0db-2824aa3d9a43",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780843293651",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T14:41:34.068Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "f6b86fcb-5542-4061-8d84-ab66aee9b9b7",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780846510710",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-07T15:35:11.176Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "cb3eaabb-54c0-4077-af1a-48fee3331e3c",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780897910946",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T05:51:51.617Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "3d0b013a-2c49-40b1-920d-204b87ad5432",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780898063337",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T05:54:23.971Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "de467e9b-e5e2-46b3-bdcb-7368487a55fa",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780899750015",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T06:22:30.661Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "c0383ed6-2faf-452d-a5ee-17bfb1b6c066",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780908831493",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T08:53:52.146Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "82b3f205-9d72-4f73-b21e-de49c402f365",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780932487052",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T15:28:07.766Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "bf89f337-b7e1-4d38-bf98-fd0c6c387a45",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780934178328",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T15:56:19.315Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "95147d37-f13e-42d3-9e4b-2dae3461697f",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780942068874",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T18:07:49.533Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "1f6850f4-52c4-4ff2-86f9-031d8491f34c",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780947649957",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T19:40:50.717Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "dbe02a9a-142f-4b5d-a277-32812df07645",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780952252404",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-08T20:57:33.132Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "145e64b4-c8bf-4a10-924d-697661800aaa",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780964636298",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-09T00:23:57.053Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "d7762ee3-9114-4692-9878-76f11512c0cd",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1780966978332",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-09T01:02:59.211Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "3822833e-6cd8-4a52-b12c-ba0657fc7334",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781142113573",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-11T01:41:54.410Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "10173e0a-fb14-4337-b165-42f35b08f7e8",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781143232803",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-11T02:00:33.641Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "645c2efd-0b2c-44b0-9399-e6f8f25dc81b",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781144349482",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-11T02:19:10.504Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "95a8171d-5642-4b17-a89f-e42d156296d3",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781145529400",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-11T02:38:50.875Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "ceebcf4b-ba67-4b47-9d11-0a9106c23086",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781146155181",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-11T02:49:16.299Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "a075110b-6b2d-4575-b59c-c7e9bbe65a2a",
+    "createdAt": "2026-01-02T00:00:00.000Z",
+    "crop": "鐭敓鐣寗",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 瓒呰杽鏍瑰尯",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke-1781404205307",
+    "caseName": "API smoke tomato case",
+    "stage": "寮€鑺辨湡",
+    "stageKey": "flowering",
+    "medium": "瓒呰杽 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API trend improved",
+    "severity": "观察",
+    "photoQuality": {
+      "confidence": 90,
+      "decision": {
+        "status": "可以判断",
+        "next": "保持当前处方"
+      },
+      "signals": {
+        "greenRatio": 0.3,
+        "yellowRatio": 0.22,
+        "darkRatio": 0.18
+      }
+    },
+    "reminderPlan": {
+      "items": [
+        {
+          "key": "24h",
+          "label": "24h",
+          "task": "check roots",
+          "completedAt": "2026-06-14T02:30:06.594Z"
+        }
+      ]
+    },
+    "logs": [
+      {
+        "day": "48h",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "new growth improved"
+      }
+    ],
+    "report": "api smoke trend test",
+    "test": true
+  },
+  {
+    "id": "2b9d1f54-e5a6-4563-8d78-ea4272b927f7",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780899751207",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780899750015",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "7eb76618-77f9-45a4-b25a-64f98073af93",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780908832798",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780908831493",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "126d9b38-17a8-4a60-8f40-51d134eab073",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780932488527",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780932487052",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "0129be64-8145-42e1-a56d-641b6816e3f1",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780934180156",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780934178328",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "b835ead2-0183-4783-b1eb-081163b3a0a7",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780942070246",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780942068874",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "b90425b2-2fbe-4a99-8e9b-08a91db95064",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780947651474",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780947649957",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "a9b94969-4f25-4d9f-a44c-3cc7cf771504",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780952253816",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780952252404",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "bb774bd0-17ba-4abd-ad19-c83083062254",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780964637785",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780964636298",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "489fdf47-eb76-4308-b92e-071f3b5ffff3",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1780966979989",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1780966978332",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "5243d22a-da08-4ade-b8da-840ce268ab3a",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1781142115350",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1781142113573",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "6f629eca-2dd0-4d23-9d56-e324054c6229",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1781143234588",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1781143232803",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "12ccb11f-e218-4858-9dd2-60c0ab41d013",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1781144351336",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1781144349482",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "1bd9b2c2-6fca-446b-8f9a-5ebb744c3719",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1781145532153",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1781145529400",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "9b658b92-97d4-45ec-925c-e0547541daf6",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1781146157219",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1781146155181",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  },
+  {
+    "id": "2d37e8db-1a2b-4e52-9ed2-41c9b3e8480d",
+    "createdAt": "2026-05-31T03:55:23.466Z",
+    "medium": "?? Xponge",
+    "topRisk": "API ??",
+    "stage": "???",
+    "report": "smoke test report",
+    "crop": "????",
+    "severity": "??"
+  },
+  {
+    "id": "5b94b3e8-fd1b-453d-bd5c-5568d1b55145",
+    "createdAt": "2026-05-31T03:59:49.371Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "efbfd413-fae0-4dc1-a81a-663b58c8b4c4",
+    "createdAt": "2026-05-31T04:00:39.009Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "4db79cce-0ef1-4443-8b02-79b8f8867fc0",
+    "createdAt": "2026-05-31T04:02:02.734Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "28181237-c6d9-4dd3-816a-62a4bc908e27",
+    "createdAt": "2026-05-31T04:02:26.978Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "f35f6484-54a3-4b15-ab8f-92864c907b5d",
+    "createdAt": "2026-05-31T04:02:58.921Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "435753fa-cd59-4390-b14a-fc72b8e373f1",
+    "createdAt": "2026-05-31T04:05:43.794Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "5316cbd7-1fde-4481-85eb-e4291ae3f087",
+    "createdAt": "2026-05-31T04:09:22.599Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "63611320-5663-44af-8236-a884b01f6a87",
+    "createdAt": "2026-05-31T04:12:32.084Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "a4b7ba1e-2567-4f17-90db-c639799cb2af",
+    "createdAt": "2026-05-31T04:17:59.424Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "d4e9634d-8d08-4366-bdc0-8fe4ac521136",
+    "createdAt": "2026-05-31T04:22:00.938Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "dcee9050-44c9-4362-95d2-89f9b4ddabc4",
+    "createdAt": "2026-05-31T04:30:26.225Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "66f40b19-9c9d-47c2-8a90-b139b1f35a57",
+    "createdAt": "2026-05-31T04:49:48.265Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "b1e101ac-25cb-4145-ab4b-ab3015b62683",
+    "createdAt": "2026-05-31T04:52:22.991Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "9e16f9fc-5fb9-4831-b68c-65a6811f4f03",
+    "createdAt": "2026-05-31T05:06:29.370Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "7db21ec9-1e4e-4587-bf47-f18859d50cf6",
+    "createdAt": "2026-05-31T05:18:06.050Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "90105a7f-c7a4-4638-9367-6543bb790d90",
+    "createdAt": "2026-05-31T05:22:27.281Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "9011d95c-44e6-4ebf-8022-553e6c044970",
+    "createdAt": "2026-05-31T07:17:56.394Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "b7a57e35-67a7-408f-aad7-6cd35e0916d5",
+    "createdAt": "2026-05-31T07:26:57.998Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "d3986194-82a5-4378-bea2-8994dd6e9c35",
+    "createdAt": "2026-05-31T07:29:30.675Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "5eaa1be5-99b8-4e16-a8f2-009a90d2bae4",
+    "createdAt": "2026-05-31T10:21:25.481Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "90dc1da1-9c42-4628-b658-f93a71d6f8e8",
+    "createdAt": "2026-05-31T10:58:14.252Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "c5897ff2-8e48-472e-a2c8-08aa5cbe35a7",
+    "createdAt": "2026-05-31T11:01:41.055Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "1642d200-e6ed-4ddf-af8b-5f28fdc9da32",
+    "createdAt": "2026-05-31T11:15:18.543Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "1592c7e3-73a6-4cc9-9b3d-8dab2a672f93",
+    "createdAt": "2026-05-31T11:15:49.267Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "81559ba5-6f70-4a0b-8767-dd132b1d473b",
+    "createdAt": "2026-06-03T13:00:06.552Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "392fd33c-ee6e-4618-93d8-17c30f9bd64f",
+    "createdAt": "2026-06-04T14:58:09.064Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "09ac7593-af76-4989-a1d5-06b8eef2d513",
+    "createdAt": "2026-06-04T15:13:15.156Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "1c0a43b8-3d8f-4d2b-bf17-666290e2ab4f",
+    "createdAt": "2026-06-04T15:23:49.019Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "e7bea3fb-e750-4440-8093-c80cb7a3ad91",
+    "createdAt": "2026-06-04T15:32:37.701Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "178d5218-2084-4d03-9b1b-acc82d3eb33f",
+    "createdAt": "2026-06-05T05:36:55.360Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "330b640e-2271-4992-83d5-c912e1d46e21",
+    "createdAt": "2026-06-05T05:43:33.883Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "6c077ae7-cc57-4967-9273-a39118c52e3e",
+    "createdAt": "2026-06-05T05:46:37.368Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "068cb485-9cfe-4792-a2e0-0ab9ff959ef8",
+    "createdAt": "2026-06-05T07:39:06.731Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "1ea7cbe0-4ff9-4fa3-8d65-e1f1cae9ef72",
+    "createdAt": "2026-06-05T15:24:51.491Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "44764c3c-6186-4501-99dc-31aaeb86a174",
+    "createdAt": "2026-06-05T15:35:35.490Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "dae7bf36-6d81-4893-8d20-de184ab902ae",
+    "createdAt": "2026-06-05T15:55:47.771Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "c7c13482-7d93-49e4-9237-e1a983c551d9",
+    "createdAt": "2026-06-05T16:06:35.668Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "5d4d12ec-0d6c-4806-87a7-dda7cce420f2",
+    "createdAt": "2026-06-06T04:17:30.429Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "9329c17a-4703-4550-9b2a-a1463ef293ed",
+    "createdAt": "2026-06-06T09:06:30.241Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "7db41720-b61f-4637-99ca-690ac2c0ee88",
+    "createdAt": "2026-06-06T14:20:22.856Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "9e14ef9c-5821-49fc-a742-b84216b8c905",
+    "createdAt": "2026-06-06T14:46:40.002Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "4ba9b94d-53ea-4daa-8f4c-a5289f2abc89",
+    "createdAt": "2026-06-07T09:11:49.687Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "9eeb26ad-55a4-48a5-a9b0-59a14174f066",
+    "createdAt": "2026-06-07T09:33:12.131Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "eda9ffb9-144a-4fef-b52a-c0860de1e931",
+    "createdAt": "2026-06-07T11:12:26.485Z",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "device": "Xponge DIY 超薄根区",
+    "deviceKey": "xponge-diy",
+    "deviceFit": "caution",
+    "caseId": "case-api-smoke",
+    "caseName": "API smoke tomato case",
+    "stage": "开花期",
+    "stageKey": "flowering",
+    "medium": "超薄 Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "API 测试",
+    "severity": "观察",
+    "report": "api smoke test",
+    "test": true
+  },
+  {
+    "id": "870fecea-9d50-4bca-9a4c-0dfbaa45ddca",
+    "createdAt": "2026-01-03T00:00:00.000Z",
+    "eventType": "followup",
+    "followupLogId": "followup-api-smoke-1781404207706",
+    "followupSource": "customer-photo-upload",
+    "crop": "Tomato",
+    "cropKey": "tomato",
+    "device": "Xponge DIY",
+    "deviceKey": "xponge-diy",
+    "caseId": "case-api-smoke-1781404205307",
+    "caseName": "API smoke tomato case",
+    "stage": "Flowering",
+    "stageKey": "flowering",
+    "medium": "Xponge",
+    "mediumKey": "xponge",
+    "topRisk": "Follow-up improved",
+    "severity": "low",
+    "photoQuality": {
+      "confidence": 95,
+      "decision": {
+        "status": "自动复查",
+        "next": "Keep current prescription"
+      },
+      "signals": {
+        "greenRatio": 0.42,
+        "yellowRatio": 0.12,
+        "darkRatio": 0.11
+      }
+    },
+    "logs": [
+      {
+        "day": "day3",
+        "leaf": "better",
+        "flower": "better",
+        "pest": "unknown",
+        "notes": "follow-up photo improved"
+      }
+    ],
+    "report": "api smoke followup event",
+    "test": true
+  }
+]

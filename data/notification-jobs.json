@@ -1,0 +1,4701 @@
+[
+  {
+    "id": "8fbd2092-3db1-470c-a35d-c996fb973c5c",
+    "reportId": "http-smoke",
+    "reminderKey": "24h",
+    "dueAt": "2026-01-01T00:00:00.000Z",
+    "status": "partial",
+    "channels": [
+      "in-app",
+      "email"
+    ],
+    "channelTargets": {},
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T14:10:14.265Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "email",
+        "target": "",
+        "status": "failed",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:10:14.265Z",
+        "completedAt": null,
+        "note": "Missing target, simulated send failed"
+      }
+    ],
+    "message": "24h: simulate send smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "at": "2026-06-07T14:10:14.265Z",
+      "sent": 1,
+      "failed": 1
+    }
+  },
+  {
+    "id": "c39f5cda-ea95-4a90-88af-9f7899d474a2",
+    "reportId": "retry-smoke",
+    "reminderKey": "24h",
+    "dueAt": "2026-01-01T00:00:00.000Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "fixed@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "fixed@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:21:54.169Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "message": "24h: retry failed smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-07T14:21:54.169Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "7912d390-da97-42eb-9fc0-a2bcc4ee5b5f",
+    "reportId": "template-smoke",
+    "reminderKey": "24h",
+    "dueAt": "2026-01-01T00:00:00.000Z",
+    "status": "scheduled",
+    "channels": [
+      "in-app",
+      "email"
+    ],
+    "channelTargets": {},
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "template smoke action",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：template smoke action；拍 plant",
+        "email": "主题：植物｜复查提醒\n诊断报告需要24h：按计划完成复查照片和记录。\n动作：template smoke action\n请拍：plant"
+      }
+    },
+    "message": "植物｜复查提醒：template smoke action；拍 plant"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780833454256-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "7a2bca20-7fac-4048-b209-3931c056cac7",
+    "caseId": "case-api-smoke-1780833454256",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780836978760-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "30e952e9-2171-45a3-b0b7-6fc24e153d96",
+    "caseId": "case-api-smoke-1780836978760",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780838649852-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "a129e250-d64e-4273-9ae7-9b21359f038b",
+    "caseId": "case-api-smoke-1780838649852",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780840400595-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "46097a57-5d70-4139-a05e-8baf586b39df",
+    "caseId": "case-api-smoke-1780840400595",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780840500628-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "1f48e17c-b0d4-465c-9478-35357be59a1b",
+    "caseId": "case-api-smoke-1780840500628",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780841326532-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "b537f7a0-98a2-4fb7-8fd6-c60dd3e87ea5",
+    "caseId": "case-api-smoke-1780841326532",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780842037690-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "69022d2b-b56e-4a74-ab6a-b47084fcd773",
+    "caseId": "case-api-smoke-1780842037690",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780843293651-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "c96c7f1e-54fb-4381-b0db-2824aa3d9a43",
+    "caseId": "case-api-smoke-1780843293651",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780846510710-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "f6b86fcb-5542-4061-8d84-ab66aee9b9b7",
+    "caseId": "case-api-smoke-1780846510710",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780897910946-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "cb3eaabb-54c0-4077-af1a-48fee3331e3c",
+    "caseId": "case-api-smoke-1780897910946",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780898063337-day7-1767916800000",
+    "source": "case-trend",
+    "reportId": "3d0b013a-2c49-40b1-920d-204b87ad5432",
+    "caseId": "case-api-smoke-1780898063337",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-09T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780899750015-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "2b9d1f54-e5a6-4563-8d78-ea4272b927f7",
+    "caseId": "case-api-smoke-1780899750015",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780908831493-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "7eb76618-77f9-45a4-b25a-64f98073af93",
+    "caseId": "case-api-smoke-1780908831493",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780932487052-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "126d9b38-17a8-4a60-8f40-51d134eab073",
+    "caseId": "case-api-smoke-1780932487052",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780934178328-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "0129be64-8145-42e1-a56d-641b6816e3f1",
+    "caseId": "case-api-smoke-1780934178328",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780942068874-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "b835ead2-0183-4783-b1eb-081163b3a0a7",
+    "caseId": "case-api-smoke-1780942068874",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780947649957-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "b90425b2-2fbe-4a99-8e9b-08a91db95064",
+    "caseId": "case-api-smoke-1780947649957",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780952252404-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "a9b94969-4f25-4d9f-a44c-3cc7cf771504",
+    "caseId": "case-api-smoke-1780952252404",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780964636298-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "bb774bd0-17ba-4abd-ad19-c83083062254",
+    "caseId": "case-api-smoke-1780964636298",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1780966978332-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "489fdf47-eb76-4308-b92e-071f3b5ffff3",
+    "caseId": "case-api-smoke-1780966978332",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1781142113573-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "5243d22a-da08-4ade-b8da-840ce268ab3a",
+    "caseId": "case-api-smoke-1781142113573",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1781143232803-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "6f629eca-2dd0-4d23-9d56-e324054c6229",
+    "caseId": "case-api-smoke-1781143232803",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1781144349482-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "12ccb11f-e218-4858-9dd2-60c0ab41d013",
+    "caseId": "case-api-smoke-1781144349482",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1781145529400-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "1bd9b2c2-6fca-446b-8f9a-5ebb744c3719",
+    "caseId": "case-api-smoke-1781145529400",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1781146155181-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "9b658b92-97d4-45ec-925c-e0547541daf6",
+    "caseId": "case-api-smoke-1781146155181",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-1781404205307-day7-1768003200000",
+    "source": "case-trend",
+    "reportId": "870fecea-9d50-4bca-9a4c-0dfbaa45ddca",
+    "caseId": "case-api-smoke-1781404205307",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day7",
+    "dueAt": "2026-01-10T00:00:00.000Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "low",
+    "trendState": "improving",
+    "trendLabel": "正在改善",
+    "task": "保持当前处方，到第 7 天确认改善是否稳定。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "趋势改善时延长复查间隔，减少客户被频繁打扰。",
+    "template": {
+      "id": "tomato-improving-day7",
+      "title": "矮生番茄｜正在改善",
+      "body": "API smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。",
+      "action": "保持当前处方，到第 7 天确认改善是否稳定。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n动作：保持当前处方，到第 7 天确认改善是否稳定。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜正在改善\nAPI smoke tomato case需要第 7 天：保持当前处方，不要频繁改参数。\n下一步：保持当前处方，到第 7 天确认改善是否稳定。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜正在改善：保持当前处方，到第 7 天确认改善是否稳定。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "4904bc14-762a-4b97-b357-516444a1b9ef",
+    "reportId": "90dc1da1-9c42-4628-b658-f93a71d6f8e8",
+    "reminderKey": "24h",
+    "dueAt": "2026-05-31T10:58:14.292Z",
+    "status": "scheduled",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back"
+  },
+  {
+    "id": "75d033d7-5d11-41d7-a3b8-3ae49682cd34",
+    "reportId": "c5897ff2-8e48-472e-a2c8-08aa5cbe35a7",
+    "reminderKey": "24h",
+    "dueAt": "2026-05-31T11:01:41.377Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "10c784ed-61c0-497c-987b-b90d0e66386f",
+    "reportId": "1642d200-e6ed-4ddf-af8b-5f28fdc9da32",
+    "reminderKey": "24h",
+    "dueAt": "2026-05-31T11:15:18.843Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "81f15c2b-ff2c-4218-8bad-c265e9680eff",
+    "reportId": "1592c7e3-73a6-4cc9-9b3d-8dab2a672f93",
+    "reminderKey": "24h",
+    "dueAt": "2026-05-31T11:15:49.660Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "case-trend-case-crop-device-medium-48h-1780372523466",
+    "source": "case-trend",
+    "reportId": "2d37e8db-1a2b-4e52-9ed2-41c9b3e8480d",
+    "caseId": "case-crop-device-medium",
+    "caseName": "???? / ?? Xponge",
+    "crop": "????",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-02T03:55:23.466Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "normal",
+    "trendState": "baseline",
+    "trendLabel": "建立基线",
+    "task": "按处方执行后拍同角度照片，建立第一次趋势对比。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "只有一次诊断时，48 小时复查能最快验证方向。",
+    "template": {
+      "id": "generic-baseline-48h",
+      "title": "植物｜建立基线",
+      "body": "???? / ?? Xponge需要48 小时：先完成第一次处方动作，再建立趋势对比。",
+      "action": "按处方执行后拍同角度照片，建立第一次趋势对比。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜建立基线：按处方执行后拍同角度照片，建立第一次趋势对比。；拍 整株、叶片特写、根区",
+        "email": "主题：植物｜建立基线\n???? / ?? Xponge需要48 小时：先完成第一次处方动作，再建立趋势对比。\n动作：按处方执行后拍同角度照片，建立第一次趋势对比。\n请拍：整株、叶片特写、根区",
+        "wechat": "植物｜建立基线\n???? / ?? Xponge需要48 小时：先完成第一次处方动作，再建立趋势对比。\n下一步：按处方执行后拍同角度照片，建立第一次趋势对比。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "植物｜建立基线：按处方执行后拍同角度照片，建立第一次趋势对比。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "21deb615-f564-4d4a-8624-810d60f7b22a",
+    "reportId": "81559ba5-6f70-4a0b-8767-dd132b1d473b",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-03T13:00:06.838Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "e10f5bc5-001d-4eee-be62-be5f27b7bca2",
+    "reportId": "392fd33c-ee6e-4618-93d8-17c30f9bd64f",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-04T14:58:09.363Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "9112b025-70e2-4382-8a6a-b249cd637070",
+    "reportId": "09ac7593-af76-4989-a1d5-06b8eef2d513",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-04T15:13:15.431Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "ef5104e0-2f28-4136-aa07-61d122c6e9df",
+    "reportId": "1c0a43b8-3d8f-4d2b-bf17-666290e2ab4f",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-04T15:23:49.342Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "29e51ddf-a194-471c-98ec-026dbe72c54e",
+    "reportId": "e7bea3fb-e750-4440-8093-c80cb7a3ad91",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-04T15:32:37.983Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "098fea3c-a672-42e9-9867-80177398af5c",
+    "reportId": "178d5218-2084-4d03-9b1b-acc82d3eb33f",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T05:36:55.664Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "8485488b-8dd5-425f-82df-2d1a4020ef33",
+    "reportId": "330b640e-2271-4992-83d5-c912e1d46e21",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T05:43:34.234Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "9ace52e5-e46b-467d-a73f-210a35c09c9f",
+    "reportId": "6c077ae7-cc57-4967-9273-a39118c52e3e",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T05:46:37.845Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "9be4ed96-542c-4f6a-93aa-681d1f5e6a38",
+    "reportId": "068cb485-9cfe-4792-a2e0-0ab9ff959ef8",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T07:39:07.024Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "5c73ee0b-5062-4bf2-ba65-71d2d2fa1cb7",
+    "reportId": "1ea7cbe0-4ff9-4fa3-8d65-e1f1cae9ef72",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T15:24:51.826Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "88f54ae8-1bb3-4313-ab5c-99196d8d04e5",
+    "reportId": "44764c3c-6186-4501-99dc-31aaeb86a174",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T15:35:35.867Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "e38987ab-9db3-412f-ae34-cc0e651d978d",
+    "reportId": "dae7bf36-6d81-4893-8d20-de184ab902ae",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T15:55:48.161Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "7ac3e31b-021a-4eed-81ab-d00d9fb6b856",
+    "reportId": "c7c13482-7d93-49e4-9237-e1a983c551d9",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-05T16:06:36.065Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "344ea4e8-4410-4edb-8d68-e7199308c620",
+    "reportId": "5d4d12ec-0d6c-4806-87a7-dda7cce420f2",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-06T04:17:30.780Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "ec4ed4fc-6ac5-4e44-91b2-f1fc3f364737",
+    "reportId": "9329c17a-4703-4550-9b2a-a1463ef293ed",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-06T09:06:30.734Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "8b2bee89-9885-4d05-bf6e-8d1d24822b25",
+    "reportId": "7db41720-b61f-4637-99ca-690ac2c0ee88",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-06T14:20:23.264Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "d9b8bda1-0c01-47ec-b4fa-53d0461a80f8",
+    "reportId": "9e14ef9c-5821-49fc-a742-b84216b8c905",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-06T14:46:40.416Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "f04fda35-fb09-47fa-b687-f9333e043884",
+    "reportId": "4ba9b94d-53ea-4daa-8f4c-a5289f2abc89",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T09:11:50.345Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "1155aef6-b615-4a09-bc29-aff9b33e3e7a",
+    "reportId": "9eeb26ad-55a4-48a5-a9b0-59a14174f066",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T09:33:12.752Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "6bcdc4c8-4051-4b7a-a824-9312ebc6431e",
+    "reportId": "eda9ffb9-144a-4fef-b52a-c0860de1e931",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T11:12:26.860Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "fb96c182-4c81-46bc-8d00-c02ae54c11ed",
+    "reportId": "ef7eb5dc-0684-443a-b51d-0b29e65602e8",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T11:57:34.879Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "f6c35e7c-f314-4ea4-abe5-2a2e83598fa7",
+    "reportId": "fd61b07a-30ef-4ba3-898e-b339d694fdbf",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T12:56:19.507Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "ac605747-e4d8-413c-8c53-acf1daf2a9ba",
+    "reportId": "1459307e-4e29-4763-9f8d-cba4c4342701",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T13:24:10.833Z",
+    "status": "sent",
+    "channels": [
+      "in-app"
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "deff045d-4271-417c-8523-05a57e501ced",
+    "reportId": "00719c56-e809-4c17-b975-4840f5c83db5",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T13:53:21.633Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T13:53:21.910Z",
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T13:53:21.910Z",
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "1e067ca7-e181-465c-bdef-77517a2f075a",
+    "reportId": "5dd9f982-f228-4838-a92b-6f80054e05ee",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T13:55:01.763Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T13:55:02.029Z",
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T13:55:02.029Z",
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "completedAt": null,
+    "providerResponse": {
+      "ok": true
+    }
+  },
+  {
+    "id": "61a800a0-af8f-4925-ba8d-6132e5bd86e8",
+    "reportId": "43e405f0-0bdc-4c4b-8c82-612ea52479d4",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T14:08:47.830Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T14:08:48.362Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:08:48.362Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "completedAt": null
+  },
+  {
+    "id": "dbc0c998-1966-45c8-8b73-1c28f9a1a5db",
+    "reportId": "43e405f0-0bdc-4c4b-8c82-612ea52479d4",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-07T14:08:48.621Z",
+    "status": "failed",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {},
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "",
+        "status": "failed",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:08:48.893Z",
+        "completedAt": null,
+        "note": "Missing target, simulated send failed"
+      }
+    ],
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "at": "2026-06-07T14:08:48.893Z",
+      "sent": 0,
+      "failed": 1
+    }
+  },
+  {
+    "id": "27173d70-840b-459f-a2b6-9cb36ab6158b",
+    "reportId": "b85a5359-53bd-4ca5-9500-b02702857a34",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T14:20:38.841Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T14:20:39.441Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:20:39.441Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "message": "24h: check pests; photo: leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "a1cdabd6-6d4e-44e8-ac19-f32448c5fe7e",
+    "reportId": "b85a5359-53bd-4ca5-9500-b02702857a34",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-07T14:20:39.728Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:20:40.309Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-07T14:20:40.309Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "2b924382-2ef5-44fd-96c6-828dc9a26548",
+    "reportId": "45e3ca78-700f-4b04-9e51-f51d1504ecb9",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T14:41:34.749Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T14:41:35.293Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:41:35.293Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "64396eec-d774-46bc-8761-45915eb632fd",
+    "reportId": "45e3ca78-700f-4b04-9e51-f51d1504ecb9",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-07T14:41:35.588Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T14:41:36.242Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-07T14:41:36.243Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "c364d0b8-b86b-41fa-a35c-685aed350726",
+    "reportId": "d73c037e-86f8-4e2e-b54a-0a91ce53c2f9",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-07T15:35:12.111Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-07T19:15:03.777Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T19:15:03.777Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "73b3d85a-5adc-426f-9fa8-c58c4d4dcdd8",
+    "reportId": "d73c037e-86f8-4e2e-b54a-0a91ce53c2f9",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-07T19:15:04.310Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-07T22:40:05.708Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-07T22:40:05.709Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "0aae4800-46bf-4646-8e64-aa95901ff0ab",
+    "reportId": "2f59bea6-5cba-4a35-8527-34938801b890",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T05:51:52.745Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T05:51:53.757Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T05:51:53.757Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "a956d5d1-e6d7-4a26-9144-6480eb2c2b42",
+    "reportId": "2f59bea6-5cba-4a35-8527-34938801b890",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T05:51:54.429Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T05:51:56.909Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T05:51:56.909Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "4b92e6d3-5d96-43da-acf8-6441b19b296b",
+    "reportId": "df859fe8-bcee-4271-a55e-ee21faadbd09",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T05:54:25.160Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T05:54:26.289Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T05:54:26.289Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "c31102b1-efc2-4323-a443-e8580b5eb1fd",
+    "reportId": "df859fe8-bcee-4271-a55e-ee21faadbd09",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T05:54:27.050Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T05:54:29.483Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T05:54:29.483Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "4fcbf583-6d7e-43d7-84a6-0a3dd32019d8",
+    "reportId": "ad43ddf0-27e3-4bca-9a13-6eb9d5f0f9a5",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T06:22:32.507Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T06:22:34.540Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T06:22:34.540Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "d3eb3e9f-b2b6-4e0e-b4d4-79e7ed33d5a3",
+    "reportId": "ad43ddf0-27e3-4bca-9a13-6eb9d5f0f9a5",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T06:22:35.241Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T06:22:36.759Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T06:22:36.759Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "1b5b9224-fcc9-4908-b848-82f18c32dd48",
+    "reportId": "1937f826-c2ca-4498-a40e-9c9dd8e624cd",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T08:53:54.007Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T08:53:55.334Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T08:53:55.334Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "5477cd5f-a6b2-43fb-bee3-325f4621b003",
+    "reportId": "1937f826-c2ca-4498-a40e-9c9dd8e624cd",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T08:53:56.117Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T08:53:58.778Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T08:53:58.778Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "47206d62-5fe0-406f-9def-debc0a2ef453",
+    "reportId": "99743611-2c97-4026-b277-26e2d0fae11a",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T15:28:09.886Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T15:28:11.507Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T15:28:11.507Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "71d52fe0-9f9c-4842-8107-762c5f49ed89",
+    "reportId": "99743611-2c97-4026-b277-26e2d0fae11a",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T15:28:12.333Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T15:28:14.449Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T15:28:14.449Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "case-trend-case-tomato-device-xponge-day3-1780932935490",
+    "source": "case-trend",
+    "reportId": "44764c3c-6186-4501-99dc-31aaeb86a174",
+    "caseId": "case-tomato-device-xponge",
+    "caseName": "矮生番茄 / 超薄 Xponge",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day3",
+    "dueAt": "2026-06-08T15:35:35.490Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "normal",
+    "trendState": "stable",
+    "trendLabel": "变化不明显",
+    "task": "继续同角度复拍，判断是否进入改善或恶化。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "变化不明显时，第 3 天复查比固定 7 天更能及时发现偏差。",
+    "template": {
+      "id": "tomato-stable-day3",
+      "title": "矮生番茄｜变化不明显",
+      "body": "矮生番茄 / 超薄 Xponge需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。",
+      "action": "继续同角度复拍，判断是否进入改善或恶化。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜变化不明显：继续同角度复拍，判断是否进入改善或恶化。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜变化不明显\n矮生番茄 / 超薄 Xponge需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。\n动作：继续同角度复拍，判断是否进入改善或恶化。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜变化不明显\n矮生番茄 / 超薄 Xponge需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。\n下一步：继续同角度复拍，判断是否进入改善或恶化。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜变化不明显：继续同角度复拍，判断是否进入改善或恶化。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "582bebe4-eecf-4f12-9445-37eb6ce964ca",
+    "reportId": "c8f93c03-22e4-4f2d-9e16-c5a3f9dfb09f",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T15:56:22.186Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T15:56:24.202Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T15:56:24.202Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "113b1d47-0684-485a-8be4-c1ff66143504",
+    "reportId": "c8f93c03-22e4-4f2d-9e16-c5a3f9dfb09f",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T15:56:25.419Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T15:56:27.556Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T15:56:27.556Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "b64837c2-05ff-4bef-8318-6e63f2319dab",
+    "reportId": "eee613fb-f2b1-4c94-9f32-67377f681045",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T18:07:51.805Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T18:07:53.334Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T18:07:53.334Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "21822f80-21f3-486e-841e-2fc05ca5091e",
+    "reportId": "eee613fb-f2b1-4c94-9f32-67377f681045",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T18:07:54.117Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T18:07:55.603Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T18:07:55.603Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "12ab2451-74bf-42cd-964e-318d49f52644",
+    "reportId": "d79c3d78-10c2-4f42-86f9-a7dd0581c7e6",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T19:40:52.912Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T19:40:54.702Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T19:40:54.702Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "f9185cbc-2349-44db-80f1-18a94e7daefb",
+    "reportId": "d79c3d78-10c2-4f42-86f9-a7dd0581c7e6",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T19:40:55.622Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T19:40:57.701Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T19:40:57.701Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "092acfea-40e9-42a4-8cb0-238eb19bc97f",
+    "reportId": "8985dde6-bc43-431e-87b5-b18450373104",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-08T20:57:35.540Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-08T20:57:37.587Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T20:57:37.587Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "298ad7e5-1442-478f-926c-4c8c7dff54a0",
+    "reportId": "8985dde6-bc43-431e-87b5-b18450373104",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-08T20:57:38.485Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-08T20:57:40.338Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-08T20:57:40.338Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "352ef30e-722a-4980-991a-cd6f9a65995f",
+    "reportId": "4c6361bd-336a-4158-8624-966f12d14368",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-09T00:23:59.265Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-09T00:24:01.045Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-09T00:24:01.045Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "4fc35a77-fcd3-4d7d-b532-2fa0c0100fac",
+    "reportId": "4c6361bd-336a-4158-8624-966f12d14368",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-09T00:24:01.718Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-09T00:24:02.946Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-09T00:24:02.946Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "477464cd-f588-4429-9bb2-6449ffb63d66",
+    "reportId": "0e1986ea-04cd-4b73-afeb-47708d81b7bb",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-09T01:03:01.784Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-09T01:03:04.175Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-09T01:03:04.175Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "684c0315-2037-4ff7-bea1-ecfbb70d81e7",
+    "reportId": "0e1986ea-04cd-4b73-afeb-47708d81b7bb",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-09T01:03:04.914Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-09T01:03:06.372Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-09T01:03:06.372Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "case-trend-case-tomato-xponge-diy-xponge-day3-1781082709687",
+    "source": "case-trend",
+    "reportId": "4ba9b94d-53ea-4daa-8f4c-a5289f2abc89",
+    "caseId": "case-tomato-xponge-diy-xponge",
+    "caseName": "矮生番茄 / Xponge DIY 超薄根区",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day3",
+    "dueAt": "2026-06-10T09:11:49.687Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "normal",
+    "trendState": "stable",
+    "trendLabel": "变化不明显",
+    "task": "继续同角度复拍，判断是否进入改善或恶化。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "变化不明显时，第 3 天复查比固定 7 天更能及时发现偏差。",
+    "template": {
+      "id": "tomato-stable-day3",
+      "title": "矮生番茄｜变化不明显",
+      "body": "矮生番茄 / Xponge DIY 超薄根区需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。",
+      "action": "继续同角度复拍，判断是否进入改善或恶化。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜变化不明显：继续同角度复拍，判断是否进入改善或恶化。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜变化不明显\n矮生番茄 / Xponge DIY 超薄根区需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。\n动作：继续同角度复拍，判断是否进入改善或恶化。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜变化不明显\n矮生番茄 / Xponge DIY 超薄根区需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。\n下一步：继续同角度复拍，判断是否进入改善或恶化。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜变化不明显：继续同角度复拍，判断是否进入改善或恶化。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "case-trend-case-api-smoke-day3-1781089946485",
+    "source": "case-trend",
+    "reportId": "eda9ffb9-144a-4fef-b52a-c0860de1e931",
+    "caseId": "case-api-smoke",
+    "caseName": "API smoke tomato case",
+    "crop": "矮生番茄",
+    "cropKey": "tomato",
+    "reminderKey": "day3",
+    "dueAt": "2026-06-10T11:12:26.485Z",
+    "status": "scheduled",
+    "completedAt": null,
+    "channels": [
+      "in-app",
+      "email",
+      "wechat"
+    ],
+    "channelTargets": {
+      "email": "test@example.com",
+      "wechat": "openid-smoke",
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "queued",
+        "provider": "local-in-app",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "站内通知占位"
+      },
+      {
+        "channel": "email",
+        "target": "test@example.com",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      },
+      {
+        "channel": "wechat",
+        "target": "openid-smoke",
+        "status": "queued",
+        "provider": "placeholder",
+        "lastAttemptAt": null,
+        "completedAt": null,
+        "note": "待接入真实发送通道"
+      }
+    ],
+    "priority": "normal",
+    "trendState": "stable",
+    "trendLabel": "变化不明显",
+    "task": "继续同角度复拍，判断是否进入改善或恶化。",
+    "photo": "整株、叶片特写、根区",
+    "reason": "变化不明显时，第 3 天复查比固定 7 天更能及时发现偏差。",
+    "template": {
+      "id": "tomato-stable-day3",
+      "title": "矮生番茄｜变化不明显",
+      "body": "API smoke tomato case需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。",
+      "action": "继续同角度复拍，判断是否进入改善或恶化。",
+      "photo": "整株、叶片特写、根区",
+      "focus": "授粉、坐果、光照和水分波动",
+      "channelMessages": {
+        "in-app": "矮生番茄｜变化不明显：继续同角度复拍，判断是否进入改善或恶化。；拍 整株、叶片特写、根区",
+        "email": "主题：矮生番茄｜变化不明显\nAPI smoke tomato case需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。\n动作：继续同角度复拍，判断是否进入改善或恶化。\n请拍：整株、叶片特写、根区",
+        "wechat": "矮生番茄｜变化不明显\nAPI smoke tomato case需要第 3 天：继续同角度复拍，判断是否进入改善或恶化。\n下一步：继续同角度复拍，判断是否进入改善或恶化。\n照片：整株、叶片特写、根区"
+      }
+    },
+    "message": "矮生番茄｜变化不明显：继续同角度复拍，判断是否进入改善或恶化。；拍 整株、叶片特写、根区"
+  },
+  {
+    "id": "ca81925e-bb44-4ffa-96c0-f41403ce0dd5",
+    "reportId": "21de4b41-ec1a-4689-a96f-a87f500e7e8a",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-11T01:41:57.395Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-11T01:41:59.778Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T01:41:59.778Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "8da1387c-de7c-48a5-a6f2-9c1b1a7635da",
+    "reportId": "21de4b41-ec1a-4689-a96f-a87f500e7e8a",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-11T01:42:01.069Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T01:42:03.234Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-11T01:42:03.234Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "a6aac913-2d9b-45f0-bf8c-b4e909dee2f5",
+    "reportId": "c668f9a4-43d4-45a7-bb4a-5a3870ff1a5c",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-11T02:00:36.441Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-11T02:00:38.580Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:00:38.580Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "1109ac2a-4897-4faa-8a60-3cf1b1faa726",
+    "reportId": "c668f9a4-43d4-45a7-bb4a-5a3870ff1a5c",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-11T02:00:39.903Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:00:42.072Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-11T02:00:42.072Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "5e82639f-7d87-4438-a86a-c277896c5f84",
+    "reportId": "4e7be65b-e4b4-4b13-add1-938e84cf1fd9",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-11T02:19:13.548Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-11T02:19:15.924Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:19:15.924Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "27920227-3977-4943-be14-04f14de7735b",
+    "reportId": "4e7be65b-e4b4-4b13-add1-938e84cf1fd9",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-11T02:19:17.395Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:19:19.894Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-11T02:19:19.894Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "1d20e633-4555-4020-b546-bbec6dca8109",
+    "reportId": "7b268835-84c9-4283-8ec1-74721cfb5249",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-11T02:38:54.953Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-11T02:38:57.285Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:38:57.285Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "ff90a5a2-4d49-40a3-8d4e-5abe0b6cd7c7",
+    "reportId": "7b268835-84c9-4283-8ec1-74721cfb5249",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-11T02:38:58.259Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:39:00.666Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-11T02:39:00.666Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "4f05c6e4-f42b-4b1a-81f6-80f580e4f70b",
+    "reportId": "c4c9c683-aeda-4cf6-88f1-aa0b6f17d1d8",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-11T02:49:20.126Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-11T02:49:22.714Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:49:22.714Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "cd47e49e-fad0-454c-9f42-07684ea71b19",
+    "reportId": "c4c9c683-aeda-4cf6-88f1-aa0b6f17d1d8",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-11T02:49:23.975Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-11T02:49:26.884Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-11T02:49:26.884Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  },
+  {
+    "id": "beac726a-10e9-400b-9b28-c2691c2806a3",
+    "reportId": "b549b10d-b2ac-43f0-b62c-10f9a47613ae",
+    "reminderKey": "24h",
+    "dueAt": "2026-06-14T02:30:10.201Z",
+    "status": "sent",
+    "channels": [
+      "in-app",
+      "sms"
+    ],
+    "channelTargets": {
+      "sms": "+15550000000"
+    },
+    "channelStatuses": [
+      {
+        "channel": "in-app",
+        "target": "",
+        "status": "sent",
+        "provider": "local-in-app",
+        "lastAttemptAt": "2026-06-14T02:30:13.532Z",
+        "completedAt": null,
+        "note": "local-in-app simulated send ok"
+      },
+      {
+        "channel": "sms",
+        "target": "+15550000000",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-14T02:30:13.532Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-24h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要24h：按计划完成复查照片和记录。",
+      "action": "check pests",
+      "photo": "leaf back",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "in-app": "植物｜复查提醒：check pests；拍 leaf back",
+        "sms": "植物复查：check pests。拍leaf back。"
+      }
+    },
+    "message": "植物｜复查提醒：check pests；拍 leaf back",
+    "providerResponse": {
+      "ok": true
+    },
+    "failureSuggestions": [],
+    "completedAt": null
+  },
+  {
+    "id": "702a4145-fd08-4764-a169-e497b34fbddb",
+    "reportId": "b549b10d-b2ac-43f0-b62c-10f9a47613ae",
+    "reminderKey": "48h",
+    "dueAt": "2026-06-14T02:30:14.755Z",
+    "status": "sent",
+    "channels": [
+      "email"
+    ],
+    "channelTargets": {
+      "email": "retry@example.com"
+    },
+    "channelStatuses": [
+      {
+        "channel": "email",
+        "target": "retry@example.com",
+        "status": "sent",
+        "provider": "placeholder",
+        "lastAttemptAt": "2026-06-14T02:30:17.477Z",
+        "completedAt": null,
+        "note": "placeholder simulated send ok"
+      }
+    ],
+    "template": {
+      "id": "generic-scheduled-48h",
+      "title": "植物｜复查提醒",
+      "body": "诊断报告需要48h：按计划完成复查照片和记录。",
+      "action": "missing target smoke",
+      "photo": "plant",
+      "focus": "关键症状和复查照片",
+      "channelMessages": {
+        "email": "主题：植物｜复查提醒\n诊断报告需要48h：按计划完成复查照片和记录。\n动作：missing target smoke\n请拍：plant"
+      }
+    },
+    "message": "48h: missing target smoke; photo: plant",
+    "providerResponse": {
+      "simulated": true,
+      "retryFailedOnly": true,
+      "at": "2026-06-14T02:30:17.477Z",
+      "sent": 1,
+      "failed": 0
+    },
+    "failureSuggestions": []
+  }
+]

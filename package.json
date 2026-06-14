@@ -1,0 +1,12 @@
+{
+  "name": "grow-clinic-prototype",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "start:8004": "node server.mjs --port 8004",
+    "check": "node --check app.js && node --check server.mjs && node smoke-test.mjs && node api-test.mjs",
+    "health": "node health-check.mjs"
+  }
+}

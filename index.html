@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>hk minijungle</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <section class="diagnosis-panel" aria-labelledby="app-title">
+      <div class="panel-header">
+        <div>
+          <p class="eyebrow">hk minijungle</p>
+          <h1 id="app-title">室内种植医生</h1>
+        </div>
+        <div class="header-tools">
+          <div class="mode-switch" role="group" aria-label="视图模式">
+            <button type="button" id="customer-mode-btn" class="mode-button active">客户</button>
+            <button type="button" id="expert-mode-btn" class="mode-button">内部</button>
+          </div>
+          <div class="status-pill" id="readiness">等待输入</div>
+        </div>
+      </div>
+
+      <form id="diagnosis-form" class="form-grid">
+        <section class="smart-panel">
+          <div>
+            <p class="eyebrow">Start</p>
+            <h2>先拍一张植物照片</h2>
+            <p>不需要先填表。照片不清晰时，我会提示补拍；信息够用后直接给你下一步。</p>
+          </div>
+          <label>
+            可选：主要困扰
+            <select id="smartConcern">
+              <option value="unknown">我不确定，先看照片</option>
+              <option value="yellow">叶片发黄</option>
+              <option value="leggy">徒长/不开花</option>
+              <option value="fruit">开花不结果/落花</option>
+              <option value="pest">虫害/小飞虫</option>
+              <option value="root">根区发绿/发白</option>
+              <option value="dry">萎蔫/边缘干</option>
+            </select>
+          </label>
+          <button type="button" id="quick-photo-btn" class="primary">拍照开始</button>
+          <button type="button" id="smart-diagnose-btn" class="primary">智能识别并诊断</button>
+        </section>
+
+        <section class="stepper" aria-label="诊断步骤">
+          <div class="step active" data-step="photo"><span>1</span><strong>拍照</strong></div>
+          <div class="step" data-step="quality"><span>2</span><strong>质检</strong></div>
+          <div class="step" data-step="diagnosis"><span>3</span><strong>诊断</strong></div>
+          <div class="step" data-step="followup"><span>4</span><strong>复查</strong></div>
+        </section>
+
+        <label class="basic-field device-field">
+          种植设备/场景
+          <select name="growDevice" id="growDevice">
+            <option value="xponge-diy">Xponge DIY 超薄根区</option>
+            <option value="letpot">LetPot / 类 LetPot 智能水培机</option>
+            <option value="idoo">iDOO / Ahopegarden 平价水培机</option>
+            <option value="aerogarden">AeroGarden 桌面水培机</option>
+            <option value="clickgrow">Click & Grow 种植舱</option>
+            <option value="balcony">阳台/窗边盆栽</option>
+            <option value="office">办公室小型种植</option>
+            <option value="generic">不确定/其他</option>
+          </select>
+          <span class="field-hint" id="device-hint">根据设备自动带出灯光、水箱、介质和作物适配风险。</span>
+        </label>
+
+        <section class="device-profile-card" id="device-profile-card">
+          <span>设备建议</span>
+          <strong id="device-profile-title">Xponge DIY 超薄根区</strong>
+          <p id="device-profile-summary">适合验证薄层根系、补水缓冲和遮光防藻；结果类作物需要额外关注储液量和水分波动。</p>
+        </section>
+
+        <section class="device-crop-fit-panel">
+          <div class="block-title-row">
+            <h3 id="device-recommendation-title">优先作物</h3>
+          </div>
+          <p id="device-recommendation-summary">先从适配度最高的作物开始，能减少调参和复查成本。</p>
+          <div id="device-fit-list" class="device-fit-list"></div>
+        </section>
+
+        <section class="device-plan-card">
+          <div class="block-title-row">
+            <h3 id="device-plan-title">首批种植方案</h3>
+            <button type="button" id="apply-device-plan-btn" class="mini-button">应用方案</button>
+          </div>
+          <p id="device-plan-summary">系统会根据设备、作物和阶段自动给出株数、第一张照片、第一步动作和复查时间。</p>
+          <div id="device-plan-grid" class="device-plan-grid"></div>
+          <ul id="device-plan-list" class="device-plan-list"></ul>
+        </section>
+
+        <section class="auto-intake-card" id="auto-intake-card">
+          <div class="block-title-row">
+            <h3>自动补全</h3>
+            <button type="button" id="edit-auto-intake-btn" class="mini-button">内部调整</button>
+          </div>
+          <p id="auto-intake-summary"></p>
+          <div id="auto-intake-list" class="auto-intake-list"></div>
+        </section>
+
+        <section class="guided-photo-card" id="guided-photo-card">
+          <div class="block-title-row">
+            <h3 id="guided-photo-title">现在请拍：整株照</h3>
+            <button type="button" id="guided-photo-upload-btn" class="mini-button">开始拍照</button>
+          </div>
+          <p id="guided-photo-reason">系统会根据设备、作物和主要困扰自动决定第一张照片。</p>
+          <div id="guided-photo-steps" class="guided-photo-steps"></div>
+          <div id="guided-photo-status" class="guided-photo-status">还没有照片，先拍这一张就可以开始诊断。</div>
+        </section>
+
+        <label class="wide photo-box">
+          植株照片
+          <input type="file" id="plantPhoto" name="plantPhoto" accept="image/*" class="native-photo-input">
+          <span id="photoHint">上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。</span>
+          <strong id="auto-photo-type-badge" class="auto-photo-type-badge">等待自动识别</strong>
+          <img id="photoPreview" alt="植株照片预览">
+        </label>
+
+        <section class="photo-quality-panel">
+          <div class="block-title-row">
+            <h3>拍照质检</h3>
+            <button type="button" id="reset-photo-check-btn" class="mini-button">重置</button>
+          </div>
+          <div id="next-photo-card" class="next-photo-card">
+            <span>下一张建议</span>
+            <strong id="next-photo-title">整株照</strong>
+            <p id="next-photo-tip">把整株放进画面，包含顶部和根区。</p>
+            <button type="button" id="use-next-photo-btn" class="mini-button">按此类型上传</button>
+          </div>
+          <div id="photo-check-list" class="photo-check-list"></div>
+          <ul id="photo-quality-list" class="photo-quality-list"></ul>
+        </section>
+
+        <label class="basic-field crop-field">
+          作物
+          <select name="crop" id="crop">
+            <option value="tomato">矮生番茄</option>
+            <option value="basil">罗勒</option>
+            <option value="rosemary">迷迭香</option>
+            <option value="strawberry">草莓</option>
+            <option value="pepper">辣椒</option>
+          </select>
+          <span class="field-hint" id="crop-hint">建议限定微型/矮生番茄，不支持普通无限生长番茄。</span>
+        </label>
+
+        <label class="basic-field auto-intake-field stage-field">
+          生长阶段
+          <select name="stage" id="stage">
+            <option value="seedling">幼苗期</option>
+            <option value="vegetative">营养生长期</option>
+            <option value="flowering">开花期</option>
+            <option value="fruiting">结果期</option>
+          </select>
+        </label>
+
+        <label class="basic-field auto-intake-field medium-field">
+          种植介质
+          <select name="medium" id="medium">
+            <option value="xponge">超薄 Xponge</option>
+            <option value="coco">椰糠</option>
+            <option value="rockwool">岩棉</option>
+            <option value="soil">土培</option>
+            <option value="water">水培/DWC</option>
+          </select>
+        </label>
+
+        <label class="optional-intake-field">
+          光照判断
+          <select name="light" id="light">
+            <option value="low">偏弱：窗边或小灯</option>
+            <option value="medium">中等：补光灯 10-14 小时</option>
+            <option value="high">较强：高功率灯或南向阳台</option>
+          </select>
+        </label>
+
+        <label class="optional-intake-field">
+          根区状态
+          <select name="moisture" id="moisture">
+            <option value="wet">经常偏湿</option>
+            <option value="stable">基本稳定</option>
+            <option value="dry">经常偏干</option>
+            <option value="swing">忽干忽湿</option>
+          </select>
+        </label>
+
+        <label class="optional-intake-field">
+          温湿度感受
+          <select name="climate" id="climate">
+            <option value="normal">基本舒适</option>
+            <option value="dry">空调房偏干</option>
+            <option value="humid">闷湿不通风</option>
+            <option value="hot">阳台/灯下偏热</option>
+            <option value="cold">夜间偏冷</option>
+          </select>
+        </label>
+
+        <details class="advanced-panel">
+          <summary>高级信息，可选填写</summary>
+          <div class="advanced-grid">
+        <fieldset class="sensor-field">
+          <legend>传感器读数</legend>
+          <label>
+            根区湿度 %
+            <input type="number" name="sensorMoisture" id="sensorMoisture" min="0" max="100" placeholder="例如 62">
+          </label>
+          <label>
+            光照小时/天
+            <input type="number" name="lightHours" id="lightHours" min="0" max="24" step="0.5" placeholder="例如 14">
+          </label>
+          <label>
+            温度 °C
+            <input type="number" name="temperature" id="temperature" min="0" max="45" step="0.5" placeholder="例如 27">
+          </label>
+          <label>
+            湿度 %
+            <input type="number" name="humidity" id="humidity" min="0" max="100" placeholder="例如 58">
+          </label>
+          <label>
+            EC mS/cm
+            <input type="number" name="ec" id="ec" min="0" max="8" step="0.1" placeholder="可选">
+          </label>
+          <label>
+            pH
+            <input type="number" name="ph" id="ph" min="3" max="9" step="0.1" placeholder="可选">
+          </label>
+        </fieldset>
+
+        <fieldset class="sensor-field">
+          <legend>Xponge 参数</legend>
+          <label>
+            厚度 cm
+            <input type="number" name="xpongeThickness" id="xpongeThickness" min="0.5" max="5" step="0.1" value="1.5">
+          </label>
+          <label>
+            根毯长度 cm
+            <input type="number" name="xpongeLength" id="xpongeLength" min="5" max="120" value="30">
+          </label>
+          <label>
+            根毯宽度 cm
+            <input type="number" name="xpongeWidth" id="xpongeWidth" min="5" max="120" value="40">
+          </label>
+          <label>
+            储液量 L
+            <input type="number" name="reservoir" id="reservoir" min="0" max="30" step="0.5" placeholder="例如 3">
+          </label>
+        </fieldset>
+
+        <fieldset class="visual-field">
+          <legend>照片类型</legend>
+          <label><input type="radio" name="photoType" value="none" checked> 未上传/未指定</label>
+          <label><input type="radio" name="photoType" value="leaf"> 叶片特写</label>
+          <label><input type="radio" name="photoType" value="plant"> 整株照片</label>
+          <label><input type="radio" name="photoType" value="flower"> 花序/果实</label>
+          <label><input type="radio" name="photoType" value="root"> 根区/Xponge 表面</label>
+          <label><input type="radio" name="photoType" value="pest"> 虫害线索</label>
+        </fieldset>
+
+        <fieldset class="visual-field">
+          <legend>视觉线索</legend>
+          <label><input type="checkbox" name="visuals" value="pale-new-growth"> 新叶发淡</label>
+          <label><input type="checkbox" name="visuals" value="lower-yellowing"> 老叶先黄</label>
+          <label><input type="checkbox" name="visuals" value="long-internodes"> 节间很长</label>
+          <label><input type="checkbox" name="visuals" value="flower-drop"> 落花/小果掉落</label>
+          <label><input type="checkbox" name="visuals" value="edge-dry"> 边缘干缩</label>
+          <label><input type="checkbox" name="visuals" value="green-surface"> 表面发绿</label>
+          <label><input type="checkbox" name="visuals" value="white-fuzz"> 白毛/絮状物</label>
+          <label><input type="checkbox" name="visuals" value="webbing"> 细网/蛛丝</label>
+          <label><input type="checkbox" name="visuals" value="tiny-flies"> 小飞虫</label>
+        </fieldset>
+
+        <fieldset class="symptom-field">
+          <legend>主要症状</legend>
+          <label><input type="checkbox" name="symptoms" value="yellow-leaves"> 叶片发黄</label>
+          <label><input type="checkbox" name="symptoms" value="leggy"> 徒长、茎细</label>
+          <label><input type="checkbox" name="symptoms" value="wilting"> 萎蔫</label>
+          <label><input type="checkbox" name="symptoms" value="leaf-curl"> 卷叶</label>
+          <label><input type="checkbox" name="symptoms" value="spots"> 斑点/焦边</label>
+          <label><input type="checkbox" name="symptoms" value="no-flower"> 不开花</label>
+          <label><input type="checkbox" name="symptoms" value="no-fruit"> 开花不结果</label>
+          <label><input type="checkbox" name="symptoms" value="pests"> 有小飞虫/虫迹</label>
+          <label><input type="checkbox" name="symptoms" value="algae"> 基质表面发绿/发白</label>
+        </fieldset>
+
+        <label class="wide">
+          你的补充描述
+          <textarea name="notes" id="notes" rows="4" placeholder="例如：番茄在 1.5cm Xponge 上，30x40cm 面积，开花后小果掉落，灯每天开 12 小时。"></textarea>
+        </label>
+          </div>
+        </details>
+
+        <div class="actions">
+          <button type="button" id="sample-btn" class="secondary">载入番茄样例</button>
+          <button type="button" id="sample-basil-btn" class="secondary">罗勒样例</button>
+          <button type="button" id="sample-rosemary-btn" class="secondary">迷迭香样例</button>
+          <button type="button" id="sample-strawberry-btn" class="secondary">草莓样例</button>
+          <button type="button" id="sample-pepper-btn" class="secondary">辣椒样例</button>
+          <button type="submit" class="primary">生成诊断</button>
+        </div>
+      </form>
+
+      <section class="followup-panel" aria-labelledby="followup-title">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Follow-up</p>
+            <h2 id="followup-title">智能复查提醒</h2>
+          </div>
+          <button type="button" id="save-log-btn" class="secondary">保存复查照片记录</button>
+        </div>
+        <section class="followup-loop-card" id="followup-loop-card">
+          <div class="block-title-row">
+            <h3 id="followup-loop-title">下一次复查</h3>
+            <button type="button" id="followup-loop-upload-btn" class="mini-button">上传复查照</button>
+          </div>
+          <div class="followup-loop-grid">
+            <div>
+              <span>时间</span>
+              <strong id="followup-loop-time">完成诊断后自动生成</strong>
+            </div>
+            <div>
+              <span>照片</span>
+              <strong id="followup-loop-photo">系统会自动判断</strong>
+            </div>
+            <div>
+              <span>成功标准</span>
+              <strong id="followup-loop-success">上传复查照片后判断趋势</strong>
+            </div>
+          </div>
+          <div id="followup-loop-steps" class="followup-loop-steps"></div>
+          <p id="followup-loop-verdict" class="followup-loop-verdict">还没有复查记录。执行处方后，系统会提醒你回来拍同角度照片。</p>
+        </section>
+        <section class="customer-reminder-card" id="customer-reminder-card">
+          <span id="customer-reminder-kicker">提醒</span>
+          <strong id="customer-reminder-title">完成诊断后安排复查</strong>
+          <p id="customer-reminder-message">我会根据诊断结果安排下一次拍照提醒。</p>
+          <div id="customer-reminder-meta" class="customer-reminder-meta"></div>
+        </section>
+        <section class="customer-progress-card waiting" id="customer-progress-card">
+          <span id="customer-progress-kicker">复查结果</span>
+          <strong id="customer-progress-title">完成复查后，我会告诉你有没有变好</strong>
+          <p id="customer-progress-message">按提醒上传同角度照片就可以，不需要手动判断。</p>
+          <div id="customer-progress-meta" class="customer-reminder-meta"></div>
+        </section>
+        <div id="reminder-strip" class="reminder-strip"></div>
+        <div id="reminder-schedule-list" class="reminder-schedule-list"></div>
+        <div class="followup-grid">
+          <label>
+            当前复查节点
+            <select id="checkDay">
+              <option value="auto">系统自动推荐</option>
+              <option value="24h">24 小时</option>
+              <option value="48h">48 小时</option>
+              <option value="day3">第 3 天</option>
+              <option value="day7">第 7 天</option>
+            </select>
+          </label>
+          <label>
+            复查照片
+            <input type="file" id="followupPhoto" accept="image/*">
+          </label>
+          <label>
+            新叶状态
+            <select id="leafProgress">
+              <option value="unknown">未记录</option>
+              <option value="better">更厚/更绿</option>
+              <option value="same">差不多</option>
+              <option value="worse">更黄/更卷</option>
+            </select>
+          </label>
+          <label>
+            花果状态
+            <select id="flowerProgress">
+              <option value="unknown">未记录</option>
+              <option value="better">坐果增加</option>
+              <option value="same">差不多</option>
+              <option value="worse">继续落花/落果</option>
+            </select>
+          </label>
+          <label>
+            虫害/藻霉
+            <select id="pestProgress">
+              <option value="unknown">未记录</option>
+              <option value="better">减少</option>
+              <option value="same">差不多</option>
+              <option value="worse">扩散</option>
+            </select>
+          </label>
+          <label class="wide">
+            复查备注
+            <textarea id="logNotes" rows="3" placeholder="可不填。上传复查照片后，系统会尽量自动记录颜色、根区和虫害线索。"></textarea>
+          </label>
+        </div>
+      </section>
+    </section>
+
+    <section class="result-panel" aria-live="polite">
+      <div class="customer-summary">
+        <div>
+          <p class="eyebrow">Care Plan</p>
+          <h2 id="customer-title">先拍一张照片</h2>
+          <p id="customer-message">上传植物照片或选择主要困扰后，系统会给出最少步骤的处理建议。</p>
+        </div>
+        <div class="customer-next">
+          <span>下一步</span>
+          <strong id="customer-next-action">上传照片</strong>
+        </div>
+        <div class="confidence-meter">
+          <div class="confidence-head">
+            <span>诊断可信度</span>
+            <strong id="confidence-value">0%</strong>
+          </div>
+          <div class="confidence-track">
+            <div id="confidence-bar" class="confidence-bar"></div>
+          </div>
+          <p id="confidence-label">先上传照片，系统会判断输入是否足够。</p>
+        </div>
+      </div>
+
+      <section class="customer-photo-rescue-card" id="customer-photo-rescue-card">
+        <div>
+          <span id="customer-photo-rescue-kicker">照片需要补救</span>
+          <strong id="customer-photo-rescue-title">再拍一张更清楚的照片</strong>
+          <p id="customer-photo-rescue-message">我会告诉你要补拍哪里，不需要重新填写信息。</p>
+        </div>
+        <ul id="customer-photo-rescue-steps"></ul>
+        <button type="button" id="customer-photo-rescue-btn" class="primary">按提示重拍</button>
+      </section>
+
+      <div class="confidence-decision-card" id="confidence-decision-card">
+        <div>
+          <span id="confidence-tier-status">待判断</span>
+          <h3 id="confidence-tier-title">证据还不够</h3>
+          <p id="confidence-tier-reason">先上传一张清晰照片，系统会判断是否可以给出处方。</p>
+        </div>
+        <div class="confidence-next">
+          <span>下一步</span>
+          <strong id="confidence-tier-next">上传照片</strong>
+        </div>
+        <ul id="confidence-tier-list" class="confidence-tier-list"></ul>
+      </div>
+
+      <div class="score-card">
+        <p class="eyebrow">Diagnosis</p>
+        <h2 id="main-risk">等待诊断</h2>
+        <p id="main-summary">填写左侧信息后，这里会给出最可能原因、处理优先级和复查节点。</p>
+      </div>
+
+      <div class="metrics-strip" id="metrics-strip"></div>
+
+      <div class="result-grid">
+        <article class="result-block expert-only">
+          <h3>可能原因</h3>
+          <ol id="causes-list"></ol>
+        </article>
+        <article class="result-block customer-detail">
+          <h3>下一步处方</h3>
+          <ul id="actions-list"></ul>
+        </article>
+        <article class="result-block customer-detail">
+          <h3>图谱命中路径</h3>
+          <div id="matched-pathway-list" class="matched-pathway-list"></div>
+        </article>
+        <article class="result-block customer-detail">
+          <h3>最少补问</h3>
+          <div id="minimal-question-list" class="minimal-question-list"></div>
+        </article>
+        <article class="result-block task-block">
+          <div class="block-title-row">
+            <h3>处方任务</h3>
+            <button type="button" id="reset-tasks-btn" class="mini-button">重置</button>
+          </div>
+          <div id="task-list" class="task-list"></div>
+        </article>
+        <article class="result-block expert-only">
+          <h3>监测计划</h3>
+          <ul id="monitor-list"></ul>
+        </article>
+        <article class="result-block customer-detail">
+          <h3>拍照复查</h3>
+          <ul id="photo-list"></ul>
+        </article>
+        <article class="result-block expert-only">
+          <h3>复查判断</h3>
+          <ul id="followup-list"></ul>
+        </article>
+        <article class="result-block expert-only">
+          <h3>日志记录</h3>
+          <ul id="history-list"></ul>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>诊断报告</h3>
+            <div class="button-row">
+              <button type="button" id="save-report-btn" class="mini-button">入库</button>
+              <button type="button" id="copy-report-btn" class="mini-button">复制</button>
+            </div>
+          </div>
+          <textarea id="report-output" readonly rows="12"></textarea>
+          <p id="copy-status" class="copy-status">报告会随诊断自动更新。</p>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>后台数据库</h3>
+            <div class="button-row">
+              <button type="button" id="refresh-db-btn" class="mini-button">刷新</button>
+              <button type="button" id="export-db-btn" class="mini-button">导出 JSON</button>
+            </div>
+          </div>
+          <div class="db-filters">
+            <input type="search" id="db-search" placeholder="搜索风险、备注、报告内容">
+            <select id="db-crop-filter">
+              <option value="">全部作物</option>
+              <option value="tomato">矮生番茄</option>
+              <option value="basil">罗勒</option>
+              <option value="rosemary">迷迭香</option>
+              <option value="strawberry">草莓</option>
+              <option value="pepper">辣椒</option>
+            </select>
+            <select id="db-medium-filter">
+              <option value="">全部介质</option>
+              <option value="xponge">超薄 Xponge</option>
+              <option value="coco">椰糠</option>
+              <option value="rockwool">岩棉</option>
+              <option value="soil">土培</option>
+              <option value="water">水培/DWC</option>
+            </select>
+          </div>
+          <section class="case-manager" id="case-manager">
+            <div class="block-title-row">
+              <h4>植物病例</h4>
+              <div class="button-row">
+                <button type="button" id="new-case-btn" class="mini-button">新建病例</button>
+                <button type="button" id="refresh-cases-btn" class="mini-button">刷新病例</button>
+              </div>
+            </div>
+            <div id="active-case-card" class="active-case-card"></div>
+            <div id="case-status" class="copy-status">病例会按同一棵植物持续归档诊断、处方和复查。</div>
+            <div id="case-list" class="case-list"></div>
+            <div id="case-timeline" class="case-timeline"></div>
+            <textarea id="case-detail" readonly rows="8" placeholder="选择一个病例后，这里会显示时间线。"></textarea>
+          </section>
+          <section class="notification-center" id="notification-center">
+            <div class="block-title-row">
+              <h4>通知中心</h4>
+              <div class="button-row">
+                <button type="button" id="sync-case-notifications-btn" class="mini-button">同步病例提醒</button>
+                <button type="button" id="refresh-notifications-btn" class="mini-button">刷新通知</button>
+              </div>
+            </div>
+            <div class="notification-channel-panel" id="notification-channel-panel">
+              <div class="notification-channel-options">
+                <label><input type="checkbox" id="notification-channel-in-app" value="in-app" checked> 站内</label>
+                <label><input type="checkbox" id="notification-channel-email" value="email"> 邮件</label>
+                <label><input type="checkbox" id="notification-channel-sms" value="sms"> 短信</label>
+                <label><input type="checkbox" id="notification-channel-wechat" value="wechat"> 微信</label>
+              </div>
+              <div class="notification-target-grid">
+                <input type="email" id="notification-email-target" placeholder="邮件地址，占位">
+                <input type="tel" id="notification-sms-target" placeholder="手机号，占位">
+                <input type="text" id="notification-wechat-target" placeholder="微信 OpenID/小程序用户，占位">
+                <button type="button" id="save-notification-channels-btn" class="mini-button">保存渠道</button>
+              </div>
+            </div>
+            <div id="notification-status" class="copy-status">趋势提醒同步后会进入通知队列。</div>
+            <div id="notification-metrics" class="notification-metrics"></div>
+            <div id="notification-list" class="notification-list"></div>
+          </section>
+          <div id="db-status" class="copy-status">本地 JSON 数据库，等待保存报告。</div>
+          <ul id="db-list" class="db-list"></ul>
+          <textarea id="db-detail" readonly rows="10" placeholder="选择一条报告后，这里会显示详情。"></textarea>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>数据库洞察</h3>
+            <button type="button" id="refresh-insights-btn" class="mini-button">刷新</button>
+          </div>
+          <div id="insights-grid" class="insights-grid"></div>
+          <ul id="insights-list" class="insights-list"></ul>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>产品机会排序</h3>
+            <button type="button" id="refresh-opportunities-btn" class="mini-button">刷新</button>
+          </div>
+          <div id="opportunity-rank-list" class="opportunity-rank-list"></div>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>实验路线图</h3>
+            <button type="button" id="refresh-experiments-btn" class="mini-button">刷新</button>
+          </div>
+          <div id="experiment-list" class="experiment-list"></div>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>竞品优势融合</h3>
+            <button type="button" id="refresh-product-strategy-btn" class="mini-button">刷新</button>
+          </div>
+          <div id="product-strategy-grid" class="strategy-grid"></div>
+          <div id="product-strategy-list" class="strategy-list"></div>
+        </article>
+        <article class="result-block report-block expert-only">
+          <div class="block-title-row">
+            <h3>诊断知识图谱</h3>
+            <button type="button" id="refresh-knowledge-graph-btn" class="mini-button">刷新</button>
+          </div>
+          <div class="knowledge-filters">
+            <select id="knowledge-graph-crop-filter" aria-label="知识图谱作物筛选">
+              <option value="">全部作物</option>
+              <option value="tomato">矮生番茄</option>
+              <option value="basil">罗勒</option>
+              <option value="rosemary">迷迭香</option>
+              <option value="strawberry">草莓</option>
+              <option value="pepper">辣椒</option>
+            </select>
+            <select id="knowledge-graph-stage-filter" aria-label="知识图谱阶段筛选">
+              <option value="">全部阶段</option>
+              <option value="seedling">幼苗期</option>
+              <option value="vegetative">营养生长期</option>
+              <option value="flowering">开花期</option>
+              <option value="fruiting">结果期</option>
+            </select>
+          </div>
+          <div id="knowledge-graph-stats" class="insights-grid"></div>
+          <div id="knowledge-graph-list" class="knowledge-graph-list"></div>
+        </article>
+        <article class="result-block expert-only">
+          <h3>产品机会</h3>
+          <ul id="opportunity-list"></ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
