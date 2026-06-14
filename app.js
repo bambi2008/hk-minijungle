@@ -1948,7 +1948,13 @@ function customerTaskLabels() {
   };
 }
 
+function isWaitingForActionFollowup(plan = getReminderPlan()) {
+  const pending = firstPendingReminder(plan);
+  return Boolean(plan?.actionCompletedAt && pending?.dueAt && !isReminderDue(pending));
+}
+
 function currentCustomerTask(state = getFormState(), findings = latestFindings) {
+  if (isWaitingForActionFollowup()) return null;
   const taskState = getTaskState();
   return taskEntries(buildTasks(state, findings), customerTaskLabels())
     .find((entry) => !isTaskDone(taskState[entry.id])) || null;
@@ -2320,20 +2326,25 @@ function renderCustomerTaskFocus(state, findings, groups, labels, taskState) {
   const entries = taskEntries(groups, labels);
   const pending = entries.filter((entry) => !isTaskDone(taskState[entry.id]));
   const completed = entries.length - pending.length;
-  const current = pending[0];
+  const plan = getReminderPlan();
+  const waitingForFollowup = isWaitingForActionFollowup(plan);
+  const reminder = firstPendingReminder(plan);
+  const current = waitingForFollowup ? null : pending[0];
 
   const group = document.createElement("div");
   group.className = "task-group customer-task-focus";
 
   const title = document.createElement("div");
   title.className = "task-group-title";
-  title.textContent = current ? "当前动作" : "动作已完成";
+  title.textContent = current ? "当前动作" : waitingForFollowup ? "等待复查" : "动作已完成";
   group.appendChild(title);
 
   if (!current) {
     const done = document.createElement("div");
     done.className = "customer-action-empty";
-    done.innerHTML = "<strong>今天的动作都完成了</strong><span>等复查提醒到了，直接拍一张同角度照片。</span>";
+    done.innerHTML = waitingForFollowup
+      ? `<strong>当前动作已完成</strong><span>${reminder?.dueAt ? `${dueLabel(reminder.dueAt)} 复查，拍 ${reminder.photo || "同角度照片"}。` : "等复查提醒到了，直接拍一张同角度照片。"}</span>`
+      : "<strong>今天的动作都完成了</strong><span>等复查提醒到了，直接拍一张同角度照片。</span>";
     group.appendChild(done);
     taskList.appendChild(group);
     return;
