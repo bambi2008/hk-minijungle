@@ -1644,6 +1644,28 @@ button {
   font-size: 0.9rem;
 }
 
+.customer-photo-rescue-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0 12px;
+}
+
+.rescue-action-button {
+  border: 1px solid #d7c28c;
+  border-radius: 8px;
+  padding: 10px;
+  color: #6b4300;
+  background: #fff;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.rescue-action-button.primary-action {
+  border-color: #d7a238;
+  background: #fff0ca;
+}
+
 .customer-photo-rescue-card button {
   width: 100%;
 }
@@ -3036,6 +3058,7 @@ li {
   .confidence-decision-card,
   .confidence-tier-list,
   .customer-journey-list,
+  .customer-photo-rescue-actions,
   .active-case-card,
   .case-list,
   .case-trend-card,

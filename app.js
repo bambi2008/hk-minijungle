@@ -23,6 +23,7 @@ const customerPhotoRescueKicker = document.querySelector("#customer-photo-rescue
 const customerPhotoRescueTitle = document.querySelector("#customer-photo-rescue-title");
 const customerPhotoRescueMessage = document.querySelector("#customer-photo-rescue-message");
 const customerPhotoRescueSteps = document.querySelector("#customer-photo-rescue-steps");
+const customerPhotoRescueActions = document.querySelector("#customer-photo-rescue-actions");
 const customerPhotoRescueBtn = document.querySelector("#customer-photo-rescue-btn");
 const smartDiagnoseBtn = document.querySelector("#smart-diagnose-btn");
 const smartConcern = document.querySelector("#smartConcern");
@@ -1971,6 +1972,30 @@ function photoQualityProblems(signals = photoSignals) {
   );
 }
 
+function uniquePhotoTypes(types) {
+  const allowed = new Set(["plant", "leaf", "root", "flower", "pest"]);
+  return Array.from(new Set(types.filter((type) => allowed.has(type))));
+}
+
+function buildPhotoRescueActions(state, suggestion, isRetake) {
+  const missing = requiredPhotoTypes(state).filter((type) => !capturedPhotoTypes.has(type));
+  const primary = suggestion.type || requestedPhotoType || state.photoType || "plant";
+  const types = uniquePhotoTypes([
+    primary,
+    ...missing,
+    isRetake ? "plant" : null,
+    diagnosisRoute(state)?.key
+  ]).slice(0, 4);
+
+  return types.map((type, index) => ({
+    type,
+    label: index === 0
+      ? `${isRetake ? "重拍" : "补拍"}${photoTypeLabel(type)}`
+      : `再拍${photoTypeLabel(type)}`,
+    primary: index === 0
+  }));
+}
+
 function customerPhotoRescuePlan(state = getFormState()) {
   if (!customerHasStarted(state)) return null;
   const plan = getReminderPlan();
@@ -1999,7 +2024,8 @@ function customerPhotoRescuePlan(state = getFormState()) {
     title: isRetake ? "请重拍一张更清楚的照片" : suggestion.action,
     message: isRetake ? qualityProblems[0] : suggestion.tip,
     button: isRetake ? "按提示重拍" : `补拍${typeLabel}`,
-    steps
+    steps,
+    actions: buildPhotoRescueActions(state, suggestion, isRetake)
   };
 }
 
@@ -2021,6 +2047,17 @@ function renderCustomerPhotoRescue(state = getFormState()) {
     item.textContent = step;
     customerPhotoRescueSteps.appendChild(item);
   });
+  if (customerPhotoRescueActions) {
+    customerPhotoRescueActions.innerHTML = "";
+    plan.actions.forEach((action) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = `rescue-action-button${action.primary ? " primary-action" : ""}`;
+      button.textContent = action.label;
+      button.addEventListener("click", () => openPhotoRescueUpload(action.type));
+      customerPhotoRescueActions.appendChild(button);
+    });
+  }
 }
 
 function syncCustomerIntakeState(state = getFormState()) {
@@ -5411,13 +5448,18 @@ function openGuidedPhotoUpload() {
   plantPhoto.click();
 }
 
+function openPhotoRescueUpload(type) {
+  const targetType = type || requestedPhotoType || nextPhotoSuggestion().type || "plant";
+  requestedPhotoType = targetType;
+  setPhotoType(targetType);
+  if (photoHint) photoHint.textContent = `本次补拍已锁定为${photoTypeLabel(targetType)}。`;
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `补拍照片：${photoTypeLabel(targetType)}`;
+  plantPhoto.click();
+}
+
 function openSuggestedPhotoUpload() {
   const plan = customerPhotoRescuePlan() || nextPhotoSuggestion();
-  if (plan.type) {
-    requestedPhotoType = plan.type;
-    setPhotoType(plan.type);
-  }
-  plantPhoto.click();
+  openPhotoRescueUpload(plan.type);
 }
 
 function openFollowupUpload() {
