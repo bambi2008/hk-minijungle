@@ -18,6 +18,7 @@ const customerCompactReason = document.querySelector("#customer-compact-reason")
 const customerCompactAction = document.querySelector("#customer-compact-action");
 const customerCompactFollowup = document.querySelector("#customer-compact-followup");
 const customerCompactActionBtn = document.querySelector("#customer-compact-action-btn");
+const customerArchiveStatus = document.querySelector("#customer-archive-status");
 const confidenceDecisionCard = document.querySelector("#confidence-decision-card");
 const confidenceTierStatus = document.querySelector("#confidence-tier-status");
 const confidenceTierTitle = document.querySelector("#confidence-tier-title");
@@ -176,6 +177,7 @@ const tasksKey = "growClinicTasks";
 const reminderPlanKey = "growClinicReminderPlan";
 const baselinePhotoKey = "growClinicBaselinePhotoSignals";
 const activeCaseKey = "growClinicActiveCase";
+const customerAutoArchiveKey = "growClinicCustomerAutoArchive";
 const notificationChannelKey = "growClinicNotificationChannels";
 let latestState = null;
 let latestFindings = [];
@@ -196,6 +198,7 @@ let latestMatchedPathways = [];
 let latestVisionResult = null;
 let latestPhotoTypeDetection = null;
 let customerTimeRefreshId = null;
+let customerAutoArchiveInFlightSignature = null;
 
 const cropNames = {
   tomato: "矮生番茄",
@@ -2286,6 +2289,108 @@ function renderCustomerCompactPlan(state = getFormState(), findings = latestFind
   customerCompactReason.textContent = model.reason;
   customerCompactAction.textContent = model.action;
   customerCompactFollowup.textContent = model.followup;
+  renderCustomerArchiveStatus(state, findings);
+}
+
+function getCustomerArchiveRecord() {
+  try {
+    return JSON.parse(localStorage.getItem(customerAutoArchiveKey) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function setCustomerArchiveRecord(record) {
+  localStorage.setItem(customerAutoArchiveKey, JSON.stringify(record));
+}
+
+function customerArchiveSignature(state, findings) {
+  const activeCase = getActiveCase(state);
+  return [
+    activeCase.id,
+    state.crop,
+    state.stage,
+    state.medium,
+    Array.from(capturedPhotoTypes).sort().join(","),
+    latestPhotoTypeDetection?.type || state.photoType,
+    findings[0]?.title || ""
+  ].join("|");
+}
+
+function setCustomerArchiveStatus(text, state = "waiting") {
+  if (!customerArchiveStatus) return;
+  customerArchiveStatus.textContent = text;
+  customerArchiveStatus.dataset.state = state;
+}
+
+function renderCustomerArchiveStatus(state = getFormState(), findings = latestFindings) {
+  if (!customerArchiveStatus) return;
+  const hasPhoto = capturedPhotoTypes.size > 0 || state.hasPhoto;
+  if (!hasPhoto) {
+    setCustomerArchiveStatus("拍完首张照片后自动建档。", "waiting");
+    return;
+  }
+  const signature = customerArchiveSignature(state, findings);
+  if (customerAutoArchiveInFlightSignature === signature) {
+    setCustomerArchiveStatus("正在为这棵植物建档。", "saving");
+    return;
+  }
+  const record = getCustomerArchiveRecord();
+  if (record?.signature === signature && record?.reportId) {
+    setCustomerArchiveStatus("已为这棵植物建档，复查会继续记录。", "saved");
+    return;
+  }
+  setCustomerArchiveStatus("会自动为这棵植物建档，不需要手动保存。", "ready");
+}
+
+function shouldAutoArchiveCustomerDiagnosis(state, findings) {
+  return Boolean(
+    isCustomerModeActive() &&
+    hasRunSmartDiagnosis &&
+    findings?.length &&
+    (capturedPhotoTypes.size > 0 || state.hasPhoto)
+  );
+}
+
+async function maybeAutoArchiveCustomerDiagnosis(state, findings) {
+  if (!shouldAutoArchiveCustomerDiagnosis(state, findings)) return null;
+  const signature = customerArchiveSignature(state, findings);
+  const existing = getCustomerArchiveRecord();
+  if (existing?.signature === signature || customerAutoArchiveInFlightSignature === signature) return existing;
+
+  customerAutoArchiveInFlightSignature = signature;
+  setCustomerArchiveStatus("正在为这棵植物建档。", "saving");
+  try {
+    const response = await fetch("/api/reports", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        ...reportPayload(state, findings),
+        autoArchive: true,
+        archiveSource: "customer-first-diagnosis"
+      })
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const saved = await response.json();
+    const record = {
+      signature,
+      reportId: saved.id,
+      caseId: saved.caseId,
+      savedAt: new Date().toISOString()
+    };
+    setCustomerArchiveRecord(record);
+    setCustomerArchiveStatus("已为这棵植物建档，复查会继续记录。", "saved");
+    await loadReports();
+    await loadCases();
+    await syncCaseNotifications({ silent: true });
+    await loadNotifications();
+    return record;
+  } catch {
+    setCustomerArchiveStatus("本机已保留诊断，后台暂时未同步。", "failed");
+    return null;
+  } finally {
+    customerAutoArchiveInFlightSignature = null;
+  }
 }
 
 function renderCustomerSummary(state, findings) {
@@ -5265,6 +5370,7 @@ function renderDiagnosis(state, findings) {
   renderList(followupList, [...buildFollowupPlan(state), ...graphFollowups], (item) => item);
   renderHistory();
   reportOutput.value = buildReport(state, findings, latestMatchedPathways);
+  maybeAutoArchiveCustomerDiagnosis(state, findings);
 
   const opportunities = [
     basePlans[state.crop].opportunity,
