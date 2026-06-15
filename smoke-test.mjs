@@ -266,6 +266,7 @@ const requiredJsSnippets = [
   "function snapshotCustomerPlantBeforeReset",
   "function restorePreviousCustomerPlant",
   "function setCustomerArchiveUndoStatus",
+  "function dismissCustomerResetUndo",
   "inline-undo-button",
   "已撤销，回到上一株植物",
   "customer-plant-dossier",

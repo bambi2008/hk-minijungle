@@ -859,6 +859,7 @@ function renderCustomerStartPanel(state = getFormState(), findings = latestFindi
 
 function chooseCustomerCrop(cropKey) {
   if (!cropNames[cropKey]) return;
+  dismissCustomerResetUndo();
   cropSelect.value = cropKey;
   autoFillCustomerIntake({ forceStage: true });
   updateCropHint();
@@ -2555,6 +2556,12 @@ function setCustomerArchiveUndoStatus() {
   customerArchiveStatus.dataset.state = "saved";
   customerArchiveStatus.innerHTML = "已准备记录新植物。<button type=\"button\" id=\"undo-customer-reset-btn\" class=\"inline-undo-button\">撤销</button>";
   customerArchiveStatus.querySelector("#undo-customer-reset-btn")?.addEventListener("click", restorePreviousCustomerPlant);
+}
+
+function dismissCustomerResetUndo() {
+  if (!customerResetSnapshot) return;
+  customerResetSnapshot = null;
+  setCustomerArchiveStatus("拍完首张照片后自动建档。", "waiting");
 }
 
 function renderCustomerArchiveStatus(state = getFormState(), findings = latestFindings) {
@@ -5888,6 +5895,7 @@ cropQuickButtons.forEach((button) => {
 });
 smartDiagnoseBtn.addEventListener("click", smartDiagnose);
 smartConcern.addEventListener("change", () => {
+  dismissCustomerResetUndo();
   autoFillCustomerIntake({ forceStage: true });
   updateDeviceProfile();
   hasRunSmartDiagnosis = true;
@@ -5895,6 +5903,7 @@ smartConcern.addEventListener("change", () => {
 });
 
 function openGuidedPhotoUpload() {
+  dismissCustomerResetUndo();
   const instruction = guidedPhotoInstruction();
   if (instruction.type) {
     requestedPhotoType = instruction.type;
@@ -5904,6 +5913,7 @@ function openGuidedPhotoUpload() {
 }
 
 function openPhotoRescueUpload(type) {
+  dismissCustomerResetUndo();
   const targetType = type || requestedPhotoType || nextPhotoSuggestion().type || "plant";
   requestedPhotoType = targetType;
   setPhotoType(targetType);
@@ -6139,6 +6149,7 @@ plantPhoto.addEventListener("change", () => {
     runDiagnosis();
     return;
   }
+  dismissCustomerResetUndo();
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     photoPreview.src = reader.result;
