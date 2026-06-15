@@ -1462,12 +1462,17 @@ button {
 }
 
 .customer-dossier-meta span {
+  min-width: 0;
+  max-width: 100%;
   border-radius: 999px;
   padding: 4px 8px;
+  overflow: hidden;
   background: #edf7f1;
   color: var(--green-dark);
   font-size: 0.74rem;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .customer-dossier-meta span[data-tone="primary"] {

@@ -2368,8 +2368,14 @@ function relativePastText(dateString) {
   return dueLabel(dateString);
 }
 
-function dossierChip(text, tone = "neutral") {
-  return text ? { text, tone } : null;
+function dossierChip(text, tone = "neutral", title = "") {
+  return text ? { text, tone, title } : null;
+}
+
+function dossierShortText(text, limit = 18) {
+  const sentence = firstSentence(text).trim();
+  if (sentence.length <= limit) return sentence;
+  return `${sentence.slice(0, limit)}...`;
 }
 
 function latestDossierFollowupSummary(record = getCustomerArchiveRecord()) {
@@ -2399,9 +2405,8 @@ function customerPlantDossierModel(state, findings) {
   const crop = cropNames[state.crop] || "这棵植物";
   const stage = stageNames[state.stage] || "阶段待定";
   const medium = mediumNames[state.medium] || "介质待定";
-  const actionChip = compactPlan.action
-    ? `当前：${compactPlan.action}`
-    : `下一步：${actionModel.label}`;
+  const actionText = compactPlan.action || actionModel.label;
+  const actionChip = actionText ? `当前：${dossierShortText(actionText)}` : "";
   const followupChip = followupDue
     ? "复查：现在"
     : pendingReminder?.dueAt
@@ -2415,7 +2420,7 @@ function customerPlantDossierModel(state, findings) {
     ? `${customerArchiveEventLabel(record.lastEvent)} · 档案 ${shortReportId(record.reportId)}`
     : "待自动建档";
   const meta = [
-    dossierChip(actionChip, followupDue ? "warning" : "primary"),
+    dossierChip(actionChip, followupDue ? "warning" : "primary", actionText ? `当前：${actionText}` : ""),
     dossierChip(followupChip, followupDue ? "warning" : "neutral"),
     dossierChip(updatedChip, "neutral"),
     dossierChip(`${stage} / ${medium}`, "neutral"),
@@ -2492,6 +2497,7 @@ function renderCustomerPlantDossier(state = getFormState(), findings = latestFin
   model.meta.filter(Boolean).slice(0, 5).forEach((item) => {
     const chip = document.createElement("span");
     chip.textContent = typeof item === "string" ? item : item.text;
+    if (typeof item !== "string" && item.title) chip.title = item.title;
     if (item.tone) chip.dataset.tone = item.tone;
     customerDossierMeta.appendChild(chip);
   });

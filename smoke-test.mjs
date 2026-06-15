@@ -248,6 +248,7 @@ const requiredJsSnippets = [
   "function renderCustomerPlantDossier",
   "function relativePastText",
   "function dossierChip",
+  "function dossierShortText",
   "function latestDossierFollowupSummary",
   "function touchCustomerArchiveRecord",
   "function customerArchiveEventLabel",
