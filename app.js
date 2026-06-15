@@ -5946,6 +5946,22 @@ function focusCustomerTarget(target) {
   window.setTimeout(() => target.classList.remove("soft-focus"), 1200);
 }
 
+function setPhotoProcessingState(processing, message = "") {
+  document.body.classList.toggle("photo-processing", Boolean(processing));
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = processing ? "正在识别照片" : (message || autoPhotoTypeBadge.textContent);
+  if (processing && photoHint) photoHint.textContent = message || "正在读取照片，马上生成诊断。";
+}
+
+function focusPhotoDiagnosisResult() {
+  if (!document.body.classList.contains("customer-mode")) return;
+  window.setTimeout(() => {
+    const target = customerPlantDossier && !customerPlantDossier.hidden
+      ? customerPlantDossier
+      : customerPlanCompact || document.querySelector(".customer-summary");
+    focusCustomerTarget(target);
+  }, 80);
+}
+
 quickPhotoBtn.addEventListener("click", openGuidedPhotoUpload);
 guidedPhotoUploadBtn.addEventListener("click", openGuidedPhotoUpload);
 customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
@@ -6161,20 +6177,29 @@ plantPhoto.addEventListener("change", () => {
     photoPreview.src = reader.result;
     photoPreview.classList.add("visible");
     document.body.classList.add("has-plant-photo");
-    photoHint.textContent = `已载入：${file.name}`;
+    setPhotoProcessingState(true, `已载入：${file.name}，正在识别照片并生成诊断。`);
     analyzeImageSignals(reader.result).then(async (signals) => {
-      photoSignals = signals;
-      setPhotoType(requestedPhotoType || "plant");
-      inferFromFileName(file);
-      applyPhotoSignals();
-      const detection = detectUploadedPhotoType(file, signals, getFormState());
-      const currentPhotoType = applyPhotoTypeDetection(detection);
-      await analyzePhotoWithVision(reader.result, file, { photoType: currentPhotoType });
-      capturedPhotoTypes.add(currentPhotoType);
-      saveBaselinePhotoSignals(currentPhotoType, signals);
-      photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${file.name}`;
-      hasRunSmartDiagnosis = true;
-      runDiagnosis();
+      try {
+        photoSignals = signals;
+        setPhotoType(requestedPhotoType || "plant");
+        inferFromFileName(file);
+        applyPhotoSignals();
+        const detection = detectUploadedPhotoType(file, signals, getFormState());
+        const currentPhotoType = applyPhotoTypeDetection(detection);
+        await analyzePhotoWithVision(reader.result, file, { photoType: currentPhotoType });
+        capturedPhotoTypes.add(currentPhotoType);
+        saveBaselinePhotoSignals(currentPhotoType, signals);
+        photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${file.name}。诊断已更新。`;
+        hasRunSmartDiagnosis = true;
+        runDiagnosis();
+        focusPhotoDiagnosisResult();
+      } finally {
+        setPhotoProcessingState(false);
+      }
+    }).catch(() => {
+      setPhotoProcessingState(false);
+      if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
+      if (photoHint) photoHint.textContent = "照片没有读取成功，请换一张清晰照片重试。";
     });
   });
   reader.readAsDataURL(file);
