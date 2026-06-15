@@ -2370,6 +2370,20 @@ function dossierChip(text, tone = "neutral") {
   return text ? { text, tone } : null;
 }
 
+function latestDossierFollowupSummary(record = getCustomerArchiveRecord()) {
+  const latest = getLogs().slice(-1)[0] || null;
+  const assessment = latest?.routeAssessment || null;
+  const title = record?.followupTitle || assessment?.title || null;
+  const next = record?.followupNext || assessment?.next || null;
+  const state = record?.followupState || assessment?.state || "same";
+  if (!title && !next) return null;
+  return {
+    state,
+    title: title || "复查已记录",
+    next: next || "继续按下一次提醒复拍。"
+  };
+}
+
 function customerPlantDossierModel(state, findings) {
   if (!customerHasStarted(state)) return null;
   const actionModel = customerPrimaryActionModel(state, findings);
@@ -2406,6 +2420,21 @@ function customerPlantDossierModel(state, findings) {
     dossierChip(archiveChip, "subtle")
   ];
 
+  if (record?.lastEvent === "followup") {
+    const summary = latestDossierFollowupSummary(record);
+    if (summary) {
+      return {
+        state: summary.state === "worse" ? "worse" : "saved",
+        kicker: summary.state === "worse" ? "复查需要注意" : "复查已记录",
+        title: `${crop}档案`,
+        message: `复查已记录：${summary.title}。${summary.next}`,
+        action: actionModel.action,
+        actionLabel: actionModel.label,
+        meta
+      };
+    }
+  }
+
   if (followupDue) {
     return {
       state: "due",
@@ -2419,11 +2448,14 @@ function customerPlantDossierModel(state, findings) {
   }
 
   if (waitingForActionFollowup && pendingReminder) {
+    const actionText = record?.lastEvent === "action-completed" && record.actionText
+      ? `已记录：${firstSentence(record.actionText)}。`
+      : "";
     return {
       state: "waiting",
-      kicker: "等待复查",
+      kicker: record?.lastEvent === "action-completed" ? "动作已记录" : "等待复查",
       title: `${crop}档案`,
-      message: `${relativeDueText(pendingReminder.dueAt)}复查；这段时间先保持当前动作，不要叠加新调整。`,
+      message: `${actionText}${relativeDueText(pendingReminder.dueAt)}拍${pendingReminder.photo || "同角度照片"}复查；这段时间先保持当前动作。`,
       action: actionModel.action,
       actionLabel: actionModel.label,
       meta
@@ -6088,7 +6120,9 @@ async function saveFollowupLog(options = {}) {
     lastEvent: "followup",
     followupAt: log.at,
     followupLogId: log.id,
-    followupState: log.routeAssessment?.state || null
+    followupState: log.routeAssessment?.state || null,
+    followupTitle: log.routeAssessment?.title || null,
+    followupNext: log.routeAssessment?.next || null
   });
   logNotes.value = "";
   runDiagnosis();

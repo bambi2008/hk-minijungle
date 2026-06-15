@@ -1421,6 +1421,11 @@ button {
   background: #fffaf0;
 }
 
+.customer-plant-dossier[data-state="worse"] {
+  border-color: #d08b7d;
+  background: #fff7f3;
+}
+
 .customer-plant-dossier > div:first-child > span {
   display: block;
   color: var(--green);
@@ -1430,6 +1435,10 @@ button {
 
 .customer-plant-dossier[data-state="due"] > div:first-child > span {
   color: #8a5b00;
+}
+
+.customer-plant-dossier[data-state="worse"] > div:first-child > span {
+  color: #9b4635;
 }
 
 .customer-plant-dossier strong {
@@ -1484,6 +1493,11 @@ button {
 .customer-plant-dossier[data-state="due"] .customer-dossier-meta span[data-tone="primary"] {
   color: #fff;
   background: var(--green);
+}
+
+.customer-plant-dossier[data-state="worse"] .customer-dossier-meta span[data-tone="primary"] {
+  color: #fff;
+  background: #9b4635;
 }
 
 .customer-dossier-actions {
