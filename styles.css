@@ -806,6 +806,23 @@ input[type="radio"] {
   color: var(--green-dark);
 }
 
+body.followup-processing .followup-loop-card {
+  border-color: #d7a238;
+  background: #fffaf0;
+}
+
+body.followup-processing #followup-loop-upload-btn {
+  border-color: #d7a238;
+  background: #fff4d9;
+  color: #6b4300;
+  cursor: wait;
+}
+
+body.followup-processing .followup-loop-verdict {
+  border-left-color: #d7a238;
+  color: #6b4300;
+}
+
 body.customer-mode.customer-followup-due .followup-loop-grid,
 body.customer-mode.customer-followup-due .followup-loop-steps {
   opacity: 0.72;

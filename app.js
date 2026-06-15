@@ -5962,6 +5962,22 @@ function focusPhotoDiagnosisResult() {
   }, 80);
 }
 
+function setFollowupProcessingState(processing, message = "") {
+  document.body.classList.toggle("followup-processing", Boolean(processing));
+  if (processing) {
+    followupLoopUploadBtn.disabled = true;
+    followupLoopUploadBtn.textContent = "正在对比复查照";
+    if (message) followupLoopVerdict.textContent = message;
+    return;
+  }
+  const state = latestState || getFormState();
+  const findings = latestFindings.length ? latestFindings : diagnose(state);
+  const loop = followupLoopInstruction(state, findings);
+  const target = followupPhotoTarget(loop);
+  followupLoopUploadBtn.disabled = loop.disabled;
+  followupLoopUploadBtn.textContent = loop.disabled ? "等待诊断" : loop.due ? `拍${target.label}复查照` : "上传复查照";
+}
+
 quickPhotoBtn.addEventListener("click", openGuidedPhotoUpload);
 guidedPhotoUploadBtn.addEventListener("click", openGuidedPhotoUpload);
 customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
@@ -6295,69 +6311,89 @@ saveLogBtn.addEventListener("click", async () => {
 followupPhoto.addEventListener("change", () => {
   const file = followupPhoto.files && followupPhoto.files[0];
   if (!file) return;
+  setFollowupProcessingState(true, `已载入：${file.name}，正在对比复查照。`);
+  const showFollowupPhotoError = () => {
+    setFollowupProcessingState(false);
+    followupLoopVerdict.textContent = "复查照片没有读取成功，请换一张清晰照片重试。";
+  };
   const reader = new FileReader();
+  reader.addEventListener("error", showFollowupPhotoError);
   reader.addEventListener("load", () => {
     analyzeImageSignals(reader.result).then(async (signals) => {
-      photoSignals = signals;
-      const photoType = requestedPhotoType || getFormState().photoType || "leaf";
-      await analyzePhotoWithVision(reader.result, file, {
-        photoType,
-        mode: "followup",
-        checkDay: checkDay.value
-      });
-      const comparison = await compareFollowupWithVision(reader.result, file, signals);
+      try {
+        photoSignals = signals;
+        const photoType = requestedPhotoType || getFormState().photoType || "leaf";
+        await analyzePhotoWithVision(reader.result, file, {
+          photoType,
+          mode: "followup",
+          checkDay: checkDay.value
+        });
+        const comparison = await compareFollowupWithVision(reader.result, file, signals);
 
-      if (signals.yellowRatio !== null && signals.yellowRatio > 0.22) {
-        leafProgress.value = "worse";
-      } else if (signals.greenRatio !== null && signals.greenRatio > 0.32) {
-        leafProgress.value = "better";
+        if (signals.yellowRatio !== null && signals.yellowRatio > 0.22) {
+          leafProgress.value = "worse";
+        } else if (signals.greenRatio !== null && signals.greenRatio > 0.32) {
+          leafProgress.value = "better";
+        }
+
+        if (signals.greenRatio !== null && signals.greenRatio > 0.36 && checkDay.value === "48h") {
+          pestProgress.value = "worse";
+        }
+
+        if (signals.darkRatio !== null && signals.darkRatio > 0.45) {
+          leafProgress.value = "worse";
+        }
+
+        if (comparison?.trend === "improved") leafProgress.value = "better";
+        if (comparison?.trend === "worse") leafProgress.value = "worse";
+
+        const trendText = {
+          improved: "前后对比显示正在改善",
+          worse: "前后对比显示有加重迹象",
+          unchanged: "前后对比变化不明显"
+        }[comparison?.trend];
+        const comparisonNote = trendText ? ` ${trendText}。` : "";
+        logNotes.value = `复查照片已自动读取：黄度 ${(signals.yellowRatio * 100).toFixed(0)}%，绿度 ${(signals.greenRatio * 100).toFixed(0)}%，暗部 ${(signals.darkRatio * 100).toFixed(0)}%。${comparisonNote}`;
+        const existingLogs = getLogs();
+        const previewLog = {
+          photoType,
+          leaf: leafProgress.value,
+          flower: flowerProgress.value,
+          pest: pestProgress.value,
+          notes: logNotes.value.trim(),
+          autoSignals: signals,
+          autoSaved: true,
+          source: "customer-photo-upload"
+        };
+        const assessment = routeFollowupAssessment(
+          getFormState(),
+          previewLog,
+          existingLogs[existingLogs.length - 1] || null,
+          comparison
+        );
+        followupLoopVerdict.textContent = `刚刚上传的复查照：${assessment.title}。${assessment.message}`;
+
+        if (document.body.classList.contains("customer-mode")) {
+          let savedLog;
+          try {
+            savedLog = await saveFollowupLog({ auto: true, photoType, comparison });
+          } catch {
+            followupPhoto.value = "";
+            followupLoopVerdict.textContent = "复查照片已读取，但复查记录没有保存成功，请稍后再试。";
+            customerReminderMessage.textContent = "复查照片已读取，后台保存暂时失败。";
+            focusCustomerTarget(followupLoopCard);
+            return;
+          }
+          const savedAssessment = savedLog.routeAssessment || assessment;
+          followupPhoto.value = "";
+          followupLoopVerdict.textContent = `复查照片已自动保存：${savedAssessment.title}。${savedAssessment.next}`;
+          customerReminderMessage.textContent = `复查记录已保存：${savedAssessment.next}`;
+          focusCustomerTarget(customerPlantDossier || followupLoopCard);
+        }
+      } finally {
+        setFollowupProcessingState(false);
       }
-
-      if (signals.greenRatio !== null && signals.greenRatio > 0.36 && checkDay.value === "48h") {
-        pestProgress.value = "worse";
-      }
-
-      if (signals.darkRatio !== null && signals.darkRatio > 0.45) {
-        leafProgress.value = "worse";
-      }
-
-      if (comparison?.trend === "improved") leafProgress.value = "better";
-      if (comparison?.trend === "worse") leafProgress.value = "worse";
-
-      const trendText = {
-        improved: "前后对比显示正在改善",
-        worse: "前后对比显示有加重迹象",
-        unchanged: "前后对比变化不明显"
-      }[comparison?.trend];
-      const comparisonNote = trendText ? ` ${trendText}。` : "";
-      logNotes.value = `复查照片已自动读取：黄度 ${(signals.yellowRatio * 100).toFixed(0)}%，绿度 ${(signals.greenRatio * 100).toFixed(0)}%，暗部 ${(signals.darkRatio * 100).toFixed(0)}%。${comparisonNote}`;
-      const existingLogs = getLogs();
-      const previewLog = {
-        photoType,
-        leaf: leafProgress.value,
-        flower: flowerProgress.value,
-        pest: pestProgress.value,
-        notes: logNotes.value.trim(),
-        autoSignals: signals,
-        autoSaved: true,
-        source: "customer-photo-upload"
-      };
-      const assessment = routeFollowupAssessment(
-        getFormState(),
-        previewLog,
-        existingLogs[existingLogs.length - 1] || null,
-        comparison
-      );
-      followupLoopVerdict.textContent = `刚刚上传的复查照：${assessment.title}。${assessment.message}`;
-
-      if (document.body.classList.contains("customer-mode")) {
-        const savedLog = await saveFollowupLog({ auto: true, photoType, comparison });
-        const savedAssessment = savedLog.routeAssessment || assessment;
-        followupPhoto.value = "";
-        followupLoopVerdict.textContent = `复查照片已自动保存：${savedAssessment.title}。${savedAssessment.next}`;
-        customerReminderMessage.textContent = `复查记录已保存：${savedAssessment.next}`;
-      }
-    });
+    }).catch(showFollowupPhotoError);
   });
   reader.readAsDataURL(file);
 });

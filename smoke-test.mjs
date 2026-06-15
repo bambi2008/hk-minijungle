@@ -397,6 +397,11 @@ const requiredJsSnippets = [
   "function followupAssessmentRouteKey",
   "function routeFollowupAssessment",
   "routeAssessment",
+  "function setFollowupProcessingState",
+  "body.classList.toggle(\"followup-processing\"",
+  "setFollowupProcessingState(true",
+  "setFollowupProcessingState(false",
+  "复查照片已读取，但复查记录没有保存成功",
   "路径判断：",
   "坐果趋势在改善",
   "根区压力在下降",
@@ -455,7 +460,8 @@ const requiredCssSnippets = [
   "body.customer-mode.customer-followup-due .status-pill",
   ".followup-loop-target",
   "body.customer-mode.customer-followup-due .followup-loop-target",
-  ".auto-photo-type-badge"
+  ".auto-photo-type-badge",
+  "body.followup-processing .followup-loop-card"
 ];
 
 const missingCssSnippets = requiredCssSnippets.filter((snippet) => !css.includes(snippet));
