@@ -208,6 +208,7 @@ let latestVisionResult = null;
 let latestPhotoTypeDetection = null;
 let customerTimeRefreshId = null;
 let customerAutoArchiveInFlightSignature = null;
+let customerResetSnapshot = null;
 
 const cropNames = {
   tomato: "矮生番茄",
@@ -2547,6 +2548,13 @@ function setCustomerArchiveStatus(text, state = "waiting") {
   if (!customerArchiveStatus) return;
   customerArchiveStatus.textContent = text;
   customerArchiveStatus.dataset.state = state;
+}
+
+function setCustomerArchiveUndoStatus() {
+  if (!customerArchiveStatus) return;
+  customerArchiveStatus.dataset.state = "saved";
+  customerArchiveStatus.innerHTML = "已准备记录新植物。<button type=\"button\" id=\"undo-customer-reset-btn\" class=\"inline-undo-button\">撤销</button>";
+  customerArchiveStatus.querySelector("#undo-customer-reset-btn")?.addEventListener("click", restorePreviousCustomerPlant);
 }
 
 function renderCustomerArchiveStatus(state = getFormState(), findings = latestFindings) {
@@ -5969,7 +5977,109 @@ function handleCustomerPrimaryAction(event) {
   runCustomerPrimaryAction(event.currentTarget.dataset.action);
 }
 
+function cssSelectorValue(value) {
+  const text = String(value ?? "");
+  return window.CSS?.escape ? CSS.escape(text) : text.replace(/"/g, "\\\"");
+}
+
+function formDraftSnapshot() {
+  return Array.from(form.elements)
+    .filter((element) => element.name || element.id)
+    .filter((element) => element.type !== "file" && element.type !== "button" && element.type !== "submit")
+    .map((element) => ({
+      selector: element.id ? `#${element.id}` : `[name="${element.name}"][value="${cssSelectorValue(element.value)}"]`,
+      name: element.name,
+      type: element.type,
+      value: element.value,
+      checked: Boolean(element.checked)
+    }));
+}
+
+function restoreFormDraft(draft = []) {
+  draft.forEach((item) => {
+    let element = document.querySelector(item.selector);
+    if (!element && item.name) {
+      element = document.querySelector(`[name="${item.name}"][value="${cssSelectorValue(item.value)}"]`);
+    }
+    if (!element) return;
+    if (element.type === "checkbox" || element.type === "radio") {
+      element.checked = item.checked;
+    } else {
+      element.value = item.value;
+    }
+  });
+}
+
+function snapshotCustomerPlantBeforeReset() {
+  return {
+    formDraft: formDraftSnapshot(),
+    localStorage: {
+      [reminderPlanKey]: localStorage.getItem(reminderPlanKey),
+      [baselinePhotoKey]: localStorage.getItem(baselinePhotoKey),
+      [customerAutoArchiveKey]: localStorage.getItem(customerAutoArchiveKey),
+      [historyKey]: localStorage.getItem(historyKey),
+      [tasksKey]: localStorage.getItem(tasksKey),
+      [activeCaseKey]: localStorage.getItem(activeCaseKey)
+    },
+    capturedPhotoTypes: Array.from(capturedPhotoTypes),
+    hasRunSmartDiagnosis,
+    requestedPhotoType,
+    latestVisionResult,
+    latestPhotoTypeDetection,
+    latestMatchedPathways,
+    photoSignals: { ...photoSignals },
+    photoPreviewSrc: photoPreview.getAttribute("src"),
+    photoPreviewVisible: photoPreview.classList.contains("visible"),
+    bodyClasses: {
+      hasPlantPhoto: document.body.classList.contains("has-plant-photo"),
+      followupDue: document.body.classList.contains("customer-followup-due")
+    }
+  };
+}
+
+function restorePreviousCustomerPlant() {
+  const snapshot = customerResetSnapshot;
+  if (!snapshot) return;
+  Object.entries(snapshot.localStorage || {}).forEach(([key, value]) => {
+    if (value === null || value === undefined) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  });
+  restoreFormDraft(snapshot.formDraft);
+  capturedPhotoTypes = new Set(snapshot.capturedPhotoTypes || []);
+  hasRunSmartDiagnosis = Boolean(snapshot.hasRunSmartDiagnosis);
+  requestedPhotoType = snapshot.requestedPhotoType || "plant";
+  latestVisionResult = snapshot.latestVisionResult || null;
+  latestPhotoTypeDetection = snapshot.latestPhotoTypeDetection || null;
+  latestMatchedPathways = snapshot.latestMatchedPathways || [];
+  photoSignals = snapshot.photoSignals || {
+    greenRatio: null,
+    yellowRatio: null,
+    darkRatio: null,
+    brightness: null,
+    contrast: null,
+    width: null,
+    height: null
+  };
+  if (snapshot.photoPreviewSrc) {
+    photoPreview.src = snapshot.photoPreviewSrc;
+    photoPreview.classList.toggle("visible", Boolean(snapshot.photoPreviewVisible));
+  } else {
+    photoPreview.removeAttribute("src");
+    photoPreview.classList.remove("visible");
+  }
+  document.body.classList.toggle("has-plant-photo", Boolean(snapshot.bodyClasses?.hasPlantPhoto));
+  document.body.classList.toggle("customer-followup-due", Boolean(snapshot.bodyClasses?.followupDue));
+  if (plantPhoto) plantPhoto.value = "";
+  if (followupPhoto) followupPhoto.value = "";
+  updateDeviceProfile();
+  runDiagnosis();
+  setCustomerArchiveStatus("已撤销，回到上一株植物。", "saved");
+  customerResetSnapshot = null;
+  focusCustomerTarget(customerPlantDossier || document.querySelector(".customer-summary"));
+}
+
 function resetCustomerPlantDossier() {
+  customerResetSnapshot = snapshotCustomerPlantBeforeReset();
   form.reset();
   capturedPhotoTypes = new Set();
   hasRunSmartDiagnosis = false;
@@ -6005,8 +6115,8 @@ function resetCustomerPlantDossier() {
   if (caseTimeline) caseTimeline.innerHTML = "<div class=\"case-empty-timeline\">新植物还没有诊断记录。</div>";
   if (caseStatus) caseStatus.textContent = "已准备记录新植物。";
   updateDeviceProfile();
-  setCustomerArchiveStatus("拍完首张照片后自动建档。", "waiting");
   runDiagnosis();
+  setCustomerArchiveUndoStatus();
   focusCustomerTarget(document.querySelector(".customer-summary"));
 }
 

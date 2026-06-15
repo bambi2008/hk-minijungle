@@ -1996,6 +1996,17 @@ body.customer-mode .customer-plan-compact .customer-primary-action {
   font-weight: 700;
 }
 
+.inline-undo-button {
+  margin-left: 8px;
+  min-height: 24px;
+  border: 0;
+  padding: 0 8px;
+  color: var(--green-dark);
+  background: #d8ecdf;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .customer-archive-status[data-state="saved"] {
   color: var(--green-dark);
   background: #edf7f1;
