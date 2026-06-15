@@ -1916,15 +1916,17 @@ function customerReminderSummary(state = getFormState(), findings = latestFindin
   }
 
   if (plan?.actionCompletedAt && pending?.dueAt) {
+    const handoff = actionFollowupHandoff(plan);
     return {
       kicker: "动作已完成",
-      title: `我会在 ${relativeDueText(pending.dueAt)} 提醒你复查`,
-      message: plan.actionFollowupReason || "不用手动计算时间，我已经按你完成动作的时间重新安排。",
+      title: handoff?.title || `我会在 ${relativeDueText(pending.dueAt)} 提醒你复查`,
+      message: handoff?.message || "不用手动计算时间，我已经按你完成动作的时间重新安排。",
       meta: [
-        pending.task || "按提醒复查",
-        pending.photo ? `拍 ${pending.photo}` : "同角度拍照",
-        `复查时间 ${dueLabel(pending.dueAt)}`,
-        `完成 ${dueLabel(plan.actionCompletedAt)}`
+        handoff?.idleAdvice || "现在不用继续操作",
+        handoff?.photo || (pending.photo ? `拍 ${pending.photo}` : "同角度拍照"),
+        handoff?.dueAt || `复查时间 ${dueLabel(pending.dueAt)}`,
+        handoff?.success || pending.task || "按提醒复查",
+        handoff?.completed || `完成 ${dueLabel(plan.actionCompletedAt)}`
       ]
     };
   }
@@ -2198,6 +2200,36 @@ function isWaitingForActionFollowup(plan = getReminderPlan()) {
   return Boolean(plan?.actionCompletedAt && pending?.dueAt && !isReminderDue(pending));
 }
 
+function actionFollowupHandoff(plan = getReminderPlan()) {
+  const pending = firstPendingReminder(plan);
+  if (!plan?.actionCompletedAt || !pending?.dueAt) return null;
+  const due = isReminderDue(pending);
+  const when = due ? "现在" : relativeDueText(pending.dueAt);
+  const photo = pending.photo ? `拍 ${pending.photo}` : "拍同角度照片";
+  const task = pending.task || "按提醒复查";
+  const success = pending.success || followupSuccessText(pending);
+  const reason = plan.actionFollowupReason || "已按你完成动作的时间重新计算复查节点。";
+  return {
+    due,
+    when,
+    photo,
+    task,
+    success,
+    reason,
+    title: due ? "现在拍复查照" : `我会在 ${when} 提醒你复查`,
+    message: due
+      ? "现在只需要拍一张同角度复查照，我会判断有没有变好。"
+      : `${reason} 现在先别叠加新动作，到点只拍复查照。`,
+    nextAction: due ? photo.replace(/^拍\s*/, "拍") : `${when}复查`,
+    compactReason: due
+      ? "复查时间到了，拍完我会自动判断趋势。"
+      : `当前动作已完成，先不用继续调参数；${when}回来${photo}。`,
+    idleAdvice: due ? "现在只做复查拍照" : "现在不用继续操作",
+    completed: `完成 ${dueLabel(plan.actionCompletedAt)}`,
+    dueAt: `复查时间 ${dueLabel(pending.dueAt)}`
+  };
+}
+
 function currentCustomerTask(state = getFormState(), findings = latestFindings) {
   if (isWaitingForActionFollowup()) return null;
   const taskState = getTaskState();
@@ -2355,13 +2387,14 @@ function customerCompactPlanModel(state, findings) {
   const pendingReminder = firstPendingReminder(plan);
   const followupDue = pendingReminder && isReminderDue(pendingReminder);
   if (plan?.actionCompletedAt && pendingReminder) {
+    const handoff = actionFollowupHandoff(plan);
     return {
       judgement: followupDue ? "该复查了" : "等待复查",
-      reason: followupDue
+      reason: handoff?.compactReason || (followupDue
         ? "现在拍同角度复查照，我会判断有没有变好。"
-        : plan.actionFollowupReason || "当前动作已经完成，先不要叠加新动作。",
+        : "当前动作已经完成，先不要叠加新动作。"),
       action: actionModel.label,
-      followup: followupDue ? "现在" : relativeDueText(pendingReminder.dueAt)
+      followup: handoff?.due ? "现在" : handoff?.when || relativeDueText(pendingReminder.dueAt)
     };
   }
 
@@ -2713,13 +2746,14 @@ function renderCustomerSummary(state, findings) {
   const pendingReminder = firstPendingReminder(plan);
   const followupDue = pendingReminder && isReminderDue(pendingReminder);
   if (plan?.actionCompletedAt && pendingReminder) {
+    const handoff = actionFollowupHandoff(plan);
     customerTitle.textContent = followupDue ? "该复查了" : "动作已完成，等待复查";
-    customerMessage.textContent = followupDue
+    customerMessage.textContent = handoff?.compactReason || (followupDue
       ? "现在拍一张同角度复查照，我会自动判断有没有变好。"
-      : plan.actionFollowupReason || "系统已经按你完成动作的时间重新安排复查。";
+      : "系统已经按你完成动作的时间重新安排复查。");
     customerNextAction.textContent = followupDue
       ? `拍${pendingReminder.photo || "复查照"}`
-      : `${relativeDueText(pendingReminder.dueAt)}复查`;
+      : handoff?.nextAction || `${relativeDueText(pendingReminder.dueAt)}复查`;
     renderCustomerPrimaryAction(state, findings);
     const score = confidenceScore();
     confidenceValue.textContent = `${score}%`;
@@ -2944,17 +2978,18 @@ function refreshAfterCustomerAction(state, findings, text, record) {
 
   if (!plan) return;
   const pending = firstPendingReminder(plan);
-  const when = pending?.dueAt ? relativeDueText(pending.dueAt) : "下一次提醒";
+  const handoff = actionFollowupHandoff(plan);
+  const when = handoff?.when || (pending?.dueAt ? relativeDueText(pending.dueAt) : "下一次提醒");
   customerReminderKicker.textContent = "动作已完成";
-  customerReminderTitle.textContent = `我会在 ${when} 提醒你复查`;
-  customerReminderMessage.textContent = plan.actionFollowupReason || "不用手动计算时间，我已经按你完成动作的时间重新安排。";
+  customerReminderTitle.textContent = handoff?.title || `我会在 ${when} 提醒你复查`;
+  customerReminderMessage.textContent = handoff?.message || "不用手动计算时间，我已经按你完成动作的时间重新安排。";
   customerReminderMeta.innerHTML = "";
   [
-    pending?.task || "按提醒复查",
-    pending?.photo ? `拍 ${pending.photo}` : "同角度拍照",
-    pending?.dueAt ? `复查时间 ${dueLabel(pending.dueAt)}` : "",
-    pending?.success ? `看 ${pending.success}` : "",
-    record?.completedAt ? `完成 ${dueLabel(record.completedAt)}` : ""
+    handoff?.idleAdvice || "现在不用继续操作",
+    handoff?.photo || (pending?.photo ? `拍 ${pending.photo}` : "同角度拍照"),
+    handoff?.dueAt || (pending?.dueAt ? `复查时间 ${dueLabel(pending.dueAt)}` : ""),
+    handoff?.success ? `看 ${handoff.success}` : pending?.success ? `看 ${pending.success}` : "",
+    record?.completedAt ? `完成 ${dueLabel(record.completedAt)}` : handoff?.completed || ""
   ].filter(Boolean).slice(0, 3).forEach((item) => {
     const chip = document.createElement("span");
     chip.textContent = item;
@@ -2980,12 +3015,27 @@ function renderCustomerTaskFocus(state, findings, groups, labels, taskState) {
   group.appendChild(title);
 
   if (!current) {
+    const handoff = actionFollowupHandoff(plan);
     const done = document.createElement("div");
     done.className = "customer-action-empty";
     done.innerHTML = waitingForFollowup
-      ? `<strong>当前动作已完成</strong><span>${reminder?.dueAt ? `${relativeDueText(reminder.dueAt)}复查，拍 ${reminder.photo || "同角度照片"}。` : "等复查提醒到了，直接拍一张同角度照片。"}</span>`
+      ? `<strong>当前动作已完成</strong><span>${handoff?.compactReason || (reminder?.dueAt ? `${relativeDueText(reminder.dueAt)}复查，拍 ${reminder.photo || "同角度照片"}。` : "等复查提醒到了，直接拍一张同角度照片。")}</span>`
       : "<strong>今天的动作都完成了</strong><span>等复查提醒到了，直接拍一张同角度照片。</span>";
     group.appendChild(done);
+    if (waitingForFollowup && handoff) {
+      const guide = document.createElement("div");
+      guide.className = "customer-action-handoff";
+      [
+        ["现在", handoff.idleAdvice],
+        ["回来", `${handoff.when}，${handoff.photo}`],
+        ["判断", handoff.success]
+      ].forEach(([label, value]) => {
+        const item = document.createElement("div");
+        item.innerHTML = `<span>${label}</span><strong>${value}</strong>`;
+        guide.appendChild(item);
+      });
+      group.appendChild(guide);
+    }
     taskList.appendChild(group);
     return;
   }

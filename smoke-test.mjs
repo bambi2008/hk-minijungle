@@ -241,6 +241,7 @@ const requiredJsSnippets = [
   "function renderCustomerJourney",
   "function customerTaskLabels",
   "function isWaitingForActionFollowup",
+  "function actionFollowupHandoff",
   "function currentCustomerTask",
   "function customerPrimaryActionModel",
   "function renderCustomerPrimaryAction",
@@ -304,6 +305,9 @@ const requiredJsSnippets = [
   "plan?.items?.length",
   "动作已完成，等待复查",
   "处方已执行，等待复查验证",
+  "现在不用继续操作",
+  "现在先别叠加新动作",
+  "customer-action-handoff",
   "function photoQualityProblems",
   "function uniquePhotoTypes",
   "function buildPhotoRescueActions",
@@ -469,7 +473,8 @@ const requiredCssSnippets = [
   ".auto-photo-type-badge",
   "body.followup-processing .followup-loop-card",
   ".followup-photo-guide",
-  ".followup-photo-guide-item"
+  ".followup-photo-guide-item",
+  ".customer-action-handoff"
 ];
 
 const missingCssSnippets = requiredCssSnippets.filter((snippet) => !css.includes(snippet));
