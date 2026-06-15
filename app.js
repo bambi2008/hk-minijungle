@@ -162,6 +162,7 @@ const followupLoopSuccess = document.querySelector("#followup-loop-success");
 const followupLoopSteps = document.querySelector("#followup-loop-steps");
 const followupLoopVerdict = document.querySelector("#followup-loop-verdict");
 const followupLoopTarget = document.querySelector("#followup-loop-target");
+const followupPhotoGuide = document.querySelector("#followup-photo-guide");
 const followupLoopUploadBtn = document.querySelector("#followup-loop-upload-btn");
 const customerReminderCard = document.querySelector("#customer-reminder-card");
 const customerReminderKicker = document.querySelector("#customer-reminder-kicker");
@@ -1790,6 +1791,57 @@ function followupPhotoTarget(loop = followupLoopInstruction()) {
   };
 }
 
+function followupPhotoGuideItems(loop, state = getFormState()) {
+  if (!loop || loop.disabled) return [];
+  const target = followupPhotoTarget(loop);
+  const crop = cropNames[state.crop] || "这棵植物";
+  const byType = {
+    plant: [
+      ["对齐", `拍完整${crop}、盆口和灯光方向`],
+      ["位置", "手机保持上次距离，横竖方向不变"],
+      ["看点", loop.success]
+    ],
+    leaf: [
+      ["对齐", "找同一片问题叶，旁边带一片新叶"],
+      ["位置", "叶面铺平，避开强反光和手影"],
+      ["看点", "新叶是否更绿，老叶黄斑是否扩大"]
+    ],
+    root: [
+      ["对齐", "拍同一段根区边缘、植株基部和水位"],
+      ["位置", "镜头垂直向下，带上干湿边界"],
+      ["看点", "藻斑、白毛、积水和根色是否改善"]
+    ],
+    flower: [
+      ["对齐", "拍同一组花序或同一串小果"],
+      ["位置", "花心/果柄清楚，背景尽量简单"],
+      ["看点", "落花是否减少，小果是否继续保留"]
+    ],
+    pest: [
+      ["对齐", "拍同一片叶背、嫩梢或同一张粘虫板"],
+      ["位置", "靠近但不要糊，先对焦再拍"],
+      ["看点", "虫点、蛛丝或飞虫数量是否下降"]
+    ]
+  };
+  return byType[target.type] || [
+    ["对齐", photoTip(target.type)],
+    ["位置", "尽量同角度、同光线、同距离"],
+    ["看点", loop.success]
+  ];
+}
+
+function renderFollowupPhotoGuide(loop, state = getFormState()) {
+  if (!followupPhotoGuide) return;
+  const items = followupPhotoGuideItems(loop, state);
+  followupPhotoGuide.hidden = !items.length;
+  followupPhotoGuide.innerHTML = "";
+  items.forEach(([label, text]) => {
+    const item = document.createElement("div");
+    item.className = "followup-photo-guide-item";
+    item.innerHTML = `<span>${label}</span><strong>${text}</strong>`;
+    followupPhotoGuide.appendChild(item);
+  });
+}
+
 function renderFollowupPhotoTarget(loop) {
   if (!followupLoopTarget) return;
   if (!loop || loop.disabled) {
@@ -1827,6 +1879,7 @@ function renderFollowupLoop(state = getFormState(), findings = latestFindings) {
   document.body.classList.toggle("customer-followup-due", document.body.classList.contains("customer-mode") && loop.due && !loop.disabled);
   updateCustomerFollowupCue(loop);
   renderFollowupPhotoTarget(loop);
+  renderFollowupPhotoGuide(loop, state);
   followupLoopSteps.innerHTML = "";
   loop.steps.forEach((step, index) => {
     const item = document.createElement("div");

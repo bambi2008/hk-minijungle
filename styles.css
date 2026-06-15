@@ -903,6 +903,38 @@ body.customer-mode.customer-followup-due .customer-progress-card {
   line-height: 1.35;
 }
 
+.followup-photo-guide {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+  border-top: 1px solid #dbe6df;
+  padding-top: 10px;
+}
+
+.followup-photo-guide[hidden] {
+  display: none;
+}
+
+.followup-photo-guide-item {
+  min-width: 0;
+}
+
+.followup-photo-guide-item span {
+  display: block;
+  color: var(--blue);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.followup-photo-guide-item strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 0.8rem;
+  line-height: 1.35;
+}
+
 .followup-loop-verdict {
   margin: 10px 0 0;
   border-left: 3px solid var(--gold);
@@ -3298,6 +3330,7 @@ li {
   .followup-grid,
   .followup-loop-grid,
   .followup-loop-steps,
+  .followup-photo-guide,
   .reminder-strip,
   .schedule-item,
   .notification-metrics,

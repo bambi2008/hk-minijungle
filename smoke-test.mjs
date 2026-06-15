@@ -79,6 +79,7 @@ const requiredIds = [
   "followup-loop-steps",
   "followup-loop-verdict",
   "followup-loop-target",
+  "followup-photo-guide",
   "followup-loop-upload-btn",
   "customer-reminder-card",
   "customer-reminder-kicker",
@@ -323,11 +324,16 @@ const requiredJsSnippets = [
   "function updateCustomerFollowupCue",
   "function followupPhotoTarget",
   "function renderFollowupPhotoTarget",
+  "function followupPhotoGuideItems",
+  "function renderFollowupPhotoGuide",
   "function applyFollowupPhotoTarget",
   "document.title = due",
   "`拍${target.label}复查照`",
   "`拍${photoTypeLabel(type)}复查照`",
   "本次复查已锁定为",
+  "拍同一段根区边缘",
+  "拍同一组花序",
+  "拍同一片叶背",
   "setInterval(refreshCustomerTimeState",
   "document.addEventListener(\"visibilitychange\"",
   "还有 ${days} 天",
@@ -461,7 +467,9 @@ const requiredCssSnippets = [
   ".followup-loop-target",
   "body.customer-mode.customer-followup-due .followup-loop-target",
   ".auto-photo-type-badge",
-  "body.followup-processing .followup-loop-card"
+  "body.followup-processing .followup-loop-card",
+  ".followup-photo-guide",
+  ".followup-photo-guide-item"
 ];
 
 const missingCssSnippets = requiredCssSnippets.filter((snippet) => !css.includes(snippet));
