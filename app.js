@@ -813,6 +813,21 @@ function renderAutoIntakeCard(state = getFormState()) {
   });
 }
 
+function customerFirstPhotoPrompt(state = getFormState()) {
+  const plan = buildDeviceCropPlan(state);
+  const type = plan.firstPhoto || "plant";
+  const crop = cropNames[state.crop] || "这棵植物";
+  const label = photoTypeLabel(type);
+  return {
+    type,
+    label,
+    crop,
+    button: `拍${crop}${label}`,
+    title: `先拍${crop}${label}`,
+    message: `不用填表。第一张只拍${label}：${photoTip(type)} 拍完我会自动判断要不要补拍。`
+  };
+}
+
 function renderCropQuickChoices(state = getFormState()) {
   if (!cropQuickButtons.length) return;
   cropQuickButtons.forEach((button) => {
@@ -820,7 +835,11 @@ function renderCropQuickChoices(state = getFormState()) {
     button.classList.toggle("active", selected);
     button.setAttribute("aria-pressed", String(selected));
   });
-  if (quickPhotoBtn) quickPhotoBtn.textContent = `拍${cropNames[state.crop]}照片`;
+  const prompt = customerFirstPhotoPrompt(state);
+  if (quickPhotoBtn) {
+    quickPhotoBtn.textContent = prompt.button;
+    quickPhotoBtn.setAttribute("aria-label", prompt.title);
+  }
 }
 
 function hasCustomerDossierContext(state = getFormState()) {
@@ -842,8 +861,9 @@ function hasCustomerDossierContext(state = getFormState()) {
 function renderCustomerStartPanel(state = getFormState(), findings = latestFindings) {
   if (!customerStartTitle || !customerStartMessage) return;
   if (!hasCustomerDossierContext(state)) {
-    customerStartTitle.textContent = "先拍一张植物照片";
-    customerStartMessage.textContent = "不需要先填表。照片不清晰时，我会提示补拍；信息够用后直接给你下一步。";
+    const prompt = customerFirstPhotoPrompt(state);
+    customerStartTitle.textContent = prompt.title;
+    customerStartMessage.textContent = prompt.message;
     renderCropQuickChoices(state);
     return;
   }
@@ -865,7 +885,12 @@ function chooseCustomerCrop(cropKey) {
   autoFillCustomerIntake({ forceStage: true });
   updateCropHint();
   updateDeviceProfile();
-  renderCropQuickChoices(getFormState());
+  const state = getFormState();
+  const prompt = customerFirstPhotoPrompt(state);
+  requestedPhotoType = prompt.type;
+  if (photoHint) photoHint.textContent = `已选择${prompt.crop}，第一张拍${prompt.label}。`;
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `首张照片：${prompt.label}`;
+  renderCropQuickChoices(state);
   runDiagnosis();
   quickPhotoBtn?.focus();
 }
