@@ -2393,8 +2393,11 @@ function customerPlantDossierModel(state, findings) {
       : compactPlan.followup
         ? `复查：${compactPlan.followup}`
         : "";
-  const updatedChip = record?.savedAt ? `更新：${relativePastText(record.savedAt)}` : "";
-  const archiveChip = record?.reportId ? `档案 ${shortReportId(record.reportId)}` : "待自动建档";
+  const updatedAt = record?.updatedAt || record?.savedAt;
+  const updatedChip = updatedAt ? `更新：${relativePastText(updatedAt)}` : "";
+  const archiveChip = record?.reportId
+    ? `${customerArchiveEventLabel(record.lastEvent)} · 档案 ${shortReportId(record.reportId)}`
+    : "待自动建档";
   const meta = [
     dossierChip(actionChip, followupDue ? "warning" : "primary"),
     dossierChip(followupChip, followupDue ? "warning" : "neutral"),
@@ -2472,6 +2475,29 @@ function setCustomerArchiveRecord(record) {
   localStorage.setItem(customerAutoArchiveKey, JSON.stringify(record));
 }
 
+function touchCustomerArchiveRecord(update = {}) {
+  const existing = getCustomerArchiveRecord();
+  if (!existing?.reportId) return null;
+  const now = new Date().toISOString();
+  const next = {
+    ...existing,
+    ...update,
+    updatedAt: now,
+    lastEvent: update.lastEvent || existing.lastEvent || "diagnosis"
+  };
+  setCustomerArchiveRecord(next);
+  return next;
+}
+
+function customerArchiveEventLabel(event) {
+  const labels = {
+    diagnosis: "已建档",
+    "action-completed": "已完成动作",
+    followup: "已保存复查"
+  };
+  return labels[event] || "已更新";
+}
+
 function customerArchiveSignature(state, findings) {
   const activeCase = getActiveCase(state);
   return [
@@ -2540,11 +2566,14 @@ async function maybeAutoArchiveCustomerDiagnosis(state, findings) {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const saved = await response.json();
+    const savedAt = new Date().toISOString();
     const record = {
       signature,
       reportId: saved.id,
       caseId: saved.caseId,
-      savedAt: new Date().toISOString()
+      savedAt,
+      updatedAt: savedAt,
+      lastEvent: "diagnosis"
     };
     setCustomerArchiveRecord(record);
     setCustomerArchiveStatus("已为这棵植物建档，复查会继续记录。", "saved");
@@ -2792,11 +2821,17 @@ function taskEntries(groups, labels) {
 
 function refreshAfterCustomerAction(state, findings, text, record) {
   const plan = rescheduleRemindersFromAction(state, findings, text);
+  touchCustomerArchiveRecord({
+    lastEvent: "action-completed",
+    actionCompletedAt: record?.completedAt || new Date().toISOString(),
+    actionText: text
+  });
   renderReminderSchedule(state, findings);
   renderFollowupLoop(state, findings);
   renderCustomerReminderSummary(state, findings);
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
+  renderCustomerPlantDossier(state, findings);
   renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
@@ -6049,6 +6084,12 @@ async function saveFollowupLog(options = {}) {
   logs.push(log);
   setLogs(logs);
   completeReminder(checkDay.value);
+  touchCustomerArchiveRecord({
+    lastEvent: "followup",
+    followupAt: log.at,
+    followupLogId: log.id,
+    followupState: log.routeAssessment?.state || null
+  });
   logNotes.value = "";
   runDiagnosis();
 
