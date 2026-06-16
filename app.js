@@ -123,6 +123,10 @@ const refreshNotificationsBtn = document.querySelector("#refresh-notifications-b
 const notificationStatus = document.querySelector("#notification-status");
 const notificationMetrics = document.querySelector("#notification-metrics");
 const notificationList = document.querySelector("#notification-list");
+const integrationCenter = document.querySelector("#integration-center");
+const refreshIntegrationsBtn = document.querySelector("#refresh-integrations-btn");
+const integrationStatus = document.querySelector("#integration-status");
+const integrationGrid = document.querySelector("#integration-grid");
 const refreshInsightsBtn = document.querySelector("#refresh-insights-btn");
 const insightsGrid = document.querySelector("#insights-grid");
 const insightsList = document.querySelector("#insights-list");
@@ -157,6 +161,13 @@ const guidedPhotoReason = document.querySelector("#guided-photo-reason");
 const guidedPhotoSteps = document.querySelector("#guided-photo-steps");
 const guidedPhotoStatus = document.querySelector("#guided-photo-status");
 const guidedPhotoUploadBtn = document.querySelector("#guided-photo-upload-btn");
+const nativeCameraBtn = document.querySelector("#native-camera-btn");
+const nativeCameraCard = document.querySelector("#native-camera-card");
+const nativeCameraVideo = document.querySelector("#native-camera-video");
+const nativeCameraCanvas = document.querySelector("#native-camera-canvas");
+const nativeCameraShotBtn = document.querySelector("#native-camera-shot-btn");
+const nativeCameraCloseBtn = document.querySelector("#native-camera-close-btn");
+const nativeCameraStatus = document.querySelector("#native-camera-status");
 const resetPhotoCheckBtn = document.querySelector("#reset-photo-check-btn");
 const nextPhotoTitle = document.querySelector("#next-photo-title");
 const nextPhotoTip = document.querySelector("#next-photo-tip");
@@ -223,6 +234,7 @@ let latestPhotoQualityGate = null;
 let latestAiPipelineSnapshot = null;
 let customerCaseTimelineCache = null;
 let customerCaseTimelineInFlightKey = null;
+let nativeCameraStream = null;
 let customerTimeRefreshId = null;
 let customerAutoArchiveInFlightSignature = null;
 let customerResetSnapshot = null;
@@ -4310,6 +4322,60 @@ function notificationMetric(label, value) {
   return `<div><span>${label}</span><strong>${value}</strong></div>`;
 }
 
+function integrationStatusLabel(status) {
+  const labels = {
+    connected: "已接入",
+    partial: "部分接入",
+    placeholder: "本地占位",
+    "client-detected": "前端检测"
+  };
+  return labels[status] || "待推进";
+}
+
+function integrationStatusClass(status) {
+  if (status === "connected") return "connected";
+  if (status === "partial" || status === "client-detected") return "partial";
+  return "placeholder";
+}
+
+async function loadIntegrationStatus() {
+  if (!integrationGrid || !integrationStatus) return;
+  integrationStatus.textContent = "正在检查四个关键短板的接入状态...";
+  try {
+    const response = await fetch("/api/integrations/status");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    integrationGrid.innerHTML = "";
+    payload.items.forEach((item) => {
+      const card = document.createElement("div");
+      card.className = `integration-card ${integrationStatusClass(item.status)}`;
+      const envEntries = Object.entries(item.env || {});
+      card.innerHTML = `
+        <span>${integrationStatusLabel(item.status)}</span>
+        <strong>${item.title}</strong>
+        <p>${item.summary}</p>
+        <em>${item.next}</em>
+        <div class="integration-env-list"></div>
+      `;
+      const envList = card.querySelector(".integration-env-list");
+      const rows = envEntries.length
+        ? envEntries.map(([key, value]) => ({ key, value }))
+        : (item.requiredEnv || []).map((key) => ({ key, value: false }));
+      rows.slice(0, 5).forEach(({ key, value }) => {
+        const chip = document.createElement("small");
+        chip.dataset.ready = String(Boolean(value));
+        chip.textContent = `${key}: ${value ? "ready" : "missing"}`;
+        envList.appendChild(chip);
+      });
+      integrationGrid.appendChild(card);
+    });
+    const connected = payload.items.filter((item) => item.status === "connected").length;
+    integrationStatus.textContent = `四大短板推进：${connected}/${payload.items.length} 已真实接入；其余为可配置占位或前端能力。`;
+  } catch {
+    integrationStatus.textContent = "集成状态接口暂不可用，请确认本地服务已更新。";
+  }
+}
+
 async function completeNotification(id) {
   const response = await fetch(`/api/notifications/${encodeURIComponent(id)}`, {
     method: "PATCH",
@@ -6507,7 +6573,128 @@ function setFollowupProcessingState(processing, message = "") {
   followupLoopUploadBtn.textContent = loop.disabled ? "等待诊断" : loop.due ? `拍${target.label}复查照` : "上传复查照";
 }
 
-quickPhotoBtn.addEventListener("click", openGuidedPhotoUpload);
+async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
+  photoPreview.src = dataUrl;
+  photoPreview.classList.add("visible");
+  document.body.classList.add("has-plant-photo");
+  const source = options.source || "file";
+  const fileName = file?.name || (source === "camera" ? `camera-${Date.now()}.jpg` : "照片");
+  setPhotoProcessingState(true, `已载入：${fileName}，正在识别照片并生成诊断。`);
+  try {
+    const signals = await analyzeImageSignals(dataUrl);
+    photoSignals = signals;
+    setPhotoType(requestedPhotoType || "plant");
+    inferFromFileName({ name: fileName });
+    applyPhotoSignals();
+    const detection = detectUploadedPhotoType({ name: fileName }, signals, getFormState());
+    const currentPhotoType = applyPhotoTypeDetection(detection);
+    const vision = await analyzePhotoWithVision(dataUrl, { name: fileName }, {
+      photoType: currentPhotoType,
+      skipHints: true,
+      source
+    });
+    const gate = photoQualityGate(signals, currentPhotoType, detection, vision);
+    latestPhotoQualityGate = gate;
+    updateAiPipelineSnapshot(getFormState(), {
+      vision,
+      gate,
+      detection,
+      photoType: currentPhotoType,
+      hasImage: true
+    });
+    renderPhotoReview(gate, fileName);
+    if (gate.canContinue) {
+      if (vision) applyVisionHints(vision);
+      capturedPhotoTypes.add(currentPhotoType);
+      saveBaselinePhotoSignals(currentPhotoType, signals);
+      photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${fileName}。${source === "camera" ? "相机照片" : "照片"}${gate.state === "warn" ? "可继续使用，也可以重拍优化。" : "已通过质检，诊断已更新。"}`;
+      hasRunSmartDiagnosis = true;
+    } else {
+      photoHint.textContent = `这张${photoTypeLabel(currentPhotoType)}暂时看不准：${gate.message}`;
+      hasRunSmartDiagnosis = false;
+    }
+    runDiagnosis();
+    if (gate.canContinue) focusPhotoDiagnosisResult();
+    else focusCustomerTarget(photoReviewCard || customerPhotoRescueCard);
+  } catch {
+    if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
+    if (photoHint) photoHint.textContent = "照片没有读取成功，请换一张清晰照片重试。";
+    latestPhotoQualityGate = photoQualityGate({ width: null, height: null }, requestedPhotoType || "plant");
+    renderPhotoReview(latestPhotoQualityGate, fileName);
+  } finally {
+    setPhotoProcessingState(false);
+  }
+}
+
+function nativeCameraSupported() {
+  return Boolean(navigator.mediaDevices?.getUserMedia && nativeCameraVideo && nativeCameraCanvas);
+}
+
+function stopNativeCamera() {
+  if (nativeCameraStream) {
+    nativeCameraStream.getTracks().forEach((track) => track.stop());
+    nativeCameraStream = null;
+  }
+  if (nativeCameraVideo) nativeCameraVideo.srcObject = null;
+  if (nativeCameraCard) nativeCameraCard.hidden = true;
+  document.body.classList.remove("native-camera-open");
+}
+
+async function openNativeCamera() {
+  dismissCustomerResetUndo();
+  if (!nativeCameraSupported()) {
+    if (nativeCameraStatus) nativeCameraStatus.textContent = "当前浏览器不支持直接相机，已切换到相册/文件选择。";
+    openGuidedPhotoUpload();
+    return;
+  }
+  const instruction = guidedPhotoInstruction();
+  if (instruction.type) {
+    requestedPhotoType = instruction.type;
+    setPhotoType(instruction.type);
+  }
+  try {
+    nativeCameraCard.hidden = false;
+    document.body.classList.add("native-camera-open");
+    nativeCameraStatus.textContent = `正在打开相机。请拍${photoTypeLabel(requestedPhotoType || "plant")}，拍完会自动质检。`;
+    nativeCameraStream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: { ideal: "environment" },
+        width: { ideal: 1280 },
+        height: { ideal: 960 }
+      },
+      audio: false
+    });
+    nativeCameraVideo.srcObject = nativeCameraStream;
+    await nativeCameraVideo.play();
+    nativeCameraStatus.textContent = `相机已打开：把${photoTypeLabel(requestedPhotoType || "plant")}放进画面，尽量稳定后点击拍下。`;
+  } catch {
+    stopNativeCamera();
+    if (nativeCameraStatus) nativeCameraStatus.textContent = "相机没有打开，已切换到相册/文件选择。";
+    openGuidedPhotoUpload();
+  }
+}
+
+async function captureNativeCameraFrame() {
+  if (!nativeCameraVideo || !nativeCameraCanvas || !nativeCameraStream) {
+    openGuidedPhotoUpload();
+    return;
+  }
+  const width = nativeCameraVideo.videoWidth || 1280;
+  const height = nativeCameraVideo.videoHeight || 960;
+  nativeCameraCanvas.width = width;
+  nativeCameraCanvas.height = height;
+  const context = nativeCameraCanvas.getContext("2d");
+  context.drawImage(nativeCameraVideo, 0, 0, width, height);
+  const dataUrl = nativeCameraCanvas.toDataURL("image/jpeg", 0.86);
+  const photoType = requestedPhotoType || "plant";
+  stopNativeCamera();
+  await processPlantPhotoDataUrl(dataUrl, { name: `camera-${photoType}-${Date.now()}.jpg` }, { source: "camera" });
+}
+
+quickPhotoBtn.addEventListener("click", openNativeCamera);
+nativeCameraBtn?.addEventListener("click", openNativeCamera);
+nativeCameraShotBtn?.addEventListener("click", captureNativeCameraFrame);
+nativeCameraCloseBtn?.addEventListener("click", stopNativeCamera);
 guidedPhotoUploadBtn.addEventListener("click", openGuidedPhotoUpload);
 customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
 
@@ -6515,7 +6702,7 @@ followupLoopUploadBtn.addEventListener("click", openFollowupUpload);
 
 function runCustomerPrimaryAction(action) {
   if (action === "guided-photo") {
-    openGuidedPhotoUpload();
+    openNativeCamera();
     return;
   }
   if (action === "suggested-photo") {
@@ -6664,6 +6851,7 @@ function restorePreviousCustomerPlant() {
 }
 
 function resetCustomerPlantDossier() {
+  stopNativeCamera();
   customerResetSnapshot = snapshotCustomerPlantBeforeReset();
   form.reset();
   capturedPhotoTypes = new Set();
@@ -6749,52 +6937,13 @@ plantPhoto.addEventListener("change", () => {
   clearCustomerFirstPhotoReady();
   const reader = new FileReader();
   reader.addEventListener("load", () => {
-    photoPreview.src = reader.result;
-    photoPreview.classList.add("visible");
-    document.body.classList.add("has-plant-photo");
-    setPhotoProcessingState(true, `已载入：${file.name}，正在识别照片并生成诊断。`);
-    analyzeImageSignals(reader.result).then(async (signals) => {
-      try {
-        photoSignals = signals;
-        setPhotoType(requestedPhotoType || "plant");
-        inferFromFileName(file);
-        applyPhotoSignals();
-        const detection = detectUploadedPhotoType(file, signals, getFormState());
-        const currentPhotoType = applyPhotoTypeDetection(detection);
-        const vision = await analyzePhotoWithVision(reader.result, file, { photoType: currentPhotoType, skipHints: true });
-        const gate = photoQualityGate(signals, currentPhotoType, detection, vision);
-        latestPhotoQualityGate = gate;
-        updateAiPipelineSnapshot(getFormState(), {
-          vision,
-          gate,
-          detection,
-          photoType: currentPhotoType,
-          hasImage: true
-        });
-        renderPhotoReview(gate, file.name);
-        if (gate.canContinue) {
-          if (vision) applyVisionHints(vision);
-          capturedPhotoTypes.add(currentPhotoType);
-          saveBaselinePhotoSignals(currentPhotoType, signals);
-          photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${file.name}。${gate.state === "warn" ? "照片可继续使用，也可以重拍优化。" : "诊断已更新。"}`;
-          hasRunSmartDiagnosis = true;
-        } else {
-          photoHint.textContent = `这张${photoTypeLabel(currentPhotoType)}暂时看不准：${gate.message}`;
-          hasRunSmartDiagnosis = false;
-        }
-        runDiagnosis();
-        if (gate.canContinue) focusPhotoDiagnosisResult();
-        else focusCustomerTarget(photoReviewCard || customerPhotoRescueCard);
-      } finally {
-        setPhotoProcessingState(false);
-      }
-    }).catch(() => {
-      setPhotoProcessingState(false);
-      if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
-      if (photoHint) photoHint.textContent = "照片没有读取成功，请换一张清晰照片重试。";
-      latestPhotoQualityGate = photoQualityGate({ width: null, height: null }, requestedPhotoType || "plant");
-      renderPhotoReview(latestPhotoQualityGate, file.name);
-    });
+    processPlantPhotoDataUrl(reader.result, file, { source: "file" });
+  });
+  reader.addEventListener("error", () => {
+    if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
+    if (photoHint) photoHint.textContent = "照片没有读取成功，请换一张清晰照片重试。";
+    latestPhotoQualityGate = photoQualityGate({ width: null, height: null }, requestedPhotoType || "plant");
+    renderPhotoReview(latestPhotoQualityGate, file.name);
   });
   reader.readAsDataURL(file);
 });
@@ -6804,6 +6953,7 @@ useNextPhotoBtn.addEventListener("click", () => {
 });
 
 resetPhotoCheckBtn.addEventListener("click", () => {
+  stopNativeCamera();
   capturedPhotoTypes = new Set();
   hasRunSmartDiagnosis = false;
   requestedPhotoType = "plant";
@@ -7051,6 +7201,7 @@ refreshInsightsBtn.addEventListener("click", loadInsights);
 refreshOpportunitiesBtn.addEventListener("click", loadOpportunityRanks);
 refreshExperimentsBtn.addEventListener("click", loadExperiments);
 refreshProductStrategyBtn.addEventListener("click", loadProductStrategy);
+refreshIntegrationsBtn?.addEventListener("click", loadIntegrationStatus);
 refreshKnowledgeGraphBtn.addEventListener("click", loadKnowledgeGraph);
 knowledgeGraphCropFilter.addEventListener("change", loadKnowledgeGraph);
 knowledgeGraphStageFilter.addEventListener("change", loadKnowledgeGraph);
@@ -7090,3 +7241,4 @@ loadOpportunityRanks();
 loadExperiments();
 loadProductStrategy();
 loadKnowledgeGraph();
+loadIntegrationStatus();

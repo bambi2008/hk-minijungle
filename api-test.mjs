@@ -275,6 +275,50 @@ try {
     throw new Error("Crop models payload mismatch");
   }
 
+  const integrationsResponse = await fetch(`${base}/api/integrations/status`);
+  if (integrationsResponse.status !== 200) {
+    throw new Error(`GET /api/integrations/status failed: ${integrationsResponse.status}`);
+  }
+  const integrations = await integrationsResponse.json();
+  if (
+    !integrations.items?.some((item) => item.key === "vision-ai") ||
+    !integrations.items?.some((item) => item.key === "real-notifications") ||
+    !integrations.items?.some((item) => item.key === "sensor-bridge") ||
+    !integrations.items?.some((item) => item.key === "native-camera")
+  ) {
+    throw new Error("Integration status payload mismatch");
+  }
+
+  const sensorResponse = await fetch(`${base}/api/sensors/ingest`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      source: "xponge-controller",
+      deviceId: "sensor-smoke",
+      readings: {
+        moisture: 61,
+        waterLevel: 2.4,
+        lightHours: 14,
+        temperature: 25,
+        humidity: 56,
+        ec: 1.5,
+        ph: 6.2
+      }
+    })
+  });
+  if (sensorResponse.status !== 200) {
+    throw new Error(`POST /api/sensors/ingest failed: ${sensorResponse.status}`);
+  }
+  const sensor = await sensorResponse.json();
+  if (
+    sensor.integrationContract?.version !== "sensor-bridge-v1" ||
+    sensor.diagnosisFields.sensorMoisture !== 61 ||
+    sensor.diagnosisFields.reservoir !== 2.4 ||
+    !sensor.activeReadings.includes("ec")
+  ) {
+    throw new Error("Sensor ingest payload mismatch");
+  }
+
   const knowledgeGraphResponse = await fetch(`${base}/api/knowledge-graph?crop=tomato&stage=flowering`);
   if (knowledgeGraphResponse.status !== 200) {
     throw new Error(`GET /api/knowledge-graph failed: ${knowledgeGraphResponse.status}`);

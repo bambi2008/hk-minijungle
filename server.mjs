@@ -60,6 +60,93 @@ async function readEnvValue(name) {
   return "";
 }
 
+async function envPresence(names) {
+  const entries = await Promise.all(names.map(async (name) => [name, Boolean(await readEnvValue(name))]));
+  return Object.fromEntries(entries);
+}
+
+function statusLevel(configured, partial = false) {
+  if (configured) return "connected";
+  if (partial) return "partial";
+  return "placeholder";
+}
+
+async function integrationStatusPayload() {
+  const env = {
+    vision: await envPresence(["OPENAI_API_KEY", "OPENAI_VISION_MODEL"]),
+    notifications: await envPresence([
+      "NOTIFICATION_EMAIL_WEBHOOK_URL",
+      "NOTIFICATION_SMS_WEBHOOK_URL",
+      "NOTIFICATION_WECHAT_WEBHOOK_URL"
+    ]),
+    sensors: await envPresence([
+      "SENSOR_WEBHOOK_SECRET",
+      "SENSOR_API_URL",
+      "GARDYN_API_KEY",
+      "LETPOT_API_KEY",
+      "XIAOMI_SENSOR_TOKEN"
+    ])
+  };
+  const notificationChannels = {
+    email: env.notifications.NOTIFICATION_EMAIL_WEBHOOK_URL,
+    sms: env.notifications.NOTIFICATION_SMS_WEBHOOK_URL,
+    wechat: env.notifications.NOTIFICATION_WECHAT_WEBHOOK_URL
+  };
+  const anyNotification = Object.values(notificationChannels).some(Boolean);
+  const anySensor = Object.values(env.sensors).some(Boolean);
+  return {
+    generatedAt: new Date().toISOString(),
+    items: [
+      {
+        key: "vision-ai",
+        title: "真正视觉 AI",
+        status: statusLevel(env.vision.OPENAI_API_KEY),
+        summary: env.vision.OPENAI_API_KEY
+          ? `已检测到 OpenAI Key，当前模型 ${env.vision.OPENAI_VISION_MODEL ? "已自定义" : defaultVisionModel}。`
+          : "当前使用本地颜色/规则占位；充值并配置 OPENAI_API_KEY 后会自动切换真实视觉模型。",
+        next: env.vision.OPENAI_API_KEY ? "继续积累照片质检和复查样本。" : "配置 OPENAI_API_KEY，可选 OPENAI_VISION_MODEL。",
+        env: env.vision,
+        requiredEnv: ["OPENAI_API_KEY"],
+        optionalEnv: ["OPENAI_VISION_MODEL"]
+      },
+      {
+        key: "real-notifications",
+        title: "真实通知",
+        status: statusLevel(anyNotification, Object.values(notificationChannels).filter(Boolean).length > 0),
+        summary: anyNotification
+          ? "已检测到至少一个真实通知 webhook，可从通知队列升级到真实发送。"
+          : "当前通知仍是站内/模拟发送；商业化需要微信、短信、邮件或小程序通道。",
+        next: "优先接微信/小程序，再接短信和邮件兜底。",
+        env: notificationChannels,
+        requiredEnv: ["NOTIFICATION_WECHAT_WEBHOOK_URL 或 NOTIFICATION_SMS_WEBHOOK_URL 或 NOTIFICATION_EMAIL_WEBHOOK_URL"],
+        optionalEnv: []
+      },
+      {
+        key: "sensor-bridge",
+        title: "传感器/硬件闭环",
+        status: statusLevel(anySensor),
+        summary: anySensor
+          ? "已检测到传感器或硬件桥配置，可接入灯光、水位、EC、温湿度数据。"
+          : "当前传感器数据来自表单；下一步需要接设备 API 或传感器 webhook。",
+        next: "先做通用 webhook，再适配 Gardyn/LetPot/Xponge 控制器。",
+        env: env.sensors,
+        requiredEnv: ["SENSOR_API_URL 或 SENSOR_WEBHOOK_SECRET"],
+        optionalEnv: ["GARDYN_API_KEY", "LETPOT_API_KEY", "XIAOMI_SENSOR_TOKEN"]
+      },
+      {
+        key: "native-camera",
+        title: "移动端原生相机",
+        status: "client-detected",
+        summary: "前端已支持 getUserMedia 直拍和文件/相册降级；是否可用取决于浏览器、HTTPS/localhost 和用户授权。",
+        next: "在手机浏览器/小程序 WebView 上实测相机权限、首帧速度和拍照后自动诊断。",
+        env: {},
+        requiredEnv: [],
+        optionalEnv: []
+      }
+    ]
+  };
+}
+
 async function getDb() {
   await mkdir(dataDir, { recursive: true });
   if (sqliteDb) return sqliteDb;
@@ -1250,6 +1337,51 @@ function compareVisionPayload(body) {
   };
 }
 
+function finiteNumber(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
+function normalizeSensorPayload(body = {}) {
+  const raw = body.readings || body.sensor || body;
+  const normalized = {
+    source: body.source || raw.source || "generic-sensor",
+    deviceId: body.deviceId || raw.deviceId || "",
+    capturedAt: body.capturedAt || raw.capturedAt || new Date().toISOString(),
+    readings: {
+      moisture: finiteNumber(raw.moisture ?? raw.soilMoisture ?? raw.rootMoisture),
+      waterLevel: finiteNumber(raw.waterLevel ?? raw.reservoirLevel),
+      lightHours: finiteNumber(raw.lightHours),
+      lightLux: finiteNumber(raw.lightLux ?? raw.lux),
+      temperature: finiteNumber(raw.temperature ?? raw.tempC),
+      humidity: finiteNumber(raw.humidity),
+      ec: finiteNumber(raw.ec),
+      ph: finiteNumber(raw.ph)
+    }
+  };
+  const activeReadings = Object.entries(normalized.readings)
+    .filter(([, value]) => value !== null)
+    .map(([key]) => key);
+  return {
+    ...normalized,
+    activeReadings,
+    diagnosisFields: {
+      sensorMoisture: normalized.readings.moisture,
+      lightHours: normalized.readings.lightHours,
+      temperature: normalized.readings.temperature,
+      humidity: normalized.readings.humidity,
+      ec: normalized.readings.ec,
+      ph: normalized.readings.ph,
+      reservoir: normalized.readings.waterLevel
+    },
+    integrationContract: {
+      version: "sensor-bridge-v1",
+      acceptedFields: ["moisture", "waterLevel", "lightHours", "lightLux", "temperature", "humidity", "ec", "ph"],
+      canMapToDiagnosisForm: true
+    }
+  };
+}
+
 function buildNotificationJobs(reportId, reminderPlan, channels, channelTargets = {}) {
   const requestedChannels = channels?.length ? channels : ["in-app"];
   return (reminderPlan?.items || []).map((item) => {
@@ -1402,6 +1534,106 @@ function simulateChannelSend(statuses, job, options = {}) {
     });
 }
 
+function notificationWebhookEnvName(channel) {
+  const names = {
+    email: "NOTIFICATION_EMAIL_WEBHOOK_URL",
+    sms: "NOTIFICATION_SMS_WEBHOOK_URL",
+    wechat: "NOTIFICATION_WECHAT_WEBHOOK_URL"
+  };
+  return names[channel] || "";
+}
+
+async function deliverChannelStatuses(statuses, job, options = {}) {
+  const attemptedAt = new Date().toISOString();
+  const retryFailedOnly = options.retryFailedOnly === true;
+  const channelTargets = options.channelTargets || {};
+  const baseStatuses = statuses?.length ? statuses : channelStatusList(job.channels || ["in-app"], job.channelTargets || {});
+  const delivered = [];
+
+  for (const item of baseStatuses) {
+    if (retryFailedOnly && item.status !== "failed") {
+      delivered.push(item);
+      continue;
+    }
+
+    const target = channelTargets[item.channel] || item.target || job.channelTargets?.[item.channel] || "";
+    const hasTarget = item.channel === "in-app" || Boolean(target);
+    const webhookEnv = notificationWebhookEnvName(item.channel);
+    const webhookUrl = webhookEnv ? await readEnvValue(webhookEnv) : "";
+
+    if (!hasTarget) {
+      delivered.push({
+        ...item,
+        target,
+        status: "failed",
+        provider: item.provider || "placeholder",
+        lastAttemptAt: attemptedAt,
+        note: channelFailureSuggestion(item.channel).action
+      });
+      continue;
+    }
+
+    if (item.channel === "in-app") {
+      delivered.push({
+        ...item,
+        target,
+        status: "sent",
+        provider: "local-in-app",
+        lastAttemptAt: attemptedAt,
+        note: "站内通知已进入本地队列"
+      });
+      continue;
+    }
+
+    if (!webhookUrl) {
+      delivered.push({
+        ...item,
+        target,
+        status: "sent",
+        provider: "placeholder-simulated",
+        lastAttemptAt: attemptedAt,
+        note: "未配置真实 webhook，已按模拟发送处理"
+      });
+      continue;
+    }
+
+    try {
+      const response = await fetch(webhookUrl, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          channel: item.channel,
+          target,
+          message: job.template?.channelMessages?.[item.channel] || job.message || "",
+          title: job.template?.title || job.caseName || "hk minijungle 复查提醒",
+          action: job.template?.action || job.task || "",
+          photo: job.template?.photo || job.photo || "",
+          job
+        })
+      });
+      delivered.push({
+        ...item,
+        target,
+        status: response.ok ? "sent" : "failed",
+        provider: `${item.channel}-webhook`,
+        lastAttemptAt: attemptedAt,
+        note: response.ok ? "真实 webhook 发送成功" : `真实 webhook 返回 HTTP ${response.status}`
+      });
+    } catch {
+      delivered.push({
+        ...item,
+        target,
+        status: "failed",
+        provider: `${item.channel}-webhook`,
+        lastAttemptAt: attemptedAt,
+        note: "真实 webhook 请求失败"
+      });
+    }
+  }
+
+  return delivered;
+}
+
 function notificationStatusFromChannels(statuses) {
   const sent = statuses.filter((item) => item.status === "sent" || item.status === "completed").length;
   const failed = statuses.filter((item) => item.status === "failed").length;
@@ -1470,6 +1702,16 @@ function buildCaseTrendNotificationJobs(cases, existingJobs = [], channels, chan
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${host}:${port}`);
+
+    if (url.pathname === "/api/integrations/status" && req.method === "GET") {
+      sendJson(res, 200, await integrationStatusPayload());
+      return;
+    }
+
+    if (url.pathname === "/api/sensors/ingest" && req.method === "POST") {
+      sendJson(res, 200, normalizeSensorPayload(await readJsonBody(req)));
+      return;
+    }
 
     if (url.pathname === "/api/insights" && req.method === "GET") {
       const reports = await readReports();
@@ -1610,10 +1852,10 @@ const server = createServer(async (req, res) => {
         sendJson(res, 404, { error: "Notification job not found" });
         return;
       }
-      target.channelStatuses = simulateChannelSend(target.channelStatuses, target);
+      target.channelStatuses = await deliverChannelStatuses(target.channelStatuses, target);
       target.status = notificationStatusFromChannels(target.channelStatuses);
       target.providerResponse = {
-        simulated: true,
+        simulated: !target.channelStatuses.some((item) => item.provider?.includes("webhook")),
         at: new Date().toISOString(),
         sent: target.channelStatuses.filter((item) => item.status === "sent").length,
         failed: target.channelStatuses.filter((item) => item.status === "failed").length
@@ -1634,13 +1876,13 @@ const server = createServer(async (req, res) => {
         return;
       }
       target.channelTargets = { ...(target.channelTargets || {}), ...(body.channelTargets || {}) };
-      target.channelStatuses = simulateChannelSend(target.channelStatuses, target, {
+      target.channelStatuses = await deliverChannelStatuses(target.channelStatuses, target, {
         retryFailedOnly: true,
         channelTargets: body.channelTargets || {}
       });
       target.status = notificationStatusFromChannels(target.channelStatuses);
       target.providerResponse = {
-        simulated: true,
+        simulated: !target.channelStatuses.some((item) => item.provider?.includes("webhook")),
         retryFailedOnly: true,
         at: new Date().toISOString(),
         sent: target.channelStatuses.filter((item) => item.status === "sent").length,

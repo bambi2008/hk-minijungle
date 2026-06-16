@@ -114,9 +114,21 @@
         <section class="guided-photo-card" id="guided-photo-card">
           <div class="block-title-row">
             <h3 id="guided-photo-title">现在请拍：整株照</h3>
-            <button type="button" id="guided-photo-upload-btn" class="mini-button">开始拍照</button>
+            <div class="button-row">
+              <button type="button" id="native-camera-btn" class="mini-button">打开相机</button>
+              <button type="button" id="guided-photo-upload-btn" class="mini-button">相册/文件</button>
+            </div>
           </div>
           <p id="guided-photo-reason">系统会根据设备、作物和主要困扰自动决定第一张照片。</p>
+          <div id="native-camera-card" class="native-camera-card" hidden>
+            <video id="native-camera-video" playsinline muted></video>
+            <canvas id="native-camera-canvas" hidden></canvas>
+            <div class="native-camera-actions">
+              <button type="button" id="native-camera-shot-btn" class="primary">拍下并诊断</button>
+              <button type="button" id="native-camera-close-btn" class="secondary">关闭相机</button>
+            </div>
+            <p id="native-camera-status">相机打开后，把植物放进框内，系统会自动质检。</p>
+          </div>
           <div id="guided-photo-steps" class="guided-photo-steps"></div>
           <div id="guided-photo-status" class="guided-photo-status">还没有照片，先拍这一张就可以开始诊断。</div>
         </section>
@@ -645,6 +657,14 @@
             <div id="notification-status" class="copy-status">趋势提醒同步后会进入通知队列。</div>
             <div id="notification-metrics" class="notification-metrics"></div>
             <div id="notification-list" class="notification-list"></div>
+          </section>
+          <section class="integration-center" id="integration-center">
+            <div class="block-title-row">
+              <h4>四大短板推进状态</h4>
+              <button type="button" id="refresh-integrations-btn" class="mini-button">刷新状态</button>
+            </div>
+            <div id="integration-status" class="copy-status">正在检查视觉 AI、真实通知、传感器和相机能力。</div>
+            <div id="integration-grid" class="integration-grid"></div>
           </section>
           <div id="db-status" class="copy-status">本地 JSON 数据库，等待保存报告。</div>
           <ul id="db-list" class="db-list"></ul>

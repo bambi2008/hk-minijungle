@@ -541,6 +541,51 @@ legend {
   font-weight: 600;
 }
 
+.native-camera-card {
+  display: grid;
+  gap: 10px;
+  margin: 10px 0 12px;
+  border: 1px solid #cfe2d6;
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.native-camera-card[hidden] {
+  display: none;
+}
+
+.native-camera-card video {
+  width: 100%;
+  max-height: 360px;
+  border-radius: 8px;
+  background: #16241c;
+  object-fit: cover;
+  aspect-ratio: 4 / 3;
+}
+
+.native-camera-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.72fr);
+  gap: 8px;
+}
+
+.native-camera-actions button {
+  min-height: 40px;
+}
+
+.native-camera-card p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+body.native-camera-open .guided-photo-card {
+  border-color: #98caa9;
+  background: #f1faf4;
+}
+
 select,
 textarea,
 input[type="number"],
@@ -1452,6 +1497,100 @@ body.customer-mode.customer-followup-due .followup-loop-target {
   color: var(--muted);
   background: #fff;
   font-size: 0.84rem;
+}
+
+.integration-center {
+  border: 1px solid #d9e5df;
+  border-radius: 8px;
+  padding: 12px;
+  margin-top: 12px;
+  background: #fff;
+}
+
+.integration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.integration-card {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 11px;
+  background: #fbfdfb;
+}
+
+.integration-card.connected {
+  border-color: #9dccae;
+  background: #f3faf5;
+}
+
+.integration-card.partial {
+  border-color: #d7c27a;
+  background: #fffaf0;
+}
+
+.integration-card.placeholder {
+  border-color: #d9e5df;
+}
+
+.integration-card span {
+  display: block;
+  color: var(--green);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.integration-card.partial span {
+  color: #8a5b00;
+}
+
+.integration-card strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink);
+  font-size: 0.96rem;
+  line-height: 1.3;
+}
+
+.integration-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.integration-card em {
+  display: block;
+  margin-top: 7px;
+  color: var(--green-dark);
+  font-size: 0.8rem;
+  font-style: normal;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.integration-env-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 9px;
+}
+
+.integration-env-list small {
+  border-radius: 999px;
+  padding: 3px 7px;
+  background: #fff1ec;
+  color: #9b4635;
+  font-size: 0.68rem;
+  font-weight: 800;
+}
+
+.integration-env-list small[data-ready="true"] {
+  background: #edf7f1;
+  color: var(--green-dark);
 }
 
 button {
@@ -3636,6 +3775,8 @@ li {
   .strategy-card-grid,
   .strategy-module-grid,
   .strategy-columns,
+  .integration-grid,
+  .native-camera-actions,
   .device-fit-list,
   .device-plan-grid,
   .auto-intake-list,
