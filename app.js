@@ -210,6 +210,7 @@ let latestPhotoTypeDetection = null;
 let customerTimeRefreshId = null;
 let customerAutoArchiveInFlightSignature = null;
 let customerResetSnapshot = null;
+let customerPhotoPickerCancelTimer = null;
 
 const cropNames = {
   tomato: "矮生番茄",
@@ -847,7 +848,24 @@ function setCustomerPhotoPickerOpen(prompt = customerFirstPhotoPrompt()) {
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `等待上传：${prompt.label}`;
 }
 
+function scheduleCustomerPhotoPickerCancelCheck(prompt = customerFirstPhotoPrompt()) {
+  if (customerPhotoPickerCancelTimer) window.clearTimeout(customerPhotoPickerCancelTimer);
+  customerPhotoPickerCancelTimer = window.setTimeout(() => {
+    customerPhotoPickerCancelTimer = null;
+    if (!document.body.classList.contains("customer-photo-picker-open")) return;
+    if (plantPhoto?.files?.length) return;
+    document.body.classList.remove("customer-photo-picker-open");
+    document.body.classList.add("customer-first-photo-ready");
+    if (photoHint) photoHint.textContent = `还没有选择照片。准备好后再拍${prompt.label}，我会继续自动诊断。`;
+    if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `等待照片：${prompt.label}`;
+  }, 900);
+}
+
 function clearCustomerFirstPhotoReady() {
+  if (customerPhotoPickerCancelTimer) {
+    window.clearTimeout(customerPhotoPickerCancelTimer);
+    customerPhotoPickerCancelTimer = null;
+  }
   document.body.classList.remove("customer-first-photo-ready", "customer-photo-picker-open");
 }
 
@@ -6064,11 +6082,14 @@ function openGuidedPhotoUpload() {
     requestedPhotoType = instruction.type;
     setPhotoType(instruction.type);
   }
+  let pickerPrompt = null;
   if (document.body.classList.contains("customer-mode")) {
     const prompt = customerFirstPhotoPrompt({ ...getFormState(), photoType: instruction.type || getFormState().photoType });
-    setCustomerPhotoPickerOpen({ ...prompt, type: instruction.type || prompt.type, label: photoTypeLabel(instruction.type || prompt.type) });
+    pickerPrompt = { ...prompt, type: instruction.type || prompt.type, label: photoTypeLabel(instruction.type || prompt.type) };
+    setCustomerPhotoPickerOpen(pickerPrompt);
   }
   plantPhoto.click();
+  if (pickerPrompt) scheduleCustomerPhotoPickerCancelCheck(pickerPrompt);
 }
 
 function openPhotoRescueUpload(type) {
