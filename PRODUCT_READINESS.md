@@ -2,6 +2,18 @@
 
 This prototype is now structured as a local MVP with replaceable production seams.
 
+## Brand Naming
+
+Current product name direction:
+- Brand: FiveCrop
+- App Store title: `FiveCrop: Plant Doctor`
+- App Store subtitle: `Care for 5 edible plants`
+
+Rationale:
+- Keep the brand short, memorable, and easy to spell.
+- Include searchable App Store intent terms such as `Plant Doctor` and `Plant Care`.
+- Signal the product boundary: care and diagnosis for five indoor edible crops.
+
 ## Vision Recognition
 
 Current state:
