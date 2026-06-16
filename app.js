@@ -828,6 +828,29 @@ function customerFirstPhotoPrompt(state = getFormState()) {
   };
 }
 
+function setCustomerFirstPhotoReady(prompt = customerFirstPhotoPrompt()) {
+  document.body.classList.add("customer-first-photo-ready");
+  document.body.classList.remove("customer-photo-picker-open");
+  requestedPhotoType = prompt.type;
+  setPhotoType(prompt.type);
+  if (photoHint) photoHint.textContent = `已选择${prompt.crop}，第一张拍${prompt.label}。`;
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `首张照片：${prompt.label}`;
+  if (quickPhotoBtn) {
+    quickPhotoBtn.classList.add("soft-focus");
+    window.setTimeout(() => quickPhotoBtn.classList.remove("soft-focus"), 1200);
+  }
+}
+
+function setCustomerPhotoPickerOpen(prompt = customerFirstPhotoPrompt()) {
+  document.body.classList.add("customer-photo-picker-open");
+  if (photoHint) photoHint.textContent = `正在等待选择${prompt.label}，选好后会自动诊断。`;
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `等待上传：${prompt.label}`;
+}
+
+function clearCustomerFirstPhotoReady() {
+  document.body.classList.remove("customer-first-photo-ready", "customer-photo-picker-open");
+}
+
 function renderCropQuickChoices(state = getFormState()) {
   if (!cropQuickButtons.length) return;
   cropQuickButtons.forEach((button) => {
@@ -887,9 +910,7 @@ function chooseCustomerCrop(cropKey) {
   updateDeviceProfile();
   const state = getFormState();
   const prompt = customerFirstPhotoPrompt(state);
-  requestedPhotoType = prompt.type;
-  if (photoHint) photoHint.textContent = `已选择${prompt.crop}，第一张拍${prompt.label}。`;
-  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `首张照片：${prompt.label}`;
+  setCustomerFirstPhotoReady(prompt);
   renderCropQuickChoices(state);
   runDiagnosis();
   quickPhotoBtn?.focus();
@@ -6043,6 +6064,10 @@ function openGuidedPhotoUpload() {
     requestedPhotoType = instruction.type;
     setPhotoType(instruction.type);
   }
+  if (document.body.classList.contains("customer-mode")) {
+    const prompt = customerFirstPhotoPrompt({ ...getFormState(), photoType: instruction.type || getFormState().photoType });
+    setCustomerPhotoPickerOpen({ ...prompt, type: instruction.type || prompt.type, label: photoTypeLabel(instruction.type || prompt.type) });
+  }
   plantPhoto.click();
 }
 
@@ -6285,6 +6310,7 @@ function resetCustomerPlantDossier() {
   photoPreview.removeAttribute("src");
   photoPreview.classList.remove("visible");
   document.body.classList.remove("has-plant-photo", "customer-followup-due");
+  clearCustomerFirstPhotoReady();
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "等待自动识别";
   if (photoHint) photoHint.textContent = "上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。";
   if (caseDetail) caseDetail.value = "";
@@ -6304,6 +6330,7 @@ customerDossierNewBtn.addEventListener("click", resetCustomerPlantDossier);
 plantPhoto.addEventListener("change", () => {
   const file = plantPhoto.files && plantPhoto.files[0];
   if (!file) {
+    clearCustomerFirstPhotoReady();
     photoPreview.removeAttribute("src");
     photoPreview.classList.remove("visible");
     document.body.classList.remove("has-plant-photo");
@@ -6316,6 +6343,7 @@ plantPhoto.addEventListener("change", () => {
     return;
   }
   dismissCustomerResetUndo();
+  clearCustomerFirstPhotoReady();
   const reader = new FileReader();
   reader.addEventListener("load", () => {
     photoPreview.src = reader.result;
@@ -6374,6 +6402,7 @@ resetPhotoCheckBtn.addEventListener("click", () => {
   photoPreview.removeAttribute("src");
   photoPreview.classList.remove("visible");
   document.body.classList.remove("has-plant-photo");
+  clearCustomerFirstPhotoReady();
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "等待自动识别";
   plantPhoto.value = "";
   photoHint.textContent = "上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。";

@@ -2000,6 +2000,22 @@ body.customer-mode #quick-photo-btn {
   width: 100%;
 }
 
+body.customer-mode.customer-first-photo-ready .smart-panel {
+  border-color: #b9d4c4;
+  background: #f7fbf8;
+}
+
+body.customer-mode.customer-first-photo-ready #quick-photo-btn {
+  border-color: var(--green-dark);
+  box-shadow: 0 10px 26px rgba(31, 122, 77, 0.18);
+}
+
+body.customer-mode.customer-photo-picker-open #quick-photo-btn {
+  border-color: #d7a238;
+  background: #fff4d9;
+  color: #6b4300;
+}
+
 body.customer-mode .smart-panel > div {
   order: 0;
 }
