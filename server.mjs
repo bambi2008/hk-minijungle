@@ -964,6 +964,7 @@ function localVisionPayload(body) {
       photoType: body.photoType || "unknown",
       hasImage: Boolean(body.imageData)
     },
+    clientPipeline: body.clientPipeline || null,
     photoType: body.photoType || "unknown",
     labels,
     observations,
@@ -978,6 +979,11 @@ function localVisionPayload(body) {
     },
     aiFallbackReason: null,
     aiFallbackDetail: null,
+    integrationContract: {
+      version: "ai-pipeline-v1",
+      expectedOutputs: ["photoType", "quality", "labels", "observations", "diagnosisHints", "missingPhotos", "nextAction"],
+      canSwapProviderWithoutUiChange: true
+    },
     nextIntegration: "Replace this endpoint with a vision model that detects photo type, yellowing, curling, spots, pests, algae, and before/after changes."
   };
 }
@@ -1090,6 +1096,7 @@ function normalizeAiVisionResult(raw, body, local) {
       photoType,
       hasImage: Boolean(body.imageData)
     },
+    clientPipeline: body.clientPipeline || local.clientPipeline || null,
     photoType,
     cropKey,
     stageKey: validChoice(raw.stageKey, stageKeys, body.context?.stageKey || "unknown"),
@@ -1114,7 +1121,8 @@ function normalizeAiVisionResult(raw, body, local) {
       labels: local.labels,
       diagnosisHints: local.diagnosisHints,
       confidence: local.confidence
-    }
+    },
+    integrationContract: local.integrationContract
   };
 }
 

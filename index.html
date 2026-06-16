@@ -123,10 +123,20 @@
 
         <label class="wide photo-box">
           植株照片
-          <input type="file" id="plantPhoto" name="plantPhoto" accept="image/*" class="native-photo-input">
+          <input type="file" id="plantPhoto" name="plantPhoto" accept="image/*" capture="environment" class="native-photo-input">
           <span id="photoHint">上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。</span>
           <strong id="auto-photo-type-badge" class="auto-photo-type-badge">等待自动识别</strong>
           <img id="photoPreview" alt="植株照片预览">
+          <div id="photo-review-card" class="photo-review-card" hidden>
+            <span id="photo-review-kicker">拍照质检</span>
+            <strong id="photo-review-title">等待照片</strong>
+            <p id="photo-review-message">拍完后系统会自动判断这张照片能不能用于诊断。</p>
+            <div id="photo-review-meta" class="photo-review-meta"></div>
+            <div class="photo-review-actions">
+              <button type="button" id="photo-retake-btn" class="secondary">一键重拍</button>
+              <button type="button" id="photo-continue-btn" class="primary">继续诊断</button>
+            </div>
+          </div>
         </label>
 
         <section class="photo-quality-panel">
@@ -370,7 +380,7 @@
           </label>
           <label>
             复查照片
-            <input type="file" id="followupPhoto" accept="image/*">
+            <input type="file" id="followupPhoto" accept="image/*" capture="environment">
           </label>
           <label>
             新叶状态
@@ -449,6 +459,23 @@
           <button type="button" id="customer-dossier-continue-btn" class="primary">继续照看</button>
           <button type="button" id="customer-dossier-new-btn" class="secondary">新植物</button>
         </div>
+      </section>
+
+      <section class="customer-case-timeline-card" id="customer-case-timeline-card" hidden>
+        <div class="customer-case-timeline-head">
+          <div>
+            <span>病例时间线</span>
+            <strong id="customer-case-timeline-title">等待建档</strong>
+            <p id="customer-case-timeline-summary">首张诊断保存后，这里会持续显示诊断、动作、复查和趋势。</p>
+          </div>
+          <div class="customer-case-trend">
+            <span>趋势</span>
+            <div class="customer-case-trend-track">
+              <div id="customer-case-trend-bar" class="customer-case-trend-bar"></div>
+            </div>
+          </div>
+        </div>
+        <div id="customer-case-timeline-list" class="customer-case-timeline-list"></div>
       </section>
 
       <section class="customer-plan-compact" id="customer-plan-compact">

@@ -296,6 +296,11 @@ try {
       photoType: "leaf",
       fileName: "yellow-leaf.jpg",
       capturedPhotoTypes: ["plant"],
+      clientPipeline: {
+        version: "ai-pipeline-v1",
+        readyForRealVision: true,
+        photoQualityGate: { version: "photo-gate-v1", state: "pass", score: 94 }
+      },
       context: { cropKey: "tomato", stageKey: "flowering", mediumKey: "xponge", concern: "yellow" },
       signals: { yellowRatio: 0.3, greenRatio: 0.2, darkRatio: 0.1, brightness: 120, contrast: 40, width: 1024, height: 768 }
     })
@@ -308,6 +313,8 @@ try {
   if (
     !vision.readyForAiProvider ||
     vision.modelInput.cropKey !== "tomato" ||
+    vision.clientPipeline?.version !== "ai-pipeline-v1" ||
+    !vision.integrationContract?.canSwapProviderWithoutUiChange ||
     !vision.labels.some((item) => item.label === "yellowing") ||
     !vision.diagnosisHints.includes("yellow-leaves") ||
     !vision.missingPhotos.includes("root")

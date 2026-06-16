@@ -28,6 +28,11 @@ const customerDossierMessage = document.querySelector("#customer-dossier-message
 const customerDossierMeta = document.querySelector("#customer-dossier-meta");
 const customerDossierContinueBtn = document.querySelector("#customer-dossier-continue-btn");
 const customerDossierNewBtn = document.querySelector("#customer-dossier-new-btn");
+const customerCaseTimelineCard = document.querySelector("#customer-case-timeline-card");
+const customerCaseTimelineTitle = document.querySelector("#customer-case-timeline-title");
+const customerCaseTimelineSummary = document.querySelector("#customer-case-timeline-summary");
+const customerCaseTrendBar = document.querySelector("#customer-case-trend-bar");
+const customerCaseTimelineList = document.querySelector("#customer-case-timeline-list");
 const confidenceDecisionCard = document.querySelector("#confidence-decision-card");
 const confidenceTierStatus = document.querySelector("#confidence-tier-status");
 const confidenceTierTitle = document.querySelector("#confidence-tier-title");
@@ -139,6 +144,13 @@ const plantPhoto = document.querySelector("#plantPhoto");
 const photoPreview = document.querySelector("#photoPreview");
 const photoHint = document.querySelector("#photoHint");
 const autoPhotoTypeBadge = document.querySelector("#auto-photo-type-badge");
+const photoReviewCard = document.querySelector("#photo-review-card");
+const photoReviewKicker = document.querySelector("#photo-review-kicker");
+const photoReviewTitle = document.querySelector("#photo-review-title");
+const photoReviewMessage = document.querySelector("#photo-review-message");
+const photoReviewMeta = document.querySelector("#photo-review-meta");
+const photoRetakeBtn = document.querySelector("#photo-retake-btn");
+const photoContinueBtn = document.querySelector("#photo-continue-btn");
 const guidedPhotoCard = document.querySelector("#guided-photo-card");
 const guidedPhotoTitle = document.querySelector("#guided-photo-title");
 const guidedPhotoReason = document.querySelector("#guided-photo-reason");
@@ -207,6 +219,10 @@ let knowledgeGraphPathways = [];
 let latestMatchedPathways = [];
 let latestVisionResult = null;
 let latestPhotoTypeDetection = null;
+let latestPhotoQualityGate = null;
+let latestAiPipelineSnapshot = null;
+let customerCaseTimelineCache = null;
+let customerCaseTimelineInFlightKey = null;
 let customerTimeRefreshId = null;
 let customerAutoArchiveInFlightSignature = null;
 let customerResetSnapshot = null;
@@ -844,8 +860,8 @@ function setCustomerFirstPhotoReady(prompt = customerFirstPhotoPrompt()) {
 
 function setCustomerPhotoPickerOpen(prompt = customerFirstPhotoPrompt()) {
   document.body.classList.add("customer-photo-picker-open");
-  if (photoHint) photoHint.textContent = `正在等待选择${prompt.label}，选好后会自动诊断。`;
-  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `等待上传：${prompt.label}`;
+  if (photoHint) photoHint.textContent = `正在等待相机/相册返回${prompt.label}，拍完后会自动质检和诊断。`;
+  if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `等待拍摄：${prompt.label}`;
 }
 
 function scheduleCustomerPhotoPickerCancelCheck(prompt = customerFirstPhotoPrompt()) {
@@ -2653,6 +2669,150 @@ function renderCustomerPlantDossier(state = getFormState(), findings = latestFin
   });
 }
 
+function activeCustomerCaseId() {
+  const record = getCustomerArchiveRecord();
+  if (record?.caseId) return record.caseId;
+  if (record?.reportId) return getActiveCase().id;
+  return null;
+}
+
+function customerTrendProgress(trend = {}) {
+  const states = {
+    improving: 78,
+    stable: 56,
+    baseline: 34,
+    uncertain: 42,
+    worsening: 24,
+    empty: 8
+  };
+  return states[trend.state] || 34;
+}
+
+function customerTimelineEventLabel(entry = {}) {
+  if (entry.eventType === "followup") return "复查";
+  if (entry.eventType === "action") return "动作";
+  return "诊断";
+}
+
+function customerTimelineDetail(entry = {}) {
+  if (entry.eventType === "followup" && entry.routeAssessment?.title) {
+    return entry.routeAssessment.title;
+  }
+  if (entry.eventType === "action") return firstSentence(entry.actionText || "已完成处方动作");
+  return entry.decision || entry.topRisk || "已记录";
+}
+
+function localCustomerActionEvents() {
+  const record = getCustomerArchiveRecord();
+  const plan = getReminderPlan();
+  const actionAt = record?.actionCompletedAt || plan?.actionCompletedAt;
+  const actionText = record?.actionText || plan?.actionCompletedTask || "";
+  if (!actionAt || !actionText) return [];
+  return [{
+    id: `local-action-${actionAt}`,
+    eventType: "action",
+    createdAt: actionAt,
+    actionText,
+    topRisk: "处方动作已完成",
+    decision: "等待复查",
+    confidence: confidenceScore(),
+    riskScore: null
+  }];
+}
+
+function mergeCustomerTimelineEvents(timeline = []) {
+  const merged = [...timeline, ...localCustomerActionEvents()]
+    .filter((entry) => entry?.createdAt)
+    .sort((a, b) => Date.parse(a.createdAt) - Date.parse(b.createdAt));
+  const seen = new Set();
+  return merged.filter((entry) => {
+    const key = `${entry.eventType}-${entry.id || entry.createdAt}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function renderCustomerCaseTimeline(item = customerCaseTimelineCache) {
+  if (!customerCaseTimelineCard || !customerCaseTimelineList) return;
+  const visible = document.body.classList.contains("customer-mode") && hasCustomerDossierContext();
+  customerCaseTimelineCard.hidden = !visible;
+  if (!visible) return;
+
+  const mergedTimeline = mergeCustomerTimelineEvents(item?.timeline || []);
+  if (!mergedTimeline.length) {
+    customerCaseTimelineCard.dataset.state = "baseline";
+    customerCaseTimelineTitle.textContent = "正在建立植物病例";
+    customerCaseTimelineSummary.textContent = "首张诊断保存后，会自动形成诊断、动作、复查和趋势记录。";
+    if (customerCaseTrendBar) customerCaseTrendBar.style.width = "12%";
+    customerCaseTimelineList.innerHTML = `
+      <div class="customer-case-timeline-empty">
+        <strong>等待第一条诊断记录</strong>
+        <span>拍完首张照片后自动建档。</span>
+      </div>
+    `;
+    return;
+  }
+
+  const trend = item?.trend || {};
+  customerCaseTimelineCard.dataset.state = trendClassName(trend);
+  customerCaseTimelineTitle.textContent = item?.name || `${cropNames[getFormState().crop] || "植物"}病例`;
+  customerCaseTimelineSummary.textContent = `${trend.label || "建立基线"}：${trend.summary || "等待下一次复查后判断趋势。"}`;
+  if (customerCaseTrendBar) customerCaseTrendBar.style.width = `${customerTrendProgress(trend)}%`;
+  const events = mergedTimeline.slice(-4).reverse();
+  customerCaseTimelineList.innerHTML = "";
+  events.forEach((entry) => {
+    const row = document.createElement("div");
+    row.className = `customer-case-timeline-event ${entry.eventType || "diagnosis"}`;
+    row.innerHTML = `
+      <span>${customerTimelineEventLabel(entry)}</span>
+      <strong>${customerTimelineDetail(entry)}</strong>
+      <em>${relativePastText(entry.createdAt)} · 风险分 ${entry.riskScore ?? "-"} · 可信度 ${entry.confidence ?? "-"}%</em>
+    `;
+    customerCaseTimelineList.appendChild(row);
+  });
+  const next = document.createElement("div");
+  next.className = "customer-case-timeline-next";
+  next.innerHTML = `
+    <span>下一次</span>
+    <strong>${trend.reminder ? trendReminderText(trend.reminder) : "按处方后自动安排"}</strong>
+    <em>${trend.next || "继续按提醒节点复拍。"}</em>
+  `;
+  customerCaseTimelineList.appendChild(next);
+}
+
+async function refreshCustomerCaseTimeline(options = {}) {
+  if (!customerCaseTimelineCard) return null;
+  const caseId = activeCustomerCaseId();
+  if (!caseId) {
+    customerCaseTimelineCache = null;
+    renderCustomerCaseTimeline(null);
+    return null;
+  }
+  if (!options.force && customerCaseTimelineCache?.id === caseId) {
+    renderCustomerCaseTimeline(customerCaseTimelineCache);
+    return customerCaseTimelineCache;
+  }
+  if (customerCaseTimelineInFlightKey === caseId) return customerCaseTimelineCache;
+  customerCaseTimelineInFlightKey = caseId;
+  if (!options.silent && customerCaseTimelineTitle) {
+    customerCaseTimelineTitle.textContent = "正在刷新病例时间线";
+  }
+  try {
+    const response = await fetch(`/api/cases/${encodeURIComponent(caseId)}`);
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const item = await response.json();
+    customerCaseTimelineCache = item;
+    renderCustomerCaseTimeline(item);
+    return item;
+  } catch {
+    renderCustomerCaseTimeline(customerCaseTimelineCache);
+    return null;
+  } finally {
+    customerCaseTimelineInFlightKey = null;
+  }
+}
+
 function getCustomerArchiveRecord() {
   try {
     return JSON.parse(localStorage.getItem(customerAutoArchiveKey) || "null");
@@ -2782,6 +2942,7 @@ async function maybeAutoArchiveCustomerDiagnosis(state, findings) {
     setCustomerArchiveStatus("已为这棵植物建档，复查会继续记录。", "saved");
     await loadReports();
     await loadCases();
+    await refreshCustomerCaseTimeline({ force: true, silent: true });
     await syncCaseNotifications({ silent: true });
     await loadNotifications();
     return record;
@@ -3036,6 +3197,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
   renderCustomerPlantDossier(state, findings);
+  renderCustomerCaseTimeline();
   renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
@@ -3239,9 +3401,14 @@ function buildReport(state, findings, matchedPathways = []) {
 
   lines.push("", "## 照片质检");
   lines.push(`- 诊断可信度：${confidenceScore()}%`);
+  if (latestPhotoQualityGate) {
+    lines.push(`- 拍照质检：${latestPhotoQualityGate.state} / ${latestPhotoQualityGate.score}% / ${latestPhotoQualityGate.message}`);
+    lines.push(`- 照片参数：${latestPhotoQualityGate.dimensions}，亮度 ${latestPhotoQualityGate.brightness ?? "-"}，细节 ${latestPhotoQualityGate.contrast ?? "-"}`);
+  }
   lines.push(`- 可信度分层：${confidenceDecision.status} / ${confidenceDecision.title}`);
   lines.push(`- 分层原因：${confidenceDecision.reason}`);
   lines.push(`- 分层下一步：${confidenceDecision.next}`);
+  lines.push(`- AI 管线：${aiProviderLabel()}；字段已预留为 ${buildAiPipelineSnapshot(state).version}`);
   if (latestVisionResult) {
     lines.push(`- 视觉识别：${latestVisionResult.provider || "unknown"}，置信度 ${Math.round((latestVisionResult.confidence || 0) * 100)}%`);
     if (latestVisionResult.labels?.length) {
@@ -3356,6 +3523,7 @@ function reportPayload(state, findings) {
     photoQuality: {
       confidence: confidenceScore(),
       decision: confidenceDecision,
+      gate: latestPhotoQualityGate,
       required: requiredPhotoTypes(state),
       captured: Array.from(capturedPhotoTypes),
       messages: evaluatePhotoQuality(),
@@ -3363,6 +3531,13 @@ function reportPayload(state, findings) {
     },
     photoTypeDetection: latestPhotoTypeDetection,
     vision: latestVisionResult,
+    aiPipeline: updateAiPipelineSnapshot(state, {
+      gate: latestPhotoQualityGate,
+      detection: latestPhotoTypeDetection,
+      vision: latestVisionResult,
+      photoType: state.photoType,
+      hasImage: photoSignals.width !== null
+    }),
     findings,
     customerActions: buildCustomerActions(state, findings, latestMatchedPathways),
     knowledgePathways: latestMatchedPathways,
@@ -3602,6 +3777,7 @@ async function syncFollowupCaseRecord(log, state, findings, options = {}) {
     if (caseStatus) caseStatus.textContent = `复查记录已归档到后台病例：${saved.id}`;
     await loadReports();
     await loadCases();
+    await refreshCustomerCaseTimeline({ force: true, silent: true });
     await syncCaseNotifications({ silent: true });
     await loadNotifications();
     return saved;
@@ -4886,6 +5062,12 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
         photoType,
         capturedPhotoTypes: Array.from(capturedPhotoTypes),
         signals: photoSignals,
+        clientPipeline: buildAiPipelineSnapshot(state, {
+          photoType,
+          hasImage: true,
+          gate: latestPhotoQualityGate,
+          detection: latestPhotoTypeDetection
+        }),
         context: {
           cropKey: state.crop,
           stageKey: state.stage,
@@ -4899,6 +5081,7 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
     latestVisionResult = result;
+    updateAiPipelineSnapshot(state, { vision: result, photoType, hasImage: true });
     if (result.provider === "openai-responses") {
       photoHint.textContent = `AI 已识别：${file?.name || "照片"}，置信度 ${Math.round((result.confidence || 0) * 100)}%。`;
     } else {
@@ -5014,6 +5197,160 @@ function evaluatePhotoQuality(signals = photoSignals) {
   return items;
 }
 
+function photoQualityGate(signals = photoSignals, photoType = requestedPhotoType || "plant", detection = latestPhotoTypeDetection, vision = latestVisionResult) {
+  const fail = [];
+  const warn = [];
+  const pass = [];
+  const width = Number(signals.width);
+  const height = Number(signals.height);
+  const brightness = Number(signals.brightness);
+  const contrast = Number(signals.contrast);
+
+  if (!Number.isFinite(width) || !Number.isFinite(height)) {
+    fail.push("照片没有读取成功");
+  } else if (width < 480 || height < 480) {
+    fail.push("分辨率太低，放大后看不清叶片或根区");
+  } else if (width < 900 || height < 900) {
+    warn.push("分辨率略低，关键细节可能不够稳");
+  } else {
+    pass.push("分辨率够用");
+  }
+
+  if (Number.isFinite(brightness)) {
+    if (brightness < 45) fail.push("画面太暗，颜色判断会失真");
+    else if (brightness < 75) warn.push("画面偏暗，建议开灯或靠近窗边");
+    else if (brightness > 238) fail.push("画面过曝，叶色和白毛/藻霉容易看错");
+    else if (brightness > 220) warn.push("画面偏亮，避开强反光会更稳");
+    else pass.push("亮度正常");
+  }
+
+  if (Number.isFinite(contrast)) {
+    if (contrast < 14) fail.push("照片太糊或背景太近，纹理不够清楚");
+    else if (contrast < 22) warn.push("细节偏弱，重新对焦会更好");
+    else pass.push("细节可读");
+  }
+
+  if (detection?.confidence && detection.confidence < 0.58) {
+    warn.push("照片类型识别不够稳，必要时会要求补拍");
+  }
+
+  const state = fail.length ? "fail" : warn.length ? "warn" : "pass";
+  const score = Math.max(0, Math.min(100, 92 - fail.length * 28 - warn.length * 12 + Math.min(pass.length, 3) * 2));
+  const provider = vision?.provider === "openai-responses" ? "OpenAI Vision" : "本地规则";
+  const message = state === "fail"
+    ? fail[0]
+    : state === "warn"
+      ? `${warn[0]}；可以继续，也可以一键重拍。`
+      : "照片通过质检，可以继续诊断。";
+
+  return {
+    version: "photo-gate-v1",
+    state,
+    score,
+    photoType,
+    label: photoTypeLabel(photoType),
+    message,
+    fail,
+    warn,
+    pass,
+    provider,
+    dimensions: Number.isFinite(width) && Number.isFinite(height) ? `${Math.round(width)}x${Math.round(height)}` : "-",
+    brightness: Number.isFinite(brightness) ? Math.round(brightness) : null,
+    contrast: Number.isFinite(contrast) ? Math.round(contrast) : null,
+    retakeRecommended: state === "fail",
+    canContinue: state !== "fail"
+  };
+}
+
+function aiProviderLabel(result = latestVisionResult) {
+  if (result?.provider === "openai-responses") return "OpenAI Vision";
+  if (result?.readyForAiProvider) return "本地规则 · 可接真实视觉模型";
+  return "本地规则";
+}
+
+function buildAiPipelineSnapshot(state = getFormState(), options = {}) {
+  const vision = options.vision || latestVisionResult;
+  const gate = options.gate || latestPhotoQualityGate;
+  const detection = options.detection || latestPhotoTypeDetection;
+  const photoType = options.photoType || gate?.photoType || detection?.type || requestedPhotoType || state.photoType || "plant";
+  return {
+    version: "ai-pipeline-v1",
+    readyForRealVision: true,
+    provider: vision?.provider || "local-heuristic-placeholder",
+    providerLabel: aiProviderLabel(vision),
+    upgradeTarget: "OpenAI Vision / plant-specific vision model",
+    modelInput: {
+      cropKey: state.crop,
+      stageKey: state.stage,
+      mediumKey: state.medium,
+      concern: smartConcern.value,
+      photoType,
+      capturedPhotoTypes: Array.from(capturedPhotoTypes),
+      hasImage: Boolean(options.hasImage ?? (photoSignals.width !== null))
+    },
+    photoQualityGate: gate,
+    photoTypeDetection: detection,
+    labels: vision?.labels || [],
+    observations: vision?.observations || [],
+    diagnosisHints: vision?.diagnosisHints || [],
+    missingPhotos: vision?.missingPhotos || requiredPhotoTypes(state).filter((type) => !capturedPhotoTypes.has(type)),
+    expectedOutputs: [
+      "photoType",
+      "quality",
+      "labels",
+      "observations",
+      "diagnosisHints",
+      "missingPhotos",
+      "nextAction"
+    ]
+  };
+}
+
+function updateAiPipelineSnapshot(state = getFormState(), options = {}) {
+  latestAiPipelineSnapshot = buildAiPipelineSnapshot(state, options);
+  return latestAiPipelineSnapshot;
+}
+
+function hidePhotoReview() {
+  latestPhotoQualityGate = null;
+  if (!photoReviewCard) return;
+  photoReviewCard.hidden = true;
+  photoReviewCard.dataset.state = "";
+  if (photoReviewMeta) photoReviewMeta.innerHTML = "";
+}
+
+function renderPhotoReview(gate = latestPhotoQualityGate, fileName = "") {
+  if (!photoReviewCard || !gate) return;
+  photoReviewCard.hidden = false;
+  photoReviewCard.dataset.state = gate.state;
+  photoReviewKicker.textContent = gate.state === "fail" ? "照片未通过" : gate.state === "warn" ? "照片可用但建议优化" : "照片通过";
+  photoReviewTitle.textContent = gate.state === "fail"
+    ? `请重拍${gate.label}`
+    : gate.state === "warn"
+      ? `${gate.label}可以继续`
+      : `${gate.label}已通过`;
+  photoReviewMessage.textContent = gate.message;
+  photoReviewMeta.innerHTML = "";
+  [
+    `质检 ${gate.score}%`,
+    `类型 ${gate.label}`,
+    `尺寸 ${gate.dimensions}`,
+    `亮度 ${gate.brightness ?? "-"}`,
+    `细节 ${gate.contrast ?? "-"}`,
+    gate.provider,
+    fileName ? `文件 ${fileName}` : ""
+  ].filter(Boolean).forEach((item) => {
+    const chip = document.createElement("span");
+    chip.textContent = item;
+    photoReviewMeta.appendChild(chip);
+  });
+  if (photoRetakeBtn) photoRetakeBtn.textContent = `重拍${gate.label}`;
+  if (photoContinueBtn) {
+    photoContinueBtn.disabled = !gate.canContinue;
+    photoContinueBtn.textContent = gate.canContinue ? "继续诊断" : "先重拍";
+  }
+}
+
 function nextPhotoSuggestion() {
   const required = requiredPhotoTypes();
   const missing = required.filter((type) => !capturedPhotoTypes.has(type));
@@ -5075,7 +5412,8 @@ function guidedPhotoInstruction(state = getFormState()) {
     ? `已获得 ${capturedPhotoTypes.size} 张关键照片，当前可信度 ${confidenceScore()}%。`
     : capturedPhotoTypes.size
       ? `已获得 ${capturedPhotoTypes.size} 张，还缺 ${missing.map(photoTypeLabel).join("、") || photoTypeLabel(type)}。`
-      : "还没有照片，先拍这一张就可以开始诊断。";
+      : `还没有照片，先拍这一张就可以开始诊断。当前识别管线：${aiProviderLabel()}。`;
+  const actionVerb = document.body.classList.contains("customer-mode") ? "打开相机拍" : "上传";
 
   return {
     type,
@@ -5083,7 +5421,7 @@ function guidedPhotoInstruction(state = getFormState()) {
     reason,
     status,
     steps: ready ? qualityMessages.slice(0, 3) : photoStepList(type),
-    action: ready ? "继续诊断" : `拍${photoTypeLabel(type)}`
+    action: ready ? "继续诊断" : `${actionVerb}${photoTypeLabel(type)}`
   };
 }
 
@@ -5322,6 +5660,8 @@ async function loadReportIntoForm(id, options = {}) {
     hasRunSmartDiagnosis = true;
     latestPhotoTypeDetection = report.photoTypeDetection || null;
     latestVisionResult = report.vision || null;
+    latestPhotoQualityGate = report.photoQuality?.gate || report.aiPipeline?.photoQualityGate || null;
+    latestAiPipelineSnapshot = report.aiPipeline || null;
 
     if (report.sensor) {
       document.querySelector("#sensorMoisture").value = report.sensor.moisture ?? "";
@@ -5352,6 +5692,8 @@ async function loadReportIntoForm(id, options = {}) {
       renderActiveCase();
     }
     updateDeviceProfile();
+    if (latestPhotoQualityGate) renderPhotoReview(latestPhotoQualityGate);
+    else hidePhotoReview();
     dbDetail.value = report.report || "";
     runDiagnosis();
     if (options.resume && customerArchiveStatus) {
@@ -5380,6 +5722,7 @@ async function restoreCustomerArchiveOnStartup() {
   if (!report) return null;
   renderCustomerCompactPlan(latestState || getFormState(), latestFindings);
   renderCustomerPlantDossier(latestState || getFormState(), latestFindings);
+  await refreshCustomerCaseTimeline({ force: true, silent: true });
   return report;
 }
 
@@ -5793,6 +6136,7 @@ function renderDiagnosis(state, findings) {
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
   renderCustomerPlantDossier(state, findings);
+  renderCustomerCaseTimeline();
   renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderConfidenceDecision(state, findings);
@@ -5870,6 +6214,7 @@ function refreshCustomerTimeState() {
   renderCustomerProgressSummary(state);
   renderCustomerSummary(state, findings);
   renderCustomerPlantDossier(state, findings);
+  renderCustomerCaseTimeline();
   renderCustomerCompactPlan(state, findings);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
@@ -6099,7 +6444,17 @@ function openPhotoRescueUpload(type) {
   setPhotoType(targetType);
   if (photoHint) photoHint.textContent = `本次补拍已锁定为${photoTypeLabel(targetType)}。`;
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = `补拍照片：${photoTypeLabel(targetType)}`;
+  let pickerPrompt = null;
+  if (document.body.classList.contains("customer-mode")) {
+    pickerPrompt = {
+      ...customerFirstPhotoPrompt({ ...getFormState(), photoType: targetType }),
+      type: targetType,
+      label: photoTypeLabel(targetType)
+    };
+    setCustomerPhotoPickerOpen(pickerPrompt);
+  }
   plantPhoto.click();
+  if (pickerPrompt) scheduleCustomerPhotoPickerCancelCheck(pickerPrompt);
 }
 
 function openSuggestedPhotoUpload() {
@@ -6248,6 +6603,9 @@ function snapshotCustomerPlantBeforeReset() {
     requestedPhotoType,
     latestVisionResult,
     latestPhotoTypeDetection,
+    latestPhotoQualityGate,
+    latestAiPipelineSnapshot,
+    customerCaseTimelineCache,
     latestMatchedPathways,
     photoSignals: { ...photoSignals },
     photoPreviewSrc: photoPreview.getAttribute("src"),
@@ -6272,6 +6630,9 @@ function restorePreviousCustomerPlant() {
   requestedPhotoType = snapshot.requestedPhotoType || "plant";
   latestVisionResult = snapshot.latestVisionResult || null;
   latestPhotoTypeDetection = snapshot.latestPhotoTypeDetection || null;
+  latestPhotoQualityGate = snapshot.latestPhotoQualityGate || null;
+  latestAiPipelineSnapshot = snapshot.latestAiPipelineSnapshot || null;
+  customerCaseTimelineCache = snapshot.customerCaseTimelineCache || null;
   latestMatchedPathways = snapshot.latestMatchedPathways || [];
   photoSignals = snapshot.photoSignals || {
     greenRatio: null,
@@ -6289,6 +6650,8 @@ function restorePreviousCustomerPlant() {
     photoPreview.removeAttribute("src");
     photoPreview.classList.remove("visible");
   }
+  if (latestPhotoQualityGate) renderPhotoReview(latestPhotoQualityGate);
+  else hidePhotoReview();
   document.body.classList.toggle("has-plant-photo", Boolean(snapshot.bodyClasses?.hasPlantPhoto));
   document.body.classList.toggle("customer-followup-due", Boolean(snapshot.bodyClasses?.followupDue));
   if (plantPhoto) plantPhoto.value = "";
@@ -6309,6 +6672,10 @@ function resetCustomerPlantDossier() {
   customerAutoArchiveInFlightSignature = null;
   latestVisionResult = null;
   latestPhotoTypeDetection = null;
+  latestPhotoQualityGate = null;
+  latestAiPipelineSnapshot = null;
+  customerCaseTimelineCache = null;
+  customerCaseTimelineInFlightKey = null;
   latestMatchedPathways = [];
   photoSignals = {
     greenRatio: null,
@@ -6330,12 +6697,14 @@ function resetCustomerPlantDossier() {
   if (followupPhoto) followupPhoto.value = "";
   photoPreview.removeAttribute("src");
   photoPreview.classList.remove("visible");
+  hidePhotoReview();
   document.body.classList.remove("has-plant-photo", "customer-followup-due");
   clearCustomerFirstPhotoReady();
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "等待自动识别";
   if (photoHint) photoHint.textContent = "上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。";
   if (caseDetail) caseDetail.value = "";
   if (caseTimeline) caseTimeline.innerHTML = "<div class=\"case-empty-timeline\">新植物还没有诊断记录。</div>";
+  renderCustomerCaseTimeline(null);
   if (caseStatus) caseStatus.textContent = "已准备记录新植物。";
   updateDeviceProfile();
   runDiagnosis();
@@ -6347,11 +6716,23 @@ customerPrimaryActionBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerCompactActionBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerDossierContinueBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerDossierNewBtn.addEventListener("click", resetCustomerPlantDossier);
+photoRetakeBtn?.addEventListener("click", () => {
+  const type = latestPhotoQualityGate?.photoType || requestedPhotoType || nextPhotoSuggestion().type || "plant";
+  openPhotoRescueUpload(type);
+});
+photoContinueBtn?.addEventListener("click", () => {
+  if (latestPhotoQualityGate && !latestPhotoQualityGate.canContinue) {
+    openPhotoRescueUpload(latestPhotoQualityGate.photoType);
+    return;
+  }
+  focusPhotoDiagnosisResult();
+});
 
 plantPhoto.addEventListener("change", () => {
   const file = plantPhoto.files && plantPhoto.files[0];
   if (!file) {
     clearCustomerFirstPhotoReady();
+    hidePhotoReview();
     photoPreview.removeAttribute("src");
     photoPreview.classList.remove("visible");
     document.body.classList.remove("has-plant-photo");
@@ -6359,6 +6740,7 @@ plantPhoto.addEventListener("change", () => {
     hasRunSmartDiagnosis = false;
     latestVisionResult = null;
     latestPhotoTypeDetection = null;
+    latestAiPipelineSnapshot = null;
     if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "等待自动识别";
     runDiagnosis();
     return;
@@ -6379,13 +6761,30 @@ plantPhoto.addEventListener("change", () => {
         applyPhotoSignals();
         const detection = detectUploadedPhotoType(file, signals, getFormState());
         const currentPhotoType = applyPhotoTypeDetection(detection);
-        await analyzePhotoWithVision(reader.result, file, { photoType: currentPhotoType });
-        capturedPhotoTypes.add(currentPhotoType);
-        saveBaselinePhotoSignals(currentPhotoType, signals);
-        photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${file.name}。诊断已更新。`;
-        hasRunSmartDiagnosis = true;
+        const vision = await analyzePhotoWithVision(reader.result, file, { photoType: currentPhotoType, skipHints: true });
+        const gate = photoQualityGate(signals, currentPhotoType, detection, vision);
+        latestPhotoQualityGate = gate;
+        updateAiPipelineSnapshot(getFormState(), {
+          vision,
+          gate,
+          detection,
+          photoType: currentPhotoType,
+          hasImage: true
+        });
+        renderPhotoReview(gate, file.name);
+        if (gate.canContinue) {
+          if (vision) applyVisionHints(vision);
+          capturedPhotoTypes.add(currentPhotoType);
+          saveBaselinePhotoSignals(currentPhotoType, signals);
+          photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${file.name}。${gate.state === "warn" ? "照片可继续使用，也可以重拍优化。" : "诊断已更新。"}`;
+          hasRunSmartDiagnosis = true;
+        } else {
+          photoHint.textContent = `这张${photoTypeLabel(currentPhotoType)}暂时看不准：${gate.message}`;
+          hasRunSmartDiagnosis = false;
+        }
         runDiagnosis();
-        focusPhotoDiagnosisResult();
+        if (gate.canContinue) focusPhotoDiagnosisResult();
+        else focusCustomerTarget(photoReviewCard || customerPhotoRescueCard);
       } finally {
         setPhotoProcessingState(false);
       }
@@ -6393,6 +6792,8 @@ plantPhoto.addEventListener("change", () => {
       setPhotoProcessingState(false);
       if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
       if (photoHint) photoHint.textContent = "照片没有读取成功，请换一张清晰照片重试。";
+      latestPhotoQualityGate = photoQualityGate({ width: null, height: null }, requestedPhotoType || "plant");
+      renderPhotoReview(latestPhotoQualityGate, file.name);
     });
   });
   reader.readAsDataURL(file);
@@ -6411,6 +6812,10 @@ resetPhotoCheckBtn.addEventListener("click", () => {
   localStorage.removeItem(customerAutoArchiveKey);
   latestVisionResult = null;
   latestPhotoTypeDetection = null;
+  latestPhotoQualityGate = null;
+  latestAiPipelineSnapshot = null;
+  customerCaseTimelineCache = null;
+  customerCaseTimelineInFlightKey = null;
   photoSignals = {
     greenRatio: null,
     yellowRatio: null,
@@ -6422,11 +6827,13 @@ resetPhotoCheckBtn.addEventListener("click", () => {
   };
   photoPreview.removeAttribute("src");
   photoPreview.classList.remove("visible");
+  hidePhotoReview();
   document.body.classList.remove("has-plant-photo");
   clearCustomerFirstPhotoReady();
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "等待自动识别";
   plantPhoto.value = "";
   photoHint.textContent = "上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。";
+  renderCustomerCaseTimeline(null);
   runDiagnosis();
 });
 
