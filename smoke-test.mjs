@@ -232,9 +232,9 @@ if (missing.length) {
 }
 
 const requiredHtmlSnippets = [
-  "What needs attention?",
-  "Take a plant photo",
-  "One clear photo is enough to start",
+  "What does your plant need today?",
+  "One clear photo gives you one clear next step.",
+  "Your photo stays private by default.",
   "Take a photo",
   "data-customer-step=\"followup\"",
   "Photos are used only for this diagnosis",

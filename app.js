@@ -16,6 +16,10 @@ const customerProgressSteps = Array.from(document.querySelectorAll("[data-custom
 const customerModeBtn = document.querySelector("#customer-mode-btn");
 const expertModeBtn = document.querySelector("#expert-mode-btn");
 const customerTitle = document.querySelector("#customer-title");
+const customerAppTitle = document.querySelector("#customer-app-title");
+const customerAppIntro = document.querySelector("#customer-app-intro");
+const customerResultPhoto = document.querySelector("#customer-result-photo");
+const customerResultCrop = document.querySelector("#customer-result-crop");
 const customerMessage = document.querySelector("#customer-message");
 const customerNextAction = document.querySelector("#customer-next-action");
 const customerPrimaryActionBtn = document.querySelector("#customer-primary-action-btn");
@@ -2738,6 +2742,14 @@ function renderCustomerMobileExperience(state = getFormState()) {
     else step.removeAttribute("aria-current");
   });
   if (customerMobileRisk) customerMobileRisk.textContent = model.risk;
+  const stageCopy = {
+    photo: ["What does your plant need today?", "One clear photo gives you one clear next step."],
+    analyzing: ["Looking closely.", "Checking photo quality and visible symptoms."],
+    action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
+    followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
+  };
+  if (customerAppTitle) customerAppTitle.textContent = stageCopy[stage][0];
+  if (customerAppIntro) customerAppIntro.textContent = stageCopy[stage][1];
   if (customerMobileAction) customerMobileAction.textContent = model.action;
   if (customerMobileFollowup) customerMobileFollowup.textContent = model.followup;
   if (customerMobileEvidence) {
@@ -2751,8 +2763,13 @@ function renderCustomerMobileExperience(state = getFormState()) {
       ? `${cropNames[state.crop]} uploaded for diagnosis`
       : "Dwarf tomato plant beside an apartment window";
   }
+  if (customerResultPhoto) {
+    customerResultPhoto.src = uploaded || "assets/tomato-diagnosis.png";
+    customerResultPhoto.alt = `${cropNames[state.crop]} photo used for this diagnosis`;
+  }
+  if (customerResultCrop) customerResultCrop.textContent = cropNames[state.crop];
   if (customerPhotoStatusLabel) {
-    customerPhotoStatusLabel.textContent = processing ? "Checking photo" : hasPhoto ? "Photo ready" : "Example framing";
+    customerPhotoStatusLabel.textContent = processing ? "Checking photo" : hasPhoto ? "Photo ready" : "Example";
   }
   if (customerCheckPlantBtn) {
     const labels = {
