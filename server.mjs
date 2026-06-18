@@ -4,7 +4,7 @@ import { extname, join, normalize } from "node:path";
 import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { buildKnowledgeGraphView, flattenKnowledgeGraph, knowledgeGraph } from "./knowledge-graph.mjs";
+import { buildGoldenPathCases, buildKnowledgeGraphView, flattenKnowledgeGraph, knowledgeGraph } from "./knowledge-graph.mjs";
 
 const root = process.cwd();
 const portArgIndex = process.argv.indexOf("--port");
@@ -19,6 +19,105 @@ const notificationPath = join(dataDir, "notification-jobs.json");
 const sqlitePath = join(dataDir, "grow-clinic.sqlite");
 const openAiEndpoint = "https://api.openai.com/v1/responses";
 const defaultVisionModel = "gpt-4.1-mini";
+const visionOutputSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: [
+    "photoType",
+    "cropKey",
+    "stageKey",
+    "labels",
+    "observations",
+    "diagnosisHints",
+    "missingPhotos",
+    "confidence",
+    "quality",
+    "nextAction"
+  ],
+  properties: {
+    photoType: { type: "string", enum: ["plant", "leaf", "root", "flower", "pest", "unknown"] },
+    cropKey: { type: "string", enum: ["tomato", "basil", "rosemary", "strawberry", "pepper", "unknown"] },
+    stageKey: { type: "string", enum: ["seedling", "vegetative", "flowering", "fruiting", "unknown"] },
+    labels: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["label", "confidence"],
+        properties: {
+          label: {
+            type: "string",
+            enum: [
+              "yellowing",
+              "leaf-curl",
+              "spots",
+              "possible-pest",
+              "surface-algae",
+              "white-fuzz",
+              "leggy-growth",
+              "flower-drop",
+              "flower-or-fruit",
+              "wilting",
+              "dry-edge",
+              "root-risk",
+              "healthy-signal"
+            ]
+          },
+          confidence: { type: "number" }
+        }
+      }
+    },
+    observations: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["code", "confidence", "evidence"],
+        properties: {
+          code: { type: "string" },
+          confidence: { type: "number" },
+          evidence: { type: "string" }
+        }
+      }
+    },
+    diagnosisHints: {
+      type: "array",
+      items: {
+        type: "string",
+        enum: [
+          "yellow-leaves",
+          "leggy",
+          "wilting",
+          "leaf-curl",
+          "spots",
+          "no-flower",
+          "no-fruit",
+          "pests",
+          "algae",
+          "water-swing",
+          "flowering-context",
+          "root-risk"
+        ]
+      }
+    },
+    missingPhotos: {
+      type: "array",
+      items: { type: "string", enum: ["plant", "leaf", "root", "flower", "pest"] }
+    },
+    confidence: { type: "number" },
+    quality: {
+      type: "object",
+      additionalProperties: false,
+      required: ["brightness", "focus", "framing"],
+      properties: {
+        brightness: { type: "string", enum: ["good", "dark", "overexposed", "unknown"] },
+        focus: { type: "string", enum: ["good", "blurry", "unknown"] },
+        framing: { type: "string", enum: ["good", "too-close", "too-far", "unknown"] }
+      }
+    },
+    nextAction: { type: "string" }
+  }
+};
 let sqliteDb = null;
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -783,7 +882,7 @@ function buildProductStrategy(reports) {
       ]
     },
     {
-      title: "hk minijungle 差异层：五类可食用作物专家",
+      title: "FiveCrop 差异层：五类可食用作物专家",
       currentScore: 69,
       targetScore: 92,
       evidence: evidenceCount(["tomato", "basil", "rosemary", "strawberry", "pepper", "番茄", "罗勒", "迷迭香", "草莓", "辣椒"]),
@@ -957,6 +1056,66 @@ function buildExperiments(reports) {
       successMetric: "用户在 7 天内无新增严重症状，且能完成至少 2 次复查。"
     };
   });
+}
+
+function buildP2Growth(reports) {
+  const labelFields = ["cropKey", "stageKey", "photoType", "symptoms", "visuals", "topRisk"];
+  const eligibleRecords = reports.filter((report) =>
+    report.cropKey &&
+    report.stageKey &&
+    report.photoType &&
+    report.photoType !== "none"
+  );
+  const fieldCoverage = Object.fromEntries(labelFields.map((field) => [
+    field,
+    reports.length
+      ? Math.round((reports.filter((report) => {
+        const value = report[field];
+        return Array.isArray(value) ? value.length > 0 : Boolean(value);
+      }).length / reports.length) * 100)
+      : 0
+  ]));
+  const followupReports = reports.filter((report) => Array.isArray(report.logs) && report.logs.length);
+  const actionReports = reports.filter((report) => report.reminderPlan?.actionCompletedAt);
+  const correctedReports = reports.filter((report) => report.annotation?.correctedDiagnosis);
+
+  return {
+    version: "fivecrop-p2-growth-v1",
+    labeling: {
+      schemaVersion: "fivecrop-label-v1",
+      requiredFields: [
+        "cropKey",
+        "stageKey",
+        "photoType",
+        "symptoms",
+        "visuals",
+        "predictedDiagnosis",
+        "finalOutcome"
+      ],
+      totalReports: reports.length,
+      eligibleRecords: eligibleRecords.length,
+      fieldCoverage,
+      correctionsInReports: correctedReports.length
+    },
+    funnel: {
+      diagnosisSaved: reports.length,
+      photoCompleted: eligibleRecords.length,
+      followupReturned: followupReports.length,
+      actionCompleted: actionReports.length,
+      photoCompletionRate: reports.length ? Math.round((eligibleRecords.length / reports.length) * 100) : 0,
+      followupReturnRate: reports.length ? Math.round((followupReports.length / reports.length) * 100) : 0,
+      actionCompletionRate: reports.length ? Math.round((actionReports.length / reports.length) * 100) : 0
+    },
+    monetization: {
+      freeDiagnosisLimit: 3,
+      paidBoundaries: [
+        "advanced_followup",
+        "before_after_comparison",
+        "expert_correction",
+        "unlimited_case_history"
+      ]
+    }
+  };
 }
 
 const cropModels = {
@@ -1217,9 +1376,10 @@ function visionPrompt(body) {
   const cropKey = body.context?.cropKey || "unknown";
   const cropModel = cropModels[cropKey];
   return [
-    "You are an indoor edible crop diagnosis vision adapter for hk minijungle.",
+    "You are an indoor edible crop diagnosis vision adapter for FiveCrop.",
     "Analyze only visible evidence in the photo. Do not invent sensor readings.",
     "Supported crops: tomato, basil, rosemary, strawberry, pepper. If unsure, use unknown.",
+    "Prefer conservative uncertainty over guessing. Use short Chinese for nextAction.",
     `User context: crop=${cropKey}, stage=${body.context?.stageKey || "unknown"}, medium=${body.context?.mediumKey || "unknown"}, concern=${body.context?.concern || "unknown"}, expectedPhotoType=${body.photoType || "unknown"}.`,
     cropModel ? `Crop model risks: ${cropModel.primaryRisks.join(", ")}. Required photos: ${cropModel.requiredPhotos.join(", ")}.` : "",
     "Return ONLY a JSON object with this shape:",
@@ -1245,6 +1405,55 @@ function visionPrompt(body) {
   ].filter(Boolean).join("\n");
 }
 
+function openAiVisionRequestBody(body, model, options = {}) {
+  const requestBody = {
+    model,
+    input: [
+      {
+        role: "user",
+        content: [
+          { type: "input_text", text: visionPrompt(body) },
+          { type: "input_image", image_url: body.imageData }
+        ]
+      }
+    ],
+    max_output_tokens: 900
+  };
+
+  if (options.structured !== false) {
+    requestBody.text = {
+      format: {
+        type: "json_schema",
+        name: "fivecrop_vision_analysis",
+        schema: visionOutputSchema,
+        strict: true
+      }
+    };
+  }
+
+  return requestBody;
+}
+
+async function requestOpenAiVision(apiKey, body, model, options = {}) {
+  return fetch(openAiEndpoint, {
+    method: "POST",
+    headers: {
+      "authorization": `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(openAiVisionRequestBody(body, model, options))
+  });
+}
+
+async function openAiErrorDetail(response) {
+  try {
+    const errorPayload = await response.json();
+    return String(errorPayload.error?.message || errorPayload.error?.type || "").slice(0, 220);
+  } catch {
+    return "openai-error-body-unavailable";
+  }
+}
+
 async function analyzeVisionWithOpenAI(body, local) {
   if (!body.imageData || !String(body.imageData).startsWith("data:image/")) {
     local.aiFallbackReason = "no-image-data";
@@ -1257,35 +1466,26 @@ async function analyzeVisionWithOpenAI(body, local) {
   }
 
   const model = await readEnvValue("OPENAI_VISION_MODEL") || defaultVisionModel;
-  const response = await fetch(openAiEndpoint, {
-    method: "POST",
-    headers: {
-      "authorization": `Bearer ${apiKey}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify({
-      model,
-      input: [
-        {
-          role: "user",
-          content: [
-            { type: "input_text", text: visionPrompt(body) },
-            { type: "input_image", image_url: body.imageData }
-          ]
-        }
-      ],
-      max_output_tokens: 900
-    })
-  });
+  let response = await requestOpenAiVision(apiKey, body, model);
 
   if (!response.ok) {
-    local.aiFallbackReason = `openai-http-${response.status}`;
-    try {
-      const errorPayload = await response.json();
-      local.aiFallbackDetail = String(errorPayload.error?.message || errorPayload.error?.type || "").slice(0, 220);
-    } catch {
-      local.aiFallbackDetail = "openai-error-body-unavailable";
+    const firstDetail = await openAiErrorDetail(response);
+    if (response.status === 400 && /schema|format|text|json/i.test(firstDetail)) {
+      response = await requestOpenAiVision(apiKey, body, model, { structured: false });
+      if (response.ok) {
+        const payload = await response.json();
+        const parsed = jsonFromModelText(outputTextFromResponse(payload));
+        if (!parsed) {
+          local.aiFallbackReason = "openai-invalid-json";
+          local.aiFallbackDetail = "structured-output-retry-returned-invalid-json";
+          return null;
+        }
+        return normalizeAiVisionResult({ ...parsed, model }, body, local);
+      }
     }
+
+    local.aiFallbackReason = `openai-http-${response.status}`;
+    local.aiFallbackDetail = firstDetail;
     return null;
   }
   const payload = await response.json();
@@ -1302,9 +1502,10 @@ async function analyzeVisionPayload(body) {
   try {
     const ai = await analyzeVisionWithOpenAI(body, local);
     if (ai?.labels?.length || ai?.observations?.length) return ai;
-  } catch {
+  } catch (error) {
     // Keep the diagnosis flow usable when network, quota, or model access fails.
     local.aiFallbackReason = "openai-request-failed";
+    local.aiFallbackDetail = String(error?.message || error || "").slice(0, 220);
   }
   return local;
 }
@@ -1387,7 +1588,7 @@ function buildNotificationJobs(reportId, reminderPlan, channels, channelTargets 
   return (reminderPlan?.items || []).map((item) => {
     const template = notificationTemplate({
       source: "report-reminder",
-      caseName: item.caseName || "诊断报告",
+      caseName: item.caseName || "FiveCrop 诊断报告",
       cropKey: item.cropKey || "generic",
       trendState: item.trendState || "scheduled",
       trendLabel: item.trendLabel || "复查提醒",
@@ -1605,7 +1806,7 @@ async function deliverChannelStatuses(statuses, job, options = {}) {
           channel: item.channel,
           target,
           message: job.template?.channelMessages?.[item.channel] || job.message || "",
-          title: job.template?.title || job.caseName || "hk minijungle 复查提醒",
+          title: job.template?.title || job.caseName || "FiveCrop 复查提醒",
           action: job.template?.action || job.task || "",
           photo: job.template?.photo || job.photo || "",
           job
@@ -1750,6 +1951,11 @@ const server = createServer(async (req, res) => {
       return;
     }
 
+    if (url.pathname === "/api/p2-growth" && req.method === "GET") {
+      sendJson(res, 200, buildP2Growth(await readReports()));
+      return;
+    }
+
     if (url.pathname === "/api/crop-models" && req.method === "GET") {
       sendJson(res, 200, cropModels);
       return;
@@ -1772,6 +1978,15 @@ const server = createServer(async (req, res) => {
           nodes: graphView.nodes.length,
           edges: graphView.edges.length
         }
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/golden-paths" && req.method === "GET") {
+      sendJson(res, 200, {
+        version: knowledgeGraph.version,
+        product: "FiveCrop: Plant Doctor",
+        paths: buildGoldenPathCases(knowledgeGraph)
       });
       return;
     }

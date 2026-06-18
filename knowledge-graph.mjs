@@ -212,6 +212,179 @@ export const knowledgeGraph = {
   }
 };
 
+export const goldenPathCases = [
+  {
+    id: "golden-tomato-flower-drop",
+    cropKey: "tomato",
+    pathwayId: "tomato-flower-no-fruit",
+    title: "矮生番茄落花",
+    entryPhoto: "flower",
+    photoSequence: ["flower", "plant", "leaf"],
+    diagnosisTarget: "开花但不坐果、花朵脱落",
+    customerPromise: "先判断是不是授粉、光照或温度窗口问题，只给今天一个动作。",
+    sampleInput: {
+      device: "xponge-diy",
+      stage: "flowering",
+      medium: "xponge",
+      light: "low",
+      moisture: "swing",
+      climate: "hot",
+      concern: "fruit",
+      symptoms: ["leggy", "no-fruit", "leaf-curl"],
+      visuals: ["long-internodes", "flower-drop", "edge-dry"],
+      sensorMoisture: 32,
+      lightHours: 11,
+      temperature: 33,
+      humidity: 48,
+      ec: 1.2,
+      ph: 6.4,
+      reservoir: 3,
+      notes: "矮生番茄开花后连续落花，没有小果膨大。"
+    }
+  },
+  {
+    id: "golden-basil-leggy",
+    cropKey: "basil",
+    pathwayId: "basil-leggy-low-light",
+    title: "罗勒徒长",
+    entryPhoto: "plant",
+    photoSequence: ["plant", "leaf"],
+    diagnosisTarget: "徒长、叶片变小、香味变淡",
+    customerPromise: "先把光照和修剪点说清楚，不让用户被一堆参数淹没。",
+    sampleInput: {
+      device: "letpot",
+      stage: "vegetative",
+      medium: "water",
+      light: "low",
+      moisture: "stable",
+      climate: "dry",
+      concern: "leggy",
+      symptoms: ["leggy", "yellow-leaves"],
+      visuals: ["long-internodes", "pale-new-growth"],
+      sensorMoisture: 48,
+      lightHours: 8,
+      temperature: 25,
+      humidity: 38,
+      ec: 1.1,
+      ph: 6.2,
+      reservoir: 2,
+      notes: "罗勒节间变长，叶片变淡，两周没有掐顶。"
+    }
+  },
+  {
+    id: "golden-rosemary-wet-root",
+    cropKey: "rosemary",
+    pathwayId: "rosemary-wet-root-decline",
+    title: "迷迭香过湿",
+    entryPhoto: "root",
+    photoSequence: ["root", "plant", "leaf"],
+    diagnosisTarget: "看似缺水但越浇越差、叶尖发黑或整株发灰",
+    customerPromise: "把“别再浇水”这个反直觉动作说得足够明确。",
+    sampleInput: {
+      device: "balcony",
+      stage: "vegetative",
+      medium: "soil",
+      light: "medium",
+      moisture: "wet",
+      climate: "humid",
+      concern: "root",
+      symptoms: ["yellow-leaves", "wilting", "algae"],
+      visuals: ["lower-yellowing", "white-fuzz", "green-surface"],
+      sensorMoisture: 82,
+      lightHours: 10,
+      temperature: 23,
+      humidity: 72,
+      ec: 0.9,
+      ph: 6.5,
+      reservoir: 1.5,
+      notes: "迷迭香下部叶片发黄，根区长期潮湿，表面有白色絮状物。"
+    }
+  },
+  {
+    id: "golden-strawberry-pollination-crown",
+    cropKey: "strawberry",
+    pathwayId: "strawberry-crown-wet",
+    relatedPathwayIds: ["strawberry-flower-no-fruit"],
+    title: "草莓授粉/冠部湿",
+    entryPhoto: "flower",
+    photoSequence: ["flower", "root", "plant"],
+    diagnosisTarget: "冠部潮湿叠加花后不坐果风险",
+    customerPromise: "先处理冠部湿和授粉动作，再用同一花序/冠部照片复查。",
+    sampleInput: {
+      device: "clickgrow",
+      stage: "flowering",
+      medium: "xponge",
+      light: "medium",
+      moisture: "wet",
+      climate: "humid",
+      concern: "fruit",
+      symptoms: ["no-fruit", "spots", "algae"],
+      visuals: ["flower-drop", "white-fuzz", "green-surface"],
+      sensorMoisture: 76,
+      lightHours: 12,
+      temperature: 26,
+      humidity: 68,
+      ec: 1.6,
+      ph: 6.1,
+      reservoir: 3,
+      notes: "草莓开花后坐果差，冠部附近潮湿并有白色絮状物。"
+    }
+  },
+  {
+    id: "golden-pepper-flower-drop",
+    cropKey: "pepper",
+    pathwayId: "pepper-flower-drop",
+    title: "辣椒落花",
+    entryPhoto: "flower",
+    photoSequence: ["flower", "plant", "leaf"],
+    diagnosisTarget: "开花很多但连续掉花、不坐果",
+    customerPromise: "把授粉、温度和水分波动合成一个今天能做的动作。",
+    sampleInput: {
+      device: "aerogarden",
+      stage: "flowering",
+      medium: "water",
+      light: "low",
+      moisture: "swing",
+      climate: "hot",
+      concern: "fruit",
+      symptoms: ["leggy", "no-fruit", "leaf-curl", "wilting"],
+      visuals: ["long-internodes", "flower-drop", "edge-dry"],
+      sensorMoisture: 36,
+      lightHours: 10,
+      temperature: 34,
+      humidity: 42,
+      ec: 1.4,
+      ph: 6.3,
+      reservoir: 3,
+      notes: "矮生辣椒开花后连续落花，灯下温度偏高，根区忽干忽湿。"
+    }
+  }
+];
+
+export function buildGoldenPathCases(graph = knowledgeGraph, cases = goldenPathCases) {
+  const pathways = new Map(flattenKnowledgeGraph(graph).map((pathway) => [pathway.id, pathway]));
+  return cases.map((item) => {
+    const pathway = pathways.get(item.pathwayId);
+    const relatedPathways = (item.relatedPathwayIds || []).map((id) => pathways.get(id)).filter(Boolean);
+    return {
+      ...item,
+      cropName: graph.crops[item.cropKey]?.name || item.cropKey,
+      pathway,
+      relatedPathways,
+      prescription: pathway?.prescription || [],
+      followup: pathway?.followup || null,
+      requiredPhotos: Array.from(new Set([...(pathway?.requiredPhotos || []), ...item.photoSequence])),
+      runnableFlow: {
+        photo: item.entryPhoto,
+        diagnosis: pathway?.userProblem || item.diagnosisTarget,
+        action: pathway?.prescription?.[0] || "",
+        followup: pathway?.followup?.when || "",
+        success: pathway?.followup?.success || ""
+      }
+    };
+  });
+}
+
 export function flattenKnowledgeGraph(graph = knowledgeGraph) {
   return Object.entries(graph.crops).flatMap(([cropKey, crop]) =>
     crop.pathways.map((pathway) => ({
@@ -261,4 +434,3 @@ export function buildKnowledgeGraphView(graph = knowledgeGraph) {
 
   return { nodes, edges };
 }
-

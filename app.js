@@ -1,4 +1,18 @@
 const form = document.querySelector("#diagnosis-form");
+const customerAppShell = document.querySelector("#customer-app-shell");
+const customerInternalBtn = document.querySelector("#customer-internal-btn");
+const customerCameraBtn = document.querySelector("#customer-camera-btn");
+const customerStagePhoto = document.querySelector("#customer-stage-photo");
+const customerMobileRisk = document.querySelector("#customer-mobile-risk");
+const customerMobileAction = document.querySelector("#customer-mobile-action");
+const customerMobileFollowup = document.querySelector("#customer-mobile-followup");
+const customerMobileEvidence = document.querySelector("#customer-mobile-evidence");
+const customerMobilePrivacyBtn = document.querySelector("#customer-mobile-privacy-btn");
+const customerMobilePrivacyDetail = document.querySelector("#customer-mobile-privacy-detail");
+const customerCheckPlantBtn = document.querySelector("#customer-check-plant-btn");
+const customerPhotoStatusLabel = document.querySelector("#customer-photo-status-label");
+const customerAnalysisState = document.querySelector("#customer-analysis-state");
+const customerProgressSteps = Array.from(document.querySelectorAll("[data-customer-step]"));
 const customerModeBtn = document.querySelector("#customer-mode-btn");
 const expertModeBtn = document.querySelector("#expert-mode-btn");
 const customerTitle = document.querySelector("#customer-title");
@@ -15,12 +29,19 @@ const customerJourneyKicker = document.querySelector("#customer-journey-kicker")
 const customerJourneyTitle = document.querySelector("#customer-journey-title");
 const customerJourneyList = document.querySelector("#customer-journey-list");
 const customerPlanCompact = document.querySelector("#customer-plan-compact");
+const customerCompactPhoto = document.querySelector("#customer-compact-photo");
 const customerCompactJudgement = document.querySelector("#customer-compact-judgement");
 const customerCompactReason = document.querySelector("#customer-compact-reason");
 const customerCompactAction = document.querySelector("#customer-compact-action");
 const customerCompactFollowup = document.querySelector("#customer-compact-followup");
 const customerCompactActionBtn = document.querySelector("#customer-compact-action-btn");
 const customerArchiveStatus = document.querySelector("#customer-archive-status");
+const customerTrustCard = document.querySelector("#customer-trust-card");
+const customerTrustTitle = document.querySelector("#customer-trust-title");
+const customerTrustList = document.querySelector("#customer-trust-list");
+const customerPrivacyCard = document.querySelector("#customer-privacy-card");
+const customerPrivacyCopy = document.querySelector("#customer-privacy-copy");
+const customerDeleteLocalDataBtn = document.querySelector("#customer-delete-local-data-btn");
 const customerPlantDossier = document.querySelector("#customer-plant-dossier");
 const customerDossierKicker = document.querySelector("#customer-dossier-kicker");
 const customerDossierTitle = document.querySelector("#customer-dossier-title");
@@ -134,6 +155,21 @@ const refreshOpportunitiesBtn = document.querySelector("#refresh-opportunities-b
 const opportunityRankList = document.querySelector("#opportunity-rank-list");
 const refreshExperimentsBtn = document.querySelector("#refresh-experiments-btn");
 const experimentList = document.querySelector("#experiment-list");
+const p2GrowthPanel = document.querySelector("#p2-growth-panel");
+const refreshP2GrowthBtn = document.querySelector("#refresh-p2-growth-btn");
+const p2GrowthMetrics = document.querySelector("#p2-growth-metrics");
+const annotationSchemaPanel = document.querySelector("#annotation-schema-panel");
+const annotationSchemaList = document.querySelector("#annotation-schema-list");
+const annotationPreview = document.querySelector("#annotation-preview");
+const expertCorrectionPanel = document.querySelector("#expert-correction-panel");
+const correctionDiagnosisInput = document.querySelector("#correction-diagnosis-input");
+const correctionOutcomeSelect = document.querySelector("#correction-outcome-select");
+const correctionReasonInput = document.querySelector("#correction-reason-input");
+const saveCorrectionBtn = document.querySelector("#save-correction-btn");
+const correctionStatus = document.querySelector("#correction-status");
+const correctionList = document.querySelector("#correction-list");
+const pricingBoundaryPanel = document.querySelector("#pricing-boundary-panel");
+const pricingBoundaryList = document.querySelector("#pricing-boundary-list");
 const refreshProductStrategyBtn = document.querySelector("#refresh-product-strategy-btn");
 const productStrategyGrid = document.querySelector("#product-strategy-grid");
 const productStrategyList = document.querySelector("#product-strategy-list");
@@ -1376,6 +1412,7 @@ function setTaskCompletion(id, text, done) {
       completedAt: new Date().toISOString(),
       text
     };
+    trackP2Event("action_completed", { id, text });
   } else {
     delete next[id];
   }
@@ -2466,8 +2503,12 @@ function renderCustomerPrimaryAction(state = getFormState(), findings = latestFi
 function customerCompactPlanModel(state, findings) {
   const started = customerHasStarted(state);
   const actionModel = customerPrimaryActionModel(state, findings);
+  const journey = customerJourneyModel(state, findings);
+  const photoStep = journey.steps.find((step) => step.label === "拍照");
+  const photo = photoStep?.detail || "拍一张整株照";
   if (!started) {
     return {
+      photo,
       judgement: "等待第一张照片",
       reason: `先选择${cropNames[state.crop]}，再拍一张清晰照片。`,
       action: actionModel.label,
@@ -2481,6 +2522,7 @@ function customerCompactPlanModel(state, findings) {
   if (plan?.actionCompletedAt && pendingReminder) {
     const handoff = actionFollowupHandoff(plan);
     return {
+      photo,
       judgement: followupDue ? "该复查了" : "等待复查",
       reason: handoff?.compactReason || (followupDue
         ? "现在拍同角度复查照，我会判断有没有变好。"
@@ -2493,6 +2535,7 @@ function customerCompactPlanModel(state, findings) {
   const rescue = customerPhotoRescuePlan(state);
   if (rescue) {
     return {
+      photo,
       judgement: rescue.kicker,
       reason: rescue.message,
       action: rescue.button,
@@ -2505,8 +2548,9 @@ function customerCompactPlanModel(state, findings) {
   const pending = firstPendingReminder();
   const firstReminder = buildReminders(state, findings)[0];
   return {
-    judgement: top.title,
-    reason: firstSentence(top.why),
+    photo,
+    judgement: top?.title || "诊断已生成",
+    reason: top ? firstSentence(top.why) : "信息已经足够生成当前建议。",
     action: task ? firstSentence(task.text) : actionModel.label,
     followup: pending?.dueAt
       ? relativeDueText(pending.dueAt)
@@ -2519,11 +2563,211 @@ function customerCompactPlanModel(state, findings) {
 function renderCustomerCompactPlan(state = getFormState(), findings = latestFindings) {
   if (!customerPlanCompact || !customerCompactJudgement) return;
   const model = customerCompactPlanModel(state, findings);
+  if (customerCompactPhoto) customerCompactPhoto.textContent = model.photo;
   customerCompactJudgement.textContent = model.judgement;
   customerCompactReason.textContent = model.reason;
   customerCompactAction.textContent = model.action;
   customerCompactFollowup.textContent = model.followup;
   renderCustomerArchiveStatus(state, findings);
+  renderCustomerTrustAndPrivacy(state, findings);
+}
+
+function customerEvidenceLabel(value) {
+  const labels = {
+    "flower-drop": "落花或花序变化",
+    "long-internodes": "节间偏长",
+    "pale-leaves": "叶色偏淡",
+    "white-fuzz": "根区白色絮状物",
+    "green-surface": "基质表面发绿",
+    "edge-dry": "叶缘干缩",
+    "leaf-curl": "叶片卷曲",
+    "yellow-leaves": "叶片发黄",
+    "wilting": "叶片下垂",
+    "spots": "叶面斑点",
+    "pests": "虫害痕迹",
+    "no-fruit": "开花后不坐果",
+    "leggy": "徒长",
+    "algae": "根区藻绿",
+    "root-browning": "根区褐变",
+    "crown-wet": "冠部偏湿"
+  };
+  if (!value) return "";
+  return labels[value] || String(value).replace(/[-_]/g, " ");
+}
+
+function customerVisibleSignals(state = getFormState(), findings = latestFindings) {
+  const values = [];
+  const pathway = latestMatchedPathways[0];
+  values.push(...(pathway?.photoSignals || []));
+  values.push(...(state.visuals || []));
+  values.push(...(state.symptoms || []));
+  values.push(...(latestVisionResult?.observations || []).map((item) => item.label || item.evidence || item.description));
+  values.push(...(latestVisionResult?.labels || []).map((item) => item.label));
+  if (!values.length && findings[0]?.title) values.push(findings[0].title);
+
+  return Array.from(new Set(values.map(customerEvidenceLabel).filter(Boolean))).slice(0, 2);
+}
+
+function customerTrustEvidenceModel(state = getFormState(), findings = latestFindings) {
+  const hasPhoto = Boolean(capturedPhotoTypes.size || latestPhotoQualityGate || photoSignals.width);
+  const suggestion = nextPhotoSuggestion();
+  const capturedType = Array.from(capturedPhotoTypes).slice(-1)[0];
+  const currentType = latestPhotoQualityGate?.photoType
+    || latestPhotoTypeDetection?.type
+    || requestedPhotoType
+    || capturedType
+    || state.photoType
+    || suggestion.type
+    || "plant";
+  const signals = customerVisibleSignals(state, findings);
+  const evidence = [];
+
+  evidence.push(hasPhoto
+    ? `照片类型：已按${photoTypeLabel(currentType)}判断，避免把整株、叶片、根区或花序混在一起。`
+    : `照片类型：先拍${photoTypeLabel(currentType)}，系统会按照片角度判断。`);
+
+  evidence.push(signals.length
+    ? `可见症状：目前抓到${signals.join("、")}。`
+    : "可见症状：上传照片后会先看叶片、根区、花序或虫害线索。");
+
+  evidence.push(suggestion.type
+    ? `缺失信息：下一张建议拍${photoTypeLabel(suggestion.type)}，用来补齐判断。`
+    : "缺失信息：关键照片已够用；复查时按同角度再拍一张。");
+
+  return {
+    title: hasPhoto ? "这次判断基于这些证据" : "先拍照，再给出证据",
+    evidence: evidence.slice(0, 3)
+  };
+}
+
+function renderCustomerTrustAndPrivacy(state = getFormState(), findings = latestFindings) {
+  if (customerTrustCard && customerTrustTitle && customerTrustList) {
+    const model = customerTrustEvidenceModel(state, findings);
+    customerTrustTitle.textContent = model.title;
+    customerTrustList.innerHTML = "";
+    model.evidence.forEach((item) => {
+      const li = document.createElement("li");
+      li.textContent = item;
+      customerTrustList.appendChild(li);
+    });
+  }
+
+  if (customerPrivacyCard && customerPrivacyCopy) {
+    const uploadText = latestVisionResult?.provider === "openai-responses"
+      ? "本次使用真实视觉模型时，会把压缩后的植物照片发送给 FiveCrop 后端和 OpenAI，只用于这次分析。"
+      : "当前会先用本地规则；只有配置真实视觉模型并上传照片时，才会发送压缩后的植物照片。";
+    customerPrivacyCopy.textContent = `${uploadText} FiveCrop 不保存原图进病例，也不会默认把照片用于训练或改进模型；清除本机记录会删除这个浏览器里的照片预览、基线和复查记录。`;
+  }
+}
+
+function customerMobileResultModel(state = getFormState()) {
+  const models = {
+    tomato: {
+      risk: "Flower drop from heat stress",
+      action: "Move the light 10 cm higher",
+      followup: "Come back in 3 days",
+      evidence: [
+        ["Flower photo", "Flowers are visible in your image."],
+        ["Visible flower drop", "Dropped blossoms suggest heat stress."],
+        ["Next photo: same angle", "Helps us compare what changes."]
+      ]
+    },
+    basil: {
+      risk: "Leggy growth from low light",
+      action: "Move the light closer and pinch the top",
+      followup: "Come back in 7 days",
+      evidence: [
+        ["Whole-plant photo", "The full stem shape is visible."],
+        ["Long internodes", "Wide leaf spacing points to low light."],
+        ["Next photo: side view", "We will compare new compact growth."]
+      ]
+    },
+    rosemary: {
+      risk: "Root stress from staying too wet",
+      action: "Pause watering and increase airflow",
+      followup: "Come back in 48 hours",
+      evidence: [
+        ["Root-zone photo", "The wet growing surface is visible."],
+        ["Drooping growth", "Soft tips can follow low root oxygen."],
+        ["Next photo: root zone", "We will check whether it is drying."]
+      ]
+    },
+    strawberry: {
+      risk: "Wet crown and weak pollination",
+      action: "Dry the crown and hand-pollinate today",
+      followup: "Come back in 3 days",
+      evidence: [
+        ["Flower photo", "The flower centre is readable."],
+        ["Crown moisture", "Water is sitting near the crown."],
+        ["Next photo: same flower", "We will look for early fruit set."]
+      ]
+    },
+    pepper: {
+      risk: "Flower drop from heat swings",
+      action: "Stabilize heat and gently pollinate",
+      followup: "Come back in 5 days",
+      evidence: [
+        ["Flower photo", "The flower cluster is visible."],
+        ["Dropped blossoms", "Recent flowers are not holding."],
+        ["Next photo: young fruit", "We will check whether fruit has set."]
+      ]
+    }
+  };
+  return models[state.crop] || models.tomato;
+}
+
+function renderCustomerMobileExperience(state = getFormState()) {
+  if (!customerAppShell) return;
+  const model = customerMobileResultModel(state);
+  const processing = document.body.classList.contains("photo-processing");
+  const uploaded = photoPreview?.classList.contains("visible") ? photoPreview.getAttribute("src") : "";
+  const hasPhoto = Boolean(uploaded || document.body.classList.contains("has-plant-photo"));
+  const actionModel = customerPrimaryActionModel(state, latestFindings);
+  const hasFollowup = ["followup", "followup-panel", "progress"].includes(actionModel.action);
+  const stage = processing ? "analyzing" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
+  const stageOrder = { photo: 0, analyzing: 0, action: 1, followup: 2 };
+
+  customerAppShell.dataset.state = stage;
+  customerAppShell.setAttribute("aria-busy", String(processing));
+  if (customerAnalysisState) customerAnalysisState.setAttribute("aria-hidden", String(!processing));
+  customerProgressSteps.forEach((step, index) => {
+    const activeIndex = stageOrder[stage];
+    step.classList.toggle("active", index === activeIndex);
+    step.classList.toggle("done", index < activeIndex);
+    if (index === activeIndex) step.setAttribute("aria-current", "step");
+    else step.removeAttribute("aria-current");
+  });
+  if (customerMobileRisk) customerMobileRisk.textContent = model.risk;
+  if (customerMobileAction) customerMobileAction.textContent = model.action;
+  if (customerMobileFollowup) customerMobileFollowup.textContent = model.followup;
+  if (customerMobileEvidence) {
+    customerMobileEvidence.innerHTML = model.evidence.map(([title, detail]) => `
+      <div><strong>${title}</strong><span>${detail}</span></div>
+    `).join("");
+  }
+  if (customerStagePhoto) {
+    customerStagePhoto.src = uploaded || "assets/tomato-diagnosis.png";
+    customerStagePhoto.alt = uploaded
+      ? `${cropNames[state.crop]} uploaded for diagnosis`
+      : "Dwarf tomato plant beside an apartment window";
+  }
+  if (customerPhotoStatusLabel) {
+    customerPhotoStatusLabel.textContent = processing ? "Checking photo" : hasPhoto ? "Photo ready" : "Example framing";
+  }
+  if (customerCheckPlantBtn) {
+    const labels = {
+      "guided-photo": "Take a photo",
+      "suggested-photo": "Retake photo",
+      "complete-current-task": "I did this",
+      followup: "Take follow-up photo",
+      "followup-panel": "View follow-up plan",
+      progress: "View follow-up result",
+      diagnosis: "View diagnosis"
+    };
+    customerCheckPlantBtn.dataset.action = stage === "photo" ? "guided-photo" : actionModel.action;
+    customerCheckPlantBtn.querySelector("span").textContent = processing ? "Analyzing photo..." : (labels[customerCheckPlantBtn.dataset.action] || "Continue");
+    customerCheckPlantBtn.disabled = processing;
+  }
 }
 
 function shortReportId(id) {
@@ -2941,6 +3185,7 @@ async function maybeAutoArchiveCustomerDiagnosis(state, findings) {
     });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const saved = await response.json();
+    trackP2Event("report_saved", { reportId: saved.id, cropKey: latestState?.crop });
     const savedAt = new Date().toISOString();
     const record = {
       signature,
@@ -3211,6 +3456,7 @@ function refreshAfterCustomerAction(state, findings, text, record) {
   renderCustomerPlantDossier(state, findings);
   renderCustomerCaseTimeline();
   renderCustomerCompactPlan(state, findings);
+  renderCustomerMobileExperience(state);
   renderCustomerJourney(state, findings);
   renderTasks(state, findings);
 
@@ -3371,7 +3617,7 @@ function buildReport(state, findings, matchedPathways = []) {
   const logs = getLogs();
 
   const lines = [
-    "# 室内种植诊断报告",
+    "# FiveCrop 诊断报告",
     "",
     `作物：${cropNames[state.crop]}`,
     `阶段：${document.querySelector("#stage").selectedOptions[0].textContent}`,
@@ -3550,6 +3796,7 @@ function reportPayload(state, findings) {
       photoType: state.photoType,
       hasImage: photoSignals.width !== null
     }),
+    annotation: currentAnnotationRecord(),
     findings,
     customerActions: buildCustomerActions(state, findings, latestMatchedPathways),
     knowledgePathways: latestMatchedPathways,
@@ -4635,6 +4882,117 @@ async function loadExperiments() {
   } catch {
     experimentList.innerHTML = "<div class=\"experiment-card\"><strong>实验接口不可用</strong><p>请确认当前服务由新版 server.mjs 启动。</p></div>";
   }
+}
+
+function p2Growth() {
+  return window.FiveCropP2 || null;
+}
+
+function trackP2Event(type, detail = {}) {
+  const p2 = p2Growth();
+  if (!p2) return null;
+  return p2.trackEvent(type, detail);
+}
+
+function p2AnnotationContext(state = latestState || getFormState()) {
+  return {
+    photoType: latestPhotoQualityGate?.photoType || state.photoType || "none",
+    capturedPhotoTypes: Array.from(capturedPhotoTypes),
+    confidence: confidenceScore(),
+    photoQuality: latestPhotoQualityGate,
+    reminderPlan: getReminderPlan(),
+    logs: getLogs()
+  };
+}
+
+function currentAnnotationRecord(correction = null) {
+  const state = latestState || getFormState();
+  const findings = latestFindings.length ? latestFindings : diagnose(state);
+  const p2 = p2Growth();
+  if (!p2) return null;
+  return p2.buildAnnotationRecord({
+    state,
+    findings,
+    context: p2AnnotationContext(state),
+    correction
+  });
+}
+
+function metricCell(label, value) {
+  return `<div class="experiment-cell"><span>${label}</span><em>${value}</em></div>`;
+}
+
+function renderAnnotationSchema() {
+  const p2 = p2Growth();
+  if (!p2 || !annotationSchemaList || !annotationPreview) return;
+  annotationSchemaList.innerHTML = p2.annotationSchema.requiredFields
+    .map((field) => `<span>${field}</span>`)
+    .join("");
+  const record = currentAnnotationRecord();
+  annotationPreview.value = JSON.stringify(record, null, 2);
+}
+
+function renderCorrectionList() {
+  const p2 = p2Growth();
+  if (!p2 || !correctionList) return;
+  const corrections = p2.getCorrections().slice(-4).reverse();
+  if (!corrections.length) {
+    correctionList.innerHTML = "<div class=\"p2-record-card\"><strong>No corrections yet</strong><p>Save an expert correction to create a labeled training record.</p></div>";
+    return;
+  }
+  correctionList.innerHTML = corrections.map((item) => `
+    <div class="p2-record-card">
+      <strong>${item.correctedDiagnosis || item.predictedDiagnosis || "Correction"}</strong>
+      <p>${item.cropKey} / ${item.stageKey} / ${item.photoType} / outcome: ${item.finalOutcome}</p>
+    </div>
+  `).join("");
+}
+
+function renderPricingBoundary(reports = []) {
+  const p2 = p2Growth();
+  if (!p2 || !pricingBoundaryList) return;
+  const gate = p2.usageGate({ reports });
+  const pricing = p2.pricingBoundary;
+  pricingBoundaryList.innerHTML = [
+    `<div class="p2-record-card"><strong>${pricing.free.name}</strong><p>${pricing.free.diagnosisLimit} free diagnoses. Includes: ${pricing.free.includes.join(", ")}.</p></div>`,
+    `<div class="p2-record-card"><strong>${pricing.pro.name}</strong><p>Paid boundary: ${pricing.pro.trigger}. Includes: ${pricing.pro.includes.join(", ")}.</p></div>`,
+    `<div class="p2-record-card"><strong>${pricing.expert.name}</strong><p>Paid boundary: ${pricing.expert.trigger}. Includes: ${pricing.expert.includes.join(", ")}.</p></div>`,
+    `<div class="p2-record-card"><strong>Current gate: ${gate.tier}</strong><p>${gate.message}</p></div>`
+  ].join("");
+  if (gate.tier !== "free") p2.trackEvent("paid_boundary_seen", { tier: gate.tier });
+}
+
+async function loadP2GrowthDashboard() {
+  const p2 = p2Growth();
+  if (!p2) return;
+  let reports = [];
+  let backend = null;
+  try {
+    const [reportResponse, growthResponse] = await Promise.all([
+      fetch("/api/reports/export"),
+      fetch("/api/p2-growth")
+    ]);
+    if (reportResponse.ok) reports = await reportResponse.json();
+    if (growthResponse.ok) backend = await growthResponse.json();
+  } catch {
+    reports = [];
+  }
+
+  const analytics = p2.analyticsSnapshot({ reports });
+  if (p2GrowthMetrics) {
+    p2GrowthMetrics.innerHTML = [
+      metricCell("Photo completion", `${analytics.photoCompletionRate}%`),
+      metricCell("Follow-up return", `${analytics.followupReturnRate}%`),
+      metricCell("Action done", `${analytics.actionCompletionRate}%`),
+      metricCell("Corrections", analytics.corrections),
+      metricCell("Labeled reports", backend?.labeling?.eligibleRecords ?? reports.length),
+      metricCell("Paid intent", analytics.paidIntent)
+    ].join("");
+  }
+
+  renderAnnotationSchema();
+  renderCorrectionList();
+  renderPricingBoundary(reports);
 }
 
 function strategyList(items) {
@@ -6253,6 +6611,7 @@ function renderDiagnosis(state, findings) {
       : "后续可用照片识别虫害线索，提前提示隔离和复查。"
   ];
   renderList(opportunityList, opportunities, (item) => item);
+  loadP2GrowthDashboard();
 }
 
 function runDiagnosis() {
@@ -6294,6 +6653,7 @@ function startCustomerTimeRefresh() {
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   hasRunSmartDiagnosis = true;
+  trackP2Event("diagnosis_started", { source: "manual-submit" });
   runDiagnosis();
 });
 
@@ -6474,6 +6834,14 @@ editAutoIntakeBtn.addEventListener("click", () => {
 
 customerModeBtn.addEventListener("click", () => setMode("customer"));
 expertModeBtn.addEventListener("click", () => setMode("expert"));
+customerInternalBtn?.addEventListener("click", () => setMode("expert"));
+customerCameraBtn?.addEventListener("click", openGuidedPhotoUpload);
+customerCheckPlantBtn?.addEventListener("click", handleCustomerPrimaryAction);
+customerMobilePrivacyBtn?.addEventListener("click", () => {
+  const expanded = customerMobilePrivacyDetail?.hidden === false;
+  if (customerMobilePrivacyDetail) customerMobilePrivacyDetail.hidden = expanded;
+  customerMobilePrivacyBtn.setAttribute("aria-expanded", String(!expanded));
+});
 cropQuickButtons.forEach((button) => {
   button.addEventListener("click", () => chooseCustomerCrop(button.dataset.cropChoice));
 });
@@ -6543,6 +6911,7 @@ function focusCustomerTarget(target) {
 
 function setPhotoProcessingState(processing, message = "") {
   document.body.classList.toggle("photo-processing", Boolean(processing));
+  renderCustomerMobileExperience(latestState || getFormState());
   if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = processing ? "正在识别照片" : (message || autoPhotoTypeBadge.textContent);
   if (processing && photoHint) photoHint.textContent = message || "正在读取照片，马上生成诊断。";
 }
@@ -6550,9 +6919,8 @@ function setPhotoProcessingState(processing, message = "") {
 function focusPhotoDiagnosisResult() {
   if (!document.body.classList.contains("customer-mode")) return;
   window.setTimeout(() => {
-    const target = customerPlantDossier && !customerPlantDossier.hidden
-      ? customerPlantDossier
-      : customerPlanCompact || document.querySelector(".customer-summary");
+    const target = document.querySelector(".customer-diagnosis-result")
+      || (customerPlantDossier && !customerPlantDossier.hidden ? customerPlantDossier : customerPlanCompact);
     focusCustomerTarget(target);
   }, 80);
 }
@@ -6606,6 +6974,8 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
     if (gate.canContinue) {
       if (vision) applyVisionHints(vision);
       capturedPhotoTypes.add(currentPhotoType);
+      trackP2Event("photo_completed", { photoType: currentPhotoType, source, gate: gate.state });
+      trackP2Event("diagnosis_started", { source: "photo", photoType: currentPhotoType });
       saveBaselinePhotoSignals(currentPhotoType, signals);
       photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${fileName}。${source === "camera" ? "相机照片" : "照片"}${gate.state === "warn" ? "可继续使用，也可以重拍优化。" : "已通过质检，诊断已更新。"}`;
       hasRunSmartDiagnosis = true;
@@ -6904,6 +7274,10 @@ customerPrimaryActionBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerCompactActionBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerDossierContinueBtn.addEventListener("click", handleCustomerPrimaryAction);
 customerDossierNewBtn.addEventListener("click", resetCustomerPlantDossier);
+customerDeleteLocalDataBtn?.addEventListener("click", () => {
+  resetCustomerPlantDossier();
+  setCustomerArchiveStatus("本机照片预览、基线和复查记录已清除。", "saved");
+});
 photoRetakeBtn?.addEventListener("click", () => {
   const type = latestPhotoQualityGate?.photoType || requestedPhotoType || nextPhotoSuggestion().type || "plant";
   openPhotoRescueUpload(type);
@@ -7018,6 +7392,10 @@ async function saveFollowupLog(options = {}) {
 
   logs.push(log);
   setLogs(logs);
+  trackP2Event("followup_returned", {
+    photoType: log.photoType,
+    outcome: log.routeAssessment?.state || "unknown"
+  });
   completeReminder(checkDay.value);
   touchCustomerArchiveRecord({
     lastEvent: "followup",
@@ -7166,6 +7544,7 @@ saveReportBtn.addEventListener("click", async () => {
     await loadInsights();
     await loadOpportunityRanks();
     await loadExperiments();
+    await loadP2GrowthDashboard();
   } catch {
     copyStatus.textContent = "入库失败：请确认本地服务正在运行 server.mjs。";
   }
@@ -7200,6 +7579,30 @@ newCaseBtn.addEventListener("click", () => {
 refreshInsightsBtn.addEventListener("click", loadInsights);
 refreshOpportunitiesBtn.addEventListener("click", loadOpportunityRanks);
 refreshExperimentsBtn.addEventListener("click", loadExperiments);
+refreshP2GrowthBtn?.addEventListener("click", loadP2GrowthDashboard);
+saveCorrectionBtn?.addEventListener("click", () => {
+  const p2 = p2Growth();
+  if (!p2) return;
+  const correctedDiagnosis = correctionDiagnosisInput?.value.trim() || "";
+  const reason = correctionReasonInput?.value.trim() || "";
+  if (!correctedDiagnosis) {
+    if (correctionStatus) correctionStatus.textContent = "请先填写修正后的诊断。";
+    return;
+  }
+  const record = currentAnnotationRecord({
+    correctedDiagnosis,
+    reason,
+    finalOutcome: correctionOutcomeSelect?.value || "confirmed_by_expert",
+    source: "expert-correction"
+  });
+  p2.saveCorrection(record);
+  if (correctionStatus) correctionStatus.textContent = `已保存纠错：${record.correctedDiagnosis}`;
+  if (correctionDiagnosisInput) correctionDiagnosisInput.value = "";
+  if (correctionReasonInput) correctionReasonInput.value = "";
+  renderAnnotationSchema();
+  renderCorrectionList();
+  loadP2GrowthDashboard();
+});
 refreshProductStrategyBtn.addEventListener("click", loadProductStrategy);
 refreshIntegrationsBtn?.addEventListener("click", loadIntegrationStatus);
 refreshKnowledgeGraphBtn.addEventListener("click", loadKnowledgeGraph);

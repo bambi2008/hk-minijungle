@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.mjs",
     "start:8004": "node server.mjs --port 8004",
-    "check": "node --check app.js && node --check server.mjs && node smoke-test.mjs && node api-test.mjs",
-    "health": "node health-check.mjs"
+    "check": "node --check app.js && node --check p2-growth.js && node --check server.mjs && node --check openai-vision-smoke.mjs && node smoke-test.mjs && node api-test.mjs",
+    "health": "node health-check.mjs",
+    "vision:smoke": "node openai-vision-smoke.mjs"
   }
 }

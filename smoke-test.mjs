@@ -1,10 +1,27 @@
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 
 const html = await readFile("index.html", "utf8");
 const js = await readFile("app.js", "utf8");
+const p2js = await readFile("p2-growth.js", "utf8");
 const css = await readFile("styles.css", "utf8");
+await access("assets/tomato-diagnosis.png");
+await access("assets/five-crops-sprite.png");
+await access("design/fivecrop-customer-concept.png");
 
 const requiredIds = [
+  "customer-app-shell",
+  "customer-internal-btn",
+  "customer-camera-btn",
+  "customer-stage-photo",
+  "customer-photo-status-label",
+  "customer-analysis-state",
+  "customer-mobile-risk",
+  "customer-mobile-action",
+  "customer-mobile-followup",
+  "customer-mobile-evidence",
+  "customer-mobile-privacy-btn",
+  "customer-mobile-privacy-detail",
+  "customer-check-plant-btn",
   "diagnosis-form",
   "customer-mode-btn",
   "expert-mode-btn",
@@ -17,12 +34,19 @@ const requiredIds = [
   "customer-journey-title",
   "customer-journey-list",
   "customer-plan-compact",
+  "customer-compact-photo",
   "customer-compact-judgement",
   "customer-compact-reason",
   "customer-compact-action",
   "customer-compact-followup",
   "customer-compact-action-btn",
   "customer-archive-status",
+  "customer-trust-card",
+  "customer-trust-title",
+  "customer-trust-list",
+  "customer-privacy-card",
+  "customer-privacy-copy",
+  "customer-delete-local-data-btn",
   "customer-case-timeline-card",
   "customer-case-timeline-title",
   "customer-case-timeline-summary",
@@ -155,6 +179,21 @@ const requiredIds = [
   "opportunity-rank-list",
   "refresh-experiments-btn",
   "experiment-list",
+  "p2-growth-panel",
+  "refresh-p2-growth-btn",
+  "p2-growth-metrics",
+  "annotation-schema-panel",
+  "annotation-schema-list",
+  "annotation-preview",
+  "expert-correction-panel",
+  "correction-diagnosis-input",
+  "correction-outcome-select",
+  "correction-reason-input",
+  "save-correction-btn",
+  "correction-status",
+  "correction-list",
+  "pricing-boundary-panel",
+  "pricing-boundary-list",
   "refresh-product-strategy-btn",
   "product-strategy-grid",
   "product-strategy-list",
@@ -193,12 +232,25 @@ if (missing.length) {
 }
 
 const requiredHtmlSnippets = [
+  "What needs attention?",
+  "Take a plant photo",
+  "One clear photo is enough to start",
+  "Take a photo",
+  "data-customer-step=\"followup\"",
+  "Photos are used only for this diagnosis",
+  "assets/tomato-diagnosis.png",
+  "class=\"customer-crop-rail\"",
   "id=\"crop-quick-start\"",
   "id=\"crop-choice-tomato\"",
   "id=\"crop-choice-basil\"",
   "id=\"crop-choice-rosemary\"",
   "id=\"crop-choice-strawberry\"",
   "id=\"crop-choice-pepper\"",
+  "番茄黄金路径",
+  "罗勒黄金路径",
+  "迷迭香黄金路径",
+  "草莓黄金路径",
+  "辣椒黄金路径",
   "data-crop-choice=\"tomato\"",
   "data-crop-choice=\"basil\"",
   "data-crop-choice=\"rosemary\"",
@@ -208,7 +260,12 @@ const requiredHtmlSnippets = [
   "id=\"photo-review-card\"",
   "id=\"customer-case-timeline-card\"",
   "id=\"native-camera-card\"",
-  "id=\"integration-center\""
+  "id=\"integration-center\"",
+  "id=\"p2-growth-panel\"",
+  "标注数据结构",
+  "专家纠错入口",
+  "订阅/付费边界",
+  "p2-growth.js"
 ];
 
 const missingHtmlSnippets = requiredHtmlSnippets.filter((snippet) => !html.includes(snippet));
@@ -218,7 +275,27 @@ if (missingHtmlSnippets.length) {
   process.exit(1);
 }
 
+const brandSnippets = [
+  "<title>FiveCrop: Plant Doctor</title>",
+  "Care for 5 edible plants",
+  "FiveCrop: Plant Doctor",
+  "先给 FiveCrop 一张植物照片",
+  "FiveCrop 诊断报告"
+];
+
+const missingBrandSnippets = brandSnippets.filter((snippet) => !html.includes(snippet));
+
+if (missingBrandSnippets.length) {
+  console.error(`Missing FiveCrop brand copy: ${missingBrandSnippets.join(", ")}`);
+  process.exit(1);
+}
+
 const requiredJsSnippets = [
+  "function customerMobileResultModel",
+  "function renderCustomerMobileExperience",
+  "customerCameraBtn?.addEventListener",
+  "customerCheckPlantBtn?.addEventListener",
+  "customerMobilePrivacyBtn?.addEventListener",
   "function buildCustomerActions",
   "function pathwayCustomerAction",
   "async function loadProductStrategy",
@@ -304,7 +381,23 @@ const requiredJsSnippets = [
   "customer-dossier-active",
   "已在照看中",
   "function customerCompactPlanModel",
+  "customerCompactPhoto",
   "function renderCustomerCompactPlan",
+  "function customerTrustEvidenceModel",
+  "function renderCustomerTrustAndPrivacy",
+  "customerDeleteLocalDataBtn",
+  "function p2Growth",
+  "function trackP2Event",
+  "function currentAnnotationRecord",
+  "function loadP2GrowthDashboard",
+  "annotation: currentAnnotationRecord()",
+  "expert-correction",
+  "paid_boundary_seen",
+  "照片类型：",
+  "可见症状：",
+  "缺失信息：",
+  "不会默认把照片用于训练或改进模型",
+  "清除本机记录",
   "function customerPlantDossierModel",
   "function renderCustomerPlantDossier",
   "function renderCustomerCaseTimeline",
@@ -500,7 +593,34 @@ if (missingSnippets.length) {
   process.exit(1);
 }
 
+const requiredP2Snippets = [
+  "window.FiveCropP2",
+  "annotationSchema",
+  "pricingBoundary",
+  "function trackEvent",
+  "function buildAnnotationRecord",
+  "function saveCorrection",
+  "function analyticsSnapshot",
+  "function usageGate",
+  "expert-correction",
+  "advanced follow-up"
+];
+
+const missingP2Snippets = requiredP2Snippets.filter((snippet) => !p2js.includes(snippet));
+
+if (missingP2Snippets.length) {
+  console.error(`Missing expected P2 growth module logic: ${missingP2Snippets.join(", ")}`);
+  process.exit(1);
+}
+
 const requiredCssSnippets = [
+  ".customer-app-shell",
+  "body.customer-mode .customer-app-shell",
+  ".customer-crop-rail",
+  ".customer-photo-frame",
+  ".customer-evidence-grid",
+  ".customer-check-button",
+  "assets/five-crops-sprite.png",
   "body.customer-mode .customer-detail",
   "body.customer-mode .confidence-decision-card",
   "body.customer-mode .customer-next",
@@ -508,6 +628,11 @@ const requiredCssSnippets = [
   ".customer-primary-action",
   ".customer-plan-compact",
   ".customer-plan-cell.primary",
+  ".customer-trust-card",
+  ".customer-privacy-card",
+  ".p2-growth-panel",
+  ".p2-correction-grid",
+  ".p2-record-card",
   ".photo-review-card[data-state=\"fail\"]",
   ".photo-review-actions",
   ".native-camera-card",
@@ -520,6 +645,8 @@ const requiredCssSnippets = [
   ".customer-archive-status[data-state=\"saved\"]",
   ".customer-archive-status[data-state=\"saving\"]",
   "body.customer-mode .customer-plan-compact",
+  "body.customer-mode .customer-trust-card",
+  "body.customer-mode .customer-privacy-card",
   "body.customer-mode .followup-panel",
   ".crop-quick-start",
   ".crop-choice-grid",

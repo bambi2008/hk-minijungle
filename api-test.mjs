@@ -1,10 +1,39 @@
-import { mkdtemp, rm } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 const host = "127.0.0.1";
 const testDataDir = await mkdtemp(join(tmpdir(), "grow-clinic-api-"));
 process.env.GROW_CLINIC_DATA_DIR = testDataDir;
+const protectedDataFiles = [
+  join(process.cwd(), "data", "diagnosis-reports.json"),
+  join(process.cwd(), "data", "notification-jobs.json")
+];
+
+async function fileHash(path) {
+  try {
+    return createHash("sha256").update(await readFile(path)).digest("hex");
+  } catch {
+    return null;
+  }
+}
+
+async function dataFileSnapshot() {
+  return Object.fromEntries(await Promise.all(
+    protectedDataFiles.map(async (path) => [path, await fileHash(path)])
+  ));
+}
+
+async function assertProtectedDataUnchanged(before) {
+  const after = await dataFileSnapshot();
+  const changed = protectedDataFiles.filter((path) => before[path] !== after[path]);
+  if (changed.length) {
+    throw new Error(`API tests modified protected demo data: ${changed.join(", ")}`);
+  }
+}
+
+const protectedDataBefore = await dataFileSnapshot();
 const { server, closeStorage } = await import("./server.mjs");
 
 await new Promise((resolve) => server.listen(0, host, resolve));
@@ -265,6 +294,20 @@ try {
     throw new Error("Experiments payload mismatch");
   }
 
+  const p2GrowthResponse = await fetch(`${base}/api/p2-growth`);
+  if (p2GrowthResponse.status !== 200) {
+    throw new Error(`GET /api/p2-growth failed: ${p2GrowthResponse.status}`);
+  }
+
+  const p2Growth = await p2GrowthResponse.json();
+  if (
+    p2Growth.version !== "fivecrop-p2-growth-v1" ||
+    !p2Growth.labeling?.requiredFields?.includes("finalOutcome") ||
+    !p2Growth.monetization?.paidBoundaries?.includes("expert_correction")
+  ) {
+    throw new Error("P2 growth payload mismatch");
+  }
+
   const cropModelsResponse = await fetch(`${base}/api/crop-models`);
   if (cropModelsResponse.status !== 200) {
     throw new Error(`GET /api/crop-models failed: ${cropModelsResponse.status}`);
@@ -331,6 +374,49 @@ try {
     !knowledgeGraph.graph.nodes.some((node) => node.type === "photo_signal")
   ) {
     throw new Error("Knowledge graph payload mismatch");
+  }
+
+  const goldenPathsResponse = await fetch(`${base}/api/golden-paths`);
+  if (goldenPathsResponse.status !== 200) {
+    throw new Error(`GET /api/golden-paths failed: ${goldenPathsResponse.status}`);
+  }
+  const goldenPaths = await goldenPathsResponse.json();
+  const expectedGolden = {
+    tomato: "tomato-flower-no-fruit",
+    basil: "basil-leggy-low-light",
+    rosemary: "rosemary-wet-root-decline",
+    strawberry: "strawberry-crown-wet",
+    pepper: "pepper-flower-drop"
+  };
+  if (goldenPaths.product !== "FiveCrop: Plant Doctor" || goldenPaths.paths?.length !== 5) {
+    throw new Error("Golden paths summary mismatch");
+  }
+  Object.entries(expectedGolden).forEach(([cropKey, pathwayId]) => {
+    const item = goldenPaths.paths.find((path) => path.cropKey === cropKey);
+    if (
+      !item ||
+      item.pathwayId !== pathwayId ||
+      !item.pathway?.requiredPhotos?.length ||
+      !item.prescription?.length ||
+      !item.followup?.when ||
+      !item.followup?.photo ||
+      !item.followup?.success ||
+      !item.runnableFlow?.photo ||
+      !item.runnableFlow?.diagnosis ||
+      !item.runnableFlow?.action ||
+      !item.runnableFlow?.followup ||
+      !item.runnableFlow?.success
+    ) {
+      throw new Error(`Golden path payload mismatch for ${cropKey}`);
+    }
+  });
+  const strawberryGolden = goldenPaths.paths.find((path) => path.cropKey === "strawberry");
+  if (
+    !strawberryGolden.relatedPathways?.some((pathway) => pathway.id === "strawberry-flower-no-fruit") ||
+    !strawberryGolden.photoSequence.includes("flower") ||
+    !strawberryGolden.photoSequence.includes("root")
+  ) {
+    throw new Error("Strawberry golden path should cover pollination and wet crown");
   }
 
   const visionResponse = await fetch(`${base}/api/vision/analyze`, {
@@ -501,4 +587,5 @@ try {
   await new Promise((resolve) => server.close(resolve));
   closeStorage();
   await rm(testDataDir, { recursive: true, force: true });
+  await assertProtectedDataUnchanged(protectedDataBefore);
 }

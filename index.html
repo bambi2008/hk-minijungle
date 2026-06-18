@@ -3,16 +3,107 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>hk minijungle</title>
+  <title>FiveCrop: Plant Doctor</title>
+  <link rel="icon" href="data:,">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
   <main class="app-shell">
+    <section class="customer-app-shell" id="customer-app-shell" data-state="photo" aria-busy="false" aria-labelledby="customer-app-title">
+      <header class="customer-app-header">
+        <a class="customer-wordmark" href="#customer-app-shell" aria-label="FiveCrop home">FiveCrop</a>
+        <ol class="customer-progress" aria-label="Care progress">
+          <li class="active" data-customer-step="photo"><span>1</span><strong>Photo</strong></li>
+          <li data-customer-step="action"><span>2</span><strong>Action</strong></li>
+          <li data-customer-step="followup"><span>3</span><strong>Follow-up</strong></li>
+        </ol>
+        <button type="button" id="customer-internal-btn" class="customer-internal-btn">Internal</button>
+      </header>
+
+      <div class="customer-app-content">
+        <h1 id="customer-app-title">What needs attention?</h1>
+
+        <div class="customer-crop-rail" role="group" aria-label="Choose your crop">
+          <button type="button" class="customer-crop-option active" data-crop-choice="tomato" aria-pressed="true">
+            <span class="customer-crop-photo crop-tomato"></span><strong>Tomato</strong>
+          </button>
+          <button type="button" class="customer-crop-option" data-crop-choice="basil" aria-pressed="false">
+            <span class="customer-crop-photo crop-basil"></span><strong>Basil</strong>
+          </button>
+          <button type="button" class="customer-crop-option" data-crop-choice="rosemary" aria-pressed="false">
+            <span class="customer-crop-photo crop-rosemary"></span><strong>Rosemary</strong>
+          </button>
+          <button type="button" class="customer-crop-option" data-crop-choice="strawberry" aria-pressed="false">
+            <span class="customer-crop-photo crop-strawberry"></span><strong>Strawberry</strong>
+          </button>
+          <button type="button" class="customer-crop-option" data-crop-choice="pepper" aria-pressed="false">
+            <span class="customer-crop-photo crop-pepper"></span><strong>Pepper</strong>
+          </button>
+        </div>
+
+        <section class="customer-photo-stage" aria-labelledby="customer-photo-title">
+          <div class="customer-section-title">
+            <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3h5Z"/><circle cx="12" cy="13" r="3"/></svg>
+            <div><h2 id="customer-photo-title">Take a plant photo</h2><p>One clear photo is enough to start</p></div>
+          </div>
+          <button type="button" id="customer-camera-btn" class="customer-photo-frame" aria-label="Take or upload a plant photo">
+            <img id="customer-stage-photo" src="assets/tomato-diagnosis.png" alt="Dwarf tomato plant beside an apartment window">
+            <span id="customer-photo-status-label" class="customer-photo-status-label">Example framing</span>
+            <span id="customer-analysis-state" class="customer-analysis-state" aria-live="polite">
+              <span class="customer-analysis-spinner" aria-hidden="true"></span>
+              Checking photo quality...
+            </span>
+            <span class="customer-camera-control">
+              <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3h5Z"/><circle cx="12" cy="13" r="3"/></svg>
+            </span>
+          </button>
+        </section>
+
+        <section class="customer-diagnosis-result" aria-live="polite">
+          <span>Most likely</span>
+          <h2 id="customer-mobile-risk">Flower drop from heat stress</h2>
+
+          <div class="customer-action-row primary-row">
+            <div><span>Do this today</span><strong id="customer-mobile-action">Move the light 10 cm higher</strong></div>
+          </div>
+          <div class="customer-action-row">
+            <div><span>Follow-up</span><strong id="customer-mobile-followup">Come back in 3 days</strong></div>
+          </div>
+
+          <div class="customer-evidence-section">
+            <h3>Why this?</h3>
+            <div class="customer-evidence-grid" id="customer-mobile-evidence">
+              <div><strong>Flower photo</strong><span>Flowers are visible in your image.</span></div>
+              <div><strong>Visible flower drop</strong><span>Dropped blossoms suggest heat stress.</span></div>
+              <div><strong>Next photo: same angle</strong><span>Helps us compare what changes.</span></div>
+            </div>
+          </div>
+
+          <button type="button" id="customer-mobile-privacy-btn" class="customer-privacy-row">
+            <span>Photos are used only for this diagnosis</span><strong>Privacy</strong>
+          </button>
+          <p id="customer-mobile-privacy-detail" class="customer-mobile-privacy-detail" hidden>FiveCrop sends a compressed plant photo only when vision analysis is enabled. Original photos are not saved in the case or used for model training by default.</p>
+        </section>
+
+        <section class="customer-followup-preview">
+          <span>Your follow-up</span>
+          <strong>Same angle, clearer answer.</strong>
+          <p>FiveCrop will ask for one photo when it is time to check whether the action worked.</p>
+        </section>
+      </div>
+      <div class="customer-sticky-action">
+        <button type="button" id="customer-check-plant-btn" class="customer-check-button" data-action="guided-photo">
+          <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M14.5 4 16 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2h3l1.5-3h5Z"/><circle cx="12" cy="13" r="3"/></svg>
+          <span>Take a photo</span>
+        </button>
+      </div>
+    </section>
+
     <section class="diagnosis-panel" aria-labelledby="app-title">
       <div class="panel-header">
         <div>
-          <p class="eyebrow">hk minijungle</p>
-          <h1 id="app-title">室内种植医生</h1>
+          <p class="eyebrow">Care for 5 edible plants</p>
+          <h1 id="app-title">FiveCrop: Plant Doctor</h1>
         </div>
         <div class="header-tools">
           <div class="mode-switch" role="group" aria-label="视图模式">
@@ -27,7 +118,7 @@
         <section class="smart-panel">
           <div>
             <p class="eyebrow">Start</p>
-            <h2 id="customer-start-title">先拍一张植物照片</h2>
+            <h2 id="customer-start-title">先给 FiveCrop 一张植物照片</h2>
             <p id="customer-start-message">不需要先填表。照片不清晰时，我会提示补拍；信息够用后直接给你下一步。</p>
           </div>
           <section id="crop-quick-start" class="crop-quick-start" aria-label="选择植物">
@@ -324,11 +415,11 @@
         </details>
 
         <div class="actions">
-          <button type="button" id="sample-btn" class="secondary">载入番茄样例</button>
-          <button type="button" id="sample-basil-btn" class="secondary">罗勒样例</button>
-          <button type="button" id="sample-rosemary-btn" class="secondary">迷迭香样例</button>
-          <button type="button" id="sample-strawberry-btn" class="secondary">草莓样例</button>
-          <button type="button" id="sample-pepper-btn" class="secondary">辣椒样例</button>
+          <button type="button" id="sample-btn" class="secondary">番茄黄金路径</button>
+          <button type="button" id="sample-basil-btn" class="secondary">罗勒黄金路径</button>
+          <button type="button" id="sample-rosemary-btn" class="secondary">迷迭香黄金路径</button>
+          <button type="button" id="sample-strawberry-btn" class="secondary">草莓黄金路径</button>
+          <button type="button" id="sample-pepper-btn" class="secondary">辣椒黄金路径</button>
           <button type="submit" class="primary">生成诊断</button>
         </div>
       </form>
@@ -491,21 +582,41 @@
       </section>
 
       <section class="customer-plan-compact" id="customer-plan-compact">
+        <div class="customer-plan-cell">
+          <span>拍照</span>
+          <strong id="customer-compact-photo">等待第一张照片</strong>
+        </div>
         <div class="customer-plan-cell primary">
-          <span>判断</span>
+          <span>结果</span>
           <strong id="customer-compact-judgement">等待照片</strong>
           <p id="customer-compact-reason">拍一张照片后，我会给出当前最可能的问题。</p>
         </div>
         <div class="customer-plan-cell">
-          <span>当前动作</span>
+          <span>今天做什么</span>
           <strong id="customer-compact-action">拍照开始</strong>
         </div>
         <div class="customer-plan-cell">
-          <span>复查时间</span>
+          <span>什么时候回来</span>
           <strong id="customer-compact-followup">诊断后自动安排</strong>
         </div>
         <button type="button" id="customer-compact-action-btn" class="primary customer-primary-action">开始</button>
         <p id="customer-archive-status" class="customer-archive-status">拍完首张照片后自动建档。</p>
+      </section>
+
+      <section class="customer-trust-card" id="customer-trust-card">
+        <div>
+          <span>为什么可信</span>
+          <strong id="customer-trust-title">等待照片证据</strong>
+        </div>
+        <ul id="customer-trust-list"></ul>
+      </section>
+
+      <section class="customer-privacy-card" id="customer-privacy-card">
+        <div>
+          <span>照片和隐私</span>
+          <p id="customer-privacy-copy">照片只用于本次诊断；上传真实视觉模型时会先压缩，不会默认用于训练或改进模型。</p>
+        </div>
+        <button type="button" id="customer-delete-local-data-btn" class="secondary">清除本机记录</button>
       </section>
 
       <section class="customer-photo-rescue-card" id="customer-photo-rescue-card">
@@ -582,7 +693,7 @@
         </article>
         <article class="result-block report-block expert-only">
           <div class="block-title-row">
-            <h3>诊断报告</h3>
+            <h3>FiveCrop 诊断报告</h3>
             <div class="button-row">
               <button type="button" id="save-report-btn" class="mini-button">入库</button>
               <button type="button" id="copy-report-btn" class="mini-button">复制</button>
@@ -692,6 +803,39 @@
           </div>
           <div id="experiment-list" class="experiment-list"></div>
         </article>
+        <article class="result-block report-block expert-only p2-growth-panel" id="p2-growth-panel">
+          <div class="block-title-row">
+            <h3>P2 长期竞争力</h3>
+            <button type="button" id="refresh-p2-growth-btn" class="mini-button">刷新</button>
+          </div>
+          <div id="p2-growth-metrics" class="experiment-grid"></div>
+          <section class="p2-subpanel" id="annotation-schema-panel">
+            <h4>标注数据结构</h4>
+            <div id="annotation-schema-list" class="p2-chip-list"></div>
+            <textarea id="annotation-preview" readonly rows="7"></textarea>
+          </section>
+          <section class="p2-subpanel" id="expert-correction-panel">
+            <h4>专家纠错入口</h4>
+            <div class="p2-correction-grid">
+              <input type="text" id="correction-diagnosis-input" placeholder="修正后的诊断">
+              <select id="correction-outcome-select">
+                <option value="confirmed_by_expert">专家确认</option>
+                <option value="improved">复查改善</option>
+                <option value="unchanged">复查无明显变化</option>
+                <option value="worse">复查变差</option>
+                <option value="unknown">结果未知</option>
+              </select>
+              <input type="text" id="correction-reason-input" placeholder="纠错理由或证据">
+              <button type="button" id="save-correction-btn" class="mini-button">保存纠错</button>
+            </div>
+            <div id="correction-status" class="copy-status">纠错会生成可训练的标注记录。</div>
+            <div id="correction-list" class="p2-record-list"></div>
+          </section>
+          <section class="p2-subpanel" id="pricing-boundary-panel">
+            <h4>订阅/付费边界</h4>
+            <div id="pricing-boundary-list" class="p2-record-list"></div>
+          </section>
+        </article>
         <article class="result-block report-block expert-only">
           <div class="block-title-row">
             <h3>竞品优势融合</h3>
@@ -733,6 +877,7 @@
     </section>
   </main>
 
+  <script src="p2-growth.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
