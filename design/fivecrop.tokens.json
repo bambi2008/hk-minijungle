@@ -1,0 +1,46 @@
+{
+  "$description": "FiveCrop customer experience tokens: primitive to semantic to component.",
+  "primitive": {
+    "color": {
+      "white": { "$description": "Optical white canvas.", "$type": "color", "$value": "#FFFFFF" },
+      "ink950": { "$description": "Fashion editorial ink.", "$type": "color", "$value": "#111111" },
+      "neutral600": { "$description": "Secondary text neutral.", "$type": "color", "$value": "#5F5A5C" },
+      "cherry600": { "$description": "Lacquer cherry action color.", "$type": "color", "$value": "#E40046" },
+      "emerald700": { "$description": "Trust and evidence color.", "$type": "color", "$value": "#0A6640" },
+      "cobalt600": { "$description": "Selection and follow-up accent.", "$type": "color", "$value": "#2D4CFF" },
+      "blueMist100": { "$description": "Cool follow-up surface.", "$type": "color", "$value": "#EAF0FF" },
+      "neutral200": { "$description": "Hairline divider.", "$type": "color", "$value": "#D9D7D5" },
+      "neutral100": { "$description": "Quiet secondary surface.", "$type": "color", "$value": "#F4F4F2" }
+    },
+    "space": {
+      "1": { "$type": "dimension", "$value": { "value": 4, "unit": "px" } },
+      "3": { "$type": "dimension", "$value": { "value": 12, "unit": "px" } },
+      "4": { "$type": "dimension", "$value": { "value": 16, "unit": "px" } },
+      "5": { "$type": "dimension", "$value": { "value": 20, "unit": "px" } },
+      "6": { "$type": "dimension", "$value": { "value": 24, "unit": "px" } },
+      "8": { "$type": "dimension", "$value": { "value": 32, "unit": "px" } }
+    }
+  },
+  "semantic": {
+    "color": {
+      "surface": { "$type": "color", "$value": "{primitive.color.white}" },
+      "text": { "$description": "Primary customer text.", "$type": "color", "$value": "{primitive.color.ink950}" },
+      "textMuted": { "$description": "Secondary customer text.", "$type": "color", "$value": "{primitive.color.neutral600}" },
+      "action": { "$description": "Primary capture and today action.", "$type": "color", "$value": "{primitive.color.cherry600}" },
+      "positive": { "$description": "Evidence and privacy trust signal.", "$type": "color", "$value": "{primitive.color.emerald700}" },
+      "selection": { "$description": "Selected crop and follow-up state.", "$type": "color", "$value": "{primitive.color.cobalt600}" },
+      "followupSurface": { "$description": "Follow-up information surface.", "$type": "color", "$value": "{primitive.color.blueMist100}" },
+      "border": { "$description": "Customer interface dividers.", "$type": "color", "$value": "{primitive.color.neutral200}" }
+    }
+  },
+  "component": {
+    "button": {
+      "primaryBackground": { "$type": "color", "$value": "{semantic.color.action}" },
+      "primaryText": { "$type": "color", "$value": "{primitive.color.white}" },
+      "minHeight": { "$type": "dimension", "$value": { "value": 56, "unit": "px" } }
+    },
+    "screen": {
+      "gutter": { "$type": "dimension", "$value": "{primitive.space.5}" }
+    }
+  }
+}

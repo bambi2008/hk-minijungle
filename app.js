@@ -20,6 +20,9 @@ const customerAppTitle = document.querySelector("#customer-app-title");
 const customerAppIntro = document.querySelector("#customer-app-intro");
 const customerResultPhoto = document.querySelector("#customer-result-photo");
 const customerResultCrop = document.querySelector("#customer-result-crop");
+const customerBackBtn = document.querySelector("#customer-back-btn");
+const customerPrivacyTopBtn = document.querySelector("#customer-privacy-top-btn");
+const customerPhotoPrivacyDetail = document.querySelector("#customer-photo-privacy-detail");
 const customerMessage = document.querySelector("#customer-message");
 const customerNextAction = document.querySelector("#customer-next-action");
 const customerPrimaryActionBtn = document.querySelector("#customer-primary-action-btn");
@@ -2743,7 +2746,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
   });
   if (customerMobileRisk) customerMobileRisk.textContent = model.risk;
   const stageCopy = {
-    photo: ["What does your plant need today?", "One clear photo gives you one clear next step."],
+    photo: ["Show me what’s changing.", "Frame the whole plant. We’ll ask for a detail only if needed."],
     analyzing: ["Looking closely.", "Checking photo quality and visible symptoms."],
     action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
     followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
@@ -2753,8 +2756,13 @@ function renderCustomerMobileExperience(state = getFormState()) {
   if (customerMobileAction) customerMobileAction.textContent = model.action;
   if (customerMobileFollowup) customerMobileFollowup.textContent = model.followup;
   if (customerMobileEvidence) {
-    customerMobileEvidence.innerHTML = model.evidence.map(([title, detail]) => `
-      <div><strong>${title}</strong><span>${detail}</span></div>
+    const icons = [
+      '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 20v-7M7 13c-3 0-5-2-5-5 3 0 5 2 5 5Zm0 3c4 0 7-3 7-7-4 0-7 3-7 7Z"/></svg>',
+      '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M5 4c5 0 8 3 8 8v7M13 12c1-3 4-5 7-5 0 4-2 7-7 7"/><path d="M10 20h6"/></svg>',
+      '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5"/></svg>'
+    ];
+    customerMobileEvidence.innerHTML = model.evidence.map(([title, detail], index) => `
+      <div><span class="customer-evidence-icon">${icons[index] || icons[2]}</span><strong>${title}</strong><span>${detail}</span></div>
     `).join("");
   }
   if (customerStagePhoto) {
@@ -2775,7 +2783,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
     const labels = {
       "guided-photo": "Take a photo",
       "suggested-photo": "Retake photo",
-      "complete-current-task": "I did this",
+      "complete-current-task": "I’ve done this",
       followup: "Take follow-up photo",
       "followup-panel": "View follow-up plan",
       progress: "View follow-up result",
@@ -2975,6 +2983,83 @@ function customerTimelineDetail(entry = {}) {
   return entry.decision || entry.topRisk || "已记录";
 }
 
+function customerTimelineStatus(entry = {}, index = 0, total = 1) {
+  if (entry.eventType === "followup") {
+    const state = entry.routeAssessment?.state;
+    if (state === "better") return "开始好转";
+    if (state === "worse") return "需要重看";
+    return "继续观察";
+  }
+  if (entry.eventType === "action") return "动作完成";
+  return index === total - 1 ? "建立基线" : "重新判断";
+}
+
+function customerTimelineMeta(entry = {}) {
+  const parts = [relativePastText(entry.createdAt)];
+  if (entry.eventType === "followup") {
+    if (entry.routeAssessment?.next) parts.push(entry.routeAssessment.next);
+    else if (entry.next) parts.push(entry.next);
+  } else if (entry.eventType === "action") {
+    parts.push("等待同角度复查照片验证效果");
+  } else {
+    if (entry.severity) parts.push(entry.severity);
+    if (entry.next) parts.push(entry.next);
+  }
+  return parts.filter(Boolean).join(" · ");
+}
+
+function customerTimelineMetric(entry = {}) {
+  if (entry.eventType === "action") return "处方已执行";
+  if (entry.eventType === "followup") {
+    const state = entry.routeAssessment?.state;
+    if (state === "better") return "趋势改善";
+    if (state === "worse") return "趋势变差";
+    return "趋势待确认";
+  }
+  const confidence = entry.confidence ?? "-";
+  return `可信度 ${confidence}%`;
+}
+
+function customerRecoveryNextStep(trend = {}) {
+  const reminder = trend.reminder;
+  if (reminder) {
+    const photo = reminder.photo ? `拍${reminder.photo}` : "拍同角度复查照";
+    return {
+      title: trendReminderText(reminder),
+      detail: `${photo}；${reminder.task || trend.next || "按系统建议继续复查。"}`
+    };
+  }
+  return {
+    title: "按处方后自动安排",
+    detail: trend.next || "继续按提醒节点复拍。"
+  };
+}
+
+function appendCustomerTimelineRow(entry, index, total) {
+  const row = document.createElement("div");
+  row.className = `customer-case-timeline-event ${entry.eventType || "diagnosis"}`;
+
+  const label = document.createElement("span");
+  label.textContent = customerTimelineEventLabel(entry);
+
+  const body = document.createElement("div");
+  const status = document.createElement("small");
+  status.textContent = customerTimelineStatus(entry, index, total);
+
+  const title = document.createElement("strong");
+  title.textContent = customerTimelineDetail(entry);
+
+  const meta = document.createElement("em");
+  meta.textContent = customerTimelineMeta(entry);
+
+  const metric = document.createElement("b");
+  metric.textContent = customerTimelineMetric(entry);
+
+  body.append(status, title, meta, metric);
+  row.append(label, body);
+  customerCaseTimelineList.appendChild(row);
+}
+
 function localCustomerActionEvents() {
   const record = getCustomerArchiveRecord();
   const plan = getReminderPlan();
@@ -3015,42 +3100,41 @@ function renderCustomerCaseTimeline(item = customerCaseTimelineCache) {
   const mergedTimeline = mergeCustomerTimelineEvents(item?.timeline || []);
   if (!mergedTimeline.length) {
     customerCaseTimelineCard.dataset.state = "baseline";
-    customerCaseTimelineTitle.textContent = "正在建立植物病例";
-    customerCaseTimelineSummary.textContent = "首张诊断保存后，会自动形成诊断、动作、复查和趋势记录。";
+    customerCaseTimelineTitle.textContent = "正在建立恢复轨迹";
+    customerCaseTimelineSummary.textContent = "首张诊断保存后，会自动形成基线、处方动作和复查判断。";
     if (customerCaseTrendBar) customerCaseTrendBar.style.width = "12%";
-    customerCaseTimelineList.innerHTML = `
-      <div class="customer-case-timeline-empty">
-        <strong>等待第一条诊断记录</strong>
-        <span>拍完首张照片后自动建档。</span>
-      </div>
-    `;
+    customerCaseTimelineList.innerHTML = "";
+    const empty = document.createElement("div");
+    empty.className = "customer-case-timeline-empty";
+    const title = document.createElement("strong");
+    title.textContent = "先拍一张清晰植物照";
+    const copy = document.createElement("span");
+    copy.textContent = "FiveCrop 会把这张照片作为基线，后续复查都和它对照。";
+    empty.append(title, copy);
+    customerCaseTimelineList.appendChild(empty);
     return;
   }
 
   const trend = item?.trend || {};
   customerCaseTimelineCard.dataset.state = trendClassName(trend);
-  customerCaseTimelineTitle.textContent = item?.name || `${cropNames[getFormState().crop] || "植物"}病例`;
+  customerCaseTimelineTitle.textContent = item?.name || `${cropNames[getFormState().crop] || "植物"}恢复轨迹`;
   customerCaseTimelineSummary.textContent = `${trend.label || "建立基线"}：${trend.summary || "等待下一次复查后判断趋势。"}`;
   if (customerCaseTrendBar) customerCaseTrendBar.style.width = `${customerTrendProgress(trend)}%`;
   const events = mergedTimeline.slice(-4).reverse();
   customerCaseTimelineList.innerHTML = "";
-  events.forEach((entry) => {
-    const row = document.createElement("div");
-    row.className = `customer-case-timeline-event ${entry.eventType || "diagnosis"}`;
-    row.innerHTML = `
-      <span>${customerTimelineEventLabel(entry)}</span>
-      <strong>${customerTimelineDetail(entry)}</strong>
-      <em>${relativePastText(entry.createdAt)} · 风险分 ${entry.riskScore ?? "-"} · 可信度 ${entry.confidence ?? "-"}%</em>
-    `;
-    customerCaseTimelineList.appendChild(row);
-  });
+  events.forEach((entry, index) => appendCustomerTimelineRow(entry, index, events.length));
+  const nextStep = customerRecoveryNextStep(trend);
   const next = document.createElement("div");
   next.className = "customer-case-timeline-next";
-  next.innerHTML = `
-    <span>下一次</span>
-    <strong>${trend.reminder ? trendReminderText(trend.reminder) : "按处方后自动安排"}</strong>
-    <em>${trend.next || "继续按提醒节点复拍。"}</em>
-  `;
+  const nextLabel = document.createElement("span");
+  nextLabel.textContent = "下一次";
+  const nextBody = document.createElement("div");
+  const nextTitle = document.createElement("strong");
+  nextTitle.textContent = nextStep.title;
+  const nextDetail = document.createElement("em");
+  nextDetail.textContent = nextStep.detail;
+  nextBody.append(nextTitle, nextDetail);
+  next.append(nextLabel, nextBody);
   customerCaseTimelineList.appendChild(next);
 }
 
@@ -6854,6 +6938,16 @@ expertModeBtn.addEventListener("click", () => setMode("expert"));
 customerInternalBtn?.addEventListener("click", () => setMode("expert"));
 customerCameraBtn?.addEventListener("click", openGuidedPhotoUpload);
 customerCheckPlantBtn?.addEventListener("click", handleCustomerPrimaryAction);
+customerBackBtn?.addEventListener("click", resetCustomerPlantDossier);
+customerPrivacyTopBtn?.addEventListener("click", () => {
+  const resultStage = ["action", "followup"].includes(customerAppShell?.dataset.state);
+  const detail = resultStage ? customerMobilePrivacyDetail : customerPhotoPrivacyDetail;
+  if (!detail) return;
+  const expanded = detail.hidden === false;
+  detail.hidden = expanded;
+  customerPrivacyTopBtn.setAttribute("aria-expanded", String(!expanded));
+  customerPrivacyTopBtn.setAttribute("aria-controls", detail.id);
+});
 customerMobilePrivacyBtn?.addEventListener("click", () => {
   const expanded = customerMobilePrivacyDetail?.hidden === false;
   if (customerMobilePrivacyDetail) customerMobilePrivacyDetail.hidden = expanded;

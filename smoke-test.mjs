@@ -10,7 +10,8 @@ await access("design/fivecrop-customer-concept.png");
 
 const requiredIds = [
   "customer-app-shell",
-  "customer-internal-btn",
+  "customer-back-btn",
+  "customer-privacy-top-btn",
   "customer-camera-btn",
   "customer-stage-photo",
   "customer-photo-status-label",
@@ -232,11 +233,11 @@ if (missing.length) {
 }
 
 const requiredHtmlSnippets = [
-  "What does your plant need today?",
-  "One clear photo gives you one clear next step.",
-  "Your photo stays private by default.",
+  "Show me what&rsquo;s changing.",
+  "Frame the whole plant. We&rsquo;ll ask for a detail only if needed.",
+  "Private by default",
   "Take a photo",
-  "data-customer-step=\"followup\"",
+  "customer-camera-guide",
   "Photos are used only for this diagnosis",
   "assets/tomato-diagnosis.png",
   "class=\"customer-crop-rail\"",
