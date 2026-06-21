@@ -19,6 +19,7 @@ const notificationPath = join(dataDir, "notification-jobs.json");
 const sqlitePath = join(dataDir, "grow-clinic.sqlite");
 const openAiEndpoint = "https://api.openai.com/v1/responses";
 const defaultVisionModel = "gpt-4.1-mini";
+const openAiRequestTimeoutMs = Math.max(5000, Number(process.env.OPENAI_REQUEST_TIMEOUT_MS) || 45000);
 const visionOutputSchema = {
   type: "object",
   additionalProperties: false,
@@ -1435,14 +1436,21 @@ function openAiVisionRequestBody(body, model, options = {}) {
 }
 
 async function requestOpenAiVision(apiKey, body, model, options = {}) {
-  return fetch(openAiEndpoint, {
-    method: "POST",
-    headers: {
-      "authorization": `Bearer ${apiKey}`,
-      "content-type": "application/json"
-    },
-    body: JSON.stringify(openAiVisionRequestBody(body, model, options))
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), openAiRequestTimeoutMs);
+  try {
+    return await fetch(openAiEndpoint, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${apiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(openAiVisionRequestBody(body, model, options)),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 async function openAiErrorDetail(response) {

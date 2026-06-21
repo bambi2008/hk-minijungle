@@ -6,6 +6,8 @@ const p2js = await readFile("p2-growth.js", "utf8");
 const css = await readFile("styles.css", "utf8");
 await access("assets/tomato-diagnosis.png");
 await access("assets/five-crops-sprite.png");
+await access("assets/tomato-diagnosis-preview.jpg");
+await access("assets/five-crops-sprite-preview.jpg");
 await access("design/fivecrop-customer-concept.png");
 
 const requiredIds = [
@@ -239,7 +241,7 @@ const requiredHtmlSnippets = [
   "Take a photo",
   "customer-camera-guide",
   "Photos are used only for this diagnosis",
-  "assets/tomato-diagnosis.png",
+  "assets/tomato-diagnosis-preview.jpg",
   "class=\"customer-crop-rail\"",
   "id=\"crop-quick-start\"",
   "id=\"crop-choice-tomato\"",
@@ -621,7 +623,7 @@ const requiredCssSnippets = [
   ".customer-photo-frame",
   ".customer-evidence-grid",
   ".customer-check-button",
-  "assets/five-crops-sprite.png",
+  "assets/five-crops-sprite-preview.jpg",
   "body.customer-mode .customer-detail",
   "body.customer-mode .confidence-decision-card",
   "body.customer-mode .customer-next",

@@ -78,6 +78,8 @@ Current state:
 - Frontend performs lightweight color and quality checks, then calls `/api/vision/analyze`.
 - Intake photos are saved as per-photo-type baselines so follow-up photos can be compared against the matching view when available.
 - `npm run vision:smoke` runs a live OpenAI vision adapter check against a generated test image without writing persistent data.
+- `npm run vision:golden` runs live OpenAI checks for all five golden-path crops against generated test images, then verifies the follow-up comparison contract. It uses a temporary data directory and is intentionally not executed by the default check script because it calls the paid API.
+- OpenAI vision requests have a default 45 second timeout via `OPENAI_REQUEST_TIMEOUT_MS` so customer diagnosis falls back instead of waiting indefinitely.
 
 Production replacement:
 - Do not start by training on a large custom image dataset. V1 should call a general multimodal vision model through the same `/api/vision/analyze` contract, then collect opt-in images and confirmed outcomes for later improvement.

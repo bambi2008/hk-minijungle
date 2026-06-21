@@ -217,7 +217,7 @@ body.customer-mode .customer-app-shell {
   aspect-ratio: 4 / 5;
   border: 1.5px solid transparent;
   border-radius: 5px;
-  background-image: url("assets/five-crops-sprite.png");
+  background-image: url("assets/five-crops-sprite-preview.jpg");
   background-repeat: no-repeat;
   background-size: 500% 100%;
 }
@@ -3253,6 +3253,45 @@ button {
   margin-top: 11px;
 }
 
+.customer-recovery-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  border-top: 1px solid #edf1ee;
+  padding-top: 9px;
+}
+
+.customer-recovery-evidence span {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.customer-recovery-evidence strong {
+  max-width: 100%;
+  border-radius: 999px;
+  padding: 4px 8px;
+  overflow: hidden;
+  background: #f6faf7;
+  color: var(--green-dark);
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.customer-case-timeline-card[data-state="worsening"] .customer-recovery-evidence strong {
+  color: #9b4635;
+  background: #fff0eb;
+}
+
+.customer-case-timeline-card[data-state="stable"] .customer-recovery-evidence strong,
+.customer-case-timeline-card[data-state="uncertain"] .customer-recovery-evidence strong {
+  color: #6b4300;
+  background: #fff4d9;
+}
+
 .customer-case-timeline-event,
 .customer-case-timeline-next,
 .customer-case-timeline-empty {
@@ -3297,6 +3336,27 @@ button {
   font-weight: 900;
 }
 
+.customer-case-timeline-next small {
+  display: inline-block;
+  margin-bottom: 4px;
+  border-radius: 999px;
+  padding: 2px 7px;
+  background: #f0f5f2;
+  color: var(--green-dark);
+  font-size: 0.68rem;
+  font-weight: 900;
+}
+
+.customer-case-timeline-next[data-urgency="due"] small {
+  color: #fff;
+  background: #9b4635;
+}
+
+.customer-case-timeline-next[data-urgency="soon"] small {
+  color: #6b4300;
+  background: #fff4d9;
+}
+
 .customer-case-timeline-event strong,
 .customer-case-timeline-next strong,
 .customer-case-timeline-empty strong {
@@ -3315,6 +3375,35 @@ button {
   font-size: 0.76rem;
   font-style: normal;
   line-height: 1.35;
+}
+
+.customer-recovery-shot-list {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.customer-recovery-shot-list li {
+  position: relative;
+  min-width: 0;
+  padding-left: 15px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.customer-recovery-shot-list li::before {
+  position: absolute;
+  top: 0.62em;
+  left: 2px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  content: "";
 }
 
 .customer-case-timeline-event b {

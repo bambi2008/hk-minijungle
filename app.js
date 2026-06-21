@@ -2766,13 +2766,13 @@ function renderCustomerMobileExperience(state = getFormState()) {
     `).join("");
   }
   if (customerStagePhoto) {
-    customerStagePhoto.src = uploaded || "assets/tomato-diagnosis.png";
+    customerStagePhoto.src = uploaded || "assets/tomato-diagnosis-preview.jpg";
     customerStagePhoto.alt = uploaded
       ? `${cropNames[state.crop]} uploaded for diagnosis`
       : "Dwarf tomato plant beside an apartment window";
   }
   if (customerResultPhoto) {
-    customerResultPhoto.src = uploaded || "assets/tomato-diagnosis.png";
+    customerResultPhoto.src = uploaded || "assets/tomato-diagnosis-preview.jpg";
     customerResultPhoto.alt = `${cropNames[state.crop]} photo used for this diagnosis`;
   }
   if (customerResultCrop) customerResultCrop.textContent = cropNames[state.crop];
@@ -3024,15 +3024,56 @@ function customerRecoveryNextStep(trend = {}) {
   const reminder = trend.reminder;
   if (reminder) {
     const photo = reminder.photo ? `拍${reminder.photo}` : "拍同角度复查照";
+    const dueAt = Date.parse(reminder.dueAt);
+    const hoursUntilDue = Number.isFinite(dueAt) ? (dueAt - Date.now()) / (60 * 60 * 1000) : null;
+    const dueState = hoursUntilDue !== null && hoursUntilDue <= 0
+      ? "due"
+      : hoursUntilDue !== null && hoursUntilDue <= 24
+        ? "soon"
+        : "scheduled";
     return {
       title: trendReminderText(reminder),
-      detail: `${photo}；${reminder.task || trend.next || "按系统建议继续复查。"}`
+      detail: `${photo}；${reminder.task || trend.next || "按系统建议继续复查。"}`,
+      urgency: dueState,
+      urgencyLabel: dueState === "due" ? "现在复查" : dueState === "soon" ? relativeDueText(reminder.dueAt) : "按计划",
+      checklist: [
+        reminder.photo ? `重点拍：${reminder.photo}` : "重点拍：同一株植物",
+        "角度和距离尽量和上次一样",
+        "避开强背光，保持叶片/花/根区清晰"
+      ]
     };
   }
   return {
     title: "按处方后自动安排",
-    detail: trend.next || "继续按提醒节点复拍。"
+    detail: trend.next || "继续按提醒节点复拍。",
+    urgency: "scheduled",
+    urgencyLabel: "等待安排",
+    checklist: [
+      "先完成今天的处方动作",
+      "复查时回到同一个位置拍照",
+      "让主要症状区域保持清晰"
+    ]
   };
+}
+
+function appendCustomerRecoveryEvidence(trend = {}) {
+  const evidence = Array.isArray(trend.evidence) ? trend.evidence.filter(Boolean).slice(0, 3) : [];
+  if (!evidence.length) return;
+
+  const panel = document.createElement("div");
+  panel.className = "customer-recovery-evidence";
+
+  const label = document.createElement("span");
+  label.textContent = "判断依据";
+  panel.appendChild(label);
+
+  evidence.forEach((item) => {
+    const chip = document.createElement("strong");
+    chip.textContent = item;
+    panel.appendChild(chip);
+  });
+
+  customerCaseTimelineList.appendChild(panel);
 }
 
 function appendCustomerTimelineRow(entry, index, total) {
@@ -3122,18 +3163,29 @@ function renderCustomerCaseTimeline(item = customerCaseTimelineCache) {
   if (customerCaseTrendBar) customerCaseTrendBar.style.width = `${customerTrendProgress(trend)}%`;
   const events = mergedTimeline.slice(-4).reverse();
   customerCaseTimelineList.innerHTML = "";
+  appendCustomerRecoveryEvidence(trend);
   events.forEach((entry, index) => appendCustomerTimelineRow(entry, index, events.length));
   const nextStep = customerRecoveryNextStep(trend);
   const next = document.createElement("div");
   next.className = "customer-case-timeline-next";
+  next.dataset.urgency = nextStep.urgency;
   const nextLabel = document.createElement("span");
   nextLabel.textContent = "下一次";
   const nextBody = document.createElement("div");
+  const urgency = document.createElement("small");
+  urgency.textContent = nextStep.urgencyLabel;
   const nextTitle = document.createElement("strong");
   nextTitle.textContent = nextStep.title;
   const nextDetail = document.createElement("em");
   nextDetail.textContent = nextStep.detail;
-  nextBody.append(nextTitle, nextDetail);
+  const checklist = document.createElement("ul");
+  checklist.className = "customer-recovery-shot-list";
+  nextStep.checklist.forEach((item) => {
+    const li = document.createElement("li");
+    li.textContent = item;
+    checklist.appendChild(li);
+  });
+  nextBody.append(urgency, nextTitle, nextDetail, checklist);
   next.append(nextLabel, nextBody);
   customerCaseTimelineList.appendChild(next);
 }
