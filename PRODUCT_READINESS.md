@@ -73,16 +73,17 @@ Production checklist:
 ## Vision Recognition
 
 Current state:
-- `/api/vision/analyze` uses the OpenAI Responses API when `OPENAI_API_KEY` is configured, with strict JSON schema output for the app contract.
+- `/api/vision/analyze` now uses a provider adapter. Recommended MVP default is `VISION_PROVIDER=qwen` with `DASHSCOPE_API_KEY` or `QWEN_API_KEY`; OpenAI remains only as an optional legacy fallback adapter.
 - The local heuristic adapter remains as a fallback for missing images, missing credentials, quota/rate failures, network failures, or invalid model JSON.
 - Frontend performs lightweight color and quality checks, then calls `/api/vision/analyze`.
 - Intake photos are saved as per-photo-type baselines so follow-up photos can be compared against the matching view when available.
-- `npm run vision:smoke` runs a live OpenAI vision adapter check against a generated test image without writing persistent data.
-- `npm run vision:golden` runs live OpenAI checks for all five golden-path crops against generated test images, then verifies the follow-up comparison contract. It uses a temporary data directory and is intentionally not executed by the default check script because it calls the paid API.
-- OpenAI vision requests have a default 45 second timeout via `OPENAI_REQUEST_TIMEOUT_MS` so customer diagnosis falls back instead of waiting indefinitely.
+- `npm run vision:smoke` runs a live configured-provider check against a generated test image without writing persistent data.
+- `npm run vision:golden` runs live configured-provider checks for all five golden-path crops against generated test images, then verifies the follow-up comparison contract. It uses a temporary data directory and is intentionally not executed by the default check script because it calls a paid API.
+- Live vision requests have a default 45 second timeout via `VISION_REQUEST_TIMEOUT_MS` so customer diagnosis falls back instead of waiting indefinitely.
 
 Production replacement:
 - Do not start by training on a large custom image dataset. V1 should call a general multimodal vision model through the same `/api/vision/analyze` contract, then collect opt-in images and confirmed outcomes for later improvement.
+- Because overseas account availability has proven risky for this product, treat domestic provider independence as a launch requirement. Use Qwen-VL / Alibaba Cloud Model Studio as the first replacement path, evaluate Doubao Vision or Baidu Qianfan as the second domestic path, and keep the UI/report contract unchanged.
 - Fine-tuning or custom training becomes useful only after the product has enough labeled examples per crop, symptom, photo type, and growth stage.
 - Keep a local fallback for demos, offline use, and provider failures.
 - Keep monitoring live adapter failures such as 429 quota/rate errors and surface them as fallback reasons instead of breaking diagnosis.

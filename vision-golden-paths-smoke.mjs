@@ -6,6 +6,7 @@ import { deflateSync } from "node:zlib";
 const host = "127.0.0.1";
 const testDataDir = await mkdtemp(join(tmpdir(), "fivecrop-golden-vision-"));
 process.env.GROW_CLINIC_DATA_DIR = testDataDir;
+const expectedProvider = process.env.VISION_EXPECTED_PROVIDER || "";
 const { server, closeStorage } = await import("./server.mjs");
 
 const photoTypes = new Set(["plant", "leaf", "root", "flower", "pest", "unknown"]);
@@ -155,12 +156,15 @@ const goldenCases = [
 ];
 
 function assertVisionContract(payload, item) {
-  if (payload.provider !== "openai-responses") {
+  if (!payload.provider || payload.provider === "local-heuristic-placeholder") {
     const detail = payload.aiFallbackDetail ? ` detail=${payload.aiFallbackDetail}` : "";
     throw new Error(`${item.cropKey}: vision model did not run; fallback=${payload.aiFallbackReason || "unknown"}${detail}`);
   }
+  if (expectedProvider && payload.provider !== expectedProvider) {
+    throw new Error(`${item.cropKey}: vision provider mismatch expected=${expectedProvider} actual=${payload.provider}`);
+  }
   if (!payload.model || !payload.integrationContract?.canSwapProviderWithoutUiChange || !payload.modelInput?.hasImage) {
-    throw new Error(`${item.cropKey}: OpenAI vision payload contract mismatch`);
+    throw new Error(`${item.cropKey}: vision provider payload contract mismatch`);
   }
   if (!photoTypes.has(payload.photoType) || !Array.isArray(payload.observations) || !Array.isArray(payload.labels) || !payload.nextAction) {
     throw new Error(`${item.cropKey}: normalized vision fields missing`);
@@ -221,7 +225,7 @@ try {
     const labelText = payload.labels.map((entry) => entry.label).join("|") || "none";
     console.log(`golden-vision-ok crop=${item.cropKey} model=${payload.model} labels=${labelText} compare=${comparison.trend}`);
   }
-  console.log(`openai-golden-paths-smoke-ok paths=${goldenCases.length}`);
+  console.log(`vision-golden-paths-smoke-ok paths=${goldenCases.length}`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
   closeStorage();

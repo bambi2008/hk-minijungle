@@ -6,6 +6,7 @@ import { deflateSync } from "node:zlib";
 const host = "127.0.0.1";
 const testDataDir = await mkdtemp(join(tmpdir(), "fivecrop-vision-"));
 process.env.GROW_CLINIC_DATA_DIR = testDataDir;
+const expectedProvider = process.env.VISION_EXPECTED_PROVIDER || "";
 const { server, closeStorage } = await import("./server.mjs");
 
 function crc32(bytes) {
@@ -98,18 +99,21 @@ try {
   }
 
   const payload = await response.json();
-  if (payload.provider !== "openai-responses") {
+  if (!payload.provider || payload.provider === "local-heuristic-placeholder") {
     const detail = payload.aiFallbackDetail ? ` detail=${payload.aiFallbackDetail}` : "";
     throw new Error(`Vision model did not run; fallback=${payload.aiFallbackReason || "unknown"}${detail}`);
   }
+  if (expectedProvider && payload.provider !== expectedProvider) {
+    throw new Error(`Vision provider mismatch: expected=${expectedProvider} actual=${payload.provider}`);
+  }
   if (!payload.model || !payload.integrationContract?.canSwapProviderWithoutUiChange || !payload.modelInput?.hasImage) {
-    throw new Error("OpenAI vision payload contract mismatch");
+    throw new Error("Vision provider payload contract mismatch");
   }
   if (!Array.isArray(payload.observations) || !Array.isArray(payload.labels) || !payload.nextAction) {
-    throw new Error("OpenAI vision result missing normalized analysis fields");
+    throw new Error("Vision provider result missing normalized analysis fields");
   }
 
-  console.log(`openai-vision-smoke-ok provider=${payload.provider} model=${payload.model} labels=${payload.labels.length}`);
+  console.log(`vision-provider-smoke-ok provider=${payload.provider} model=${payload.model} labels=${payload.labels.length}`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
   closeStorage();

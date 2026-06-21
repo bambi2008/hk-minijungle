@@ -2660,8 +2660,9 @@ function renderCustomerTrustAndPrivacy(state = getFormState(), findings = latest
   }
 
   if (customerPrivacyCard && customerPrivacyCopy) {
-    const uploadText = latestVisionResult?.provider === "openai-responses"
-      ? "本次使用真实视觉模型时，会把压缩后的植物照片发送给 FiveCrop 后端和 OpenAI，只用于这次分析。"
+    const usesRemoteVision = latestVisionResult?.provider && latestVisionResult.provider !== "local-heuristic-placeholder";
+    const uploadText = usesRemoteVision
+      ? "本次使用真实视觉模型时，会把压缩后的植物照片发送给 FiveCrop 后端和已配置的视觉模型提供商，只用于这次分析。"
       : "当前会先用本地规则；只有配置真实视觉模型并上传照片时，才会发送压缩后的植物照片。";
     customerPrivacyCopy.textContent = `${uploadText} FiveCrop 不保存原图进病例，也不会默认把照片用于训练或改进模型；清除本机记录会删除这个浏览器里的照片预览、基线和复查记录。`;
   }
@@ -5659,7 +5660,7 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
     const result = await response.json();
     latestVisionResult = result;
     updateAiPipelineSnapshot(state, { vision: result, photoType, hasImage: true });
-    if (result.provider === "openai-responses") {
+    if (result.provider && result.provider !== "local-heuristic-placeholder") {
       photoHint.textContent = `AI 已识别：${file?.name || "照片"}，置信度 ${Math.round((result.confidence || 0) * 100)}%。`;
     } else {
       photoHint.textContent = `已读取：${file?.name || "照片"}，当前使用本地规则。`;
@@ -5813,7 +5814,7 @@ function photoQualityGate(signals = photoSignals, photoType = requestedPhotoType
 
   const state = fail.length ? "fail" : warn.length ? "warn" : "pass";
   const score = Math.max(0, Math.min(100, 92 - fail.length * 28 - warn.length * 12 + Math.min(pass.length, 3) * 2));
-  const provider = vision?.provider === "openai-responses" ? "OpenAI Vision" : "本地规则";
+  const provider = aiProviderLabel(vision);
   const message = state === "fail"
     ? fail[0]
     : state === "warn"
@@ -5840,7 +5841,9 @@ function photoQualityGate(signals = photoSignals, photoType = requestedPhotoType
 }
 
 function aiProviderLabel(result = latestVisionResult) {
+  if (result?.provider === "qwen-dashscope") return "Qwen Vision";
   if (result?.provider === "openai-responses") return "OpenAI Vision";
+  if (result?.provider && result.provider !== "local-heuristic-placeholder") return "AI Vision";
   if (result?.readyForAiProvider) return "本地规则 · 可接真实视觉模型";
   return "本地规则";
 }
@@ -5855,7 +5858,7 @@ function buildAiPipelineSnapshot(state = getFormState(), options = {}) {
     readyForRealVision: true,
     provider: vision?.provider || "local-heuristic-placeholder",
     providerLabel: aiProviderLabel(vision),
-    upgradeTarget: "OpenAI Vision / plant-specific vision model",
+    upgradeTarget: "Qwen-VL / plant-specific vision model",
     modelInput: {
       cropKey: state.crop,
       stageKey: state.stage,

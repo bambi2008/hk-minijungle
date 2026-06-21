@@ -18,8 +18,11 @@ const dbPath = join(dataDir, "diagnosis-reports.json");
 const notificationPath = join(dataDir, "notification-jobs.json");
 const sqlitePath = join(dataDir, "grow-clinic.sqlite");
 const openAiEndpoint = "https://api.openai.com/v1/responses";
+const qwenEndpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
 const defaultVisionModel = "gpt-4.1-mini";
+const defaultQwenVisionModel = "qwen-vl-plus";
 const openAiRequestTimeoutMs = Math.max(5000, Number(process.env.OPENAI_REQUEST_TIMEOUT_MS) || 45000);
+const visionRequestTimeoutMs = Math.max(5000, Number(process.env.VISION_REQUEST_TIMEOUT_MS) || openAiRequestTimeoutMs);
 const visionOutputSchema = {
   type: "object",
   additionalProperties: false,
@@ -171,9 +174,22 @@ function statusLevel(configured, partial = false) {
   return "placeholder";
 }
 
+async function configuredVisionProvider() {
+  const requested = String(await readEnvValue("VISION_PROVIDER") || "auto").trim().toLowerCase();
+  if (requested === "dashscope") return "qwen";
+  return ["auto", "qwen", "openai", "local"].includes(requested) ? requested : "auto";
+}
+
 async function integrationStatusPayload() {
   const env = {
-    vision: await envPresence(["OPENAI_API_KEY", "OPENAI_VISION_MODEL"]),
+    vision: await envPresence([
+      "VISION_PROVIDER",
+      "DASHSCOPE_API_KEY",
+      "QWEN_API_KEY",
+      "QWEN_VISION_MODEL",
+      "OPENAI_API_KEY",
+      "OPENAI_VISION_MODEL"
+    ]),
     notifications: await envPresence([
       "NOTIFICATION_EMAIL_WEBHOOK_URL",
       "NOTIFICATION_SMS_WEBHOOK_URL",
@@ -194,6 +210,23 @@ async function integrationStatusPayload() {
   };
   const anyNotification = Object.values(notificationChannels).some(Boolean);
   const anySensor = Object.values(env.sensors).some(Boolean);
+  const visionProvider = await configuredVisionProvider();
+  const hasQwenVision = env.vision.DASHSCOPE_API_KEY || env.vision.QWEN_API_KEY;
+  const hasOpenAiVision = env.vision.OPENAI_API_KEY;
+  const hasConfiguredVision = visionProvider === "qwen"
+    ? hasQwenVision
+    : visionProvider === "openai"
+      ? hasOpenAiVision
+      : hasQwenVision || hasOpenAiVision;
+  const activeVisionModel = visionProvider === "qwen"
+    ? (env.vision.QWEN_VISION_MODEL ? "custom Qwen-VL model" : defaultQwenVisionModel)
+    : visionProvider === "openai"
+      ? (env.vision.OPENAI_VISION_MODEL ? "custom OpenAI model" : defaultVisionModel)
+      : hasQwenVision
+        ? (env.vision.QWEN_VISION_MODEL ? "custom Qwen-VL model" : defaultQwenVisionModel)
+        : hasOpenAiVision
+          ? (env.vision.OPENAI_VISION_MODEL ? "custom OpenAI model" : defaultVisionModel)
+          : "local heuristic";
   return {
     generatedAt: new Date().toISOString(),
     items: [
@@ -207,7 +240,17 @@ async function integrationStatusPayload() {
         next: env.vision.OPENAI_API_KEY ? "继续积累照片质检和复查样本。" : "配置 OPENAI_API_KEY，可选 OPENAI_VISION_MODEL。",
         env: env.vision,
         requiredEnv: ["OPENAI_API_KEY"],
-        optionalEnv: ["OPENAI_VISION_MODEL"]
+        optionalEnv: ["OPENAI_VISION_MODEL"],
+        title: "Vision AI",
+        status: statusLevel(hasConfiguredVision),
+        summary: hasConfiguredVision
+          ? `Vision provider configured: ${visionProvider}; active model: ${activeVisionModel}.`
+          : "Using local rules until DASHSCOPE_API_KEY or another configured domestic vision provider is available.",
+        next: hasConfiguredVision
+          ? "Run the provider smoke test and keep collecting five-crop review photos."
+          : "Recommended: set VISION_PROVIDER=qwen and DASHSCOPE_API_KEY; optional QWEN_VISION_MODEL.",
+        requiredEnv: ["DASHSCOPE_API_KEY or QWEN_API_KEY"],
+        optionalEnv: ["VISION_PROVIDER", "QWEN_VISION_MODEL", "OPENAI_API_KEY", "OPENAI_VISION_MODEL"]
       },
       {
         key: "real-notifications",
@@ -1264,7 +1307,10 @@ function validChoice(value, choices, fallback) {
   return choices.includes(value) ? value : fallback;
 }
 
-function normalizeAiVisionResult(raw, body, local) {
+function normalizeAiVisionResult(raw, body, local, meta = {}) {
+  const provider = raw.provider || meta.provider || "ai-vision-provider";
+  const model = raw.model || meta.model || "unknown";
+  const source = meta.source || provider;
   const photoTypes = ["plant", "leaf", "root", "flower", "pest", "unknown"];
   const cropKeys = ["tomato", "basil", "rosemary", "strawberry", "pepper", "unknown"];
   const stageKeys = ["seedling", "vegetative", "flowering", "fruiting", "unknown"];
@@ -1311,13 +1357,13 @@ function normalizeAiVisionResult(raw, body, local) {
     ? raw.observations.slice(0, 8).map((item) => ({
       code: String(item.code || "visual-observation").slice(0, 80),
       confidence: Number.isFinite(Number(item.confidence)) ? Math.max(0, Math.min(1, Number(item.confidence))) : 0.5,
-      source: "openai-vision",
+      source,
       evidence: String(item.evidence || "").slice(0, 160)
     }))
     : labels.map((item) => ({
       code: item.label,
       confidence: item.confidence,
-      source: "openai-vision"
+      source
     }));
 
   const suppliedTypes = new Set(body.capturedPhotoTypes || []);
@@ -1332,8 +1378,8 @@ function normalizeAiVisionResult(raw, body, local) {
     : [];
 
   return {
-    provider: "openai-responses",
-    model: raw.model || defaultVisionModel,
+    provider,
+    model,
     readyForAiProvider: true,
     fallbackProvider: local.provider,
     modelInput: {
@@ -1435,9 +1481,32 @@ function openAiVisionRequestBody(body, model, options = {}) {
   return requestBody;
 }
 
+function qwenVisionRequestBody(body, options = {}) {
+  const requestBody = {
+    model: options.model || defaultQwenVisionModel,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "text", text: visionPrompt(body) },
+          { type: "image_url", image_url: { url: body.imageData } }
+        ].filter(Boolean)
+      }
+    ],
+    temperature: 0.1,
+    max_tokens: 900
+  };
+
+  if (options.structured !== false) {
+    requestBody.response_format = { type: "json_object" };
+  }
+
+  return requestBody;
+}
+
 async function requestOpenAiVision(apiKey, body, model, options = {}) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), openAiRequestTimeoutMs);
+  const timeout = setTimeout(() => controller.abort(), visionRequestTimeoutMs);
   try {
     return await fetch(openAiEndpoint, {
       method: "POST",
@@ -1453,6 +1522,24 @@ async function requestOpenAiVision(apiKey, body, model, options = {}) {
   }
 }
 
+async function requestQwenVision(apiKey, body, model, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), visionRequestTimeoutMs);
+  try {
+    return await fetch(qwenEndpoint, {
+      method: "POST",
+      headers: {
+        "authorization": `Bearer ${apiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(qwenVisionRequestBody(body, { ...options, model })),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function openAiErrorDetail(response) {
   try {
     const errorPayload = await response.json();
@@ -1460,6 +1547,74 @@ async function openAiErrorDetail(response) {
   } catch {
     return "openai-error-body-unavailable";
   }
+}
+
+async function qwenErrorDetail(response) {
+  try {
+    const errorPayload = await response.json();
+    return String(errorPayload.error?.message || errorPayload.message || errorPayload.code || "").slice(0, 220);
+  } catch {
+    return "qwen-error-body-unavailable";
+  }
+}
+
+function outputTextFromQwenResponse(payload) {
+  return (payload.choices || [])
+    .map((choice) => choice.message?.content || choice.text || "")
+    .filter(Boolean)
+    .join("\n");
+}
+
+async function analyzeVisionWithQwen(body, local) {
+  if (!body.imageData || !String(body.imageData).startsWith("data:image/")) {
+    local.aiFallbackReason = "no-image-data";
+    return null;
+  }
+  const apiKey = await readEnvValue("DASHSCOPE_API_KEY") || await readEnvValue("QWEN_API_KEY");
+  if (!apiKey) {
+    local.aiFallbackReason = "missing-qwen-api-key";
+    return null;
+  }
+
+  const model = await readEnvValue("QWEN_VISION_MODEL") || defaultQwenVisionModel;
+  let response = await requestQwenVision(apiKey, body, model);
+
+  if (!response.ok) {
+    const firstDetail = await qwenErrorDetail(response);
+    if (response.status === 400 && /schema|format|json|response/i.test(firstDetail)) {
+      response = await requestQwenVision(apiKey, body, model, { structured: false });
+      if (response.ok) {
+        const payload = await response.json();
+        const parsed = jsonFromModelText(outputTextFromQwenResponse(payload));
+        if (!parsed) {
+          local.aiFallbackReason = "qwen-invalid-json";
+          local.aiFallbackDetail = "structured-output-retry-returned-invalid-json";
+          return null;
+        }
+        return normalizeAiVisionResult({ ...parsed, model }, body, local, {
+          provider: "qwen-dashscope",
+          model,
+          source: "qwen-vision"
+        });
+      }
+    }
+
+    local.aiFallbackReason = `qwen-http-${response.status}`;
+    local.aiFallbackDetail = firstDetail;
+    return null;
+  }
+
+  const payload = await response.json();
+  const parsed = jsonFromModelText(outputTextFromQwenResponse(payload));
+  if (!parsed) {
+    local.aiFallbackReason = "qwen-invalid-json";
+    return null;
+  }
+  return normalizeAiVisionResult({ ...parsed, model }, body, local, {
+    provider: "qwen-dashscope",
+    model,
+    source: "qwen-vision"
+  });
 }
 
 async function analyzeVisionWithOpenAI(body, local) {
@@ -1488,7 +1643,11 @@ async function analyzeVisionWithOpenAI(body, local) {
           local.aiFallbackDetail = "structured-output-retry-returned-invalid-json";
           return null;
         }
-        return normalizeAiVisionResult({ ...parsed, model }, body, local);
+        return normalizeAiVisionResult({ ...parsed, model }, body, local, {
+          provider: "openai-responses",
+          model,
+          source: "openai-vision"
+        });
       }
     }
 
@@ -1502,17 +1661,29 @@ async function analyzeVisionWithOpenAI(body, local) {
     local.aiFallbackReason = "openai-invalid-json";
     return null;
   }
-  return normalizeAiVisionResult({ ...parsed, model }, body, local);
+  return normalizeAiVisionResult({ ...parsed, model }, body, local, {
+    provider: "openai-responses",
+    model,
+    source: "openai-vision"
+  });
 }
 
 async function analyzeVisionPayload(body) {
   const local = localVisionPayload(body);
   try {
-    const ai = await analyzeVisionWithOpenAI(body, local);
-    if (ai?.labels?.length || ai?.observations?.length) return ai;
+    const provider = await configuredVisionProvider();
+    if (provider !== "local") {
+      const providers = provider === "auto" ? ["qwen", "openai"] : [provider];
+      for (const item of providers) {
+        const ai = item === "qwen"
+          ? await analyzeVisionWithQwen(body, local)
+          : await analyzeVisionWithOpenAI(body, local);
+        if (ai?.labels?.length || ai?.observations?.length) return ai;
+      }
+    }
   } catch (error) {
     // Keep the diagnosis flow usable when network, quota, or model access fails.
-    local.aiFallbackReason = "openai-request-failed";
+    local.aiFallbackReason = "vision-provider-request-failed";
     local.aiFallbackDetail = String(error?.message || error || "").slice(0, 220);
   }
   return local;
