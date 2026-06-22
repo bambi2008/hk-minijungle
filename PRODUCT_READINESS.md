@@ -73,7 +73,7 @@ Production checklist:
 ## Vision Recognition
 
 Current state:
-- `/api/vision/analyze` now uses a provider adapter. Recommended MVP default is `VISION_PROVIDER=qwen` with `DASHSCOPE_API_KEY` or `QWEN_API_KEY`; OpenAI remains only as an optional legacy fallback adapter.
+- `/api/vision/analyze` now uses a provider adapter. Recommended MVP default is `VISION_PROVIDER=qwen` with `DASHSCOPE_API_KEY` or `QWEN_API_KEY`; OpenAI remains only as an explicit legacy adapter and is not used by automatic fallback.
 - The local heuristic adapter remains as a fallback for missing images, missing credentials, quota/rate failures, network failures, or invalid model JSON.
 - Frontend performs lightweight color and quality checks, then calls `/api/vision/analyze`.
 - Intake photos are saved as per-photo-type baselines so follow-up photos can be compared against the matching view when available.

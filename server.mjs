@@ -1757,7 +1757,7 @@ async function analyzeVisionPayload(body) {
   try {
     const provider = await configuredVisionProvider();
     if (provider !== "local") {
-      const providers = provider === "auto" ? ["qwen", "openai"] : [provider];
+      const providers = provider === "auto" ? ["qwen"] : [provider];
       for (const item of providers) {
         const ai = item === "qwen"
           ? await analyzeVisionWithQwen(body, local)
