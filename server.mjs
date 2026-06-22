@@ -10,7 +10,9 @@ const root = process.cwd();
 const portArgIndex = process.argv.indexOf("--port");
 const cliPort = portArgIndex >= 0 ? process.argv[portArgIndex + 1] : null;
 const port = Number(cliPort || process.env.PORT || 8004);
-const host = "127.0.0.1";
+const hostArgIndex = process.argv.indexOf("--host");
+const cliHost = hostArgIndex >= 0 ? process.argv[hostArgIndex + 1] : null;
+const host = cliHost || process.env.HOST || "127.0.0.1";
 const dataDir = process.env.GROW_CLINIC_DATA_DIR
   ? normalize(process.env.GROW_CLINIC_DATA_DIR)
   : join(root, "data");
