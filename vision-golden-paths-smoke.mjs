@@ -111,7 +111,7 @@ const goldenCases = [
     concern: "fruit",
     symptom: "flower-drop",
     signals: { yellowRatio: 0.18, greenRatio: 0.42, darkRatio: 0.1, brightness: 148, contrast: 46, width: 128, height: 128 },
-    compare: { context: "flower", before: { yellowRatio: 0.18, greenRatio: 0.42, darkRatio: 0.1 }, after: { yellowRatio: 0.1, greenRatio: 0.46, darkRatio: 0.06 }, trend: "improved" }
+    compare: { context: "flower", before: { yellowRatio: 0.18, greenRatio: 0.42, darkRatio: 0.1 }, after: { yellowRatio: 0.07, greenRatio: 0.46, darkRatio: 0.01 }, trend: "improved" }
   },
   {
     cropKey: "basil",
@@ -121,7 +121,7 @@ const goldenCases = [
     concern: "leggy",
     symptom: "leggy-growth",
     signals: { yellowRatio: 0.08, greenRatio: 0.3, darkRatio: 0.18, brightness: 112, contrast: 38, width: 128, height: 128 },
-    compare: { context: "plant", before: { yellowRatio: 0.08, greenRatio: 0.3, darkRatio: 0.18 }, after: { yellowRatio: 0.06, greenRatio: 0.4, darkRatio: 0.1 }, trend: "improved" }
+    compare: { context: "plant", before: { yellowRatio: 0.08, greenRatio: 0.3, darkRatio: 0.18 }, after: { yellowRatio: 0.03, greenRatio: 0.4, darkRatio: 0.07 }, trend: "improved" }
   },
   {
     cropKey: "rosemary",
@@ -151,7 +151,7 @@ const goldenCases = [
     concern: "fruit",
     symptom: "flower-drop",
     signals: { yellowRatio: 0.16, greenRatio: 0.38, darkRatio: 0.12, brightness: 145, contrast: 44, width: 128, height: 128 },
-    compare: { context: "flower", before: { yellowRatio: 0.16, greenRatio: 0.38, darkRatio: 0.12 }, after: { yellowRatio: 0.08, greenRatio: 0.44, darkRatio: 0.07 }, trend: "improved" }
+    compare: { context: "flower", before: { yellowRatio: 0.16, greenRatio: 0.38, darkRatio: 0.12 }, after: { yellowRatio: 0.06, greenRatio: 0.44, darkRatio: 0.03 }, trend: "improved" }
   }
 ];
 

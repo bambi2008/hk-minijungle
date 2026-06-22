@@ -1281,17 +1281,79 @@ function localVisionPayload(body) {
 function jsonFromModelText(text) {
   if (!text) return null;
   const clean = text.replace(/```json|```/g, "").trim();
-  try {
-    return JSON.parse(clean);
-  } catch {
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) return null;
+  const parseCandidate = (candidate) => {
+    if (!candidate) return null;
     try {
-      return JSON.parse(match[0]);
+      return JSON.parse(candidate);
     } catch {
       return null;
     }
+  };
+  const repairCandidate = (candidate) => candidate
+    .replace(/,\s*([}\]])/g, "$1")
+    .trim();
+  const closeOpenJson = (candidate) => {
+    const stack = [];
+    let inString = false;
+    let escape = false;
+    for (const char of candidate) {
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (char === "\\") {
+        escape = true;
+        continue;
+      }
+      if (char === "\"") {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (char === "{" || char === "[") stack.push(char);
+      if (char === "}" || char === "]") stack.pop();
+    }
+    if (inString) return candidate;
+    const closers = stack.reverse().map((char) => char === "{" ? "}" : "]").join("");
+    return `${candidate}${closers}`;
+  };
+  const balancedObject = (() => {
+    const start = clean.indexOf("{");
+    if (start < 0) return "";
+    let depth = 0;
+    let inString = false;
+    let escape = false;
+    for (let index = start; index < clean.length; index += 1) {
+      const char = clean[index];
+      if (escape) {
+        escape = false;
+        continue;
+      }
+      if (char === "\\") {
+        escape = true;
+        continue;
+      }
+      if (char === "\"") {
+        inString = !inString;
+        continue;
+      }
+      if (inString) continue;
+      if (char === "{") depth += 1;
+      if (char === "}") {
+        depth -= 1;
+        if (depth === 0) return clean.slice(start, index + 1);
+      }
+    }
+    return "";
+  })();
+  const greedyMatch = clean.match(/\{[\s\S]*\}/)?.[0] || "";
+  for (const candidate of [clean, balancedObject, greedyMatch]) {
+    const repaired = repairCandidate(candidate);
+    const closed = repairCandidate(closeOpenJson(repaired));
+    const parsed = parseCandidate(candidate) || parseCandidate(repaired) || parseCandidate(closed);
+    if (parsed) return parsed;
   }
+  return null;
 }
 
 function outputTextFromResponse(payload) {
@@ -1429,6 +1491,7 @@ function visionPrompt(body) {
     "Prefer conservative uncertainty over guessing. Use short Chinese for nextAction.",
     `User context: crop=${cropKey}, stage=${body.context?.stageKey || "unknown"}, medium=${body.context?.mediumKey || "unknown"}, concern=${body.context?.concern || "unknown"}, expectedPhotoType=${body.photoType || "unknown"}.`,
     cropModel ? `Crop model risks: ${cropModel.primaryRisks.join(", ")}. Required photos: ${cropModel.requiredPhotos.join(", ")}.` : "",
+    "Return only the contract fields shown below. Do not add riskAssessment, recommendations, notes, markdown, or prose outside JSON.",
     "Return ONLY a JSON object with this shape:",
     JSON.stringify({
       photoType: "plant|leaf|root|flower|pest|unknown",
@@ -1494,7 +1557,7 @@ function qwenVisionRequestBody(body, options = {}) {
       }
     ],
     temperature: 0.1,
-    max_tokens: 900
+    max_tokens: 1600
   };
 
   if (options.structured !== false) {
@@ -1559,8 +1622,26 @@ async function qwenErrorDetail(response) {
 }
 
 function outputTextFromQwenResponse(payload) {
+  const contentText = (content) => {
+    if (!content) return "";
+    if (typeof content === "string") return content;
+    if (Array.isArray(content)) {
+      return content
+        .map((part) => {
+          if (!part) return "";
+          if (typeof part === "string") return part;
+          return part.text || part.output_text || part.content || "";
+        })
+        .filter(Boolean)
+        .join("\n");
+    }
+    if (typeof content === "object") {
+      return content.text || content.output_text || content.content || JSON.stringify(content);
+    }
+    return String(content);
+  };
   return (payload.choices || [])
-    .map((choice) => choice.message?.content || choice.text || "")
+    .map((choice) => contentText(choice.message?.content || choice.text || ""))
     .filter(Boolean)
     .join("\n");
 }
@@ -1585,10 +1666,11 @@ async function analyzeVisionWithQwen(body, local) {
       response = await requestQwenVision(apiKey, body, model, { structured: false });
       if (response.ok) {
         const payload = await response.json();
-        const parsed = jsonFromModelText(outputTextFromQwenResponse(payload));
+        const text = outputTextFromQwenResponse(payload);
+        const parsed = jsonFromModelText(text);
         if (!parsed) {
           local.aiFallbackReason = "qwen-invalid-json";
-          local.aiFallbackDetail = "structured-output-retry-returned-invalid-json";
+          local.aiFallbackDetail = `structured-output-retry-returned-invalid-json: ${text.slice(0, 900)}`;
           return null;
         }
         return normalizeAiVisionResult({ ...parsed, model }, body, local, {
@@ -1605,9 +1687,11 @@ async function analyzeVisionWithQwen(body, local) {
   }
 
   const payload = await response.json();
-  const parsed = jsonFromModelText(outputTextFromQwenResponse(payload));
+  const text = outputTextFromQwenResponse(payload);
+  const parsed = jsonFromModelText(text);
   if (!parsed) {
     local.aiFallbackReason = "qwen-invalid-json";
+    local.aiFallbackDetail = text.slice(0, 900);
     return null;
   }
   return normalizeAiVisionResult({ ...parsed, model }, body, local, {
@@ -1678,7 +1762,7 @@ async function analyzeVisionPayload(body) {
         const ai = item === "qwen"
           ? await analyzeVisionWithQwen(body, local)
           : await analyzeVisionWithOpenAI(body, local);
-        if (ai?.labels?.length || ai?.observations?.length) return ai;
+        if (ai) return ai;
       }
     }
   } catch (error) {
