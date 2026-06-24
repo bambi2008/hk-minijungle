@@ -1436,6 +1436,10 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
   const requestedCropKey = body.context?.cropKey || "unknown";
   const detectedCropKey = validChoice(raw.cropKey, cropKeys, "unknown");
   const cropKey = detectedCropKey === "unknown" ? requestedCropKey : detectedCropKey;
+  const hasCropIdentityEvidence = observations.some((item) =>
+    String(item.code || "").toLowerCase() === "crop-identity" ||
+    /crop|identity|basil|tomato|rosemary|strawberry|pepper|罗勒|番茄|迷迭香|草莓|辣椒/i.test(String(item.evidence || ""))
+  );
   const cropMismatch = Boolean(
     requestedCropKey &&
     requestedCropKey !== "unknown" &&
@@ -1443,7 +1447,13 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
     detectedCropKey !== "unknown" &&
     detectedCropKey !== requestedCropKey
   );
-  const needsCropVerification = detectedCropKey === "unknown" || cropMismatch;
+  const needsCropVerification = detectedCropKey === "unknown" || cropMismatch || (
+    body.context?.mode === "intake" &&
+    requestedCropKey &&
+    requestedCropKey !== "unknown" &&
+    detectedCropKey === requestedCropKey &&
+    !hasCropIdentityEvidence
+  );
   const cropModel = cropModels[cropKey] || cropModels[body.context?.cropKey] || null;
   const modelMissing = (cropModel?.requiredPhotos || ["plant", "leaf", "root"])
     .filter((type) => !suppliedTypes.has(type));
@@ -1470,6 +1480,7 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
     detectedCropKey,
     cropMismatch,
     needsCropVerification,
+    hasCropIdentityEvidence,
     stageKey: validChoice(raw.stageKey, stageKeys, body.context?.stageKey || "unknown"),
     labels,
     observations,
@@ -1499,15 +1510,15 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
 
 function visionPrompt(body) {
   const cropKey = body.context?.cropKey || "unknown";
-  const cropModel = cropModels[cropKey];
   return [
     "You are an indoor edible crop diagnosis vision adapter for FiveCrop.",
     "Analyze only visible evidence in the photo. Do not invent sensor readings.",
     "Supported crops: tomato, basil, rosemary, strawberry, pepper. If the plant is not visibly one of these five crops, or if you are unsure, set cropKey to unknown.",
-    "The user-selected crop is only a claimed context, not ground truth. Do not copy it unless the image supports it.",
+    "First decide cropKey from image evidence only. Ignore the user-selected crop when deciding cropKey.",
+    "If the photo shows a generic green plant, ornamental plant, weed, succulent, houseplant, or any crop outside the supported five, set cropKey to unknown.",
+    "If cropKey is not unknown, include an observation with code crop-identity and evidence naming the visible crop-specific traits.",
     "Prefer conservative uncertainty over guessing. Use short Chinese for nextAction.",
-    `User claimed context: crop=${cropKey}, stage=${body.context?.stageKey || "unknown"}, medium=${body.context?.mediumKey || "unknown"}, concern=${body.context?.concern || "unknown"}, expectedPhotoType=${body.photoType || "unknown"}.`,
-    cropModel ? `Crop model risks: ${cropModel.primaryRisks.join(", ")}. Required photos: ${cropModel.requiredPhotos.join(", ")}.` : "",
+    `User claimed context for later care only: crop=${cropKey}, stage=${body.context?.stageKey || "unknown"}, medium=${body.context?.mediumKey || "unknown"}, concern=${body.context?.concern || "unknown"}, expectedPhotoType=${body.photoType || "unknown"}.`,
     "Return only the contract fields shown below. Do not add riskAssessment, recommendations, notes, markdown, or prose outside JSON.",
     "Return ONLY a JSON object with this shape:",
     JSON.stringify({
