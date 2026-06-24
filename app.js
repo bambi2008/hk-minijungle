@@ -2726,7 +2726,23 @@ function customerMobileResultModel(state = getFormState()) {
 
 function renderCustomerMobileExperience(state = getFormState()) {
   if (!customerAppShell) return;
-  const model = customerMobileResultModel(state);
+  let model = customerMobileResultModel(state);
+  if (latestVisionResult?.needsCropVerification || latestVisionResult?.cropMismatch) {
+    const selected = cropNames[state.crop] || "this crop";
+    const detected = cropNames[latestVisionResult.detectedCropKey] || "another plant";
+    model = {
+      risk: latestVisionResult.cropMismatch ? "This may not match the selected crop" : "Crop needs confirmation",
+      action: latestVisionResult.cropMismatch
+        ? `Retake or switch from ${selected} to ${detected}`
+        : `Retake the whole plant before diagnosing ${selected}`,
+      followup: "Come back after one clear whole-plant photo",
+      evidence: [
+        ["Crop check", latestVisionResult.cropMismatch ? `Vision does not match ${selected}.` : "Vision cannot confirm this crop."],
+        ["Why it matters", "FiveCrop gives advice only for five edible crops."],
+        ["Next photo", "Frame the whole plant in bright light."]
+      ]
+    };
+  }
   const processing = document.body.classList.contains("photo-processing");
   const uploaded = photoPreview?.classList.contains("visible") ? photoPreview.getAttribute("src") : "";
   const hasPhoto = Boolean(uploaded || document.body.classList.contains("has-plant-photo"));
@@ -5542,6 +5558,7 @@ function applyPhotoSignals() {
 }
 
 function applyVisionHints(result) {
+  if (result?.needsCropVerification || result?.cropMismatch) return;
   const symptoms = [];
   const visuals = [];
   (result.diagnosisHints || []).forEach((hint) => {
