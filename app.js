@@ -2727,7 +2727,8 @@ function customerMobileResultModel(state = getFormState()) {
 function renderCustomerMobileExperience(state = getFormState()) {
   if (!customerAppShell) return;
   let model = customerMobileResultModel(state);
-  if (latestVisionResult?.needsCropVerification || latestVisionResult?.cropMismatch) {
+  const needsCropCheck = visionNeedsCropCheck();
+  if (needsCropCheck) {
     const selected = cropNames[state.crop] || "this crop";
     const detected = cropNames[latestVisionResult.detectedCropKey] || "another plant";
     model = {
@@ -2748,7 +2749,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
   const hasPhoto = Boolean(uploaded || document.body.classList.contains("has-plant-photo"));
   const actionModel = customerPrimaryActionModel(state, latestFindings);
   const hasFollowup = ["followup", "followup-panel", "progress"].includes(actionModel.action);
-  const stage = processing ? "analyzing" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
+  const stage = processing ? "analyzing" : (needsCropCheck && hasPhoto) ? "action" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
   const stageOrder = { photo: 0, analyzing: 0, action: 1, followup: 2 };
 
   customerAppShell.dataset.state = stage;
@@ -2768,6 +2769,9 @@ function renderCustomerMobileExperience(state = getFormState()) {
     action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
     followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
   };
+  if (needsCropCheck) {
+    stageCopy.action = ["Confirm the crop first.", "FiveCrop only diagnoses tomato, basil, rosemary, strawberry, and pepper."];
+  }
   if (customerAppTitle) customerAppTitle.textContent = stageCopy[stage][0];
   if (customerAppIntro) customerAppIntro.textContent = stageCopy[stage][1];
   if (customerMobileAction) customerMobileAction.textContent = model.action;
@@ -2806,7 +2810,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
       progress: "View follow-up result",
       diagnosis: "View diagnosis"
     };
-    customerCheckPlantBtn.dataset.action = stage === "photo" ? "guided-photo" : actionModel.action;
+    customerCheckPlantBtn.dataset.action = needsCropCheck ? "suggested-photo" : (stage === "photo" ? "guided-photo" : actionModel.action);
     customerCheckPlantBtn.querySelector("span").textContent = processing ? "Analyzing photo..." : (labels[customerCheckPlantBtn.dataset.action] || "Continue");
     customerCheckPlantBtn.disabled = processing;
   }
@@ -5557,8 +5561,12 @@ function applyPhotoSignals() {
   addChecked("symptoms", symptoms);
 }
 
+function visionNeedsCropCheck(result = latestVisionResult) {
+  return Boolean(result?.needsCropVerification || result?.cropMismatch);
+}
+
 function applyVisionHints(result) {
-  if (result?.needsCropVerification || result?.cropMismatch) return;
+  if (visionNeedsCropCheck(result)) return;
   const symptoms = [];
   const visuals = [];
   (result.diagnosisHints || []).forEach((hint) => {
@@ -5677,7 +5685,12 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
     const result = await response.json();
     latestVisionResult = result;
     updateAiPipelineSnapshot(state, { vision: result, photoType, hasImage: true });
-    if (result.provider && result.provider !== "local-heuristic-placeholder") {
+    if (result.needsCropVerification || result.cropMismatch) {
+      const selected = cropNames[state.crop] || "所选作物";
+      photoHint.textContent = result.cropMismatch
+        ? `这张照片不像${selected}，请重新选择作物或补拍整株。`
+        : `这张照片还不能确认是${selected}，请补拍整株。`;
+    } else if (result.provider && result.provider !== "local-heuristic-placeholder") {
       photoHint.textContent = `AI 已识别：${file?.name || "照片"}，置信度 ${Math.round((result.confidence || 0) * 100)}%。`;
     } else {
       photoHint.textContent = `已读取：${file?.name || "照片"}，当前使用本地规则。`;
@@ -7075,6 +7088,10 @@ function openPhotoRescueUpload(type) {
 }
 
 function openSuggestedPhotoUpload() {
+  if (visionNeedsCropCheck()) {
+    openPhotoRescueUpload("plant");
+    return;
+  }
   const plan = customerPhotoRescuePlan() || nextPhotoSuggestion();
   openPhotoRescueUpload(plan.type);
 }
@@ -7154,20 +7171,38 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
       hasImage: true
     });
     renderPhotoReview(gate, fileName);
+    const needsCropCheck = visionNeedsCropCheck(vision);
     if (gate.canContinue) {
-      if (vision) applyVisionHints(vision);
-      capturedPhotoTypes.add(currentPhotoType);
-      trackP2Event("photo_completed", { photoType: currentPhotoType, source, gate: gate.state });
-      trackP2Event("diagnosis_started", { source: "photo", photoType: currentPhotoType });
-      saveBaselinePhotoSignals(currentPhotoType, signals);
+      if (vision && !needsCropCheck) applyVisionHints(vision);
+      if (needsCropCheck) {
+        trackP2Event("photo_crop_unconfirmed", {
+          photoType: currentPhotoType,
+          source,
+          requestedCropKey: vision?.requestedCropKey || getFormState().crop,
+          detectedCropKey: vision?.detectedCropKey || "unknown"
+        });
+      } else {
+        capturedPhotoTypes.add(currentPhotoType);
+        trackP2Event("photo_completed", { photoType: currentPhotoType, source, gate: gate.state });
+        saveBaselinePhotoSignals(currentPhotoType, signals);
+      }
       photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${fileName}。${source === "camera" ? "相机照片" : "照片"}${gate.state === "warn" ? "可继续使用，也可以重拍优化。" : "已通过质检，诊断已更新。"}`;
-      hasRunSmartDiagnosis = true;
+      hasRunSmartDiagnosis = !needsCropCheck;
+      if (needsCropCheck) {
+        const selected = cropNames[getFormState().crop] || "所选作物";
+        photoHint.textContent = vision?.cropMismatch
+          ? `这张照片不像${selected}，请重新选择作物或补拍整株。`
+          : `这张照片还不能确认是${selected}，请补拍整株后再诊断。`;
+      } else {
+        trackP2Event("diagnosis_started", { source: "photo", photoType: currentPhotoType });
+      }
     } else {
       photoHint.textContent = `这张${photoTypeLabel(currentPhotoType)}暂时看不准：${gate.message}`;
       hasRunSmartDiagnosis = false;
     }
-    runDiagnosis();
-    if (gate.canContinue) focusPhotoDiagnosisResult();
+    if (needsCropCheck) renderCustomerMobileExperience(getFormState());
+    else runDiagnosis();
+    if (gate.canContinue && !needsCropCheck) focusPhotoDiagnosisResult();
     else focusCustomerTarget(photoReviewCard || customerPhotoRescueCard);
   } catch {
     if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
