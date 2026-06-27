@@ -270,7 +270,11 @@ let capturedPhotoTypes = new Set();
 let hasRunSmartDiagnosis = false;
 let requestedPhotoType = "plant";
 let knowledgeGraphPathways = [];
+let pathologyConditions = [];
 let latestMatchedPathways = [];
+let latestMatchedPathology = [];
+let latestAssistantAdvice = null;
+let latestAssistantAdviceSignature = "";
 let latestVisionResult = null;
 let latestPhotoTypeDetection = null;
 let latestPhotoQualityGate = null;
@@ -1171,6 +1175,88 @@ function matchKnowledgePathways(state) {
     .slice(0, 3);
 }
 
+function pathologyVisionLabels() {
+  return new Set((latestVisionResult?.labels || []).map((item) => item.label).filter(Boolean));
+}
+
+function scorePathologyCondition(condition, state) {
+  if (!condition || condition.cropKey !== state.crop) return null;
+  const symptoms = new Set(state.symptoms || []);
+  const visuals = new Set(state.visuals || []);
+  const labels = pathologyVisionLabels();
+  const match = condition.match || {};
+  const reasons = [`作物匹配：${condition.cropName || cropNames[state.crop] || state.crop}`];
+  let score = 18;
+  const add = (ok, amount, reason) => {
+    if (!ok) return;
+    score += amount;
+    reasons.push(reason);
+  };
+
+  add(match.stage?.includes(state.stage), 12, `阶段匹配：${condition.stageName || state.stage}`);
+  add(!match.stage?.includes(state.stage) && ["flowering", "fruiting"].includes(condition.stage) && ["flowering", "fruiting"].includes(state.stage), 7, "花果阶段相近");
+  add(match.concern?.includes(smartConcern.value), 16, `主诉匹配：${smartConcern.value}`);
+  (match.symptoms || []).forEach((item) => add(symptoms.has(item), 14, `症状匹配：${item}`));
+  (match.visuals || []).forEach((item) => add(visuals.has(item), 13, `照片信号匹配：${item}`));
+  (match.visionLabels || []).forEach((item) => add(labels.has(item), 10, `视觉标签匹配：${item}`));
+  add(condition.photoTypes?.includes(state.photoType), 6, `照片类型匹配：${state.photoType}`);
+
+  const environment = match.environment || {};
+  add(environment.light?.includes(state.light), 8, `光照状态：${state.light}`);
+  add(environment.moisture?.includes(state.moisture), 8, `水分状态：${state.moisture}`);
+  add(environment.climate?.includes(state.climate), 7, `环境状态：${state.climate}`);
+  add(environment.medium?.includes(state.medium), 7, `介质状态：${state.medium}`);
+  add(environment.growDevice?.includes(state.growDevice), 5, `设备适配：${state.growDevice}`);
+  add(state.temperature !== null && environment.temperatureHigh !== undefined && state.temperature > environment.temperatureHigh, 10, `温度偏高：${state.temperature}C`);
+  add(state.temperature !== null && environment.temperatureLow !== undefined && state.temperature < environment.temperatureLow, 10, `温度偏低：${state.temperature}C`);
+  add(state.lightHours !== null && environment.lightHoursMax !== undefined && state.lightHours < environment.lightHoursMax, 9, `光照小时不足：${state.lightHours}h`);
+  add(state.sensorMoisture !== null && environment.sensorMoistureHigh !== undefined && state.sensorMoisture > environment.sensorMoistureHigh, 8, `湿度读数偏高：${state.sensorMoisture}`);
+  add(state.sensorMoisture !== null && environment.sensorMoistureLow !== undefined && state.sensorMoisture < environment.sensorMoistureLow, 8, `湿度读数偏低：${state.sensorMoisture}`);
+  add(state.ec !== null && environment.ecHigh !== undefined && state.ec > environment.ecHigh, 7, `EC 偏高：${state.ec}`);
+  add(state.ec !== null && environment.ecLow !== undefined && state.ec < environment.ecLow, 7, `EC 偏低：${state.ec}`);
+  add(state.ph !== null && environment.phHigh !== undefined && state.ph > environment.phHigh, 7, `pH 偏高：${state.ph}`);
+  add(state.ph !== null && environment.phLow !== undefined && state.ph < environment.phLow, 7, `pH 偏低：${state.ph}`);
+
+  if (reasons.length < 3 || score < 42) return null;
+  return {
+    ...condition,
+    score: Math.min(98, score),
+    confidence: Math.min(96, Math.max(42, score)),
+    reasons
+  };
+}
+
+function matchPathologyConditions(state) {
+  if (!pathologyConditions.length) return [];
+  return pathologyConditions
+    .map((condition) => scorePathologyCondition(condition, state))
+    .filter(Boolean)
+    .sort((a, b) => b.confidence - a.confidence)
+    .slice(0, 4);
+}
+
+function applyPathologyFindings(state, findings) {
+  latestMatchedPathology = matchPathologyConditions(state);
+  latestMatchedPathology.slice(0, 2).forEach((item) => {
+    const duplicate = findings.some((finding) =>
+      finding.title === item.title ||
+      finding.title.includes(item.category) ||
+      item.title.includes(finding.title)
+    );
+    if (duplicate) return;
+    const evidence = item.evidence?.slice(0, 2).join("；") || item.summary;
+    const missing = item.missingInfo?.slice(0, 2).join("、") || "补拍关键照片";
+    addFinding(
+      findings,
+      item.title,
+      item.score,
+      item.score >= 72 ? "high" : item.score >= 56 ? "medium" : "low",
+      `${item.summary} 证据：${evidence}。待确认：${missing}。`,
+      item.action
+    );
+  });
+}
+
 function diagnose(state) {
   const findings = [];
   const xponge = xpongeAreaLiters(state);
@@ -1326,6 +1412,7 @@ function diagnose(state) {
     );
   }
 
+  applyPathologyFindings(state, findings);
   applyDiagnosisRouteBoost(state, findings);
   return findings.sort((a, b) => b.score - a.score).slice(0, 5);
 }
@@ -3725,6 +3812,65 @@ function renderCustomerTaskFocus(state, findings, groups, labels, taskState) {
   taskList.appendChild(group);
 }
 
+function assistantAdviceSignature(state, findings) {
+  return JSON.stringify({
+    crop: state.crop,
+    stage: state.stage,
+    medium: state.medium,
+    concern: smartConcern.value,
+    topFinding: findings[0]?.title || "",
+    pathology: latestMatchedPathology.slice(0, 3).map((item) => item.id),
+    vision: (latestVisionResult?.labels || []).map((item) => item.label).sort(),
+    photoTypes: Array.from(capturedPhotoTypes).sort()
+  });
+}
+
+function assistantDiagnosisRequestBody(state, findings) {
+  return {
+    crop: cropNames[state.crop],
+    cropKey: state.crop,
+    stage: document.querySelector("#stage").selectedOptions[0].textContent,
+    stageKey: state.stage,
+    medium: mediumNames[state.medium],
+    mediumKey: state.medium,
+    concern: smartConcern.value,
+    findings,
+    pathologyMatches: latestMatchedPathology,
+    knowledgePathways: latestMatchedPathways,
+    vision: latestVisionResult,
+    photoQuality: {
+      gate: latestPhotoQualityGate,
+      required: requiredPhotoTypes(state),
+      captured: Array.from(capturedPhotoTypes),
+      signals: photoSignals
+    },
+    notes: state.notes
+  };
+}
+
+async function refreshAssistantAdvice(state, findings) {
+  const signature = assistantAdviceSignature(state, findings);
+  if (signature === latestAssistantAdviceSignature) return;
+  latestAssistantAdviceSignature = signature;
+  latestAssistantAdvice = null;
+  try {
+    const response = await fetch("/api/assistant/diagnosis", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(assistantDiagnosisRequestBody(state, findings))
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const advice = await response.json();
+    if (latestAssistantAdviceSignature !== signature) return;
+    latestAssistantAdvice = advice;
+    if (latestState && latestFindings.length && reportOutput) {
+      reportOutput.value = buildReport(latestState, latestFindings, latestMatchedPathways);
+    }
+  } catch {
+    if (latestAssistantAdviceSignature === signature) latestAssistantAdvice = null;
+  }
+}
+
 function valueOrDash(value, unit = "") {
   return value === null || value === undefined || value === "" ? "-" : `${value}${unit}`;
 }
@@ -3871,6 +4017,30 @@ function buildReport(state, findings, matchedPathways = []) {
     });
   }
 
+  if (latestMatchedPathology.length) {
+    lines.push("", "## 病理候选");
+    latestMatchedPathology.slice(0, 4).forEach((item, index) => {
+      lines.push(`${index + 1}. ${item.id} / ${item.title} / ${item.confidence}%`);
+      lines.push(`   - 证据：${item.evidence.join("；")}`);
+      lines.push(`   - 排除项：${item.differentials.join("；")}`);
+      lines.push(`   - 缺失信息：${item.missingInfo.join("；")}`);
+      lines.push(`   - 命中原因：${item.reasons.join("；")}`);
+    });
+  }
+
+  if (latestAssistantAdvice) {
+    lines.push("", "## 辅助大模型复核");
+    lines.push(`- Provider：${latestAssistantAdvice.provider} / ${latestAssistantAdvice.model}`);
+    lines.push(`- 摘要：${latestAssistantAdvice.summary}`);
+    lines.push(`- 可信度：${Math.round((latestAssistantAdvice.confidence || 0) * 100)}%`);
+    if (latestAssistantAdvice.evidence?.length) lines.push(`- 证据：${latestAssistantAdvice.evidence.join("；")}`);
+    if (latestAssistantAdvice.differentials?.length) lines.push(`- 排除项：${latestAssistantAdvice.differentials.join("；")}`);
+    if (latestAssistantAdvice.missingInfo?.length) lines.push(`- 缺失信息：${latestAssistantAdvice.missingInfo.join("；")}`);
+    lines.push(`- 下一步：${latestAssistantAdvice.nextAction}`);
+    lines.push(`- 下一张照片：${latestAssistantAdvice.nextPhoto}`);
+    if (latestAssistantAdvice.fallbackReason) lines.push(`- fallback：${latestAssistantAdvice.fallbackReason}`);
+  }
+
   lines.push("", "## 下一步处方");
   findings.forEach((finding) => lines.push(`- ${finding.action}`));
   matchedPathways.forEach((pathway) => {
@@ -3974,6 +4144,8 @@ function reportPayload(state, findings) {
     findings,
     customerActions: buildCustomerActions(state, findings, latestMatchedPathways),
     knowledgePathways: latestMatchedPathways,
+    pathologyMatches: latestMatchedPathology,
+    assistantAdvice: latestAssistantAdvice,
     tasks: flattenTasks(buildTasks(state, findings)),
     photoPlan: buildPhotoPlan(state),
     followupPlan: buildFollowupPlan(state),
@@ -5243,6 +5415,7 @@ function renderKnowledgeGraphStats(stats) {
   knowledgeGraphStats.innerHTML = [
     insightCard("作物", stats.crops),
     insightCard("路径", stats.visiblePathways),
+    insightCard("病理条件", stats.pathologyConditions || 0),
     insightCard("节点", stats.nodes),
     insightCard("关系", stats.edges)
   ].join("");
@@ -5289,8 +5462,9 @@ async function loadKnowledgeGraph() {
     const isFiltered = Boolean(params.toString());
     if (!isFiltered) {
       knowledgeGraphPathways = data.pathways;
+      pathologyConditions = data.pathology?.conditions || [];
       if (latestState && latestFindings.length) {
-        renderDiagnosis(latestState, latestFindings);
+        renderDiagnosis(latestState, diagnose(latestState));
       }
     }
 
@@ -6780,8 +6954,11 @@ function renderDiagnosis(state, findings) {
   );
   renderList(followupList, [...buildFollowupPlan(state), ...graphFollowups], (item) => item);
   renderHistory();
+  const nextAssistantSignature = assistantAdviceSignature(state, findings);
+  if (nextAssistantSignature !== latestAssistantAdviceSignature) latestAssistantAdvice = null;
   reportOutput.value = buildReport(state, findings, latestMatchedPathways);
   maybeAutoArchiveCustomerDiagnosis(state, findings);
+  refreshAssistantAdvice(state, findings);
 
   const opportunities = [
     basePlans[state.crop].opportunity,

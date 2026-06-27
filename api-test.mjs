@@ -325,6 +325,7 @@ try {
   const integrations = await integrationsResponse.json();
   if (
     !integrations.items?.some((item) => item.key === "vision-ai") ||
+    !integrations.items?.some((item) => item.key === "auxiliary-llm") ||
     !integrations.items?.some((item) => item.key === "real-notifications") ||
     !integrations.items?.some((item) => item.key === "sensor-bridge") ||
     !integrations.items?.some((item) => item.key === "native-camera")
@@ -370,10 +371,27 @@ try {
   const knowledgeGraph = await knowledgeGraphResponse.json();
   if (
     knowledgeGraph.stats.visiblePathways < 1 ||
+    knowledgeGraph.stats.pathologyConditions < 1 ||
+    !knowledgeGraph.pathology?.conditions?.some((item) => item.id === "tomato-blossom-drop-heat-pollination") ||
     !knowledgeGraph.pathways.some((item) => item.id === "tomato-flower-no-fruit") ||
     !knowledgeGraph.graph.nodes.some((node) => node.type === "photo_signal")
   ) {
     throw new Error("Knowledge graph payload mismatch");
+  }
+
+  const pathologyResponse = await fetch(`${base}/api/pathology-library?crop=basil`);
+  if (pathologyResponse.status !== 200) {
+    throw new Error(`GET /api/pathology-library failed: ${pathologyResponse.status}`);
+  }
+  const pathology = await pathologyResponse.json();
+  if (
+    pathology.stats.conditions < 40 ||
+    pathology.stats.visibleConditions < 8 ||
+    !pathology.conditions.some((item) => item.id === "basil-leggy-low-light") ||
+    !pathology.conditions.every((item) => item.cropKey === "basil") ||
+    !pathology.sourceIndex?.["ncsu-basil"]
+  ) {
+    throw new Error("Pathology library payload mismatch");
   }
 
   const goldenPathsResponse = await fetch(`${base}/api/golden-paths`);
@@ -468,6 +486,49 @@ try {
   const comparison = await compareResponse.json();
   if (comparison.trend !== "improved") {
     throw new Error("Vision comparison payload mismatch");
+  }
+
+  const assistantResponse = await fetch(`${base}/api/assistant/diagnosis`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      crop: "basil",
+      stage: "vegetative",
+      findings: [
+        {
+          title: "罗勒弱光徒长",
+          score: 88,
+          why: "节间变长且补光不足。",
+          action: "把补光稳定到 12-14 小时，并从节点上方掐顶。"
+        }
+      ],
+      pathologyMatches: [
+        {
+          id: "basil-leggy-low-light",
+          title: "罗勒弱光徒长",
+          summary: "弱光和灯距过远会让节间拉长、叶片变小、香味变淡。",
+          confidence: 91,
+          evidence: ["节间长", "顶部追光"],
+          differentials: ["过密抢光", "迟迟没有采收"],
+          missingInfo: ["灯距", "最近一次修剪时间"],
+          action: "把补光稳定到 12-14 小时，并从节点上方掐顶促侧枝。",
+          followup: { photo: "整株侧面" }
+        }
+      ],
+      photoQuality: { required: ["plant", "leaf"] }
+    })
+  });
+  if (assistantResponse.status !== 200) {
+    throw new Error(`POST /api/assistant/diagnosis failed: ${assistantResponse.status}`);
+  }
+  const assistant = await assistantResponse.json();
+  if (
+    assistant.provider !== "local-pathology-assistant" ||
+    assistant.integrationContract?.version !== "fivecrop-auxiliary-llm-v1" ||
+    !assistant.evidence?.includes("节间长") ||
+    !assistant.nextAction?.includes("补光")
+  ) {
+    throw new Error("Assistant diagnosis fallback payload mismatch");
   }
 
   const storageResponse = await fetch(`${base}/api/storage/status`);

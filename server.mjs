@@ -5,6 +5,7 @@ import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { buildGoldenPathCases, buildKnowledgeGraphView, flattenKnowledgeGraph, knowledgeGraph } from "./knowledge-graph.mjs";
+import { flattenPathologyLibrary, pathologyLibrary, pathologyStats } from "./pathology-library.mjs";
 
 const root = process.cwd();
 const portArgIndex = process.argv.indexOf("--port");
@@ -21,10 +22,13 @@ const notificationPath = join(dataDir, "notification-jobs.json");
 const sqlitePath = join(dataDir, "grow-clinic.sqlite");
 const openAiEndpoint = "https://api.openai.com/v1/responses";
 const qwenEndpoint = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+const defaultMinimaxBaseUrl = "https://api.minimax.chat/v1";
 const defaultVisionModel = "gpt-4.1-mini";
 const defaultQwenVisionModel = "qwen-vl-plus";
+const defaultMinimaxAssistantModel = "MiniMax-Text-01";
 const openAiRequestTimeoutMs = Math.max(5000, Number(process.env.OPENAI_REQUEST_TIMEOUT_MS) || 45000);
 const visionRequestTimeoutMs = Math.max(5000, Number(process.env.VISION_REQUEST_TIMEOUT_MS) || openAiRequestTimeoutMs);
+const auxiliaryRequestTimeoutMs = Math.max(5000, Number(process.env.AUX_LLM_REQUEST_TIMEOUT_MS) || 30000);
 const visionOutputSchema = {
   type: "object",
   additionalProperties: false,
@@ -182,6 +186,11 @@ async function configuredVisionProvider() {
   return ["auto", "qwen", "openai", "local"].includes(requested) ? requested : "auto";
 }
 
+async function configuredAuxiliaryProvider() {
+  const requested = String(await readEnvValue("AUX_LLM_PROVIDER") || "local").trim().toLowerCase();
+  return ["local", "minimax"].includes(requested) ? requested : "local";
+}
+
 async function integrationStatusPayload() {
   const env = {
     vision: await envPresence([
@@ -191,6 +200,13 @@ async function integrationStatusPayload() {
       "QWEN_VISION_MODEL",
       "OPENAI_API_KEY",
       "OPENAI_VISION_MODEL"
+    ]),
+    auxiliary: await envPresence([
+      "AUX_LLM_PROVIDER",
+      "MINIMAX_API_KEY",
+      "MINIMAX_MODEL",
+      "MINIMAX_BASE_URL",
+      "AUX_LLM_REQUEST_TIMEOUT_MS"
     ]),
     notifications: await envPresence([
       "NOTIFICATION_EMAIL_WEBHOOK_URL",
@@ -213,8 +229,10 @@ async function integrationStatusPayload() {
   const anyNotification = Object.values(notificationChannels).some(Boolean);
   const anySensor = Object.values(env.sensors).some(Boolean);
   const visionProvider = await configuredVisionProvider();
+  const auxiliaryProvider = await configuredAuxiliaryProvider();
   const hasQwenVision = env.vision.DASHSCOPE_API_KEY || env.vision.QWEN_API_KEY;
   const hasOpenAiVision = env.vision.OPENAI_API_KEY;
+  const hasMinimaxAssistant = auxiliaryProvider === "minimax" && env.auxiliary.MINIMAX_API_KEY;
   const hasConfiguredVision = visionProvider === "qwen"
     ? hasQwenVision
     : visionProvider === "openai"
@@ -253,6 +271,20 @@ async function integrationStatusPayload() {
           : "Recommended: set VISION_PROVIDER=qwen and DASHSCOPE_API_KEY; optional QWEN_VISION_MODEL.",
         requiredEnv: ["DASHSCOPE_API_KEY or QWEN_API_KEY"],
         optionalEnv: ["VISION_PROVIDER", "QWEN_VISION_MODEL", "OPENAI_API_KEY", "OPENAI_VISION_MODEL"]
+      },
+      {
+        key: "auxiliary-llm",
+        title: "辅助大模型",
+        status: statusLevel(hasMinimaxAssistant),
+        summary: hasMinimaxAssistant
+          ? `Auxiliary LLM configured: MiniMax; active model: ${env.auxiliary.MINIMAX_MODEL ? "custom MiniMax model" : defaultMinimaxAssistantModel}.`
+          : "Using deterministic FiveCrop pathology rules until AUX_LLM_PROVIDER=minimax and MINIMAX_API_KEY are configured.",
+        next: hasMinimaxAssistant
+          ? "Use /api/assistant/diagnosis to review pathology candidates before exposing advice to customers."
+          : "Set AUX_LLM_PROVIDER=minimax and MINIMAX_API_KEY; optional MINIMAX_MODEL and MINIMAX_BASE_URL.",
+        env: env.auxiliary,
+        requiredEnv: ["AUX_LLM_PROVIDER=minimax", "MINIMAX_API_KEY"],
+        optionalEnv: ["MINIMAX_MODEL", "MINIMAX_BASE_URL", "AUX_LLM_REQUEST_TIMEOUT_MS"]
       },
       {
         key: "real-notifications",
@@ -1367,6 +1399,174 @@ function outputTextFromResponse(payload) {
     .join("\n");
 }
 
+function outputTextFromChatCompletion(payload) {
+  const content = payload?.choices?.[0]?.message?.content;
+  if (Array.isArray(content)) {
+    return content.map((item) => item.text || item.content || "").filter(Boolean).join("\n");
+  }
+  return String(content || payload?.choices?.[0]?.text || "").trim();
+}
+
+function normalizeAssistantPayload(raw = {}, body = {}, meta = {}) {
+  const topFinding = body.findings?.[0] || {};
+  const topPathology = body.pathologyMatches?.[0] || {};
+  const evidence = Array.isArray(raw.evidence) && raw.evidence.length
+    ? raw.evidence
+    : topPathology.evidence || [topFinding.why || "证据不足，需要补拍关键照片"];
+  const differentials = Array.isArray(raw.differentials) && raw.differentials.length
+    ? raw.differentials
+    : topPathology.differentials || [];
+  const missingInfo = Array.isArray(raw.missingInfo) && raw.missingInfo.length
+    ? raw.missingInfo
+    : topPathology.missingInfo || [];
+  const nextPhoto = String(raw.nextPhoto || topPathology.followup?.photo || body.photoQuality?.required?.[0] || "整株照").slice(0, 120);
+  return {
+    provider: meta.provider || "auxiliary-llm",
+    model: meta.model || "unknown",
+    readyForAuxiliaryProvider: meta.readyForAuxiliaryProvider !== false,
+    summary: String(raw.summary || topPathology.summary || topFinding.title || "当前证据不足，先补齐照片再判断。").slice(0, 260),
+    confidence: Number.isFinite(Number(raw.confidence))
+      ? Math.max(0, Math.min(1, Number(raw.confidence)))
+      : Math.max(0.35, Math.min(0.82, Number(topPathology.confidence || topFinding.score || 45) / 100)),
+    evidence: evidence.map((item) => String(item).slice(0, 160)).slice(0, 4),
+    differentials: differentials.map((item) => String(item).slice(0, 160)).slice(0, 4),
+    missingInfo: missingInfo.map((item) => String(item).slice(0, 160)).slice(0, 4),
+    nextAction: String(raw.nextAction || topPathology.action || topFinding.action || "先补拍一张清晰整株照。").slice(0, 180),
+    nextPhoto,
+    customerSafeAdvice: String(raw.customerSafeAdvice || raw.nextAction || topPathology.action || topFinding.action || "先补齐关键照片，再给今天唯一动作。").slice(0, 180),
+    internalNotes: String(raw.internalNotes || meta.fallbackReason || "").slice(0, 360),
+    fallbackReason: meta.fallbackReason || null,
+    integrationContract: {
+      version: "fivecrop-auxiliary-llm-v1",
+      providerRole: "text-reasoning-review",
+      canSwapProviderWithoutUiChange: true,
+      expectedInputs: ["crop", "stage", "findings", "pathologyMatches", "vision", "photoQuality"],
+      expectedOutputs: ["summary", "evidence", "differentials", "missingInfo", "nextAction", "nextPhoto", "customerSafeAdvice"]
+    }
+  };
+}
+
+function localAssistantPayload(body = {}, fallbackReason = null) {
+  return normalizeAssistantPayload({}, body, {
+    provider: "local-pathology-assistant",
+    model: "fivecrop-rules",
+    readyForAuxiliaryProvider: false,
+    fallbackReason
+  });
+}
+
+function minimaxAssistantMessages(body = {}) {
+  return [
+    {
+      role: "system",
+      content: [
+        "You are FiveCrop's auxiliary diagnosis reviewer for indoor edible crops.",
+        "Qwen Vision handles image recognition; you only review text evidence, pathology candidates, and next-step logic.",
+        "Supported crops only: tomato, basil, rosemary, strawberry, pepper.",
+        "Do not invent unseen symptoms, sensor readings, pathogens, products, or chemical treatments.",
+        "Prefer conservative uncertainty. Keep customer advice to one action and one next photo.",
+        "Return only a JSON object in Chinese with the requested fields."
+      ].join("\n")
+    },
+    {
+      role: "user",
+      content: JSON.stringify({
+        contract: {
+          summary: "诊断摘要，最多 80 个中文字符",
+          confidence: 0.0,
+          evidence: ["2-4 个证据点"],
+          differentials: ["需要排除的相似问题"],
+          missingInfo: ["还缺什么信息或照片"],
+          nextAction: "今天唯一动作",
+          nextPhoto: "下一张照片类型/角度",
+          customerSafeAdvice: "可以给客户看的短建议",
+          internalNotes: "给内部专家的注意点"
+        },
+        case: {
+          crop: body.crop || body.cropKey || body.state?.crop,
+          stage: body.stage || body.stageKey || body.state?.stage,
+          medium: body.medium || body.mediumKey || body.state?.medium,
+          concern: body.concern || body.state?.concern,
+          findings: body.findings || [],
+          pathologyMatches: body.pathologyMatches || [],
+          knowledgePathways: body.knowledgePathways || [],
+          vision: body.vision || null,
+          photoQuality: body.photoQuality || null,
+          notes: body.notes || ""
+        }
+      })
+    }
+  ];
+}
+
+async function minimaxErrorDetail(response) {
+  try {
+    const errorPayload = await response.json();
+    return JSON.stringify(errorPayload).slice(0, 900);
+  } catch {
+    return "minimax-error-body-unavailable";
+  }
+}
+
+async function requestMinimaxAssistant(apiKey, body, model, baseUrl, options = {}) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), auxiliaryRequestTimeoutMs);
+  const endpoint = `${String(baseUrl || defaultMinimaxBaseUrl).replace(/\/$/, "")}/chat/completions`;
+  const requestBody = {
+    model,
+    messages: minimaxAssistantMessages(body),
+    temperature: 0.2,
+    max_tokens: 900
+  };
+  if (options.structured !== false) requestBody.response_format = { type: "json_object" };
+  try {
+    return await fetch(endpoint, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json"
+      },
+      body: JSON.stringify(requestBody)
+    });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function assistantDiagnosisPayload(body = {}) {
+  const provider = await configuredAuxiliaryProvider();
+  if (provider !== "minimax") return localAssistantPayload(body, "auxiliary-provider-not-minimax");
+  const apiKey = await readEnvValue("MINIMAX_API_KEY");
+  if (!apiKey) return localAssistantPayload(body, "missing-minimax-api-key");
+  const model = await readEnvValue("MINIMAX_MODEL") || defaultMinimaxAssistantModel;
+  const baseUrl = await readEnvValue("MINIMAX_BASE_URL") || defaultMinimaxBaseUrl;
+  try {
+    let response = await requestMinimaxAssistant(apiKey, body, model, baseUrl);
+    if (!response.ok) {
+      const detail = await minimaxErrorDetail(response);
+      if (response.status === 400 && /response_format|json|schema|format/i.test(detail)) {
+        response = await requestMinimaxAssistant(apiKey, body, model, baseUrl, { structured: false });
+      } else {
+        return localAssistantPayload(body, `minimax-http-${response.status}: ${detail}`);
+      }
+    }
+    if (!response.ok) {
+      return localAssistantPayload(body, `minimax-http-${response.status}: ${await minimaxErrorDetail(response)}`);
+    }
+    const payload = await response.json();
+    const parsed = jsonFromModelText(outputTextFromChatCompletion(payload));
+    if (!parsed) return localAssistantPayload(body, "minimax-invalid-json");
+    return normalizeAssistantPayload(parsed, body, {
+      provider: "minimax-chat-completions",
+      model,
+      readyForAuxiliaryProvider: true
+    });
+  } catch (error) {
+    return localAssistantPayload(body, `minimax-request-failed: ${String(error?.message || error).slice(0, 220)}`);
+  }
+}
+
 function validChoice(value, choices, fallback) {
   return choices.includes(value) ? value : fallback;
 }
@@ -2257,18 +2457,45 @@ const server = createServer(async (req, res) => {
       const stage = (url.searchParams.get("stage") || "").trim();
       const pathways = flattenKnowledgeGraph(knowledgeGraph)
         .filter((item) => (!crop || item.cropKey === crop) && (!stage || item.stage === stage));
+      const pathologyConditions = flattenPathologyLibrary(pathologyLibrary)
+        .filter((item) => (!crop || item.cropKey === crop) && (!stage || item.stage === stage));
       const graphView = buildKnowledgeGraphView(knowledgeGraph);
       sendJson(res, 200, {
         ...knowledgeGraph,
         pathways,
+        pathology: {
+          version: pathologyLibrary.version,
+          scope: pathologyLibrary.scope,
+          conditions: pathologyConditions,
+          stats: pathologyStats(pathologyLibrary)
+        },
         graph: graphView,
         stats: {
           crops: Object.keys(knowledgeGraph.crops).length,
           pathways: flattenKnowledgeGraph(knowledgeGraph).length,
           visiblePathways: pathways.length,
+          pathologyConditions: pathologyConditions.length,
           nodes: graphView.nodes.length,
           edges: graphView.edges.length
         }
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/pathology-library" && req.method === "GET") {
+      const crop = (url.searchParams.get("crop") || "").trim();
+      const stage = (url.searchParams.get("stage") || "").trim();
+      const conditions = flattenPathologyLibrary(pathologyLibrary)
+        .filter((item) => (!crop || item.cropKey === crop) && (!stage || item.stage === stage));
+      sendJson(res, 200, {
+        version: pathologyLibrary.version,
+        scope: pathologyLibrary.scope,
+        sourceIndex: pathologyLibrary.sourceIndex,
+        stats: {
+          ...pathologyStats(pathologyLibrary),
+          visibleConditions: conditions.length
+        },
+        conditions
       });
       return;
     }
@@ -2303,6 +2530,11 @@ const server = createServer(async (req, res) => {
 
     if (url.pathname === "/api/vision/compare" && req.method === "POST") {
       sendJson(res, 200, compareVisionPayload(await readJsonBody(req)));
+      return;
+    }
+
+    if (url.pathname === "/api/assistant/diagnosis" && req.method === "POST") {
+      sendJson(res, 200, await assistantDiagnosisPayload(await readJsonBody(req)));
       return;
     }
 
