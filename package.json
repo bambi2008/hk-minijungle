@@ -9,6 +9,7 @@
     "start:lan": "node server.mjs --host 0.0.0.0 --port 8004",
     "check": "node --check app.js && node --check p2-growth.js && node --check server.mjs && node --check vision-provider-smoke.mjs && node --check vision-golden-paths-smoke.mjs && node smoke-test.mjs && node api-test.mjs",
     "health": "node health-check.mjs",
+    "minimax:exec": "node minimax-execute.mjs",
     "vision:smoke": "node vision-provider-smoke.mjs",
     "vision:golden": "node vision-golden-paths-smoke.mjs"
   }
