@@ -505,6 +505,15 @@ const basilGuidancePlans = {
     summary: "从种子开始时，重点是先稳出苗，再用打顶建立分枝和连续采收节奏。",
     currentAction: "如果已有 4-6 个节点或株高约 15-20cm，今天从健康节点上方第一次打顶；还没到这个高度就先补光和通风。",
     pollination: "罗勒不是结果作物，日常不需要人工授粉；除非你想留种，否则花苞出现就及时摘掉。",
+    followup: "Come back in 7 days. Take one whole-plant side photo and one top-node photo.",
+    evidence: ["Pinch at 4-6 nodes", "No pollination needed", "Remove flower buds unless saving seed"],
+    reminders: [{
+      key: "day7",
+      task: "对比节间长度、侧枝数量和是否出现花苞",
+      photo: "整株侧面和顶部节点",
+      success: "侧枝变多，节间不再继续拉长，没有新的花苞压力。",
+      reason: "打顶、补光和采收节奏通常需要 7 天才能看出株型变化"
+    }],
     steps: [
       ["0-7 天", "保持介质均匀微湿但不积水，出苗后给明亮散射光或弱补光，并开始轻通风。"],
       ["2-3 对真叶", "定苗或分盆，避免一次重肥；弱苗先淘汰，留下株型紧凑、叶色均匀的苗。"],
@@ -517,6 +526,15 @@ const basilGuidancePlans = {
     summary: "移栽后的第一目标不是长得快，而是让根毛恢复吸水，避免冷、湿、强光叠加。",
     currentAction: "刚移栽后的 24-48 小时只稳环境：避开强光和热风，介质微湿不积水，不施肥、不重剪。",
     pollination: "移栽稳定前不要为了留种让它开花；花苞会消耗恢复期能量，建议先摘掉。",
+    followup: "Come back in 48 hours. Take one whole-plant photo and one stem-base photo.",
+    evidence: ["Hold transplant stress", "No feed or hard prune", "Remove flowers during recovery"],
+    reminders: [{
+      key: "48h",
+      task: "确认萎蔫是否恢复、茎基部是否发黑",
+      photo: "整株和茎基部特写",
+      success: "新梢恢复挺立，茎基部不发黑，介质不长期积水。",
+      reason: "移栽压力和黑脚/根腐风险先看 48 小时变化"
+    }],
     steps: [
       ["当天", "少动根、少浇大水；拍整株和茎基部作为基线，确认没有茎基部发黑。"],
       ["第 1-2 天", "保持温和光照和空气流动，观察是否继续萎蔫；不要换盆、施肥、重剪同时发生。"],
@@ -529,12 +547,201 @@ const basilGuidancePlans = {
     summary: "买回来的成品罗勒先做隔离、光照适应和轻采收，不急着换盆。",
     currentAction: "今天先不移栽，检查叶背和茎节有没有虫害，拍整株基线；如果株型拥挤，先轻采收而不是猛剪。",
     pollination: "成品罗勒若已经抽花，优先摘花和打顶；日常不需要授粉，留种才保留花穗。",
+    followup: "Come back in 3 days. Take one whole-plant photo and one leaf-back photo.",
+    evidence: ["Quarantine first", "Light harvest before hard pruning", "Remove flower spikes"],
+    reminders: [{
+      key: "day3",
+      task: "复查叶背虫点、采收后新梢和是否继续抽花",
+      photo: "整株、叶背和顶部节点",
+      success: "叶背没有新增虫点，新梢保持挺立，没有继续抽花或突然萎蔫。",
+      reason: "买回隔离、轻采收和摘花后，3 天内能看出是否稳定"
+    }],
     steps: [
       ["第 0 天", "隔离观察，检查叶背、小飞虫和茎基部；原盆状态稳定时先不要急着换盆。"],
       ["第 2-5 天", "逐步增加光照，减少叶面喷水；下部黄叶和拥挤叶可以少量清理。"],
       ["第 7 天", "如果适应良好，从顶部节点上方打顶并开始规律采收，保留 2-3 个主枝。"],
       ["长期", "每周至少轻采收一次；香味弱时先看光照、氮肥和采收频率。"]
     ]
+  }
+};
+
+const cropCareGuidancePlans = {
+  basil: basilGuidancePlans,
+  tomato: {
+    seed: {
+      label: "Seedling",
+      summary: "矮生番茄从种子或小苗开始时，重点是防徒长、少株数、早建立花序复查基线。",
+      currentAction: "如果已有 2-4 片真叶，今天只做一件事：增加有效光照并确认每株有独立空间；不要同时加大肥和换大盆。",
+      followup: "Come back in 7 days. Take one whole-plant side photo to compare internodes.",
+      evidence: ["Light and spacing first", "Keep 1-2 compact plants", "Pollinate only after flowers open"],
+      reminders: [{
+        key: "day7",
+        task: "对比节间长度、株型紧凑度和是否准备进入花序期",
+        photo: "整株侧面和顶部新叶",
+        success: "节间没有继续拉长，新叶稳定，植株没有因高氮只长叶。",
+        reason: "防徒长和少株数调整需要 7 天才能看出株型方向"
+      }]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "移栽矮生番茄先稳根，再进入开花授粉；缓苗期最怕强光、缺水和重肥同时发生。",
+      currentAction: "移栽后的 48 小时先稳水分和温度，拍整株基线；看到新叶恢复挺立即逐步加光，不要马上重肥。",
+      followup: "Come back in 3 days. Take the same whole-plant angle and one stem-base photo.",
+      evidence: ["Hold transplant stress", "No heavy feed today", "Flower check after recovery"],
+      reminders: [{
+        key: "day3",
+        task: "确认缓苗是否恢复，再决定是否进入开花/授粉管理",
+        photo: "同角度整株和茎基部",
+        success: "新叶恢复挺立，茎基部稳定，没有继续萎蔫。",
+        reason: "番茄移栽恢复通常第 3 天能判断是否可以加光和进入下一阶段"
+      }]
+    },
+    store: {
+      label: "Store plant",
+      summary: "买来的矮生番茄先确认是否真的是紧凑品种，再管理光照、支撑和授粉。",
+      currentAction: "今天先检查株高、标签和花序；如果已经开花，中午轻弹花序 5 秒，先不要换盆和重剪。",
+      followup: "Come back in 3-5 days. Take one flower-cluster photo to check fruit set.",
+      evidence: ["Confirm compact variety", "Hand pollinate open flowers", "Watch heat and water swings"],
+      reminders: [{
+        key: "day3",
+        task: "记录同一花序的开花数、落花数和小果保留数",
+        photo: "同一花序/小果特写",
+        success: "落花减少，小果开始保留或膨大。",
+        reason: "番茄轻弹授粉后通常 3-5 天能看到坐果第一轮信号"
+      }]
+    }
+  },
+  rosemary: {
+    seed: {
+      label: "Young plant",
+      summary: "迷迭香早期生长慢，主动养护的核心是强光、通风和偏干根区，不追求快速长大。",
+      currentAction: "今天把它放到最亮且通风的位置，等表层明显变干再浇水；不要为了促长频繁施肥。",
+      followup: "Come back in 7 days. Take one whole-plant side photo and one soil-surface photo.",
+      evidence: ["Strong light", "Airflow", "Let the root zone dry down"],
+      reminders: [{
+        key: "day7",
+        task: "确认新梢是否紧凑、叶尖是否继续发黑、根区是否过湿",
+        photo: "整株侧面和土表",
+        success: "新梢稳定，叶尖不继续发黑，土表能正常干湿循环。",
+        reason: "迷迭香强光、通风和控水调整需要 7 天观察"
+      }]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "迷迭香移栽后最怕闷湿和根区缺氧，缓苗期要少动、少水、强通风。",
+      currentAction: "移栽后的 72 小时先不追肥、不重剪，只保持明亮散射光和空气流动；盆土湿时不要补水。",
+      followup: "Come back in 48-72 hours. Take a root-zone or soil-surface photo.",
+      evidence: ["Avoid wet roots", "No heavy pruning", "Check stem base"],
+      reminders: [{
+        key: "48h",
+        task: "确认移栽后根区没有长期闷湿，茎基部没有发黑",
+        photo: "土表、盆口和茎基部",
+        success: "茎基部不发黑，叶尖不继续恶化，土表不是一直湿亮。",
+        reason: "迷迭香移栽后的闷湿风险优先看 48-72 小时"
+      }]
+    },
+    store: {
+      label: "Store plant",
+      summary: "买来的迷迭香常见问题是原盆过湿、室内弱光或突然重剪，先做环境适应。",
+      currentAction: "今天先检查盆土是否一直湿、叶尖是否发黑；放到强光通风处，先不要换大盆。",
+      followup: "Come back in 3 days. Take the same side photo and soil-surface photo.",
+      evidence: ["Check wet soil", "Strong light acclimation", "Do not overwater"],
+      reminders: [{
+        key: "day3",
+        task: "复查盆土干湿、叶尖发黑和环境适应情况",
+        photo: "同角度整株和土表",
+        success: "叶尖没有继续发黑，盆土开始有干湿变化，植株不继续萎蔫。",
+        reason: "买回后控水和强光适应 3 天内能看出是否稳定"
+      }]
+    }
+  },
+  strawberry: {
+    seed: {
+      label: "Runner/seed",
+      summary: "草莓早期重点是 crown 不埋不湿、强光和根系稳定；开花后才进入授粉管理。",
+      currentAction: "今天确认冠部露在介质表面、没有被水泡住；如果还没开花，先只稳光照和水分。",
+      followup: "Come back in 7 days. Take one crown photo and one whole-plant photo.",
+      evidence: ["Crown stays dry", "No pollination before flowers", "Watch new leaf quality"],
+      reminders: [{
+        key: "day7",
+        task: "确认冠部干爽、新叶质量和是否进入开花窗口",
+        photo: "冠部特写和整株",
+        success: "冠部不潮湿腐软，新叶稳定，未开花前不误做授粉动作。",
+        reason: "草莓早期先看冠部和根系稳定，7 天后再判断是否进入花期"
+      }]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "草莓移栽后先防冠部潮湿和缓苗萎蔫，再看开花和果形。",
+      currentAction: "今天把冠部露出来并擦干周围积水，缓苗期不要把水喷进叶心。",
+      followup: "Come back in 48 hours. Take a crown close-up from the same angle.",
+      evidence: ["Crown above medium", "Avoid misting crown", "Check wilt recovery"],
+      reminders: [{
+        key: "48h",
+        task: "确认冠部是否保持干爽、缓苗萎蔫是否恢复",
+        photo: "同角度冠部特写",
+        success: "冠部不积水、不发黑，新叶和叶柄不继续塌软。",
+        reason: "草莓移栽后冠部潮湿风险 48 小时内最需要复查"
+      }]
+    },
+    store: {
+      label: "Store plant",
+      summary: "买来的草莓如果已经开花，客户最需要知道何时人工授粉、何时看坐果。",
+      currentAction: "如果花已完全打开，今天中午用小刷子轻刷花心 3-5 秒；没开花就只保持冠部干爽。",
+      followup: "Come back in 3 days. Take one same-flower photo to check early fruit set.",
+      evidence: ["Hand pollinate open flowers", "Dry crown", "Review fruit set in 3 days"],
+      reminders: [{
+        key: "day3",
+        task: "复查同一朵花是否开始坐果，果形是否正常",
+        photo: "同一朵花或刚坐果的小果",
+        success: "花心开始膨大，小果保留，下一批果形不明显畸形。",
+        reason: "草莓软刷授粉后 3 天左右能看到早期坐果信号"
+      }]
+    }
+  },
+  pepper: {
+    seed: {
+      label: "Seedling",
+      summary: "矮生辣椒前期要先建立紧凑株形和根区稳定，避免氮肥过高导致只长叶不开花。",
+      currentAction: "如果还没开花，今天先把补光稳定到 14 小时左右，并避免继续加高氮肥。",
+      followup: "Come back in 7 days. Take one whole-plant side photo to compare compact growth.",
+      evidence: ["Compact growth first", "Avoid excess nitrogen", "Pollinate after flowers open"],
+      reminders: [{
+        key: "day7",
+        task: "对比株型紧凑度、顶部新叶和是否出现第一批花苞",
+        photo: "整株侧面和顶部新叶",
+        success: "节间稳定，没有继续只长叶；若出现花苞，再进入授粉/控温复查。",
+        reason: "辣椒补光和控氮调整需要 7 天观察株型方向"
+      }]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "辣椒移栽后先稳根区和温度；缓苗未恢复前不要急着催花催果。",
+      currentAction: "移栽后 48 小时内保持根区微湿但不忽干忽湿，避开灯下过热；今天不要重肥。",
+      followup: "Come back in 3 days. Take one whole-plant side photo and one new-tip photo.",
+      evidence: ["Hold moisture steady", "Avoid heat swings", "No heavy feed today"],
+      reminders: [{
+        key: "day3",
+        task: "确认缓苗是否恢复、顶部新叶是否继续生长",
+        photo: "整株侧面和新梢",
+        success: "新梢恢复挺立，叶片不继续下垂，灯下温度没有造成萎蔫。",
+        reason: "辣椒移栽后第 3 天适合判断是否可以恢复正常光照和营养"
+      }]
+    },
+    store: {
+      label: "Store plant",
+      summary: "买来的小型辣椒如果已经带花苞，重点是控温、稳水和辅助授粉。",
+      currentAction: "如果已有开放花，今天中午轻弹花柄 5 秒并确认灯下温度不过热；落花时先稳温水，不急着加肥。",
+      followup: "Come back in 3-5 days. Take one flower or young-fruit node photo.",
+      evidence: ["Hand pollinate open flowers", "Control heat", "Watch flower drop"],
+      reminders: [{
+        key: "day3",
+        task: "记录开放花、落花和小果保留情况",
+        photo: "同一花/幼果节点特写",
+        success: "落花减少，小果保留，灯下高温或忽干忽湿没有继续触发落花。",
+        reason: "辣椒辅助授粉和稳温水后 3-5 天能看出落花方向"
+      }]
+    }
   }
 };
 
@@ -1009,46 +1216,124 @@ function writeCustomerCareRecord(record) {
   }
 }
 
+function carePlansForCrop(cropKey) {
+  return cropCareGuidancePlans[cropKey] || cropCareGuidancePlans.basil;
+}
+
+function careModeForCrop(cropKey, requestedMode = basilGuideMode) {
+  const plans = carePlansForCrop(cropKey);
+  if (plans[requestedMode]) return requestedMode;
+  return Object.keys(plans)[0] || "seed";
+}
+
+function activeCarePlan(state = getFormState()) {
+  const mode = careModeForCrop(state.crop);
+  return {
+    mode,
+    plan: carePlansForCrop(state.crop)[mode]
+  };
+}
+
 function customerCareModel(state = getFormState()) {
   const crop = cropNames[state.crop] || "Plant";
-  if (state.crop === "basil") {
-    const plan = basilGuidancePlans[basilGuideMode] || basilGuidancePlans.seed;
-    const model = {
-      cropKey: state.crop,
-      mode: basilGuideMode,
-      modeLabel: plan.label,
-      title: `${crop} care today`,
-      message: `${plan.summary} ${basilGuidanceStageHint(state)}`,
-      action: plan.currentAction,
-      followup: "Come back in 7 days. Take a whole-plant side photo and one pruning-node detail.",
-      evidence: [
-        plan.label,
-        "No pollination unless saving seed",
-        has(state, "weak-aroma") || smartConcern.value === "aroma"
-          ? "Track light, fertilizer and harvest frequency"
-          : "Review: shape, side shoots and harvest node"
-      ]
-    };
-    return {
-      ...model,
-      completed: readCustomerCareRecord()?.signature === customerCareSignature(model)
-    };
-  }
-
+  const { mode, plan } = activeCarePlan(state);
   const model = {
     cropKey: state.crop,
-    mode: "photo-first",
-    modeLabel: "Photo first",
+    mode,
+    modeLabel: plan.label,
     title: `${crop} care today`,
-    message: "Routine guidance is being built crop by crop. For this plant, FiveCrop should first confirm the visible state.",
-    action: "Take one clear whole-plant photo.",
-    followup: "FiveCrop will set the return photo after the diagnosis.",
-    evidence: ["Routine care is live first for basil", "Photo check gives a specific next action", "Follow-up timing comes after diagnosis"]
+    message: state.crop === "basil" ? `${plan.summary} ${basilGuidanceStageHint(state)}` : plan.summary,
+    action: plan.currentAction,
+    followup: plan.followup,
+    evidence: plan.evidence || [plan.label],
+    reminders: plan.reminders || []
   };
   return {
     ...model,
-    completed: false
+    completed: readCustomerCareRecord()?.signature === customerCareSignature(model)
   };
+}
+
+function careReminderItemsForModel(model, state = getFormState()) {
+  if (Array.isArray(model.reminders) && model.reminders.length) return model.reminders;
+  const actionItems = followupItemsForCompletedAction(state, latestFindings, model.action);
+  if (actionItems.length) return actionItems;
+  return [{
+    key: "day7",
+    task: "观察今天的养护动作是否让植株保持稳定",
+    photo: "整株同角度照片",
+    success: "植株没有继续变差，并出现新的稳定生长信号。",
+    reason: "主动养护动作通常需要 7 天确认趋势"
+  }];
+}
+
+function scheduleRemindersFromCareAction(state, model, record = {}) {
+  const actionCompletedAt = record.completedAt || new Date().toISOString();
+  const anchorMs = Date.parse(actionCompletedAt) || Date.now();
+  const sourceItems = careReminderItemsForModel(model, state);
+  const items = sourceItems.map((item) => ({
+    ...item,
+    label: reminderLabel(item.key),
+    dueAt: new Date(anchorMs + reminderOffsetMs(item.key)).toISOString(),
+    completedAt: null,
+    source: "care-action",
+    cropKey: model.cropKey,
+    careMode: model.mode,
+    rescheduledFromActionAt: actionCompletedAt
+  }));
+  const plan = {
+    signature: `care|${customerCareSignature(model)}`,
+    source: "care-action",
+    cropKey: model.cropKey,
+    careMode: model.mode,
+    createdAt: actionCompletedAt,
+    actionCompletedAt,
+    actionCompletedTask: model.action,
+    actionFollowupMode: "care-action",
+    actionFollowupReason: items[0]?.reason || "已按你完成主动养护动作的时间安排复查。",
+    items
+  };
+  setReminderPlan(plan);
+  return plan;
+}
+
+function refreshAfterCareAction(state, model, record) {
+  const plan = scheduleRemindersFromCareAction(state, model, record);
+  touchCustomerArchiveRecord({
+    lastEvent: "care-action-completed",
+    actionCompletedAt: record?.completedAt || new Date().toISOString(),
+    actionText: model.action,
+    cropKey: model.cropKey,
+    careMode: model.mode
+  });
+  renderReminderSchedule(state, latestFindings);
+  renderFollowupLoop(state, latestFindings);
+  renderCustomerReminderSummary(state, latestFindings);
+  renderCustomerProgressSummary(state);
+  renderCustomerSummary(state, latestFindings);
+  renderCustomerPlantDossier(state, latestFindings);
+  renderCustomerCaseTimeline();
+  renderCustomerCompactPlan(state, latestFindings);
+  renderCustomerMobileExperience(state);
+  renderCustomerJourney(state, latestFindings);
+
+  const pending = firstPendingReminder(plan);
+  const handoff = actionFollowupHandoff(plan);
+  if (customerReminderKicker && customerReminderTitle && customerReminderMessage && customerReminderMeta) {
+    customerReminderKicker.textContent = "动作已完成";
+    customerReminderTitle.textContent = handoff?.title || "我会提醒你复查";
+    customerReminderMessage.textContent = handoff?.message || "现在不用继续操作，到点只拍复查照。";
+    customerReminderMeta.innerHTML = "";
+    [
+      handoff?.idleAdvice || "现在不用继续操作",
+      handoff?.photo || (pending?.photo ? `拍 ${pending.photo}` : "同角度拍照"),
+      handoff?.dueAt || (pending?.dueAt ? `复查时间 ${dueLabel(pending.dueAt)}` : "")
+    ].filter(Boolean).forEach((item) => {
+      const chip = document.createElement("span");
+      chip.textContent = item;
+      customerReminderMeta.appendChild(chip);
+    });
+  }
 }
 
 function renderCustomerEntryActions() {
@@ -1078,9 +1363,14 @@ function renderCustomerCareCard(state = getFormState(), stage = customerAppShell
   customerCareFollowup.textContent = model.followup;
 
   const modeRow = customerCareModeButtons[0]?.closest(".customer-care-mode-row");
-  if (modeRow) modeRow.hidden = state.crop !== "basil";
+  if (modeRow) modeRow.hidden = !carePlansForCrop(state.crop);
   customerCareModeButtons.forEach((button) => {
-    const active = button.dataset.customerCareMode === basilGuideMode;
+    const plans = carePlansForCrop(state.crop);
+    const mode = button.dataset.customerCareMode;
+    const plan = plans[mode];
+    button.hidden = !plan;
+    button.textContent = plan?.label || mode;
+    const active = mode === model.mode;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
@@ -1876,6 +2166,18 @@ function ensureReminderPlan(state, findings) {
   return plan;
 }
 
+function currentCareReminderPlan(state = getFormState()) {
+  const existing = getReminderPlan();
+  if (existing?.source === "care-action" && existing.cropKey === state.crop) return existing;
+  return null;
+}
+
+function activeReminderPlan(state = getFormState(), findings = latestFindings) {
+  const carePlan = currentCareReminderPlan(state);
+  if (carePlan && firstPendingReminder(carePlan)) return carePlan;
+  return ensureReminderPlan(state, findings);
+}
+
 function firstPendingReminder(plan = getReminderPlan()) {
   return plan?.items?.find((item) => !item.completedAt) || null;
 }
@@ -2165,7 +2467,7 @@ function renderReminders(state, findings) {
 }
 
 function renderReminderSchedule(state, findings) {
-  const plan = ensureReminderPlan(state, findings);
+  const plan = activeReminderPlan(state, findings);
   reminderScheduleList.innerHTML = "";
 
   if (!plan) {
@@ -2228,7 +2530,7 @@ function followupSuccessText(item) {
 }
 
 function followupLoopInstruction(state = getFormState(), findings = latestFindings) {
-  const plan = ensureReminderPlan(state, findings);
+  const plan = activeReminderPlan(state, findings);
   const pending = firstPendingReminder(plan);
   const fallback = buildReminders(state, findings)[0];
   const item = pending || fallback;
@@ -2389,8 +2691,27 @@ function renderFollowupLoop(state = getFormState(), findings = latestFindings) {
 }
 
 function customerReminderSummary(state = getFormState(), findings = latestFindings) {
+  const carePlan = customerEntryMode === "care" ? currentCareReminderPlan(state) : null;
+  if (customerEntryMode === "care" && !carePlan) {
+    const model = customerCareModel(state);
+    return {
+      kicker: "提醒",
+      title: "完成今天动作后安排复查",
+      message: model.followup || "点完成后，我会按这棵植物的阶段提醒你回来拍复查照。",
+      meta: ["App 内提醒", "到点拍复查照", "不用手动算时间"]
+    };
+  }
   const loop = followupLoopInstruction(state, findings);
   if (loop.disabled) {
+    if (customerEntryMode === "care") {
+      const model = customerCareModel(state);
+      return {
+        kicker: "提醒",
+        title: "完成今天动作后安排复查",
+        message: model.followup || "点完成后，我会按这棵植物的阶段提醒你回来拍复查照。",
+        meta: ["App 内提醒", "到点拍复查照", "不用手动算时间"]
+      };
+    }
     return {
       kicker: "提醒",
       title: "先完成这次诊断",
@@ -2399,7 +2720,7 @@ function customerReminderSummary(state = getFormState(), findings = latestFindin
     };
   }
 
-  const plan = getReminderPlan();
+  const plan = carePlan || activeReminderPlan(state, findings);
   const pending = firstPendingReminder(plan);
   if (loop.due) {
     return {
@@ -2694,7 +3015,7 @@ function customerTaskLabels() {
   };
 }
 
-function isWaitingForActionFollowup(plan = getReminderPlan()) {
+function isWaitingForActionFollowup(plan = activeReminderPlan()) {
   const pending = firstPendingReminder(plan);
   return Boolean(plan?.actionCompletedAt && pending?.dueAt && !isReminderDue(pending));
 }
@@ -3154,6 +3475,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
   if (customerMobileAction) customerMobileAction.textContent = model.action;
   if (customerMobileFollowup) customerMobileFollowup.textContent = model.followup;
   renderCustomerCareCard(state, stage);
+  renderCustomerReminderSummary(state, latestFindings);
   if (customerMobileEvidence) {
     const icons = [
       '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 20v-7M7 13c-3 0-5-2-5-5 3 0 5 2 5 5Zm0 3c4 0 7-3 7-7-4 0-7 3-7 7Z"/></svg>',
@@ -5927,7 +6249,7 @@ function applyInitialCustomerUrlState() {
   const crop = params.get("crop");
   if (crop && cropNames[crop] && cropSelect) cropSelect.value = crop;
   const careMode = params.get("care");
-  if (careMode && basilGuidancePlans[careMode]) basilGuideMode = careMode;
+  if (careMode && carePlansForCrop(cropSelect?.value || "basil")[careMode]) basilGuideMode = careMode;
   const intent = params.get("intent");
   if (intent === "care" || intent === "photo") {
     setCustomerEntryMode(intent, { persist: false });
@@ -8153,7 +8475,7 @@ cropQuickButtons.forEach((button) => {
 customerCareModeButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const nextMode = button.dataset.customerCareMode;
-    if (!basilGuidancePlans[nextMode]) return;
+    if (!carePlansForCrop(getFormState().crop)[nextMode]) return;
     basilGuideMode = nextMode;
     try {
       localStorage.setItem(basilGuideStorageKey, nextMode);
@@ -8449,15 +8771,16 @@ function runCustomerPrimaryAction(action) {
   if (action === "care-complete") {
     const state = getFormState();
     const model = customerCareModel(state);
-    writeCustomerCareRecord({
+    const record = {
       signature: customerCareSignature(model),
       cropKey: model.cropKey,
       mode: model.mode,
       action: model.action,
       completedAt: new Date().toISOString()
-    });
-    renderCustomerMobileExperience(state);
-    focusCustomerTarget(customerCareCard);
+    };
+    writeCustomerCareRecord(record);
+    refreshAfterCareAction(state, model, record);
+    focusCustomerTarget(customerReminderCard || customerCareCard);
     return;
   }
   if (action === "complete-current-task") {
