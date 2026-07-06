@@ -385,13 +385,107 @@ try {
   }
   const pathology = await pathologyResponse.json();
   if (
-    pathology.stats.conditions < 40 ||
-    pathology.stats.visibleConditions < 8 ||
+    pathology.stats.conditions < 44 ||
+    pathology.stats.visibleConditions < 12 ||
+    pathology.expertLayer?.evidenceVersion !== "fivecrop-expert-evidence-v1" ||
     !pathology.conditions.some((item) => item.id === "basil-leggy-low-light") ||
+    !pathology.conditions.some((item) => item.id === "basil-black-leg-root-rot") ||
+    !pathology.conditions.some((item) => item.id === "basil-chewing-pest-leaf-holes") ||
+    !pathology.conditions.some((item) => item.id === "basil-leaf-powdery-gray-mold-humidity") ||
+    !pathology.conditions.some((item) => item.id === "basil-transplant-shock-wilting") ||
+    !pathology.conditions.every((item) => item.expertEvidence?.decisionRule && item.prescriptionProtocol?.doNot?.length) ||
     !pathology.conditions.every((item) => item.cropKey === "basil") ||
     !pathology.sourceIndex?.["ncsu-basil"]
   ) {
     throw new Error("Pathology library payload mismatch");
+  }
+
+  const validationResponse = await fetch(`${base}/api/case-validation`);
+  if (validationResponse.status !== 200) {
+    throw new Error(`GET /api/case-validation failed: ${validationResponse.status}`);
+  }
+  const validation = await validationResponse.json();
+  if (
+    validation.validation?.ready !== true ||
+    validation.stats.conditions !== 44 ||
+    validation.stats.photoFixtures < 176 ||
+    validation.stats.minPhotosPerCondition < 3 ||
+    !validation.cases.every((item) => item.photoFixtures?.length >= 3 && item.expertEvidence?.decisionRule && item.prescriptionProtocol?.oneAction)
+  ) {
+    throw new Error("Case validation payload mismatch");
+  }
+
+  const correctionResponse = await fetch(`${base}/api/expert-corrections`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      cropKey: "basil",
+      conditionId: "basil-leggy-low-light",
+      predictedDiagnosis: "Basil low-light leggy growth",
+      correctedDiagnosis: "Basil leggy growth with missed pruning",
+      finalOutcome: "confirmed_by_expert",
+      correctionReason: "Internode evidence is valid, but pruning history changes the primary action."
+    })
+  });
+  if (correctionResponse.status !== 201) {
+    throw new Error(`POST /api/expert-corrections failed: ${correctionResponse.status}`);
+  }
+  const savedCorrection = await correctionResponse.json();
+  if (savedCorrection.conditionId !== "basil-leggy-low-light" || !savedCorrection.id) {
+    throw new Error("Expert correction persistence payload mismatch");
+  }
+  const correctionListResponse = await fetch(`${base}/api/expert-corrections?conditionId=basil-leggy-low-light`);
+  const correctionList = await correctionListResponse.json();
+  if (correctionList.stats?.corrections < 1 || !correctionList.corrections.some((item) => item.id === savedCorrection.id)) {
+    throw new Error("Expert correction list payload mismatch");
+  }
+  const correctedPathologyResponse = await fetch(`${base}/api/pathology-library?crop=basil`);
+  const correctedPathology = await correctedPathologyResponse.json();
+  const correctedCondition = correctedPathology.conditions.find((item) => item.id === "basil-leggy-low-light");
+  if (!correctedCondition?.correctionSummary || correctedCondition.correctionSummary.count < 1) {
+    throw new Error("Expert correction did not feed back into pathology library");
+  }
+
+  const publicPhotoRecordResponse = await fetch(`${base}/api/public-photo-test-records`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      fixtureGroupId: "tomato-blossom-drop-public-print",
+      cropKey: "tomato",
+      goldenPath: "tomato blossom drop",
+      expectedConditionId: "tomato-blossom-drop-heat-pollination",
+      sourceNumber: 2,
+      captureVariant: "straight",
+      result: "captured",
+      source: "mobile-capture",
+      appCropResult: "tomato",
+      appConditionResult: "tomato-blossom-drop-heat-pollination"
+    })
+  });
+  if (publicPhotoRecordResponse.status !== 201) {
+    throw new Error(`POST /api/public-photo-test-records failed: ${publicPhotoRecordResponse.status}`);
+  }
+  const publicPhotoSaved = await publicPhotoRecordResponse.json();
+  if (
+    !publicPhotoSaved.id ||
+    publicPhotoSaved.fixtureGroupId !== "tomato-blossom-drop-public-print" ||
+    publicPhotoSaved.sourceNumber !== 2 ||
+    publicPhotoSaved.captureVariant !== "straight"
+  ) {
+    throw new Error("Public photo test record persistence payload mismatch");
+  }
+  const publicPhotoListResponse = await fetch(`${base}/api/public-photo-test-records`);
+  const publicPhotoList = await publicPhotoListResponse.json();
+  if (!publicPhotoList.records?.some((item) => item.id === publicPhotoSaved.id && item.source === "mobile-capture")) {
+    throw new Error("Public photo test record list payload mismatch");
+  }
+  const publicPhotoClearResponse = await fetch(`${base}/api/public-photo-test-records`, { method: "DELETE" });
+  if (publicPhotoClearResponse.status !== 200) {
+    throw new Error(`DELETE /api/public-photo-test-records failed: ${publicPhotoClearResponse.status}`);
+  }
+  const publicPhotoAfterClear = await (await fetch(`${base}/api/public-photo-test-records`)).json();
+  if (publicPhotoAfterClear.records?.length !== 0) {
+    throw new Error("Public photo test records were not cleared");
   }
 
   const goldenPathsResponse = await fetch(`${base}/api/golden-paths`);
@@ -461,6 +555,10 @@ try {
   if (
     !vision.readyForAiProvider ||
     vision.modelInput.cropKey !== "tomato" ||
+    vision.requestedCropKey !== "tomato" ||
+    vision.detectedCropKey !== "unknown" ||
+    vision.needsCropVerification !== true ||
+    vision.hasCropIdentityEvidence !== false ||
     vision.clientPipeline?.version !== "ai-pipeline-v1" ||
     !vision.integrationContract?.canSwapProviderWithoutUiChange ||
     !vision.labels.some((item) => item.label === "yellowing") ||

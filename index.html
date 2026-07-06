@@ -374,12 +374,18 @@
           <label><input type="checkbox" name="visuals" value="pale-new-growth"> 新叶发淡</label>
           <label><input type="checkbox" name="visuals" value="lower-yellowing"> 老叶先黄</label>
           <label><input type="checkbox" name="visuals" value="long-internodes"> 节间很长</label>
+          <label><input type="checkbox" name="visuals" value="flower-buds"> 花苞/花穗</label>
+          <label><input type="checkbox" name="visuals" value="sparse-leaves"> 叶子变少</label>
           <label><input type="checkbox" name="visuals" value="flower-drop"> 落花/小果掉落</label>
           <label><input type="checkbox" name="visuals" value="edge-dry"> 边缘干缩</label>
           <label><input type="checkbox" name="visuals" value="green-surface"> 表面发绿</label>
           <label><input type="checkbox" name="visuals" value="white-fuzz"> 白毛/絮状物</label>
+          <label><input type="checkbox" name="visuals" value="leaf-white-powder"> 叶面白粉</label>
+          <label><input type="checkbox" name="visuals" value="gray-mold"> 灰霉绒毛</label>
           <label><input type="checkbox" name="visuals" value="webbing"> 细网/蛛丝</label>
           <label><input type="checkbox" name="visuals" value="tiny-flies"> 小飞虫</label>
+          <label><input type="checkbox" name="visuals" value="leaf-holes"> 叶片孔洞</label>
+          <label><input type="checkbox" name="visuals" value="chewed-edge"> 叶缘被啃</label>
         </fieldset>
 
         <fieldset class="symptom-field">
@@ -387,8 +393,10 @@
           <label><input type="checkbox" name="symptoms" value="yellow-leaves"> 叶片发黄</label>
           <label><input type="checkbox" name="symptoms" value="leggy"> 徒长、茎细</label>
           <label><input type="checkbox" name="symptoms" value="wilting"> 萎蔫</label>
+          <label><input type="checkbox" name="symptoms" value="transplant-shock"> 刚移栽/缓苗</label>
           <label><input type="checkbox" name="symptoms" value="leaf-curl"> 卷叶</label>
           <label><input type="checkbox" name="symptoms" value="spots"> 斑点/焦边</label>
+          <label><input type="checkbox" name="symptoms" value="bolting"> 很快开花/抽薹</label>
           <label><input type="checkbox" name="symptoms" value="no-flower"> 不开花</label>
           <label><input type="checkbox" name="symptoms" value="no-fruit"> 开花不结果</label>
           <label><input type="checkbox" name="symptoms" value="pests"> 有小飞虫/虫迹</label>
@@ -824,6 +832,21 @@
             <div id="pricing-boundary-list" class="p2-record-list"></div>
           </section>
         </article>
+        <article class="result-block report-block expert-only public-photo-test-panel" id="public-photo-test-panel">
+          <div class="block-title-row">
+            <h3>公开照片翻拍测试</h3>
+            <div class="button-row">
+              <a class="mini-button" href="PUBLIC_PHOTO_TEST_GUIDE.md" target="_blank" rel="noreferrer">打开指南</a>
+              <button type="button" id="refresh-public-photo-test-btn" class="mini-button">刷新记录</button>
+              <button type="button" id="export-public-photo-test-btn" class="mini-button">导出记录</button>
+              <button type="button" id="reset-public-photo-test-btn" class="mini-button">清空记录</button>
+            </div>
+          </div>
+          <p class="public-photo-test-intro">按五条黄金路径下载或打印公开照片，用手机 App 拍摄后，在这里记录识别结果。</p>
+          <div id="public-photo-test-metrics" class="experiment-grid"></div>
+          <div id="public-photo-test-list" class="public-photo-test-list"></div>
+          <textarea id="public-photo-test-log" readonly rows="8" placeholder="测试记录会保存在本浏览器，也可以导出 JSON。"></textarea>
+        </article>
         <article class="result-block report-block expert-only">
           <div class="block-title-row">
             <h3>竞品优势融合</h3>
@@ -865,7 +888,7 @@
     </section>
   </main>
 
-  <script src="p2-growth.js"></script>
-  <script src="app.js"></script>
+  <script src="p2-growth.js?v=20260705"></script>
+  <script src="app.js?v=20260705"></script>
 </body>
 </html>

@@ -177,6 +177,13 @@ const correctionStatus = document.querySelector("#correction-status");
 const correctionList = document.querySelector("#correction-list");
 const pricingBoundaryPanel = document.querySelector("#pricing-boundary-panel");
 const pricingBoundaryList = document.querySelector("#pricing-boundary-list");
+const publicPhotoTestPanel = document.querySelector("#public-photo-test-panel");
+const publicPhotoTestMetrics = document.querySelector("#public-photo-test-metrics");
+const publicPhotoTestList = document.querySelector("#public-photo-test-list");
+const publicPhotoTestLog = document.querySelector("#public-photo-test-log");
+const refreshPublicPhotoTestBtn = document.querySelector("#refresh-public-photo-test-btn");
+const exportPublicPhotoTestBtn = document.querySelector("#export-public-photo-test-btn");
+const resetPublicPhotoTestBtn = document.querySelector("#reset-public-photo-test-btn");
 const refreshProductStrategyBtn = document.querySelector("#refresh-product-strategy-btn");
 const productStrategyGrid = document.querySelector("#product-strategy-grid");
 const productStrategyList = document.querySelector("#product-strategy-list");
@@ -255,6 +262,7 @@ const baselinePhotoKey = "growClinicBaselinePhotoSignals";
 const activeCaseKey = "growClinicActiveCase";
 const customerAutoArchiveKey = "growClinicCustomerAutoArchive";
 const notificationChannelKey = "growClinicNotificationChannels";
+const publicPhotoTestKey = "fivecropPublicPhotoPrintResults";
 let latestState = null;
 let latestFindings = [];
 let photoSignals = {
@@ -276,6 +284,9 @@ let latestMatchedPathology = [];
 let latestAssistantAdvice = null;
 let latestAssistantAdviceSignature = "";
 let latestVisionResult = null;
+let publicPhotoFixtures = null;
+let publicPhotoServerRecords = null;
+let publicPhotoCaptureContext = null;
 let latestPhotoTypeDetection = null;
 let latestPhotoQualityGate = null;
 let latestAiPipelineSnapshot = null;
@@ -294,6 +305,14 @@ const cropNames = {
   strawberry: "草莓",
   pepper: "辣椒"
 };
+
+Object.assign(cropNames, {
+  tomato: "Tomato",
+  basil: "Basil",
+  rosemary: "Rosemary",
+  strawberry: "Strawberry",
+  pepper: "Pepper"
+});
 
 const cropConstraints = {
   tomato: "建议限定 Micro Tom、Orange Hat、Tiny Tim、Red Robin 等微型/矮生番茄；不支持普通无限生长番茄。",
@@ -1108,6 +1127,7 @@ function scorePathway(pathway, state) {
     },
     "basil-flowering-bitter": () => {
       add(state.stage === "flowering", 26, "罗勒进入开花阶段");
+      add(has(state, "bolting") || sees(state, "flower-buds") || sees(state, "sparse-leaves"), 26, "早花、花苞或叶量下降");
       add(has(state, "no-flower") || smartConcern.value === "leggy", 8, "需要判断修剪和采收节奏");
       add(state.climate === "hot" || state.moisture === "dry", 10, "热/旱压力可能逼花");
     },
@@ -2669,6 +2689,8 @@ function renderCustomerCompactPlan(state = getFormState(), findings = latestFind
 function customerEvidenceLabel(value) {
   const labels = {
     "flower-drop": "落花或花序变化",
+    "flower-buds": "花苞/花穗",
+    "sparse-leaves": "叶子变少",
     "long-internodes": "节间偏长",
     "pale-leaves": "叶色偏淡",
     "white-fuzz": "根区白色絮状物",
@@ -2677,9 +2699,18 @@ function customerEvidenceLabel(value) {
     "leaf-curl": "叶片卷曲",
     "yellow-leaves": "叶片发黄",
     "wilting": "叶片下垂",
+    "transplant-shock": "刚移栽/缓苗",
+    "recent-transplant": "近期移栽",
     "spots": "叶面斑点",
     "pests": "虫害痕迹",
+    "leaf-white-powder": "叶面白粉",
+    "gray-mold": "灰霉绒毛",
+    "powdery-mildew": "白粉病信号",
+    "leaf-holes": "叶片孔洞",
+    "chewed-edge": "叶缘被啃",
+    "chewing-damage": "啃食痕迹",
     "no-fruit": "开花后不坐果",
+    "bolting": "很快开花/抽薹",
     "leggy": "徒长",
     "algae": "根区藻绿",
     "root-browning": "根区褐变",
@@ -2817,17 +2848,15 @@ function renderCustomerMobileExperience(state = getFormState()) {
   const needsCropCheck = visionNeedsCropCheck();
   if (needsCropCheck) {
     const selected = cropNames[state.crop] || "this crop";
-    const detected = cropNames[latestVisionResult.detectedCropKey] || "another plant";
+    const detected = cropNames[latestVisionResult.detectedCropKey] || "";
     model = {
-      risk: latestVisionResult.cropMismatch ? "This may not match the selected crop" : "Crop needs confirmation",
-      action: latestVisionResult.cropMismatch
-        ? `Retake or switch from ${selected} to ${detected}`
-        : `Retake the whole plant before diagnosing ${selected}`,
-      followup: "Come back after one clear whole-plant photo",
+      risk: "Crop not confirmed",
+      action: "Retake one clear whole-plant photo",
+      followup: "Diagnosis starts after the crop is confirmed",
       evidence: [
-        ["Crop check", latestVisionResult.cropMismatch ? `Vision does not match ${selected}.` : "Vision cannot confirm this crop."],
-        ["Why it matters", "FiveCrop gives advice only for five edible crops."],
-        ["Next photo", "Frame the whole plant in bright light."]
+        ["Photo check", latestVisionResult.cropMismatch && detected ? `This looks closer to ${detected} than ${selected}.` : `We cannot confirm this is ${selected} yet.`],
+        ["Supported crops", "FiveCrop diagnoses tomato, basil, rosemary, strawberry, and pepper."],
+        ["Next photo", "Frame the whole plant in bright, even light."]
       ]
     };
   }
@@ -2856,8 +2885,9 @@ function renderCustomerMobileExperience(state = getFormState()) {
     action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
     followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
   };
+  stageCopy.photo = ["Show me what's changing.", "Frame the whole plant. We'll ask for a detail only if needed."];
   if (needsCropCheck) {
-    stageCopy.action = ["Confirm the crop first.", "FiveCrop only diagnoses tomato, basil, rosemary, strawberry, and pepper."];
+    stageCopy.action = ["Let's confirm the plant.", "FiveCrop only diagnoses tomato, basil, rosemary, strawberry, and pepper."];
   }
   if (customerAppTitle) customerAppTitle.textContent = stageCopy[stage][0];
   if (customerAppIntro) customerAppIntro.textContent = stageCopy[stage][1];
@@ -2876,14 +2906,16 @@ function renderCustomerMobileExperience(state = getFormState()) {
   if (customerStagePhoto) {
     customerStagePhoto.src = uploaded || "assets/tomato-diagnosis-preview.jpg";
     customerStagePhoto.alt = uploaded
-      ? `${cropNames[state.crop]} uploaded for diagnosis`
+      ? `${needsCropCheck ? "Unconfirmed crop" : cropNames[state.crop]} uploaded for diagnosis`
       : "Dwarf tomato plant beside an apartment window";
   }
   if (customerResultPhoto) {
     customerResultPhoto.src = uploaded || "assets/tomato-diagnosis-preview.jpg";
-    customerResultPhoto.alt = `${cropNames[state.crop]} photo used for this diagnosis`;
+    customerResultPhoto.alt = needsCropCheck
+      ? "Unconfirmed plant photo awaiting a clear whole-plant retake"
+      : `${cropNames[state.crop]} photo used for this diagnosis`;
   }
-  if (customerResultCrop) customerResultCrop.textContent = cropNames[state.crop];
+  if (customerResultCrop) customerResultCrop.textContent = needsCropCheck ? "Crop not confirmed" : cropNames[state.crop];
   if (customerPhotoStatusLabel) {
     customerPhotoStatusLabel.textContent = processing ? "Checking photo" : hasPhoto ? "Photo ready" : "Example";
   }
@@ -5244,6 +5276,12 @@ function p2AnnotationContext(state = latestState || getFormState()) {
   return {
     photoType: latestPhotoQualityGate?.photoType || state.photoType || "none",
     capturedPhotoTypes: Array.from(capturedPhotoTypes),
+    pathologyConditionId: latestMatchedPathology[0]?.id || null,
+    pathologyMatches: latestMatchedPathology.slice(0, 3).map((item) => ({
+      id: item.id,
+      title: item.title,
+      confidence: item.confidence
+    })),
     confidence: confidenceScore(),
     photoQuality: latestPhotoQualityGate,
     reminderPlan: getReminderPlan(),
@@ -5339,6 +5377,430 @@ async function loadP2GrowthDashboard() {
   renderAnnotationSchema();
   renderCorrectionList();
   renderPricingBoundary(reports);
+}
+
+const publicPhotoVariantLabels = {
+  straight: "正面",
+  angle: "斜拍",
+  dim: "暗光",
+  close: "近裁切"
+};
+
+const publicPhotoResultLabels = {
+  captured: "已拍摄",
+  pass: "通过",
+  retake: "要求重拍",
+  fail: "失败",
+  basil_default: "又默认罗勒"
+};
+
+function escapeMarkup(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (char) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  }[char]));
+}
+
+function readPublicPhotoTestRecords() {
+  if (Array.isArray(publicPhotoServerRecords)) return publicPhotoServerRecords;
+  try {
+    const records = JSON.parse(localStorage.getItem(publicPhotoTestKey) || "[]");
+    return Array.isArray(records) ? records : [];
+  } catch {
+    return [];
+  }
+}
+
+function writePublicPhotoTestRecords(records) {
+  localStorage.setItem(publicPhotoTestKey, JSON.stringify(records));
+}
+
+async function fetchPublicPhotoTestRecords() {
+  try {
+    const response = await fetch("/api/public-photo-test-records");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    publicPhotoServerRecords = Array.isArray(payload.records) ? payload.records : [];
+  } catch {
+    publicPhotoServerRecords = null;
+  }
+  return readPublicPhotoTestRecords();
+}
+
+async function persistPublicPhotoTestRecord(record) {
+  const localRecords = (() => {
+    try {
+      const current = JSON.parse(localStorage.getItem(publicPhotoTestKey) || "[]");
+      return Array.isArray(current) ? current : [];
+    } catch {
+      return [];
+    }
+  })();
+  localRecords.push(record);
+  writePublicPhotoTestRecords(localRecords);
+  try {
+    const response = await fetch("/api/public-photo-test-records", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(record)
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const saved = await response.json();
+    publicPhotoServerRecords = [...(publicPhotoServerRecords || []), saved];
+    return saved;
+  } catch {
+    publicPhotoServerRecords = null;
+    return record;
+  }
+}
+
+function publicPhotoExpectedCaptures(fixtures = publicPhotoFixtures) {
+  if (!fixtures?.fixtureGroups?.length) return 0;
+  return fixtures.fixtureGroups.reduce((sum, group) => (
+    sum + Number(group.minimumSourcePhotos || 5) * Object.keys(publicPhotoVariantLabels).length
+  ), 0);
+}
+
+function currentPublicPhotoSnapshot() {
+  const state = getFormState();
+  const topPathology = latestMatchedPathology[0] || null;
+  const riskText = mainRisk?.textContent?.trim() || "";
+  return {
+    appCropResult: state.crop || "unknown",
+    appCropLabel: cropNames[state.crop] || state.crop || "unknown",
+    appConditionResult: topPathology?.id || riskText || "not-run",
+    appConditionTitle: topPathology?.title || riskText || "not-run",
+    appNextAction: customerMobileAction?.textContent?.trim() || customerNextAction?.textContent?.trim() || "",
+    askedForRetake: Boolean(latestPhotoQualityGate?.retakeRecommended || shouldBlockDiagnosisForCropIdentity()),
+    visionCrop: latestVisionResult?.cropKey || latestVisionResult?.detectedCropKey || null,
+    visionProvider: latestVisionResult?.provider || latestAiPipelineSnapshot?.provider || null
+  };
+}
+
+function publicPhotoCaptureContextFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("capture") !== "public-photo") return null;
+  const groupId = params.get("group") || "";
+  if (!groupId) return null;
+  return {
+    groupId,
+    sourceNumber: Number(params.get("source")) || 1,
+    captureVariant: params.get("variant") || "straight"
+  };
+}
+
+function publicPhotoCaptureUrl({ groupId, sourceNumber, variant }) {
+  const params = new URLSearchParams();
+  params.set("capture", "public-photo");
+  params.set("group", groupId);
+  params.set("source", String(Number(sourceNumber) || 1));
+  params.set("variant", variant || "straight");
+  return `${window.location.origin}/?${params.toString()}`;
+}
+
+function publicPhotoContextGroup() {
+  if (!publicPhotoCaptureContext) return null;
+  return publicPhotoFixtures?.fixtureGroups?.find((item) => item.id === publicPhotoCaptureContext.groupId) || null;
+}
+
+function applyPublicPhotoCaptureContext() {
+  const group = publicPhotoContextGroup();
+  if (!group) return;
+  if (cropSelect) cropSelect.value = group.cropKey;
+  setPhotoType(group.photoTypes?.[0] || "plant");
+  requestedPhotoType = group.photoTypes?.[0] || "plant";
+  updateCropHint();
+  updateDeviceProfile();
+  runDiagnosis();
+  if (customerStartTitle) customerStartTitle.textContent = `测试源图 ${publicPhotoCaptureContext.sourceNumber}：${group.goldenPath}`;
+  if (customerStartMessage) {
+    customerStartMessage.textContent = `拍法：${publicPhotoVariantLabels[publicPhotoCaptureContext.captureVariant] || publicPhotoCaptureContext.captureVariant}。拍完会自动回写到电脑管理端。`;
+  }
+  if (customerAppIntro) {
+    customerAppIntro.textContent = `Test ${publicPhotoCaptureContext.sourceNumber} · ${publicPhotoVariantLabels[publicPhotoCaptureContext.captureVariant] || publicPhotoCaptureContext.captureVariant}`;
+  }
+}
+
+function renderPublicPhotoTestMetrics(records = readPublicPhotoTestRecords()) {
+  if (!publicPhotoTestMetrics) return;
+  const expected = publicPhotoExpectedCaptures();
+  const passCount = records.filter((item) => item.result === "pass").length;
+  const failCount = records.filter((item) => ["fail", "basil_default"].includes(item.result)).length;
+  const retakeCount = records.filter((item) => item.result === "retake").length;
+  const basilDefaultCount = records.filter((item) => item.result === "basil_default").length;
+  publicPhotoTestMetrics.innerHTML = [
+    metricCell("Captures", expected ? `${records.length}/${expected}` : records.length),
+    metricCell("Pass", passCount),
+    metricCell("Retake", retakeCount),
+    metricCell("Fail", failCount),
+    metricCell("Basil default", basilDefaultCount),
+    metricCell("Groups", publicPhotoFixtures?.fixtureGroups?.length || 0)
+  ].join("");
+}
+
+function publicPhotoRecordsForGroup(records, groupId) {
+  return records.filter((item) => item.fixtureGroupId === groupId);
+}
+
+function renderPublicPhotoTestLog(records = readPublicPhotoTestRecords()) {
+  if (!publicPhotoTestLog) return;
+  const recent = records.slice(-20).reverse();
+  publicPhotoTestLog.value = recent.length
+    ? JSON.stringify(recent, null, 2)
+    : "";
+}
+
+function renderPublicPhotoSourceLinks(group) {
+  const sourceMap = new Map((publicPhotoFixtures?.sources || []).map((source) => [source.id, source]));
+  return group.sourceRefs.map((ref) => {
+    const source = sourceMap.get(ref.sourceId);
+    if (!source) return "";
+    return `<a href="${escapeMarkup(source.url)}" target="_blank" rel="noreferrer">${escapeMarkup(source.title)}</a>`;
+  }).filter(Boolean).join("");
+}
+
+function renderPublicPhotoGroup(group, records) {
+  const groupRecords = publicPhotoRecordsForGroup(records, group.id);
+  const expected = Number(group.minimumSourcePhotos || 5) * Object.keys(publicPhotoVariantLabels).length;
+  const passCount = groupRecords.filter((item) => item.result === "pass").length;
+  const failCount = groupRecords.filter((item) => ["fail", "basil_default"].includes(item.result)).length;
+  const retakeCount = groupRecords.filter((item) => item.result === "retake").length;
+  const progress = expected ? Math.min(100, Math.round((groupRecords.length / expected) * 100)) : 0;
+  return `
+    <article class="public-photo-test-card" data-fixture-group="${escapeMarkup(group.id)}">
+      <div class="public-photo-test-card-head">
+        <div>
+          <span>${escapeMarkup(group.cropKey)} / ${escapeMarkup(group.expectedConditionId)}</span>
+          <strong>${escapeMarkup(group.goldenPath)}</strong>
+        </div>
+        <button type="button" class="mini-button" data-public-photo-action="load" data-group-id="${escapeMarkup(group.id)}">载入作物</button>
+      </div>
+      <div class="public-photo-progress" aria-label="Public photo test progress">
+        <i style="width: ${progress}%"></i>
+      </div>
+      <div class="public-photo-test-counts">
+        <span>${groupRecords.length}/${expected} captures</span>
+        <span>${passCount} pass</span>
+        <span>${retakeCount} retake</span>
+        <span>${failCount} fail</span>
+      </div>
+      <div class="public-photo-source-row">${renderPublicPhotoSourceLinks(group)}</div>
+      <div class="public-photo-evidence">
+        ${(group.evidenceChecklist || []).slice(0, 5).map((item) => `<span>${escapeMarkup(item)}</span>`).join("")}
+      </div>
+      <label class="public-photo-source-number">
+        <span>当前源图编号</span>
+        <input type="number" min="1" max="20" value="1" data-public-photo-source-number>
+      </label>
+      <div class="public-photo-variant-grid">
+        ${Object.entries(publicPhotoVariantLabels).map(([variant, label]) => `
+          <div class="public-photo-variant-row">
+            <strong>${escapeMarkup(label)}</strong>
+            <button type="button" data-public-photo-action="copy-link" data-group-id="${escapeMarkup(group.id)}" data-variant="${escapeMarkup(variant)}">复制手机链接</button>
+            <button type="button" data-public-photo-action="record" data-group-id="${escapeMarkup(group.id)}" data-variant="${escapeMarkup(variant)}" data-result="pass">通过</button>
+            <button type="button" data-public-photo-action="record" data-group-id="${escapeMarkup(group.id)}" data-variant="${escapeMarkup(variant)}" data-result="retake">重拍</button>
+            <button type="button" data-public-photo-action="record" data-group-id="${escapeMarkup(group.id)}" data-variant="${escapeMarkup(variant)}" data-result="fail">失败</button>
+            <button type="button" data-public-photo-action="record" data-group-id="${escapeMarkup(group.id)}" data-variant="${escapeMarkup(variant)}" data-result="basil_default">默认罗勒</button>
+          </div>
+        `).join("")}
+      </div>
+    </article>
+  `;
+}
+
+function renderPublicPhotoTestPanel(records = readPublicPhotoTestRecords()) {
+  if (!publicPhotoTestList) return;
+  renderPublicPhotoTestMetrics(records);
+  renderPublicPhotoTestLog(records);
+  const groups = publicPhotoFixtures?.fixtureGroups || [];
+  if (!groups.length) {
+    publicPhotoTestList.innerHTML = "<div class=\"p2-record-card\"><strong>公开照片清单未加载</strong><p>请确认 data/public-photo-fixtures.json 存在，并通过本地服务打开 App。</p></div>";
+    return;
+  }
+  publicPhotoTestList.innerHTML = groups.map((group) => renderPublicPhotoGroup(group, records)).join("");
+}
+
+async function loadPublicPhotoTestPanel() {
+  publicPhotoCaptureContext = publicPhotoCaptureContextFromUrl();
+  if (!publicPhotoTestPanel) return;
+  try {
+    const response = await fetch("/data/public-photo-fixtures.json");
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    publicPhotoFixtures = await response.json();
+  } catch {
+    publicPhotoFixtures = null;
+  }
+  const records = await fetchPublicPhotoTestRecords();
+  applyPublicPhotoCaptureContext();
+  renderPublicPhotoTestPanel(records);
+}
+
+function initialModeFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("capture") === "public-photo") return "customer";
+  if (params.get("mode") === "expert" || params.get("panel") === "public-photo-test") return "expert";
+  return localStorage.getItem("growClinicMode") || "customer";
+}
+
+function focusInitialPanelFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  const panel = params.get("panel");
+  const targetId = panel === "public-photo-test"
+    ? "public-photo-test-panel"
+    : window.location.hash.replace(/^#/, "");
+  if (!targetId) return;
+  window.setTimeout(() => {
+    document.getElementById(targetId)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, 150);
+}
+
+function enforceInitialUrlMode() {
+  const mode = initialModeFromUrl();
+  const params = new URLSearchParams(window.location.search);
+  if (params.get("mode") || params.get("panel") || params.get("capture")) {
+    setMode(mode);
+  }
+}
+
+function preparePublicPhotoGroup(groupId) {
+  const group = publicPhotoFixtures?.fixtureGroups?.find((item) => item.id === groupId);
+  if (!group) return;
+  if (cropSelect) cropSelect.value = group.cropKey;
+  setPhotoType(group.photoTypes?.[0] || "plant");
+  updateCropHint();
+  updateDeviceProfile();
+  runDiagnosis();
+  if (publicPhotoTestLog) {
+    publicPhotoTestLog.value = `已载入：${group.goldenPath}\n先用手机拍公开照片，再回到这里记录通过、重拍或失败。`;
+  }
+}
+
+async function copyPublicPhotoCaptureLink({ groupId, variant, sourceNumber }) {
+  const url = publicPhotoCaptureUrl({ groupId, sourceNumber, variant });
+  const localhostWarning = /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname)
+    ? "\n提示：如果手机打不开，把链接里的 127.0.0.1 换成电脑局域网 IP。"
+    : "";
+  try {
+    await navigator.clipboard.writeText(url);
+    if (publicPhotoTestLog) publicPhotoTestLog.value = `已复制手机拍摄链接：\n${url}${localhostWarning}`;
+  } catch {
+    if (publicPhotoTestLog) publicPhotoTestLog.value = `手机拍摄链接：\n${url}${localhostWarning}`;
+  }
+}
+
+async function savePublicPhotoTestRecord({ groupId, variant, result, sourceNumber, extra = {} }) {
+  const group = publicPhotoFixtures?.fixtureGroups?.find((item) => item.id === groupId);
+  if (!group) return;
+  const record = {
+    id: `public-photo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    createdAt: new Date().toISOString(),
+    fixtureGroupId: group.id,
+    cropKey: group.cropKey,
+    goldenPath: group.goldenPath,
+    expectedConditionId: group.expectedConditionId,
+    sourceNumber: Number(sourceNumber) || 1,
+    captureVariant: variant,
+    captureVariantLabel: publicPhotoVariantLabels[variant] || variant,
+    result,
+    resultLabel: publicPhotoResultLabels[result] || result,
+    ...currentPublicPhotoSnapshot(),
+    ...extra
+  };
+  await persistPublicPhotoTestRecord(record);
+  const records = await fetchPublicPhotoTestRecords();
+  renderPublicPhotoTestPanel(records);
+}
+
+function inferPublicPhotoAutoResult(group, gate, vision) {
+  const topPathology = latestMatchedPathology[0] || null;
+  const acceptedConditions = new Set([group.expectedConditionId, ...(group.secondaryConditionIds || [])].filter(Boolean));
+  const visionCrop = vision?.detectedCropKey || vision?.cropKey || "";
+  if (visionCrop === "basil" && group.cropKey !== "basil") return "basil_default";
+  if (gate?.retakeRecommended || visionNeedsCropCheck(vision)) return "retake";
+  if (topPathology?.id && acceptedConditions.has(topPathology.id)) return "captured";
+  return "captured";
+}
+
+async function syncPublicPhotoCaptureResult({ fileName, photoType, gate, vision, source, signals }) {
+  const group = publicPhotoContextGroup();
+  if (!group || !publicPhotoCaptureContext) return;
+  const result = inferPublicPhotoAutoResult(group, gate, vision);
+  await savePublicPhotoTestRecord({
+    groupId: group.id,
+    variant: publicPhotoCaptureContext.captureVariant,
+    sourceNumber: publicPhotoCaptureContext.sourceNumber,
+    result,
+    extra: {
+      source: "mobile-capture",
+      fileName,
+      photoType,
+      gateState: gate?.state || null,
+      gateMessage: gate?.message || null,
+      quality: {
+        dimensions: gate?.dimensions || null,
+        brightness: gate?.brightness ?? null,
+        contrast: gate?.contrast ?? null
+      },
+      sourceDevice: navigator.userAgent,
+      captureSource: source,
+      signals: {
+        greenRatio: signals?.greenRatio ?? null,
+        yellowRatio: signals?.yellowRatio ?? null,
+        darkRatio: signals?.darkRatio ?? null
+      }
+    }
+  });
+  if (photoHint) {
+    photoHint.textContent = `已同步测试记录：源图 ${publicPhotoCaptureContext.sourceNumber} / ${publicPhotoVariantLabels[publicPhotoCaptureContext.captureVariant] || publicPhotoCaptureContext.captureVariant}。`;
+  }
+}
+
+function handlePublicPhotoTestAction(event) {
+  const button = event.target.closest("[data-public-photo-action]");
+  if (!button) return;
+  const groupId = button.dataset.groupId;
+  if (button.dataset.publicPhotoAction === "load") {
+    preparePublicPhotoGroup(groupId);
+    return;
+  }
+  const card = button.closest("[data-fixture-group]");
+  const sourceNumber = card?.querySelector("[data-public-photo-source-number]")?.value || "1";
+  if (button.dataset.publicPhotoAction === "copy-link") {
+    copyPublicPhotoCaptureLink({
+      groupId,
+      variant: button.dataset.variant,
+      sourceNumber
+    });
+    return;
+  }
+  savePublicPhotoTestRecord({
+    groupId,
+    variant: button.dataset.variant,
+    result: button.dataset.result,
+    sourceNumber
+  });
+}
+
+function exportPublicPhotoTestRecords() {
+  const records = readPublicPhotoTestRecords();
+  const payload = {
+    version: "fivecrop-public-print-results-v1",
+    exportedAt: new Date().toISOString(),
+    total: records.length,
+    records
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `fivecrop-public-photo-results-${Date.now()}.json`;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function strategyList(items) {
@@ -5528,7 +5990,7 @@ function inferFromConcern() {
     yellow: ["pale-new-growth", "lower-yellowing"],
     leggy: ["long-internodes"],
     fruit: ["flower-drop"],
-    pest: ["tiny-flies"],
+    pest: ["tiny-flies", "leaf-holes", "chewed-edge"],
     root: ["green-surface", "white-fuzz"],
     dry: ["edge-dry"]
   };
@@ -5548,6 +6010,9 @@ function inferFromConcern() {
 
 function inferFromFileName(file) {
   const name = file?.name?.toLowerCase() || "";
+  const selectedCrop = cropSelect?.value || "";
+  const isBasilBoltingName = selectedCrop === "basil" || name.includes("basil") || name.includes("luole") || name.includes("罗勒");
+  const isBasilTransplantName = selectedCrop === "basil" || name.includes("basil") || name.includes("luole") || name.includes("罗勒");
   const symptoms = [];
   const visuals = [];
   if (name.includes("yellow") || name.includes("huang") || name.includes("leaf")) {
@@ -5555,7 +6020,27 @@ function inferFromFileName(file) {
     visuals.push("pale-new-growth");
     setPhotoType("leaf");
   }
-  if (name.includes("flower") || name.includes("fruit") || name.includes("tomato")) {
+  if (
+    isBasilBoltingName &&
+    (
+      name.includes("flower") ||
+      name.includes("bloom") ||
+      name.includes("bud") ||
+      name.includes("bolting") ||
+      name.includes("bitter") ||
+      name.includes("sparse") ||
+      name.includes("开花") ||
+      name.includes("花苞") ||
+      name.includes("花穗") ||
+      name.includes("抽薹") ||
+      name.includes("叶少") ||
+      name.includes("变苦")
+    )
+  ) {
+    symptoms.push("bolting");
+    visuals.push("flower-buds", "sparse-leaves");
+    setPhotoType("flower");
+  } else if (name.includes("flower") || name.includes("fruit") || name.includes("tomato")) {
     symptoms.push("no-fruit");
     visuals.push("flower-drop");
     setPhotoType("flower");
@@ -5565,10 +6050,46 @@ function inferFromFileName(file) {
     visuals.push("green-surface");
     setPhotoType("root");
   }
+  if (
+    isBasilTransplantName &&
+    (
+      name.includes("transplant") ||
+      name.includes("repot") ||
+      name.includes("potted-up") ||
+      name.includes("seedling-move") ||
+      name.includes("移栽") ||
+      name.includes("换盆") ||
+      name.includes("分株") ||
+      name.includes("缓苗")
+    )
+  ) {
+    symptoms.push("transplant-shock", "wilting");
+    setPhotoType("plant");
+  }
   if (name.includes("pest") || name.includes("bug") || name.includes("fly")) {
     symptoms.push("pests");
     visuals.push("tiny-flies");
     setPhotoType("pest");
+  }
+  if (name.includes("hole") || name.includes("chew") || name.includes("eaten") || name.includes("bite")) {
+    symptoms.push("pests");
+    visuals.push("leaf-holes", "chewed-edge");
+    setPhotoType("pest");
+  }
+  if (
+    name.includes("powder") ||
+    name.includes("mildew") ||
+    name.includes("botrytis") ||
+    name.includes("gray-mold") ||
+    name.includes("grey-mold") ||
+    name.includes("white-powder") ||
+    name.includes("白粉") ||
+    name.includes("灰霉") ||
+    name.includes("霉斑")
+  ) {
+    symptoms.push("spots");
+    visuals.push("leaf-white-powder", "gray-mold");
+    setPhotoType("leaf");
   }
   addChecked("symptoms", symptoms);
   addChecked("visuals", visuals);
@@ -5583,9 +6104,9 @@ function scorePhotoTypeKeywords(file, scores, reasons) {
   const name = file?.name?.toLowerCase() || "";
   const keywordGroups = {
     plant: ["plant", "whole", "full", "overall", "side", "overview", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "苗"],
-    leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "叶", "叶片", "黄叶", "斑点", "卷叶", "焦边"],
+    leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "powder", "mildew", "botrytis", "gray-mold", "grey-mold", "sparse", "叶", "叶片", "黄叶", "斑点", "卷叶", "焦边", "白粉", "灰霉", "霉斑", "叶少"],
     root: ["root", "xponge", "coco", "rockwool", "soil", "medium", "algae", "mold", "fungus", "gen", "根", "根区", "基质", "介质", "岩棉", "椰糠", "藻", "霉", "白毛"],
-    flower: ["flower", "bloom", "fruit", "tomato", "pepper", "strawberry", "berry", "hua", "guo", "花", "花序", "果", "果实", "番茄", "辣椒", "草莓"],
+    flower: ["flower", "bloom", "bud", "bolting", "fruit", "tomato", "pepper", "strawberry", "berry", "hua", "guo", "花", "花苞", "花穗", "花序", "抽薹", "果", "果实", "番茄", "辣椒", "草莓"],
     pest: ["pest", "bug", "fly", "gnat", "mite", "aphid", "insect", "worm", "虫", "飞虫", "小飞虫", "蚜", "螨", "粘板"]
   };
 
@@ -5760,6 +6281,9 @@ function applyVisionHints(result) {
       symptoms.push("wilting");
       visuals.push("edge-dry");
     }
+    if (hint === "transplant-shock") {
+      symptoms.push("transplant-shock", "wilting");
+    }
     if (hint === "leaf-curl") {
       symptoms.push("leaf-curl");
     }
@@ -5778,8 +6302,88 @@ function applyVisionHints(result) {
       visuals.push("flower-drop");
     }
   });
+  (result.labels || []).forEach((item) => {
+    const label = item?.label || item;
+    if (label === "flower-buds") {
+      symptoms.push("bolting");
+      visuals.push("flower-buds");
+    }
+    if (label === "sparse-leaves") {
+      symptoms.push("bolting");
+      visuals.push("sparse-leaves");
+    }
+    if (label === "recent-transplant") {
+      symptoms.push("transplant-shock", "wilting");
+    }
+    if (label === "leaf-holes" || label === "chewing-damage") {
+      symptoms.push("pests");
+      visuals.push("leaf-holes", "chewed-edge");
+    }
+    if (label === "powdery-mildew") {
+      symptoms.push("spots");
+      visuals.push("leaf-white-powder");
+    }
+    if (label === "gray-mold") {
+      symptoms.push("spots");
+      visuals.push("gray-mold");
+    }
+    if (label === "possible-pest") {
+      symptoms.push("pests");
+    }
+  });
   addChecked("symptoms", symptoms);
   addChecked("visuals", visuals);
+}
+
+function cropVerificationHint(result, selectedCropName) {
+  const detected = cropNames[result?.detectedCropKey] || "";
+  if (result?.cropMismatch && detected) {
+    return `This photo does not look like ${selectedCropName}. Retake one clear whole-plant photo before diagnosis.`;
+  }
+  return `FiveCrop cannot confirm this is ${selectedCropName} yet. Retake one clear whole-plant photo before diagnosis.`;
+}
+
+function shouldBlockDiagnosisForCropIdentity() {
+  return Boolean(visionNeedsCropCheck() && document.body.classList.contains("has-plant-photo"));
+}
+
+function renderCropIdentityBlock(state = getFormState()) {
+  latestState = state;
+  latestFindings = [];
+  latestMatchedPathways = [];
+  latestMatchedPathology = [];
+  latestAssistantAdvice = null;
+  latestAssistantAdviceSignature = "";
+  syncCustomerIntakeState(state);
+  renderCustomerMobileExperience(state);
+  if (readiness) readiness.textContent = "Crop not confirmed";
+  if (mainRisk) mainRisk.textContent = "Crop not confirmed";
+  if (mainSummary) {
+    mainSummary.textContent = "FiveCrop needs one clear whole-plant photo before it can give care advice.";
+  }
+  renderList(causesList, [
+    "The current photo does not confirm tomato, basil, rosemary, strawberry, or pepper."
+  ], (item) => item);
+  renderList(actionsList, ["Retake one clear whole-plant photo"], (item) => item);
+  renderList(taskList, ["Retake one clear whole-plant photo"], (item) => item);
+  renderMatchedPathways([]);
+  renderMinimalQuestions(state, []);
+  renderList(monitorList, ["Diagnosis will start after the crop is confirmed."], (item) => item);
+  renderList(photoList, ["Whole-plant photo in bright, even light"], (item) => item);
+  renderList(followupList, [], (item) => item);
+  if (reportOutput) {
+    reportOutput.value = [
+      "Crop not confirmed",
+      "",
+      "FiveCrop did not generate a diagnosis or prescription for this photo.",
+      "Next action: retake one clear whole-plant photo."
+    ].join("\n");
+  }
+  if (photoHint) {
+    photoHint.textContent = cropVerificationHint(latestVisionResult, cropNames[state.crop] || "the selected crop");
+  }
+  if (copyStatus) copyStatus.textContent = "Crop not confirmed. No report was generated.";
+  if (saveReportBtn) saveReportBtn.disabled = true;
 }
 
 function resizeImageForVision(dataUrl, maxSize = 1280, quality = 0.78) {
@@ -5869,6 +6473,9 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
     } else {
       photoHint.textContent = `已读取：${file?.name || "照片"}，当前使用本地规则。`;
     }
+    if (result.needsCropVerification || result.cropMismatch) {
+      photoHint.textContent = cropVerificationHint(result, cropNames[state.crop] || "the selected crop");
+    }
     if (!options.skipHints) applyVisionHints(result);
     return result;
   } catch {
@@ -5922,6 +6529,14 @@ function requiredPhotoTypes(state = getFormState()) {
 }
 
 function photoTypeLabel(type) {
+  const englishLabels = {
+    plant: "whole-plant photo",
+    leaf: "leaf detail",
+    root: "root-zone photo",
+    flower: "flower or fruit photo",
+    pest: "pest detail"
+  };
+  if (englishLabels[type]) return englishLabels[type];
   const labels = {
     plant: "整株照",
     leaf: "叶片特写",
@@ -6655,7 +7270,7 @@ function buildMinimalQuestions(state, matches = latestMatchedPathways) {
     add(question(
       "basil-prune",
       "最近 7 天有没有摘顶或剪掉花穗？",
-      "罗勒开花变苦时，修剪动作比继续加水加肥更关键。",
+      "罗勒早花、叶少或味道变差时，摘花苞和打顶采收比继续加水加肥更关键。",
       [
         { label: "没有", apply: { notesAppend: "最近 7 天未摘顶/未剪花穗。" } },
         { label: "剪过一次", apply: { notesAppend: "最近 7 天剪过一次花穗或摘顶。" } },
@@ -6761,7 +7376,7 @@ function pathwayCustomerAction(match) {
     "tomato-fruit-slow-ripen": "先不要频繁换液；保留强壮果串，把补光稳定到每天 14-16 小时。",
     "tomato-xponge-water-swing": "今天先稳住根区：边缘遮光，补水改成少量多次，不让 Xponge 一会儿干一会儿湿。",
     "basil-leggy-low-light": "今天从健康节点上方剪一次顶，并把灯距调近到 20-35cm。",
-    "basil-flowering-bitter": "今天先剪掉花穗；如果连续开花，准备启动下一批新苗。",
+    "basil-flowering-bitter": "今天及时摘掉花苞，并打顶采收；之后保持经常采收，让侧枝重新长出来。",
     "rosemary-wet-root-decline": "今天先停水 48 小时，并加强通风；不要因为叶子发蔫就继续浇。",
     "rosemary-low-light-indoors": "把迷迭香移到更强光位置，或补强光到每天 12 小时以上。",
     "strawberry-flower-no-fruit": "今天中午用软刷轻刷花心一次，之后连续 3-5 天观察同一花序。",
@@ -6901,6 +7516,7 @@ function renderMetrics(state) {
 }
 
 function renderDiagnosis(state, findings) {
+  if (saveReportBtn) saveReportBtn.disabled = false;
   latestState = state;
   latestFindings = findings;
   latestMatchedPathways = matchKnowledgePathways(state);
@@ -6978,6 +7594,10 @@ function renderDiagnosis(state, findings) {
 }
 
 function runDiagnosis() {
+  if (shouldBlockDiagnosisForCropIdentity()) {
+    renderCropIdentityBlock(getFormState());
+    return;
+  }
   autoFillCustomerIntake();
   const state = getFormState();
   renderActiveCase(state);
@@ -7370,6 +7990,7 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
         photoHint.textContent = vision?.cropMismatch
           ? `这张照片不像${selected}，请重新选择作物或补拍整株。`
           : `这张照片还不能确认是${selected}，请补拍整株后再诊断。`;
+        photoHint.textContent = cropVerificationHint(vision, selected);
       } else {
         trackP2Event("diagnosis_started", { source: "photo", photoType: currentPhotoType });
       }
@@ -7379,6 +8000,14 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
     }
     if (needsCropCheck) renderCustomerMobileExperience(getFormState());
     else runDiagnosis();
+    await syncPublicPhotoCaptureResult({
+      fileName,
+      photoType: currentPhotoType,
+      gate,
+      vision,
+      source,
+      signals
+    });
     if (gate.canContinue && !needsCropCheck) focusPhotoDiagnosisResult();
     else focusCustomerTarget(photoReviewCard || customerPhotoRescueCard);
   } catch {
@@ -7924,6 +8553,10 @@ copyReportBtn.addEventListener("click", async () => {
 });
 
 saveReportBtn.addEventListener("click", async () => {
+  if (shouldBlockDiagnosisForCropIdentity() || !latestFindings.length) {
+    renderCropIdentityBlock(getFormState());
+    return;
+  }
   try {
     const response = await fetch("/api/reports", {
       method: "POST",
@@ -7975,7 +8608,23 @@ refreshInsightsBtn.addEventListener("click", loadInsights);
 refreshOpportunitiesBtn.addEventListener("click", loadOpportunityRanks);
 refreshExperimentsBtn.addEventListener("click", loadExperiments);
 refreshP2GrowthBtn?.addEventListener("click", loadP2GrowthDashboard);
-saveCorrectionBtn?.addEventListener("click", () => {
+publicPhotoTestList?.addEventListener("click", handlePublicPhotoTestAction);
+refreshPublicPhotoTestBtn?.addEventListener("click", async () => {
+  const records = await fetchPublicPhotoTestRecords();
+  renderPublicPhotoTestPanel(records);
+});
+exportPublicPhotoTestBtn?.addEventListener("click", exportPublicPhotoTestRecords);
+resetPublicPhotoTestBtn?.addEventListener("click", async () => {
+  localStorage.removeItem(publicPhotoTestKey);
+  publicPhotoServerRecords = [];
+  try {
+    await fetch("/api/public-photo-test-records", { method: "DELETE" });
+  } catch {
+    // Local reset still keeps the test panel usable when the server is unavailable.
+  }
+  renderPublicPhotoTestPanel([]);
+});
+saveCorrectionBtn?.addEventListener("click", async () => {
   const p2 = p2Growth();
   if (!p2) return;
   const correctedDiagnosis = correctionDiagnosisInput?.value.trim() || "";
@@ -7992,6 +8641,22 @@ saveCorrectionBtn?.addEventListener("click", () => {
   });
   p2.saveCorrection(record);
   if (correctionStatus) correctionStatus.textContent = `已保存纠错：${record.correctedDiagnosis}`;
+  let backendSaved = false;
+  try {
+    const response = await fetch("/api/expert-corrections", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(record)
+    });
+    backendSaved = response.ok;
+  } catch {
+    backendSaved = false;
+  }
+  if (correctionStatus) {
+    correctionStatus.textContent = backendSaved
+      ? `Expert correction saved to case library: ${record.correctedDiagnosis}`
+      : `Expert correction saved locally; backend sync pending: ${record.correctedDiagnosis}`;
+  }
   if (correctionDiagnosisInput) correctionDiagnosisInput.value = "";
   if (correctionReasonInput) correctionReasonInput.value = "";
   renderAnnotationSchema();
@@ -8028,15 +8693,20 @@ updateCropHint();
 applyNotificationChannelConfig();
 applyDeviceTemplate({ force: true });
 runDiagnosis();
-setMode(localStorage.getItem("growClinicMode") || "customer");
+setMode(initialModeFromUrl());
 restoreCustomerArchiveOnStartup();
 startCustomerTimeRefresh();
 loadReports();
 loadCases();
+loadPublicPhotoTestPanel().then(() => {
+  enforceInitialUrlMode();
+  focusInitialPanelFromUrl();
+});
 loadNotifications();
 loadInsights();
 loadOpportunityRanks();
 loadExperiments();
 loadProductStrategy();
+window.setTimeout(enforceInitialUrlMode, 250);
 loadKnowledgeGraph();
 loadIntegrationStatus();

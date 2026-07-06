@@ -91,6 +91,8 @@
       symptoms: state?.symptoms || [],
       visuals: state?.visuals || [],
       predictedDiagnosis: top.title || "",
+      conditionId: context.pathologyConditionId || null,
+      pathologyMatches: context.pathologyMatches || [],
       correctedDiagnosis: correction?.correctedDiagnosis || null,
       correctionReason: correction?.reason || null,
       finalOutcome: correction?.finalOutcome || completedFollowup?.routeAssessment?.state || "unknown",

@@ -22,6 +22,10 @@ const sourceIndex = {
     title: "NC State Extension Gardener Plant Toolbox: Ocimum basilicum",
     url: "https://plants.ces.ncsu.edu/plants/ocimum-basilicum/"
   },
+  "purdue-basil-black-leg": {
+    title: "Purdue Southwest Purdue Agricultural Program: Black Leg on Basil",
+    url: "https://ag.purdue.edu/department/arge/swpap/black-leg-basil.html"
+  },
   "ncsu-rosemary": {
     title: "NC State Extension Gardener Plant Toolbox: Salvia rosmarinus",
     url: "https://plants.ces.ncsu.edu/plants/salvia-rosmarinus/"
@@ -278,18 +282,20 @@ export const pathologyLibrary = {
           cropKey: "basil",
           stage: "flowering",
           category: "harvest",
-          title: "罗勒开花变苦",
-          summary: "罗勒进入开花后，叶片口感和连续采收能力下降，通常需要修剪或换新苗。",
-          action: "今天剪掉花穗和老枝，保留健康节点促侧芽。",
-          followup: { when: "3-5 天", photo: "修剪点", success: "剪口下方出现侧芽" },
-          evidence: ["顶端花穗", "叶片变窄", "老枝木质化"],
-          differentials: ["热/旱压力逼花", "光周期过长", "植株过老"],
-          missingInfo: ["是否已开花", "采收频率", "室温"],
-          photoTypes: ["plant", "leaf"],
+          title: "罗勒早花/开花变苦",
+          summary: "罗勒很快开花、叶子变少或味道变差，常见原因是温度高、植株成熟、缺水或环境压力；长期不剪会让植株更快开花老化。",
+          action: "今天及时摘掉花苞，并打顶采收；罗勒越剪越分枝，长期不剪反而容易开花老化。",
+          followup: { when: "3-5 天", photo: "摘花和打顶后的节点", success: "剪口下方出现侧枝，新叶量回升且没有继续抽花" },
+          evidence: ["顶端花苞或花穗", "叶子变少", "叶片变窄", "味道变苦或香气下降", "老枝木质化"],
+          differentials: ["热/旱压力逼花", "长期不打顶采收", "光周期过长", "植株过老", "根区压力"],
+          missingInfo: ["是否已有花苞", "最近是否打顶采收", "室温", "是否缺水或受热", "味道是否变苦"],
+          photoTypes: ["plant", "leaf", "flower"],
           match: {
-            symptoms: ["no-flower", "leggy"],
+            symptoms: ["bolting", "leggy", "no-flower"],
+            visuals: ["flower-buds", "sparse-leaves", "long-internodes"],
             stage: ["flowering"],
-            environment: { climate: ["hot"], moisture: ["dry"] }
+            environment: { climate: ["hot"], moisture: ["dry"] },
+            visionLabels: ["flower-buds", "sparse-leaves", "flower-or-fruit"]
           },
           sourceIds: ["ncsu-basil", "fivecrop-field"]
         }),
@@ -311,6 +317,27 @@ export const pathologyLibrary = {
             visuals: ["lower-yellowing", "white-fuzz"],
             environment: { climate: ["humid"], moisture: ["wet"] },
             visionLabels: ["spots", "white-fuzz"]
+          },
+          sourceIds: ["ncsu-basil", "fivecrop-field"]
+        }),
+        condition({
+          id: "basil-leaf-powdery-gray-mold-humidity",
+          cropKey: "basil",
+          stage: "vegetative",
+          category: "disease",
+          title: "罗勒叶片白粉/灰霉高湿风险",
+          summary: "叶片出现白色粉状物、灰白色霉层或灰色绒毛状霉斑时，常见原因是湿度高、通风差和叶片长期带水。",
+          action: "今天先减少叶面喷水，拉开株距并加强空气流动；严重叶片剪掉，避免扩散。",
+          followup: { when: "48 小时", photo: "同一片叶面和叶背特写", success: "白粉或灰霉不再扩散，新叶没有新增霉斑" },
+          evidence: ["叶面白色粉状物", "灰白色霉层", "灰色绒毛状霉斑", "叶片长期带水或株间过密"],
+          differentials: ["霜霉叶背灰紫色霉层", "水垢/肥渍残留", "普通黄叶", "虫害蜜露或污斑"],
+          missingInfo: ["叶面近照", "叶背照片", "是否叶面喷水", "夜间湿度和通风"],
+          photoTypes: ["leaf", "plant"],
+          match: {
+            symptoms: ["spots"],
+            visuals: ["leaf-white-powder", "gray-mold"],
+            environment: { climate: ["humid"], moisture: ["wet"] },
+            visionLabels: ["powdery-mildew", "gray-mold", "white-fuzz", "spots"]
           },
           sourceIds: ["ncsu-basil", "fivecrop-field"]
         }),
@@ -337,6 +364,28 @@ export const pathologyLibrary = {
           sourceIds: ["ncsu-basil", "fivecrop-field"]
         }),
         condition({
+          id: "basil-black-leg-root-rot",
+          cropKey: "basil",
+          stage: "vegetative",
+          category: "root",
+          title: "罗勒黑脚/根腐风险",
+          summary: "冷、湿和通风差叠加时，罗勒靠近根部或介质表面的茎会出现深色病斑、发黑坏死，根区也可能开始腐烂并导致整株衰退。",
+          action: "今天先剪健康枝条扦插备份，原盆暂停浇水并改善排水和通风。",
+          followup: { when: "24-48 小时", photo: "茎基部和根区近照", success: "黑色病斑不再上移，根区气味和软腐不加重" },
+          evidence: ["茎基部发黑", "靠近介质表面的深色坏死斑", "根区潮湿或有酸臭味", "植株萎蔫衰退"],
+          differentials: ["水渍伤", "低温冻伤", "机械压伤", "单纯缺水萎蔫"],
+          missingInfo: ["茎基部近照", "根区气味", "最近是否积水", "夜间温度和通风"],
+          photoTypes: ["root", "plant", "leaf"],
+          match: {
+            concern: ["root"],
+            symptoms: ["wilting", "algae", "yellow-leaves"],
+            visuals: ["green-surface", "white-fuzz", "lower-yellowing"],
+            environment: { moisture: ["wet"], climate: ["humid", "cold"], sensorMoistureHigh: 78, temperatureLow: 18 },
+            visionLabels: ["black-stem", "stem-necrosis", "root-rot", "root-risk", "surface-algae"]
+          },
+          sourceIds: ["purdue-basil-black-leg", "fivecrop-field"]
+        }),
+        condition({
           id: "basil-dry-air-wilting",
           cropKey: "basil",
           stage: "vegetative",
@@ -358,6 +407,28 @@ export const pathologyLibrary = {
           sourceIds: ["ncsu-basil", "fivecrop-field"]
         }),
         condition({
+          id: "basil-transplant-shock-wilting",
+          cropKey: "basil",
+          stage: "vegetative",
+          category: "establishment",
+          title: "罗勒移栽后缓苗/萎蔫",
+          summary: "刚换盆、换水培篮、换介质、分株或移苗后，罗勒根毛受损、吸水能力下降，短期叶片下垂是常见缓苗反应。",
+          action: "今天先把环境稳住：避开强光和热风，保持介质微湿但不积水；不要马上施肥、重剪或反复换盆。",
+          followup: { when: "24-48 小时", photo: "整株同角度和茎基部", success: "萎蔫不再扩大，新梢开始恢复挺立，茎基部没有发黑软腐" },
+          evidence: ["刚移栽/换盆/分株", "整株或新梢下垂", "叶片软塌但无明显虫咬或病斑", "根区刚被扰动"],
+          differentials: ["干热萎蔫", "根区过湿/缺氧", "黑脚/根腐", "低温伤根"],
+          missingInfo: ["移栽日期", "是否修根或分株", "移栽后是否暴晒", "介质是否积水", "茎基部是否发黑"],
+          photoTypes: ["plant", "root", "leaf"],
+          match: {
+            concern: ["dry", "root"],
+            symptoms: ["transplant-shock", "wilting"],
+            visuals: ["fresh-transplant", "lower-yellowing"],
+            environment: { moisture: ["wet", "dry", "swing"], climate: ["hot", "cold"] },
+            visionLabels: ["recent-transplant", "wilting"]
+          },
+          sourceIds: ["ncsu-basil", "fivecrop-field"]
+        }),
+        condition({
           id: "basil-pest-leaf-distortion",
           cropKey: "basil",
           stage: "vegetative",
@@ -375,6 +446,27 @@ export const pathologyLibrary = {
             symptoms: ["pests", "leaf-curl", "spots"],
             visuals: ["tiny-flies", "webbing"],
             visionLabels: ["possible-pest", "spots"]
+          },
+          sourceIds: ["ncsu-basil", "fivecrop-field"]
+        }),
+        condition({
+          id: "basil-chewing-pest-leaf-holes",
+          cropKey: "basil",
+          stage: "vegetative",
+          category: "pest",
+          title: "罗勒咀嚼性虫害/叶片孔洞",
+          summary: "叶片出现不规则孔洞、叶缘被啃缺或嫩叶被取食时，优先排查蛞蝓、毛虫、甲虫等咀嚼性虫害，而不是只按缺肥或病斑处理。",
+          action: "今天先隔离这盆，补拍叶片正反面、叶缘、茎节和盆土表面；手动摘除可见虫体并清理潮湿残渣。",
+          followup: { when: "24 小时", photo: "同一片受损叶、新叶和盆土表面", success: "没有新增孔洞，新叶不再被啃食" },
+          evidence: ["不规则叶片孔洞", "叶缘被啃缺", "嫩叶或新叶被取食", "叶背/茎节/盆土表面有虫体或粪粒"],
+          differentials: ["机械破损", "日灼焦斑", "霜霉黄斑", "药害斑"],
+          missingInfo: ["叶片正反面", "叶缘近照", "茎节和盆土表面", "夜间是否看到虫体"],
+          photoTypes: ["pest", "leaf", "plant"],
+          match: {
+            concern: ["pest"],
+            symptoms: ["pests", "spots"],
+            visuals: ["leaf-holes", "chewed-edge"],
+            visionLabels: ["leaf-holes", "chewing-damage", "possible-pest"]
           },
           sourceIds: ["ncsu-basil", "fivecrop-field"]
         }),
@@ -944,10 +1036,150 @@ export const pathologyLibrary = {
   }
 };
 
+const categoryProtocols = {
+  flowering: {
+    dose: "One intervention per day: hand-pollinate or stabilize environment, then wait for the next flower check.",
+    targets: ["Keep canopy temperature in the crop-safe flowering band.", "Keep light steady for the full photoperiod."],
+    doNot: ["Do not add fertilizer as the first response to flower drop.", "Do not change light, water, and nutrients on the same day."],
+    escalation: "Escalate if two new flower clusters fail after the follow-up window."
+  },
+  pollination: {
+    dose: "Pollinate each open flower once around midday for 3 consecutive days.",
+    targets: ["Flowers should stay dry and visibly open.", "Air movement should be gentle, not drying."],
+    doNot: ["Do not mist flowers before pollination.", "Do not remove flowers unless they are already brown or rotting."],
+    escalation: "Escalate if flowers stay open but fruit does not start swelling after 5-7 days."
+  },
+  light: {
+    dose: "Increase usable light in one step, then hold it steady for 7 days.",
+    targets: ["Leaf crops: 12-14 h/day.", "Fruiting crops: 14-16 h/day.", "Keep the plant close enough for compact growth without heat stress."],
+    doNot: ["Do not compensate low light with extra nutrients.", "Do not prune heavily on the same day as a major light change."],
+    escalation: "Escalate if new growth remains stretched after 7 days of stable light."
+  },
+  water: {
+    dose: "Adjust water once, then observe for 24-48 hours before the next change.",
+    targets: ["Root zone should move toward evenly moist, not wet.", "Leaves should stop worsening before expecting full recovery."],
+    doNot: ["Do not alternate drought and soaking.", "Do not fertilize a plant that is wilting from root stress."],
+    escalation: "Escalate if wilting worsens while the root zone is still wet."
+  },
+  root: {
+    dose: "Pause watering or lower reservoir contact first; increase airflow around the root zone.",
+    targets: ["Surface should begin drying within 24-48 hours.", "No spreading white fuzz, odor, or soft crown tissue."],
+    doNot: ["Do not seal the crown or root surface under wet media.", "Do not add more nutrient solution before oxygen stress is ruled out."],
+    escalation: "Escalate if roots smell sour, crown tissue softens, or shoots blacken."
+  },
+  disease: {
+    dose: "Remove the worst affected leaf only if it is clearly spreading; improve airflow and keep leaves dry.",
+    targets: ["No new spots or mildew expansion over the follow-up window.", "Leaf surfaces dry before night."],
+    doNot: ["Do not spray oils or soaps under strong grow lights.", "Do not crowd plants together after spotting disease signs."],
+    escalation: "Escalate if lesions expand across new leaves or mold reaches crown/stems."
+  },
+  pest: {
+    dose: "Inspect leaf backs and isolate the plant; use sticky trap or gentle wash before stronger treatment.",
+    targets: ["New pest count should stop increasing within 24-48 hours.", "New leaves should emerge less distorted."],
+    doNot: ["Do not spray unknown chemicals on edible leaves.", "Do not treat without checking leaf backs or traps."],
+    escalation: "Escalate if moving pests or webbing remain after two inspection cycles."
+  },
+  nutrition: {
+    dose: "Correct pH/EC gradually; change one nutrient variable, then recheck in 48-72 hours.",
+    targets: ["Hydroponic pH usually stays near 5.8-6.5.", "EC changes should be gradual for small indoor crops."],
+    doNot: ["Do not double nutrient strength for pale leaves before light and roots are checked.", "Do not chase old leaf color after new growth stabilizes."],
+    escalation: "Escalate if new growth remains pale or distorted after pH/EC is stable."
+  },
+  climate: {
+    dose: "Stabilize temperature and airflow first; protect flowers and new growth from hot/cold swings.",
+    targets: ["Avoid heat buildup under lights.", "Avoid cold-window night stress."],
+    doNot: ["Do not move the plant repeatedly between extreme locations.", "Do not pollinate during heat-stressed midday wilt."],
+    escalation: "Escalate if damage continues after the temperature swing is removed."
+  },
+  fit: {
+    dose: "Reduce plant count, choose a compact variety, or move the crop to a better-fit setup.",
+    targets: ["Canopy should fit below the light with airflow around leaves.", "Root zone should match crop water demand."],
+    doNot: ["Do not force a large outdoor variety into a small countertop system.", "Do not keep incompatible herbs/crops in one wet root zone."],
+    escalation: "Escalate by changing variety or device if the same stress returns after correction."
+  },
+  harvest: {
+    dose: "Prune above a node and harvest lightly; let side shoots recover before the next cut.",
+    targets: ["New side shoots visible within 3-7 days.", "Lower canopy gets more light and air."],
+    doNot: ["Do not cut into old woody stems unless the crop tolerates it.", "Do not remove more than one third of active foliage at once."],
+    escalation: "Escalate if regrowth stalls or flowering continues after pruning."
+  },
+  establishment: {
+    dose: "Hold conditions steady and reduce stress while roots re-establish.",
+    targets: ["No new collapse after 48 hours.", "New tips resume growth within a week."],
+    doNot: ["Do not repot, fertilize, and prune on the same day.", "Do not keep transplant media saturated."],
+    escalation: "Escalate if the crown or stem base softens."
+  },
+  crown: {
+    dose: "Dry the crown immediately and keep water off the crown during the next cycle.",
+    targets: ["Crown stays dry to touch.", "No soft, brown, or fuzzy tissue expansion."],
+    doNot: ["Do not bury the strawberry crown.", "Do not mist into the crown."],
+    escalation: "Escalate if the crown softens or white fuzz spreads."
+  },
+  growth: {
+    dose: "Redirect energy with one pruning or spacing change, then wait for new growth response.",
+    targets: ["New leaves and flowers become more concentrated.", "Canopy no longer shades itself heavily."],
+    doNot: ["Do not remove all runners or leaves at once.", "Do not combine heavy pruning with nutrient changes."],
+    escalation: "Escalate if flowering remains absent after a full follow-up week."
+  }
+};
+
+function protocolForCategory(category) {
+  return categoryProtocols[category] || categoryProtocols.water;
+}
+
+function environmentTargets(match = {}) {
+  const environment = match.environment || {};
+  const targets = [];
+  if (environment.temperatureHigh !== undefined) targets.push(`Keep temperature below ${environment.temperatureHigh}C for this risk.`);
+  if (environment.temperatureLow !== undefined) targets.push(`Keep temperature above ${environment.temperatureLow}C for this risk.`);
+  if (environment.lightHoursMax !== undefined) targets.push(`Raise daily light above ${environment.lightHoursMax} h if growth remains weak.`);
+  if (environment.sensorMoistureHigh !== undefined) targets.push(`Bring moisture reading below ${environment.sensorMoistureHigh} before watering again.`);
+  if (environment.sensorMoistureLow !== undefined) targets.push(`Avoid letting moisture reading stay below ${environment.sensorMoistureLow}.`);
+  if (environment.ecHigh !== undefined) targets.push(`Avoid EC above ${environment.ecHigh}.`);
+  if (environment.ecLow !== undefined) targets.push(`Avoid EC below ${environment.ecLow}.`);
+  if (environment.phHigh !== undefined || environment.phLow !== undefined) {
+    targets.push(`Keep pH between ${environment.phLow ?? "crop lower bound"} and ${environment.phHigh ?? "crop upper bound"}.`);
+  }
+  return targets;
+}
+
+export function enrichPathologyCondition(condition) {
+  const protocol = protocolForCategory(condition.category);
+  const decisionSignals = [
+    ...(condition.evidence || []).slice(0, 3),
+    ...(condition.match?.visionLabels || []).map((item) => `vision label: ${item}`).slice(0, 2)
+  ];
+  return {
+    ...condition,
+    expertEvidence: {
+      version: "fivecrop-expert-evidence-v1",
+      positiveSigns: condition.evidence || [],
+      differentialChecks: (condition.differentials || []).map((item) => `Rule out: ${item}`),
+      missingInfo: condition.missingInfo || [],
+      photoEvidence: (condition.photoTypes || []).map((type) => `${type} photo required for stronger confidence`),
+      decisionRule: decisionSignals.length
+        ? `Treat as ${condition.id} when at least two visible signs match and the strongest differential is not supported.`
+        : `Treat as ${condition.id} only after visible signs and missing info are reviewed.`,
+      confidenceBoosters: decisionSignals,
+      confidenceReducers: ["single close-up without whole-plant context", "missing follow-up angle", "uncertain crop identity"]
+    },
+    prescriptionProtocol: {
+      version: "fivecrop-prescription-protocol-v1",
+      oneAction: condition.action,
+      dose: protocol.dose,
+      environmentTargets: [...protocol.targets, ...environmentTargets(condition.match)],
+      doNot: protocol.doNot,
+      followup: condition.followup,
+      escalation: protocol.escalation,
+      safety: "Use edible-crop-safe practices only; avoid unverified chemical treatments in MVP guidance."
+    }
+  };
+}
+
 export function flattenPathologyLibrary(library = pathologyLibrary) {
   return Object.entries(library.crops).flatMap(([cropKey, crop]) =>
     crop.conditions.map((item) => ({
-      ...item,
+      ...enrichPathologyCondition(item),
       cropKey,
       cropName: crop.name,
       cropScope: crop.scope,
@@ -1054,8 +1286,10 @@ export function scorePathologyCondition(condition, state = {}, context = {}) {
 
   if (reasons.length < 3) return null;
 
+  const rawScore = score;
   return {
     ...condition,
+    rawScore,
     score: Math.min(98, score),
     confidence: Math.min(96, Math.max(42, score)),
     reasons
@@ -1067,5 +1301,5 @@ export function matchPathologyConditions(state = {}, context = {}, library = pat
     .map((item) => scorePathologyCondition(item, state, context))
     .filter(Boolean)
     .filter((item) => item.score >= 42)
-    .sort((a, b) => b.score - a.score);
+    .sort((a, b) => (b.rawScore || b.score) - (a.rawScore || a.score));
 }

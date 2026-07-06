@@ -6,6 +6,7 @@ import { randomUUID } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { buildGoldenPathCases, buildKnowledgeGraphView, flattenKnowledgeGraph, knowledgeGraph } from "./knowledge-graph.mjs";
 import { flattenPathologyLibrary, pathologyLibrary, pathologyStats } from "./pathology-library.mjs";
+import { buildCaseValidationSuite, caseValidationStats } from "./case-validation.mjs";
 
 const root = process.cwd();
 const portArgIndex = process.argv.indexOf("--port");
@@ -61,12 +62,19 @@ const visionOutputSchema = {
               "yellowing",
               "leaf-curl",
               "spots",
+              "leaf-holes",
+              "chewing-damage",
+              "powdery-mildew",
+              "gray-mold",
               "possible-pest",
               "surface-algae",
               "white-fuzz",
               "leggy-growth",
+              "flower-buds",
+              "sparse-leaves",
               "flower-drop",
               "flower-or-fruit",
+              "recent-transplant",
               "wilting",
               "dry-edge",
               "root-risk",
@@ -106,6 +114,7 @@ const visionOutputSchema = {
           "algae",
           "water-swing",
           "flowering-context",
+          "transplant-shock",
           "root-risk"
         ]
       }
@@ -133,7 +142,8 @@ const types = {
   ".html": "text/html; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
-  ".json": "application/json; charset=utf-8"
+  ".json": "application/json; charset=utf-8",
+  ".md": "text/markdown; charset=utf-8"
 };
 
 async function readJsonBody(req) {
@@ -356,6 +366,31 @@ async function getDb() {
     );
     CREATE INDEX IF NOT EXISTS idx_notifications_due ON notification_jobs(due_at);
     CREATE INDEX IF NOT EXISTS idx_notifications_status ON notification_jobs(status);
+
+    CREATE TABLE IF NOT EXISTS expert_corrections (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      crop_key TEXT,
+      condition_id TEXT,
+      predicted_diagnosis TEXT,
+      corrected_diagnosis TEXT,
+      final_outcome TEXT,
+      payload_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_expert_corrections_crop ON expert_corrections(crop_key);
+    CREATE INDEX IF NOT EXISTS idx_expert_corrections_condition ON expert_corrections(condition_id);
+
+    CREATE TABLE IF NOT EXISTS public_photo_test_records (
+      id TEXT PRIMARY KEY,
+      created_at TEXT NOT NULL,
+      fixture_group_id TEXT,
+      source_number INTEGER,
+      capture_variant TEXT,
+      result TEXT,
+      payload_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_public_photo_test_fixture ON public_photo_test_records(fixture_group_id);
+    CREATE INDEX IF NOT EXISTS idx_public_photo_test_created ON public_photo_test_records(created_at);
   `);
 
   await migrateLegacyJson();
@@ -418,6 +453,99 @@ async function readReports() {
   return db.prepare("SELECT payload_json FROM reports ORDER BY created_at ASC")
     .all()
     .map((row) => JSON.parse(row.payload_json));
+}
+
+async function readExpertCorrections() {
+  const db = await getDb();
+  return db.prepare("SELECT payload_json FROM expert_corrections ORDER BY created_at ASC")
+    .all()
+    .map((row) => JSON.parse(row.payload_json));
+}
+
+async function readPublicPhotoTestRecords() {
+  const db = await getDb();
+  return db.prepare("SELECT payload_json FROM public_photo_test_records ORDER BY created_at ASC")
+    .all()
+    .map((row) => JSON.parse(row.payload_json));
+}
+
+async function writePublicPhotoTestRecord(record) {
+  const db = await getDb();
+  const id = record.id || randomUUID();
+  const createdAt = record.createdAt || new Date().toISOString();
+  const payload = {
+    ...record,
+    id,
+    createdAt,
+    fixtureGroupId: String(record.fixtureGroupId || record.groupId || ""),
+    sourceNumber: Number(record.sourceNumber) || 1,
+    captureVariant: String(record.captureVariant || record.variant || ""),
+    result: String(record.result || "captured")
+  };
+  db.prepare(`
+    INSERT OR REPLACE INTO public_photo_test_records
+    (id, created_at, fixture_group_id, source_number, capture_variant, result, payload_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    createdAt,
+    payload.fixtureGroupId || null,
+    payload.sourceNumber,
+    payload.captureVariant || null,
+    payload.result,
+    JSON.stringify(payload)
+  );
+  return payload;
+}
+
+async function clearPublicPhotoTestRecords() {
+  const db = await getDb();
+  db.prepare("DELETE FROM public_photo_test_records").run();
+}
+
+async function writeExpertCorrection(correction) {
+  const db = await getDb();
+  const id = correction.id || randomUUID();
+  const createdAt = correction.createdAt || new Date().toISOString();
+  const payload = { ...correction, id, createdAt };
+  const conditionId = payload.conditionId || payload.pathologyConditionId || payload.predictedConditionId || null;
+  db.prepare(`
+    INSERT OR REPLACE INTO expert_corrections
+    (id, created_at, crop_key, condition_id, predicted_diagnosis, corrected_diagnosis, final_outcome, payload_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(
+    id,
+    createdAt,
+    payload.cropKey || null,
+    conditionId,
+    payload.predictedDiagnosis || null,
+    payload.correctedDiagnosis || null,
+    payload.finalOutcome || null,
+    JSON.stringify({ ...payload, conditionId })
+  );
+  return { ...payload, conditionId };
+}
+
+function correctionSummaryByCondition(corrections = []) {
+  return corrections.reduce((summary, correction) => {
+    const conditionId = correction.conditionId || correction.pathologyConditionId || correction.predictedConditionId;
+    if (!conditionId) return summary;
+    if (!summary[conditionId]) {
+      summary[conditionId] = {
+        count: 0,
+        finalOutcomes: {},
+        latestCorrection: null
+      };
+    }
+    const target = summary[conditionId];
+    target.count += 1;
+    const outcome = correction.finalOutcome || "unknown";
+    target.finalOutcomes[outcome] = (target.finalOutcomes[outcome] || 0) + 1;
+    if (!target.latestCorrection || String(correction.createdAt || "") > String(target.latestCorrection.createdAt || "")) {
+      target.latestCorrection = correction;
+    }
+    return summary;
+  }, {});
 }
 
 function fallbackCaseId(report) {
@@ -1240,6 +1368,7 @@ function localVisionPayload(body) {
   const fileName = String(body.fileName || "").toLowerCase();
   const context = body.context || {};
   const cropModel = cropModels[context.cropKey] || null;
+  const requestedCropKey = context.cropKey || "unknown";
 
   if (signals.yellowRatio > 0.22 || fileName.includes("yellow")) {
     labels.push({ label: "yellowing", confidence: 0.72 });
@@ -1253,8 +1382,53 @@ function localVisionPayload(body) {
   if (fileName.includes("pest") || fileName.includes("bug") || fileName.includes("fly")) {
     labels.push({ label: "possible-pest", confidence: 0.64 });
   }
-  if (fileName.includes("flower") || fileName.includes("fruit")) {
+  if (fileName.includes("hole") || fileName.includes("chew") || fileName.includes("eaten") || fileName.includes("bite")) {
+    labels.push({ label: "leaf-holes", confidence: 0.68 });
+    labels.push({ label: "possible-pest", confidence: 0.64 });
+  }
+  if (fileName.includes("powder") || fileName.includes("mildew") || fileName.includes("white-powder") || fileName.includes("白粉")) {
+    labels.push({ label: "powdery-mildew", confidence: 0.68 });
+  }
+  if (fileName.includes("botrytis") || fileName.includes("gray-mold") || fileName.includes("grey-mold") || fileName.includes("灰霉") || fileName.includes("霉斑")) {
+    labels.push({ label: "gray-mold", confidence: 0.68 });
+  }
+  if (
+    requestedCropKey === "basil" &&
+    (
+      fileName.includes("flower") ||
+      fileName.includes("bloom") ||
+      fileName.includes("bud") ||
+      fileName.includes("bolting") ||
+      fileName.includes("bitter") ||
+      fileName.includes("sparse") ||
+      fileName.includes("开花") ||
+      fileName.includes("花苞") ||
+      fileName.includes("花穗") ||
+      fileName.includes("抽薹") ||
+      fileName.includes("叶少") ||
+      fileName.includes("变苦")
+    )
+  ) {
+    labels.push({ label: "flower-buds", confidence: 0.7 });
+    if (fileName.includes("sparse") || fileName.includes("叶少")) labels.push({ label: "sparse-leaves", confidence: 0.64 });
+  } else if (fileName.includes("flower") || fileName.includes("fruit")) {
     labels.push({ label: "flower-or-fruit", confidence: 0.7 });
+  }
+  if (
+    requestedCropKey === "basil" &&
+    (
+      fileName.includes("transplant") ||
+      fileName.includes("repot") ||
+      fileName.includes("potted-up") ||
+      fileName.includes("seedling-move") ||
+      fileName.includes("移栽") ||
+      fileName.includes("换盆") ||
+      fileName.includes("分株") ||
+      fileName.includes("缓苗")
+    )
+  ) {
+    labels.push({ label: "recent-transplant", confidence: 0.7 });
+    labels.push({ label: "wilting", confidence: 0.62 });
   }
 
   const observations = labels.map((item) => ({
@@ -1268,8 +1442,16 @@ function localVisionPayload(body) {
     if (item.label === "yellowing") diagnosisHints.push("yellow-leaves");
     if (item.label === "surface-algae") diagnosisHints.push("algae");
     if (item.label === "possible-pest") diagnosisHints.push("pests");
+    if (item.label === "leaf-holes") diagnosisHints.push("pests");
+    if (item.label === "chewing-damage") diagnosisHints.push("pests");
+    if (item.label === "powdery-mildew") diagnosisHints.push("spots");
+    if (item.label === "gray-mold") diagnosisHints.push("spots");
     if (item.label === "dark-or-dry-area") diagnosisHints.push("water-swing");
+    if (item.label === "flower-buds") diagnosisHints.push("flowering-context");
+    if (item.label === "sparse-leaves") diagnosisHints.push("leggy");
     if (item.label === "flower-or-fruit") diagnosisHints.push("flowering-context");
+    if (item.label === "recent-transplant") diagnosisHints.push("transplant-shock");
+    if (item.label === "wilting") diagnosisHints.push("wilting");
   });
 
   const suppliedTypes = new Set(body.capturedPhotoTypes || []);
@@ -1290,6 +1472,12 @@ function localVisionPayload(body) {
     },
     clientPipeline: body.clientPipeline || null,
     photoType: body.photoType || "unknown",
+    cropKey: requestedCropKey,
+    requestedCropKey,
+    detectedCropKey: "unknown",
+    cropMismatch: false,
+    needsCropVerification: requestedCropKey !== "unknown" && context.mode !== "followup",
+    hasCropIdentityEvidence: false,
     labels,
     observations,
     diagnosisHints: Array.from(new Set(diagnosisHints)),
@@ -1571,6 +1759,24 @@ function validChoice(value, choices, fallback) {
   return choices.includes(value) ? value : fallback;
 }
 
+function cropIdentityTerms(cropKey) {
+  return {
+    tomato: ["serrated", "compound", "hairy stem", "truss", "yellow flower"],
+    basil: ["opposite leaves", "paired leaves", "oval leaves", "soft herb", "square stem"],
+    rosemary: ["needle", "narrow leaves", "woody stem", "upright sprig"],
+    strawberry: ["trifoliate", "three leaflets", "runner", "crown", "white flower"],
+    pepper: ["smooth oval leaves", "white flower", "pepper flower", "young pepper"]
+  }[cropKey] || [];
+}
+
+function hasSpecificCropIdentityEvidence(observations, cropKey) {
+  const identityObservation = observations.find((item) => String(item.code || "").toLowerCase() === "crop-identity");
+  if (!identityObservation || Number(identityObservation.confidence || 0) < 0.65) return false;
+  const evidence = String(identityObservation.evidence || "").toLowerCase();
+  if (evidence.length < 16) return false;
+  return cropIdentityTerms(cropKey).some((term) => evidence.includes(term));
+}
+
 function normalizeAiVisionResult(raw, body, local, meta = {}) {
   const provider = raw.provider || meta.provider || "ai-vision-provider";
   const model = raw.model || meta.model || "unknown";
@@ -1590,18 +1796,26 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
     "algae",
     "water-swing",
     "flowering-context",
+    "transplant-shock",
     "root-risk"
   ]);
   const labelChoices = new Set([
     "yellowing",
     "leaf-curl",
     "spots",
+    "leaf-holes",
+    "chewing-damage",
+    "powdery-mildew",
+    "gray-mold",
     "possible-pest",
     "surface-algae",
     "white-fuzz",
     "leggy-growth",
+    "flower-buds",
+    "sparse-leaves",
     "flower-drop",
     "flower-or-fruit",
+    "recent-transplant",
     "wilting",
     "dry-edge",
     "root-risk",
@@ -1640,6 +1854,7 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
     String(item.code || "").toLowerCase() === "crop-identity" ||
     /crop|identity|basil|tomato|rosemary|strawberry|pepper|罗勒|番茄|迷迭香|草莓|辣椒/i.test(String(item.evidence || ""))
   );
+  const hasSpecificIdentityEvidence = hasSpecificCropIdentityEvidence(observations, detectedCropKey);
   const cropMismatch = Boolean(
     requestedCropKey &&
     requestedCropKey !== "unknown" &&
@@ -1652,7 +1867,7 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
     requestedCropKey &&
     requestedCropKey !== "unknown" &&
     detectedCropKey === requestedCropKey &&
-    !hasCropIdentityEvidence
+    !hasSpecificIdentityEvidence
   );
   const cropModel = cropModels[cropKey] || cropModels[body.context?.cropKey] || null;
   const modelMissing = (cropModel?.requiredPhotos || ["plant", "leaf", "root"])
@@ -1680,7 +1895,7 @@ function normalizeAiVisionResult(raw, body, local, meta = {}) {
     detectedCropKey,
     cropMismatch,
     needsCropVerification,
-    hasCropIdentityEvidence,
+    hasCropIdentityEvidence: hasSpecificIdentityEvidence,
     stageKey: validChoice(raw.stageKey, stageKeys, body.context?.stageKey || "unknown"),
     labels,
     observations,
@@ -1716,7 +1931,9 @@ function visionPrompt(body) {
     "Supported crops: tomato, basil, rosemary, strawberry, pepper. If the plant is not visibly one of these five crops, or if you are unsure, set cropKey to unknown.",
     "First decide cropKey from image evidence only. Ignore the user-selected crop when deciding cropKey.",
     "If the photo shows a generic green plant, ornamental plant, weed, succulent, houseplant, or any crop outside the supported five, set cropKey to unknown.",
-    "If cropKey is not unknown, include an observation with code crop-identity and evidence naming the visible crop-specific traits.",
+    "If the photo is too close, too blurry, leaf-only, or lacks crop-specific structures, set cropKey to unknown even when the user selected a crop.",
+    "If cropKey is not unknown, include exactly one observation with code crop-identity and evidence naming visible crop-specific traits, not just the crop name.",
+    "Crop identity traits: tomato has serrated compound leaves, hairy stems, trusses, or yellow flowers; basil has opposite paired oval leaves and soft herb stems; rosemary has needle-like narrow leaves and woody sprigs; strawberry has trifoliate leaves, crown, runners, or white flowers; pepper has smooth oval leaves, white flowers, or young peppers.",
     "Prefer conservative uncertainty over guessing. Use short Chinese for nextAction.",
     `User claimed context for later care only: crop=${cropKey}, stage=${body.context?.stageKey || "unknown"}, medium=${body.context?.mediumKey || "unknown"}, concern=${body.context?.concern || "unknown"}, expectedPhotoType=${body.photoType || "unknown"}.`,
     "Return only the contract fields shown below. Do not add riskAssessment, recommendations, notes, markdown, or prose outside JSON.",
@@ -1727,14 +1944,14 @@ function visionPrompt(body) {
       stageKey: "seedling|vegetative|flowering|fruiting|unknown",
       labels: [
         {
-          label: "yellowing|leaf-curl|spots|possible-pest|surface-algae|white-fuzz|leggy-growth|flower-drop|flower-or-fruit|wilting|dry-edge|root-risk|healthy-signal",
+          label: "yellowing|leaf-curl|spots|leaf-holes|chewing-damage|powdery-mildew|gray-mold|possible-pest|surface-algae|white-fuzz|leggy-growth|flower-buds|sparse-leaves|flower-drop|flower-or-fruit|recent-transplant|wilting|dry-edge|root-risk|healthy-signal",
           confidence: 0.0
         }
       ],
       observations: [
         { code: "short-code", confidence: 0.0, evidence: "short visible evidence" }
       ],
-      diagnosisHints: ["yellow-leaves|leggy|wilting|leaf-curl|spots|no-flower|no-fruit|pests|algae|water-swing|flowering-context|root-risk"],
+      diagnosisHints: ["yellow-leaves|leggy|wilting|leaf-curl|spots|no-flower|no-fruit|pests|algae|water-swing|flowering-context|transplant-shock|root-risk"],
       missingPhotos: ["plant|leaf|root|flower|pest"],
       confidence: 0.0,
       quality: { brightness: "good|dark|overexposed|unknown", focus: "good|blurry|unknown", framing: "good|too-close|too-far|unknown" },
@@ -2485,17 +2702,39 @@ const server = createServer(async (req, res) => {
     if (url.pathname === "/api/pathology-library" && req.method === "GET") {
       const crop = (url.searchParams.get("crop") || "").trim();
       const stage = (url.searchParams.get("stage") || "").trim();
+      const correctionSummary = correctionSummaryByCondition(await readExpertCorrections());
       const conditions = flattenPathologyLibrary(pathologyLibrary)
-        .filter((item) => (!crop || item.cropKey === crop) && (!stage || item.stage === stage));
+        .filter((item) => (!crop || item.cropKey === crop) && (!stage || item.stage === stage))
+        .map((item) => ({
+          ...item,
+          correctionSummary: correctionSummary[item.id] || { count: 0, finalOutcomes: {}, latestCorrection: null }
+        }));
       sendJson(res, 200, {
         version: pathologyLibrary.version,
         scope: pathologyLibrary.scope,
         sourceIndex: pathologyLibrary.sourceIndex,
+        expertLayer: {
+          evidenceVersion: "fivecrop-expert-evidence-v1",
+          prescriptionVersion: "fivecrop-prescription-protocol-v1",
+          correctionLoop: "server-persisted-expert-corrections"
+        },
         stats: {
           ...pathologyStats(pathologyLibrary),
-          visibleConditions: conditions.length
+          visibleConditions: conditions.length,
+          corrections: Object.values(correctionSummary).reduce((sum, item) => sum + item.count, 0)
         },
         conditions
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/case-validation" && req.method === "GET") {
+      const crop = (url.searchParams.get("crop") || "").trim();
+      const conditionId = (url.searchParams.get("conditionId") || "").trim();
+      const suite = buildCaseValidationSuite({ crop, conditionId });
+      sendJson(res, 200, {
+        ...suite,
+        validation: caseValidationStats(suite)
       });
       return;
     }
@@ -2535,6 +2774,48 @@ const server = createServer(async (req, res) => {
 
     if (url.pathname === "/api/assistant/diagnosis" && req.method === "POST") {
       sendJson(res, 200, await assistantDiagnosisPayload(await readJsonBody(req)));
+      return;
+    }
+
+    if (url.pathname === "/api/expert-corrections" && req.method === "GET") {
+      const crop = (url.searchParams.get("crop") || "").trim();
+      const conditionId = (url.searchParams.get("conditionId") || "").trim();
+      const corrections = (await readExpertCorrections())
+        .filter((item) => (!crop || item.cropKey === crop) && (!conditionId || item.conditionId === conditionId || item.pathologyConditionId === conditionId));
+      sendJson(res, 200, {
+        version: "fivecrop-expert-corrections-v1",
+        stats: {
+          corrections: corrections.length,
+          conditions: new Set(corrections.map((item) => item.conditionId || item.pathologyConditionId).filter(Boolean)).size
+        },
+        corrections
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/expert-corrections" && req.method === "POST") {
+      const saved = await writeExpertCorrection(await readJsonBody(req));
+      sendJson(res, 201, saved);
+      return;
+    }
+
+    if (url.pathname === "/api/public-photo-test-records" && req.method === "GET") {
+      sendJson(res, 200, {
+        version: "fivecrop-public-print-results-v1",
+        records: await readPublicPhotoTestRecords()
+      });
+      return;
+    }
+
+    if (url.pathname === "/api/public-photo-test-records" && req.method === "POST") {
+      const saved = await writePublicPhotoTestRecord(await readJsonBody(req));
+      sendJson(res, 201, saved);
+      return;
+    }
+
+    if (url.pathname === "/api/public-photo-test-records" && req.method === "DELETE") {
+      await clearPublicPhotoTestRecords();
+      sendJson(res, 200, { ok: true, records: [] });
       return;
     }
 

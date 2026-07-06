@@ -1,0 +1,226 @@
+{
+  "version": "fivecrop-public-print-fixtures-v1",
+  "purpose": "Printable public-source photo validation for FiveCrop before the five live plants complete a full growth cycle.",
+  "usePolicy": {
+    "doNotBundleCopyrightedImages": true,
+    "storeSourceLinksOnly": true,
+    "intendedUse": "Internal model and product validation by printing or screen-capturing source photos, then photographing them through the FiveCrop app.",
+    "note": "Source pages with unclear licenses are print/reference candidates only. Do not ship, market, train, or redistribute those images until rights are confirmed."
+  },
+  "minimumPlan": {
+    "groupsPerGoldenPath": 5,
+    "photosPerGroup": 4,
+    "minimumTotalPhoneCaptures": 100,
+    "recommendedTotalPhoneCaptures": 200
+  },
+  "captureProtocol": [
+    "Print each source image or open it on a second screen, then photograph it from the phone inside FiveCrop.",
+    "For each source image, capture four variants: straight-on, slight angle, dim indoor light, and close crop.",
+    "Include at least one wrong-crop or unsupported-plant negative control in every session.",
+    "Record whether FiveCrop confirms the correct crop before any diagnosis is accepted.",
+    "Record whether the single next action matches the expected golden-path condition or asks for a better/missing photo.",
+    "Do not save source image files into the app repository unless the image license and attribution have been reviewed."
+  ],
+  "sources": [
+    {
+      "id": "plantdoc-github",
+      "title": "PlantDoc Dataset",
+      "url": "https://github.com/pratikkayal/PlantDoc-Dataset",
+      "type": "open-dataset",
+      "license": "CC-BY-4.0 per repository metadata",
+      "bestFor": ["public plant disease photos", "tomato disease controls", "pepper disease controls", "crop identity stress tests"],
+      "limits": ["Mostly field/leaf disease photos, not indoor physiological golden-path photos."]
+    },
+    {
+      "id": "umn-tomato",
+      "title": "University of Minnesota Extension: Growing tomatoes in home gardens",
+      "url": "https://extension.umn.edu/vegetables/growing-tomatoes",
+      "type": "extension-reference",
+      "license": "source-page reference; confirm rights before reuse",
+      "bestFor": ["tomato flower and fruiting rules", "temperature and pollination context"],
+      "limits": ["Use as authority and print reference, not as bundled app asset."]
+    },
+    {
+      "id": "ncsu-basil",
+      "title": "NC State Extension Gardener Plant Toolbox: Ocimum basilicum",
+      "url": "https://plants.ces.ncsu.edu/plants/ocimum-basilicum/",
+      "type": "extension-reference",
+      "license": "source-page reference; confirm rights before reuse",
+      "bestFor": ["basil crop identity", "leaf arrangement and flower controls", "healthy-vs-leggy comparison"],
+      "limits": ["Leggy low-light examples may need additional sourced photos or live plants."]
+    },
+    {
+      "id": "ncsu-rosemary",
+      "title": "NC State Extension Gardener Plant Toolbox: Salvia rosmarinus",
+      "url": "https://plants.ces.ncsu.edu/plants/salvia-rosmarinus/",
+      "type": "extension-reference",
+      "license": "source-page reference; confirm rights before reuse",
+      "bestFor": ["rosemary crop identity", "wet-root intolerance rule", "healthy-vs-decline comparison"],
+      "limits": ["Root rot detail photos may need additional sourced photos or live plants."]
+    },
+    {
+      "id": "uky-strawberry-pollination",
+      "title": "University of Kentucky Fruit Scout: Poor Pollination, Strawberry",
+      "url": "https://fruitscout.mgcafe.uky.edu/poor-pollination-strawberry",
+      "type": "extension-reference",
+      "license": "source-page reference; confirm rights before reuse",
+      "bestFor": ["strawberry poor pollination", "malformed fruit evidence", "direct visual golden-path print"],
+      "limits": ["Use for internal print validation unless reuse rights are confirmed."]
+    },
+    {
+      "id": "umn-strawberry",
+      "title": "University of Minnesota Extension: Growing strawberries in the home garden",
+      "url": "https://extension.umn.edu/fruit/growing-strawberries-home-garden",
+      "type": "extension-reference",
+      "license": "source-page reference; confirm rights before reuse",
+      "bestFor": ["strawberry crown/root disease context", "gray mold and black root rot references"],
+      "limits": ["Outdoor garden examples need interpretation for indoor-device context."]
+    },
+    {
+      "id": "umn-pepper",
+      "title": "University of Minnesota Extension: Growing peppers in home gardens",
+      "url": "https://extension.umn.edu/vegetables/growing-peppers",
+      "type": "extension-reference",
+      "license": "source-page reference; confirm rights before reuse",
+      "bestFor": ["pepper flower drop rule", "pepper flower/fruit context", "heat and pollination context"],
+      "limits": ["Flower-drop visuals may need additional sourced photos or live plants."]
+    }
+  ],
+  "fixtureGroups": [
+    {
+      "id": "tomato-blossom-drop-public-print",
+      "cropKey": "tomato",
+      "goldenPath": "tomato blossom drop",
+      "expectedConditionId": "tomato-blossom-drop-heat-pollination",
+      "minimumSourcePhotos": 5,
+      "photoTypes": ["plant", "flower"],
+      "sourceRefs": [
+        {
+          "sourceId": "umn-tomato",
+          "role": "diagnostic authority and tomato flower reference",
+          "printTargets": ["flower cluster", "new blossom", "small fruit set or lack of fruit set"]
+        },
+        {
+          "sourceId": "plantdoc-github",
+          "role": "negative-control disease photos",
+          "printTargets": ["Tomato leaf disease folders to ensure leaf disease does not become blossom-drop diagnosis"]
+        }
+      ],
+      "evidenceChecklist": ["visible tomato identity", "flower cluster", "dropped/yellowing blossom or no young fruit", "temperature/light/pollination context"],
+      "passFailRules": [
+        "Pass: tomato crop is confirmed before diagnosis.",
+        "Pass: flower-drop photos route to tomato-blossom-drop-heat-pollination or ask for a clearer flower photo.",
+        "Fail: non-tomato or leaf-only photos produce a tomato flower-drop diagnosis."
+      ]
+    },
+    {
+      "id": "basil-leggy-public-print",
+      "cropKey": "basil",
+      "goldenPath": "basil leggy low light",
+      "expectedConditionId": "basil-leggy-low-light",
+      "minimumSourcePhotos": 5,
+      "photoTypes": ["plant"],
+      "sourceRefs": [
+        {
+          "sourceId": "ncsu-basil",
+          "role": "basil identity and healthy comparison",
+          "printTargets": ["whole basil plant", "opposite oval leaves", "flowering/bolting examples if present"]
+        }
+      ],
+      "evidenceChecklist": ["visible basil identity", "long internodes", "small upper leaves", "leaning toward light", "low-light context"],
+      "passFailRules": [
+        "Pass: basil identity is confirmed only when basil-specific leaves/stems are visible.",
+        "Pass: leggy photos route to basil-leggy-low-light or ask for a side-view whole-plant photo.",
+        "Fail: unrelated leafy herbs are accepted as basil without identity evidence."
+      ]
+    },
+    {
+      "id": "rosemary-wet-root-public-print",
+      "cropKey": "rosemary",
+      "goldenPath": "rosemary wet root decline",
+      "expectedConditionId": "rosemary-wet-root-decline",
+      "minimumSourcePhotos": 5,
+      "photoTypes": ["plant", "root"],
+      "sourceRefs": [
+        {
+          "sourceId": "ncsu-rosemary",
+          "role": "rosemary identity and wet-root intolerance authority",
+          "printTargets": ["needle-like leaves", "woody sprig", "container/soil context"]
+        }
+      ],
+      "evidenceChecklist": ["visible rosemary identity", "needle browning or wilting", "wet substrate or poor drainage cue", "root-zone close-up if available"],
+      "passFailRules": [
+        "Pass: rosemary is confirmed only from needle-like leaves or woody sprigs.",
+        "Pass: wet-root photos route to rosemary-wet-root-decline or request a root/substrate photo.",
+        "Fail: any needle-like non-rosemary plant receives a confident rosemary diagnosis without a retake."
+      ]
+    },
+    {
+      "id": "strawberry-pollination-crown-public-print",
+      "cropKey": "strawberry",
+      "goldenPath": "strawberry pollination or wet crown",
+      "expectedConditionId": "strawberry-deformed-fruit-pollination",
+      "secondaryConditionIds": ["strawberry-flower-no-fruit", "strawberry-crown-wet-rot-risk"],
+      "minimumSourcePhotos": 5,
+      "photoTypes": ["plant", "flower", "root"],
+      "sourceRefs": [
+        {
+          "sourceId": "uky-strawberry-pollination",
+          "role": "direct poor-pollination visual reference",
+          "printTargets": ["malformed strawberry fruit", "healthy comparison fruit"]
+        },
+        {
+          "sourceId": "umn-strawberry",
+          "role": "crown/root disease context and negative controls",
+          "printTargets": ["crown area", "gray mold", "black root rot", "leaf disease controls"]
+        }
+      ],
+      "evidenceChecklist": ["trifoliate strawberry leaves", "flower or fruit visible", "malformed berry or no fruit set", "wet crown/substrate if testing crown risk"],
+      "passFailRules": [
+        "Pass: malformed fruit routes to strawberry-deformed-fruit-pollination.",
+        "Pass: wet crown photos route to strawberry-crown-wet-rot-risk or request a crown close-up.",
+        "Fail: a leaf-only strawberry photo is diagnosed as pollination failure without asking for flower/fruit evidence."
+      ]
+    },
+    {
+      "id": "pepper-flower-drop-public-print",
+      "cropKey": "pepper",
+      "goldenPath": "pepper flower drop",
+      "expectedConditionId": "pepper-flower-drop",
+      "minimumSourcePhotos": 5,
+      "photoTypes": ["plant", "flower"],
+      "sourceRefs": [
+        {
+          "sourceId": "umn-pepper",
+          "role": "pepper flower-drop authority and flower/fruit reference",
+          "printTargets": ["white pepper flower", "young pepper fruit", "flower cluster or node"]
+        },
+        {
+          "sourceId": "plantdoc-github",
+          "role": "negative-control pepper disease photos",
+          "printTargets": ["Bell_pepper leaf spot and healthy folders"]
+        }
+      ],
+      "evidenceChecklist": ["visible pepper identity", "white flower or flower node", "dropped blossom or missing young fruit", "heat/light/water-swing context"],
+      "passFailRules": [
+        "Pass: flower-node photos route to pepper-flower-drop or request a clearer flower-node photo.",
+        "Pass: pepper leaf disease controls do not become flower-drop diagnoses.",
+        "Fail: tomato or basil flower photos are accepted as pepper flower drop."
+      ]
+    }
+  ],
+  "sessionLogFields": [
+    "date",
+    "phoneModel",
+    "sourceId",
+    "fixtureGroupId",
+    "printedOrScreen",
+    "captureVariant",
+    "appCropResult",
+    "appConditionResult",
+    "appNextAction",
+    "askedForRetake",
+    "pass",
+    "notes"
+  ]
+}

@@ -191,6 +191,9 @@ Scheduling rule:
 Current API:
 - `/api/crop-models`
 - `/api/golden-paths`
+- `/api/pathology-library`
+- `/api/case-validation`
+- `/api/expert-corrections`
 
 First batch:
 - dwarf tomato: pollination, fruit set, light, heat, water swing
@@ -198,6 +201,22 @@ First batch:
 - rosemary: overwatering, airflow, root hypoxia, low light
 - strawberry: pollination, wet crown, deformed fruit, fungal signs
 - compact pepper: flower drop, heat, low light, water swing
+
+Expert pathology layer:
+- The pathology library now covers 44 conditions: 12 for basil and 8 for each other crop.
+- Each condition exposes expert evidence, differential checks, missing information, a one-action prescription protocol, do-not guidance, thresholds where available, escalation guidance, and a follow-up success standard.
+- `/api/case-validation` generates simulated photo fixtures for every condition. Current acceptance target: at least 3 photos per condition; current implementation: 176 simulated fixtures across 44 conditions.
+- `case-validation-smoke.mjs` verifies that the simulated fixtures can route back to the expected condition through the existing matching engine.
+- Expert corrections are now persisted through `/api/expert-corrections` and summarized back into `/api/pathology-library` by condition id, so reviewer feedback can start accumulating into the case library.
+
+Public print-photo validation:
+- `data/public-photo-fixtures.json` tracks source-page links, expected condition ids, evidence checklists, and pass/fail rules for the five golden paths.
+- `public-photo-fixtures-smoke.mjs` verifies that each public print fixture still maps to an existing pathology condition and has enough source, evidence, and capture-protocol metadata.
+- Expert mode now includes a public photo print-test panel that loads the fixture groups, opens the Chinese guide, records pass/retake/fail/default-basil results in localStorage, and exports the result log as JSON.
+- Public print-test records are also persisted through `/api/public-photo-test-records`, so a phone capture link can carry the fixture group, source image number, and capture variant back to the desktop management panel without saving the original photo.
+- This layer is for fast internal validation only: print or screen-display sourced photos, photograph them through the phone app, and record whether crop identity, diagnosis, one action, and retake behavior are correct.
+- Public web photos with unclear rights must not be bundled into the app, training data, screenshots, or marketing until permission/license status is confirmed.
+- The minimum useful run is 100 phone captures: 5 golden paths x 5 source images x 4 capture variants. The recommended run is 200 captures.
 
 Golden paths:
 - Tomato flower drop: flower photo -> pollination/light/temperature diagnosis -> one pollination action -> 3-7 day flower follow-up.
