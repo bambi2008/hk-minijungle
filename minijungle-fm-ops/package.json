@@ -1,0 +1,11 @@
+{
+  "name": "minijungle-fm-ops",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "start:8010": "node server.mjs --port 8010",
+    "check": "node --check app.js && node --check server.mjs"
+  }
+}
