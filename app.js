@@ -13,6 +13,16 @@ const customerCheckPlantBtn = document.querySelector("#customer-check-plant-btn"
 const customerPhotoStatusLabel = document.querySelector("#customer-photo-status-label");
 const customerAnalysisState = document.querySelector("#customer-analysis-state");
 const customerProgressSteps = Array.from(document.querySelectorAll("[data-customer-step]"));
+const customerPhotoEntryBtn = document.querySelector("#customer-photo-entry-btn");
+const customerCareEntryBtn = document.querySelector("#customer-care-entry-btn");
+const customerCareCard = document.querySelector("#customer-care-card");
+const customerCareKicker = document.querySelector("#customer-care-kicker");
+const customerCareTitle = document.querySelector("#customer-care-title");
+const customerCareMessage = document.querySelector("#customer-care-message");
+const customerCareAction = document.querySelector("#customer-care-action");
+const customerCareFollowup = document.querySelector("#customer-care-followup");
+const customerCareEvidence = document.querySelector("#customer-care-evidence");
+const customerCareModeButtons = Array.from(document.querySelectorAll("[data-customer-care-mode]"));
 const customerModeBtn = document.querySelector("#customer-mode-btn");
 const expertModeBtn = document.querySelector("#expert-mode-btn");
 const customerTitle = document.querySelector("#customer-title");
@@ -537,6 +547,17 @@ let basilGuideMode = (() => {
   }
 })();
 
+const customerEntryModeStorageKey = "fivecropCustomerEntryMode";
+const customerCareRecordStorageKey = "fivecropCustomerCareRecord";
+let customerEntryMode = (() => {
+  try {
+    const saved = localStorage.getItem(customerEntryModeStorageKey);
+    return saved === "care" ? "care" : "photo";
+  } catch {
+    return "photo";
+  }
+})();
+
 function numberFrom(data, key) {
   const value = String(data.get(key) || "").trim();
   if (!value) return null;
@@ -954,6 +975,124 @@ function renderBasilGuidance(state = getFormState()) {
     item.append(label, copy);
     basilGuidanceSteps.appendChild(item);
   });
+}
+
+function setCustomerEntryMode(mode, { persist = true } = {}) {
+  customerEntryMode = mode === "care" ? "care" : "photo";
+  if (persist) {
+    try {
+      localStorage.setItem(customerEntryModeStorageKey, customerEntryMode);
+    } catch {
+      // The selected mode still works for this session if storage is blocked.
+    }
+  }
+  renderCustomerMobileExperience(latestState || getFormState());
+}
+
+function customerCareSignature(model) {
+  return [model.cropKey, model.mode, model.action].join("|");
+}
+
+function readCustomerCareRecord() {
+  try {
+    return JSON.parse(localStorage.getItem(customerCareRecordStorageKey) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function writeCustomerCareRecord(record) {
+  try {
+    localStorage.setItem(customerCareRecordStorageKey, JSON.stringify(record));
+  } catch {
+    // Local confirmation is enough for the current render even if storage is blocked.
+  }
+}
+
+function customerCareModel(state = getFormState()) {
+  const crop = cropNames[state.crop] || "Plant";
+  if (state.crop === "basil") {
+    const plan = basilGuidancePlans[basilGuideMode] || basilGuidancePlans.seed;
+    const model = {
+      cropKey: state.crop,
+      mode: basilGuideMode,
+      modeLabel: plan.label,
+      title: `${crop} care today`,
+      message: `${plan.summary} ${basilGuidanceStageHint(state)}`,
+      action: plan.currentAction,
+      followup: "Come back in 7 days. Take a whole-plant side photo and one pruning-node detail.",
+      evidence: [
+        plan.label,
+        "No pollination unless saving seed",
+        has(state, "weak-aroma") || smartConcern.value === "aroma"
+          ? "Track light, fertilizer and harvest frequency"
+          : "Review: shape, side shoots and harvest node"
+      ]
+    };
+    return {
+      ...model,
+      completed: readCustomerCareRecord()?.signature === customerCareSignature(model)
+    };
+  }
+
+  const model = {
+    cropKey: state.crop,
+    mode: "photo-first",
+    modeLabel: "Photo first",
+    title: `${crop} care today`,
+    message: "Routine guidance is being built crop by crop. For this plant, FiveCrop should first confirm the visible state.",
+    action: "Take one clear whole-plant photo.",
+    followup: "FiveCrop will set the return photo after the diagnosis.",
+    evidence: ["Routine care is live first for basil", "Photo check gives a specific next action", "Follow-up timing comes after diagnosis"]
+  };
+  return {
+    ...model,
+    completed: false
+  };
+}
+
+function renderCustomerEntryActions() {
+  const isCare = customerEntryMode === "care";
+  if (customerPhotoEntryBtn) {
+    customerPhotoEntryBtn.classList.toggle("active", !isCare);
+    customerPhotoEntryBtn.setAttribute("aria-pressed", String(!isCare));
+  }
+  if (customerCareEntryBtn) {
+    customerCareEntryBtn.classList.toggle("active", isCare);
+    customerCareEntryBtn.setAttribute("aria-pressed", String(isCare));
+  }
+}
+
+function renderCustomerCareCard(state = getFormState(), stage = customerAppShell?.dataset.state) {
+  if (!customerCareCard || !customerCareAction || !customerCareFollowup) return;
+  const show = stage === "care";
+  customerCareCard.hidden = !show;
+  renderCustomerEntryActions();
+  if (!show) return;
+
+  const model = customerCareModel(state);
+  if (customerCareKicker) customerCareKicker.textContent = model.completed ? "Done today" : "Today's care";
+  if (customerCareTitle) customerCareTitle.textContent = model.title;
+  if (customerCareMessage) customerCareMessage.textContent = model.message;
+  customerCareAction.textContent = model.completed ? "Done for today. Keep conditions steady until the review." : model.action;
+  customerCareFollowup.textContent = model.followup;
+
+  const modeRow = customerCareModeButtons[0]?.closest(".customer-care-mode-row");
+  if (modeRow) modeRow.hidden = state.crop !== "basil";
+  customerCareModeButtons.forEach((button) => {
+    const active = button.dataset.customerCareMode === basilGuideMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  if (customerCareEvidence) {
+    customerCareEvidence.innerHTML = "";
+    model.evidence.slice(0, 3).forEach((item) => {
+      const chip = document.createElement("span");
+      chip.textContent = item;
+      customerCareEvidence.appendChild(chip);
+    });
+  }
 }
 
 function isCustomerModeActive() {
@@ -2983,10 +3122,12 @@ function renderCustomerMobileExperience(state = getFormState()) {
   const hasPhoto = Boolean(uploaded || document.body.classList.contains("has-plant-photo"));
   const actionModel = customerPrimaryActionModel(state, latestFindings);
   const hasFollowup = ["followup", "followup-panel", "progress"].includes(actionModel.action);
-  const stage = processing ? "analyzing" : (needsCropCheck && hasPhoto) ? "action" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
-  const stageOrder = { photo: 0, analyzing: 0, action: 1, followup: 2 };
+  const baseStage = processing ? "analyzing" : (needsCropCheck && hasPhoto) ? "action" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
+  const stage = customerEntryMode === "care" && !processing && !needsCropCheck && !hasPhoto ? "care" : baseStage;
+  const stageOrder = { photo: 0, care: 0, analyzing: 0, action: 1, followup: 2 };
 
   customerAppShell.dataset.state = stage;
+  customerAppShell.dataset.intent = customerEntryMode;
   customerAppShell.setAttribute("aria-busy", String(processing));
   if (customerAnalysisState) customerAnalysisState.setAttribute("aria-hidden", String(!processing));
   customerProgressSteps.forEach((step, index) => {
@@ -2999,6 +3140,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
   if (customerMobileRisk) customerMobileRisk.textContent = model.risk;
   const stageCopy = {
     photo: ["Show me what’s changing.", "Frame the whole plant. We’ll ask for a detail only if needed."],
+    care: ["What should I do today?", "No photo needed for this routine step."],
     analyzing: ["Looking closely.", "Checking photo quality and visible symptoms."],
     action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
     followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
@@ -3011,6 +3153,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
   if (customerAppIntro) customerAppIntro.textContent = stageCopy[stage][1];
   if (customerMobileAction) customerMobileAction.textContent = model.action;
   if (customerMobileFollowup) customerMobileFollowup.textContent = model.followup;
+  renderCustomerCareCard(state, stage);
   if (customerMobileEvidence) {
     const icons = [
       '<svg aria-hidden="true" viewBox="0 0 24 24"><path d="M7 20v-7M7 13c-3 0-5-2-5-5 3 0 5 2 5 5Zm0 3c4 0 7-3 7-7-4 0-7 3-7 7Z"/></svg>',
@@ -3041,13 +3184,19 @@ function renderCustomerMobileExperience(state = getFormState()) {
     const labels = {
       "guided-photo": "Take a photo",
       "suggested-photo": "Retake photo",
+      "care-complete": "I’ll do this today",
       "complete-current-task": "I’ve done this",
       followup: "Take follow-up photo",
       "followup-panel": "View follow-up plan",
       progress: "View follow-up result",
       diagnosis: "View diagnosis"
     };
-    customerCheckPlantBtn.dataset.action = needsCropCheck ? "suggested-photo" : (stage === "photo" ? "guided-photo" : actionModel.action);
+    if (stage === "care") {
+      const careModel = customerCareModel(state);
+      customerCheckPlantBtn.dataset.action = careModel.completed ? "guided-photo" : "care-complete";
+    } else {
+      customerCheckPlantBtn.dataset.action = needsCropCheck ? "suggested-photo" : (stage === "photo" ? "guided-photo" : actionModel.action);
+    }
     customerCheckPlantBtn.querySelector("span").textContent = processing ? "Analyzing photo..." : (labels[customerCheckPlantBtn.dataset.action] || "Continue");
     customerCheckPlantBtn.disabled = processing;
   }
@@ -5768,8 +5917,21 @@ async function loadPublicPhotoTestPanel() {
 function initialModeFromUrl() {
   const params = new URLSearchParams(window.location.search);
   if (params.get("capture") === "public-photo") return "customer";
+  if (params.get("mode") === "customer") return "customer";
   if (params.get("mode") === "expert" || params.get("panel") === "public-photo-test") return "expert";
   return localStorage.getItem("growClinicMode") || "customer";
+}
+
+function applyInitialCustomerUrlState() {
+  const params = new URLSearchParams(window.location.search);
+  const crop = params.get("crop");
+  if (crop && cropNames[crop] && cropSelect) cropSelect.value = crop;
+  const careMode = params.get("care");
+  if (careMode && basilGuidancePlans[careMode]) basilGuideMode = careMode;
+  const intent = params.get("intent");
+  if (intent === "care" || intent === "photo") {
+    setCustomerEntryMode(intent, { persist: false });
+  }
 }
 
 function focusInitialPanelFromUrl() {
@@ -7983,8 +8145,24 @@ customerMobilePrivacyBtn?.addEventListener("click", () => {
   if (customerMobilePrivacyDetail) customerMobilePrivacyDetail.hidden = expanded;
   customerMobilePrivacyBtn.setAttribute("aria-expanded", String(!expanded));
 });
+customerPhotoEntryBtn?.addEventListener("click", () => setCustomerEntryMode("photo"));
+customerCareEntryBtn?.addEventListener("click", () => setCustomerEntryMode("care"));
 cropQuickButtons.forEach((button) => {
   button.addEventListener("click", () => chooseCustomerCrop(button.dataset.cropChoice));
+});
+customerCareModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const nextMode = button.dataset.customerCareMode;
+    if (!basilGuidancePlans[nextMode]) return;
+    basilGuideMode = nextMode;
+    try {
+      localStorage.setItem(basilGuideStorageKey, nextMode);
+    } catch {
+      // The selected care mode still works for this session if storage is blocked.
+    }
+    renderBasilGuidance();
+    renderCustomerMobileExperience(latestState || getFormState());
+  });
 });
 basilGuideModeButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -8266,6 +8444,20 @@ function runCustomerPrimaryAction(action) {
   }
   if (action === "followup") {
     openFollowupUpload();
+    return;
+  }
+  if (action === "care-complete") {
+    const state = getFormState();
+    const model = customerCareModel(state);
+    writeCustomerCareRecord({
+      signature: customerCareSignature(model),
+      cropKey: model.cropKey,
+      mode: model.mode,
+      action: model.action,
+      completedAt: new Date().toISOString()
+    });
+    renderCustomerMobileExperience(state);
+    focusCustomerTarget(customerCareCard);
     return;
   }
   if (action === "complete-current-task") {
@@ -8853,6 +9045,9 @@ exportDbBtn.addEventListener("click", async () => {
 updateCropHint();
 applyNotificationChannelConfig();
 applyDeviceTemplate({ force: true });
+applyInitialCustomerUrlState();
+updateCropHint();
+updateDeviceProfile();
 runDiagnosis();
 setMode(initialModeFromUrl());
 restoreCustomerArchiveOnStartup();
