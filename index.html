@@ -125,6 +125,7 @@
               <option value="unknown">我不确定，先看照片</option>
               <option value="yellow">叶片发黄</option>
               <option value="leggy">徒长/不开花</option>
+              <option value="aroma">香味不浓</option>
               <option value="fruit">开花不结果/落花</option>
               <option value="pest">虫害/小飞虫</option>
               <option value="root">根区发绿/发白</option>
@@ -179,6 +180,21 @@
           <p id="device-plan-summary">系统会根据设备、作物和阶段自动给出株数、第一张照片、第一步动作和复查时间。</p>
           <div id="device-plan-grid" class="device-plan-grid"></div>
           <ul id="device-plan-list" class="device-plan-list"></ul>
+        </section>
+
+        <section class="basil-guidance-card" id="basil-guidance-card" hidden>
+          <div class="block-title-row">
+            <h3>罗勒主动种植指导</h3>
+            <span id="basil-guidance-mode-label" class="basil-guidance-mode-label">种子培育</span>
+          </div>
+          <p id="basil-guidance-summary">选择你的起步方式，FiveCrop 会给出本阶段应该做的动作。</p>
+          <div class="basil-guidance-tabs" role="group" aria-label="罗勒起步方式">
+            <button type="button" class="mini-button active" data-basil-guide-mode="seed">种子培育</button>
+            <button type="button" class="mini-button" data-basil-guide-mode="transplant">移栽/换盆</button>
+            <button type="button" class="mini-button" data-basil-guide-mode="store">成品不移植</button>
+          </div>
+          <div id="basil-guidance-current" class="basil-guidance-current"></div>
+          <div id="basil-guidance-steps" class="basil-guidance-steps"></div>
         </section>
 
         <section class="auto-intake-card" id="auto-intake-card">
@@ -397,6 +413,7 @@
           <label><input type="checkbox" name="symptoms" value="leaf-curl"> 卷叶</label>
           <label><input type="checkbox" name="symptoms" value="spots"> 斑点/焦边</label>
           <label><input type="checkbox" name="symptoms" value="bolting"> 很快开花/抽薹</label>
+          <label><input type="checkbox" name="symptoms" value="weak-aroma"> 香味不浓</label>
           <label><input type="checkbox" name="symptoms" value="no-flower"> 不开花</label>
           <label><input type="checkbox" name="symptoms" value="no-fruit"> 开花不结果</label>
           <label><input type="checkbox" name="symptoms" value="pests"> 有小飞虫/虫迹</label>

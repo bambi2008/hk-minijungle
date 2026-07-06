@@ -1739,6 +1739,95 @@ legend {
   display: none;
 }
 
+.basil-guidance-card {
+  grid-column: 1 / -1;
+  border: 1px solid #d9ded6;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fffdf8;
+}
+
+.basil-guidance-card[hidden] {
+  display: none;
+}
+
+.basil-guidance-card > p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.basil-guidance-mode-label {
+  color: #6a3f2e;
+  font-size: 0.76rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.basil-guidance-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.basil-guidance-tabs .mini-button.active {
+  border-color: #6f8f64;
+  background: #edf4e9;
+  color: #24472d;
+}
+
+.basil-guidance-current {
+  display: grid;
+  gap: 5px;
+  border-left: 3px solid #6f8f64;
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: #f7faf2;
+}
+
+.basil-guidance-current strong {
+  color: var(--ink);
+  font-size: 0.92rem;
+  line-height: 1.42;
+}
+
+.basil-guidance-current span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.basil-guidance-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.basil-guidance-step {
+  min-height: 112px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #fff;
+}
+
+.basil-guidance-step span {
+  display: block;
+  color: #6a3f2e;
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.basil-guidance-step p {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+  line-height: 1.42;
+}
+
 .auto-intake-card {
   grid-column: 1 / -1;
   border: 1px solid #dbe7e0;
@@ -3811,6 +3900,10 @@ body.customer-mode .device-plan-card {
   order: 6;
 }
 
+body.customer-mode .basil-guidance-card {
+  order: 6;
+}
+
 body.customer-mode .guided-photo-card {
   order: 7;
 }
@@ -5527,6 +5620,7 @@ li {
   .native-camera-actions,
   .device-fit-list,
   .device-plan-grid,
+  .basil-guidance-steps,
   .auto-intake-list,
   .guided-photo-steps,
   .photo-check-list,

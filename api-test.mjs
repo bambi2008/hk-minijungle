@@ -385,14 +385,15 @@ try {
   }
   const pathology = await pathologyResponse.json();
   if (
-    pathology.stats.conditions < 44 ||
-    pathology.stats.visibleConditions < 12 ||
+    pathology.stats.conditions < 45 ||
+    pathology.stats.visibleConditions < 13 ||
     pathology.expertLayer?.evidenceVersion !== "fivecrop-expert-evidence-v1" ||
     !pathology.conditions.some((item) => item.id === "basil-leggy-low-light") ||
     !pathology.conditions.some((item) => item.id === "basil-black-leg-root-rot") ||
     !pathology.conditions.some((item) => item.id === "basil-chewing-pest-leaf-holes") ||
     !pathology.conditions.some((item) => item.id === "basil-leaf-powdery-gray-mold-humidity") ||
     !pathology.conditions.some((item) => item.id === "basil-transplant-shock-wilting") ||
+    !pathology.conditions.some((item) => item.id === "basil-weak-aroma-light-nitrogen-harvest") ||
     !pathology.conditions.every((item) => item.expertEvidence?.decisionRule && item.prescriptionProtocol?.doNot?.length) ||
     !pathology.conditions.every((item) => item.cropKey === "basil") ||
     !pathology.sourceIndex?.["ncsu-basil"]
@@ -407,8 +408,8 @@ try {
   const validation = await validationResponse.json();
   if (
     validation.validation?.ready !== true ||
-    validation.stats.conditions !== 44 ||
-    validation.stats.photoFixtures < 176 ||
+    validation.stats.conditions !== 45 ||
+    validation.stats.photoFixtures < 180 ||
     validation.stats.minPhotosPerCondition < 3 ||
     !validation.cases.every((item) => item.photoFixtures?.length >= 3 && item.expertEvidence?.decisionRule && item.prescriptionProtocol?.oneAction)
   ) {

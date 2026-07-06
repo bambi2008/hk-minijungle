@@ -203,9 +203,9 @@ First batch:
 - compact pepper: flower drop, heat, low light, water swing
 
 Expert pathology layer:
-- The pathology library now covers 44 conditions: 12 for basil and 8 for each other crop.
+- The pathology library now covers 45 conditions: 13 for basil and 8 for each other crop.
 - Each condition exposes expert evidence, differential checks, missing information, a one-action prescription protocol, do-not guidance, thresholds where available, escalation guidance, and a follow-up success standard.
-- `/api/case-validation` generates simulated photo fixtures for every condition. Current acceptance target: at least 3 photos per condition; current implementation: 176 simulated fixtures across 44 conditions.
+- `/api/case-validation` generates simulated photo fixtures for every condition. Current acceptance target: at least 3 photos per condition; current implementation: 180 simulated fixtures across 45 conditions.
 - `case-validation-smoke.mjs` verifies that the simulated fixtures can route back to the expected condition through the existing matching engine.
 - Expert corrections are now persisted through `/api/expert-corrections` and summarized back into `/api/pathology-library` by condition id, so reviewer feedback can start accumulating into the case library.
 

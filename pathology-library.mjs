@@ -278,6 +278,27 @@ export const pathologyLibrary = {
           sourceIds: ["ncsu-basil", "fivecrop-field"]
         }),
         condition({
+          id: "basil-weak-aroma-light-nitrogen-harvest",
+          cropKey: "basil",
+          stage: "vegetative",
+          category: "harvest",
+          title: "罗勒香味弱/风味不浓",
+          summary: "叶子长得还行但香味弱时，照片通常不能直接判断香味；常见原因是光照不足、氮肥过多或采收太少。",
+          action: "今天先增加有效光照，适度控肥，并从健康节点上方打顶或轻采收；充足阳光和连续采收会让罗勒香气更明显。",
+          followup: { when: "7 天", photo: "整株侧面和采收节点", success: "新侧枝更密，主观香味评分上升，且没有继续徒长或早花" },
+          evidence: ["用户主诉香味弱", "叶片基本健康但风味不浓", "光照不足", "氮肥或营养液偏高", "长期不打顶采收"],
+          differentials: ["弱光徒长", "早花变苦", "品种本身香味淡", "采收后存放太久", "根区压力导致生长失衡"],
+          missingInfo: ["每日有效光照小时", "最近施肥或 EC", "最近一次打顶/采收时间", "是否已经出现花苞", "品种名称"],
+          photoTypes: ["plant", "leaf"],
+          match: {
+            concern: ["aroma"],
+            symptoms: ["weak-aroma"],
+            stage: ["vegetative"],
+            environment: { light: ["low"], ecHigh: 2.4, lightHoursMax: 12 }
+          },
+          sourceIds: ["ncsu-basil", "fivecrop-field"]
+        }),
+        condition({
           id: "basil-bolting-flowering",
           cropKey: "basil",
           stage: "flowering",

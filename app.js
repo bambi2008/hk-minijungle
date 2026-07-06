@@ -96,6 +96,12 @@ const devicePlanSummary = document.querySelector("#device-plan-summary");
 const devicePlanGrid = document.querySelector("#device-plan-grid");
 const devicePlanList = document.querySelector("#device-plan-list");
 const applyDevicePlanBtn = document.querySelector("#apply-device-plan-btn");
+const basilGuidanceCard = document.querySelector("#basil-guidance-card");
+const basilGuidanceModeLabel = document.querySelector("#basil-guidance-mode-label");
+const basilGuidanceSummary = document.querySelector("#basil-guidance-summary");
+const basilGuidanceCurrent = document.querySelector("#basil-guidance-current");
+const basilGuidanceSteps = document.querySelector("#basil-guidance-steps");
+const basilGuideModeButtons = Array.from(document.querySelectorAll("[data-basil-guide-mode]"));
 const autoIntakeCard = document.querySelector("#auto-intake-card");
 const autoIntakeSummary = document.querySelector("#auto-intake-summary");
 const autoIntakeList = document.querySelector("#auto-intake-list");
@@ -449,9 +455,10 @@ const basePlans = {
   },
   basil: {
     monitor: [
-      "每 3-5 天掐顶一次，观察侧枝是否变多。",
-      "叶片变淡时先看光照，再看营养液浓度。",
-      "湿度高时保持空气流动，减少霉斑。"
+      "育苗期先稳出苗和防徒长；4-6 个节点后开始第一次打顶。",
+      "每 3-5 天轻采收一次，观察侧枝是否变多、香味是否更明显。",
+      "香味变淡时先看光照、氮肥和采收频率，再决定是否调水肥。",
+      "湿度高时保持空气流动，减少霉斑；日常不需要人工授粉，除非留种。"
     ],
     opportunity: "香草用户重视香味和连续采收，诊断可绑定修剪提醒。"
   },
@@ -480,6 +487,55 @@ const basePlans = {
     opportunity: "辣椒与番茄共享结果类模型，可复用处方逻辑。"
   }
 };
+
+const basilGuideStorageKey = "fivecropBasilGuideMode";
+const basilGuidancePlans = {
+  seed: {
+    label: "种子培育",
+    summary: "从种子开始时，重点是先稳出苗，再用打顶建立分枝和连续采收节奏。",
+    currentAction: "如果已有 4-6 个节点或株高约 15-20cm，今天从健康节点上方第一次打顶；还没到这个高度就先补光和通风。",
+    pollination: "罗勒不是结果作物，日常不需要人工授粉；除非你想留种，否则花苞出现就及时摘掉。",
+    steps: [
+      ["0-7 天", "保持介质均匀微湿但不积水，出苗后给明亮散射光或弱补光，并开始轻通风。"],
+      ["2-3 对真叶", "定苗或分盆，避免一次重肥；弱苗先淘汰，留下株型紧凑、叶色均匀的苗。"],
+      ["4-6 个节点", "第一次打顶，剪在健康节点上方，之后每 3-5 天轻采收一次，逼出侧枝。"],
+      ["出现花苞", "除非留种，否则摘掉花苞；罗勒的目标是叶片和香味，不是授粉结果。"]
+    ]
+  },
+  transplant: {
+    label: "移栽/换盆",
+    summary: "移栽后的第一目标不是长得快，而是让根毛恢复吸水，避免冷、湿、强光叠加。",
+    currentAction: "刚移栽后的 24-48 小时只稳环境：避开强光和热风，介质微湿不积水，不施肥、不重剪。",
+    pollination: "移栽稳定前不要为了留种让它开花；花苞会消耗恢复期能量，建议先摘掉。",
+    steps: [
+      ["当天", "少动根、少浇大水；拍整株和茎基部作为基线，确认没有茎基部发黑。"],
+      ["第 1-2 天", "保持温和光照和空气流动，观察是否继续萎蔫；不要换盆、施肥、重剪同时发生。"],
+      ["第 3-7 天", "看到新梢恢复挺立即逐步加光；若根区有酸臭、茎基部发黑，优先排查黑脚/根腐。"],
+      ["恢复新长势后", "再开始打顶和轻采收，把节奏切回连续分枝模式。"]
+    ]
+  },
+  store: {
+    label: "成品不移植",
+    summary: "买回来的成品罗勒先做隔离、光照适应和轻采收，不急着换盆。",
+    currentAction: "今天先不移栽，检查叶背和茎节有没有虫害，拍整株基线；如果株型拥挤，先轻采收而不是猛剪。",
+    pollination: "成品罗勒若已经抽花，优先摘花和打顶；日常不需要授粉，留种才保留花穗。",
+    steps: [
+      ["第 0 天", "隔离观察，检查叶背、小飞虫和茎基部；原盆状态稳定时先不要急着换盆。"],
+      ["第 2-5 天", "逐步增加光照，减少叶面喷水；下部黄叶和拥挤叶可以少量清理。"],
+      ["第 7 天", "如果适应良好，从顶部节点上方打顶并开始规律采收，保留 2-3 个主枝。"],
+      ["长期", "每周至少轻采收一次；香味弱时先看光照、氮肥和采收频率。"]
+    ]
+  }
+};
+
+let basilGuideMode = (() => {
+  try {
+    const saved = localStorage.getItem(basilGuideStorageKey);
+    return basilGuidancePlans[saved] ? saved : "seed";
+  } catch {
+    return "seed";
+  }
+})();
 
 function numberFrom(data, key) {
   const value = String(data.get(key) || "").trim();
@@ -706,6 +762,7 @@ function updateDeviceProfile() {
   deviceProfileSummary.textContent = `${device.summary} 重点观察：${device.risks.join("；")}。`;
   renderDeviceCropFit();
   renderDeviceCropPlan();
+  renderBasilGuidance();
 }
 
 function renderDeviceCropFit() {
@@ -854,6 +911,51 @@ function renderDeviceCropPlan() {
   });
 }
 
+function basilGuidanceStageHint(state) {
+  if (state.stage === "seedling") return "当前重点是稳出苗、定苗和防徒长。";
+  if (state.stage === "flowering") return "已到开花信号时，把摘花、打顶和恢复叶量放在第一位。";
+  if (has(state, "weak-aroma")) return "香味不浓不能靠照片直接判定，需要结合光照、氮肥和采收频率判断。";
+  return "营养生长期重点是强光、通风、打顶和连续采收。";
+}
+
+function renderBasilGuidance(state = getFormState()) {
+  if (!basilGuidanceCard || !basilGuidanceSteps || !basilGuidanceCurrent) return;
+  const isBasil = state.crop === "basil";
+  basilGuidanceCard.hidden = !isBasil;
+  if (!isBasil) return;
+
+  const plan = basilGuidancePlans[basilGuideMode] || basilGuidancePlans.seed;
+  if (basilGuidanceModeLabel) basilGuidanceModeLabel.textContent = plan.label;
+  if (basilGuidanceSummary) {
+    basilGuidanceSummary.textContent = `${plan.summary} ${basilGuidanceStageHint(state)}`;
+  }
+
+  basilGuideModeButtons.forEach((button) => {
+    const active = button.dataset.basilGuideMode === basilGuideMode;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+
+  basilGuidanceCurrent.innerHTML = "";
+  const action = document.createElement("strong");
+  action.textContent = plan.currentAction;
+  const note = document.createElement("span");
+  note.textContent = plan.pollination;
+  basilGuidanceCurrent.append(action, note);
+
+  basilGuidanceSteps.innerHTML = "";
+  plan.steps.forEach(([time, text]) => {
+    const item = document.createElement("div");
+    item.className = "basil-guidance-step";
+    const label = document.createElement("span");
+    label.textContent = time;
+    const copy = document.createElement("p");
+    copy.textContent = text;
+    item.append(label, copy);
+    basilGuidanceSteps.appendChild(item);
+  });
+}
+
 function isCustomerModeActive() {
   return !document.body.classList.contains("expert-mode");
 }
@@ -866,7 +968,7 @@ function selectedText(selector) {
 function suggestedStageForCustomer(state) {
   if (smartConcern.value === "fruit") return "flowering";
   if (["basil", "rosemary"].includes(state.crop)) return "vegetative";
-  if (["yellow", "leggy", "root", "dry", "pest"].includes(smartConcern.value)) return "vegetative";
+  if (["yellow", "leggy", "root", "dry", "pest", "aroma"].includes(smartConcern.value)) return "vegetative";
   return state.stage === "seedling" ? "vegetative" : state.stage;
 }
 
@@ -1291,6 +1393,21 @@ function diagnose(state) {
       deviceFitSeverity(fit),
       `${device.name} 对 ${cropNames[state.crop]} 的适配度为「${deviceFitLabel(fit)}」。${device.risks.join("；")}。`,
       deviceFitAction(state, device, fit)
+    );
+  }
+
+  if (state.crop === "basil" && (has(state, "weak-aroma") || smartConcern.value === "aroma")) {
+    const weakAromaScore = 72 +
+      (state.light === "low" || state.lightHours !== null && state.lightHours < 12 ? 12 : 0) +
+      (state.ec !== null && state.ec > 2.4 ? 8 : 0) +
+      (has(state, "leggy") || sees(state, "long-internodes") ? 6 : 0);
+    addFinding(
+      findings,
+      "罗勒香味弱/风味不浓",
+      weakAromaScore,
+      weakAromaScore >= 82 ? "high" : "medium",
+      "香味不浓无法靠照片直接判断；常见原因是光照不足、氮肥偏高或长期不打顶采收。照片主要用来排除徒长、早花和根区压力。",
+      "今天先增加有效光照，适度控肥，并从健康节点上方打顶或轻采收；充足阳光和连续采收会让罗勒香气更明显。"
     );
   }
 
@@ -2700,6 +2817,7 @@ function customerEvidenceLabel(value) {
     "yellow-leaves": "叶片发黄",
     "wilting": "叶片下垂",
     "transplant-shock": "刚移栽/缓苗",
+    "weak-aroma": "香味不浓",
     "recent-transplant": "近期移栽",
     "spots": "叶面斑点",
     "pests": "虫害痕迹",
@@ -5990,6 +6108,7 @@ function inferFromConcern() {
   const symptomMap = {
     yellow: ["yellow-leaves"],
     leggy: ["leggy", "no-flower"],
+    aroma: ["weak-aroma"],
     fruit: ["no-fruit"],
     pest: ["pests"],
     root: ["algae"],
@@ -6006,6 +6125,7 @@ function inferFromConcern() {
   const photoTypeMap = {
     yellow: "leaf",
     leggy: "plant",
+    aroma: "plant",
     fruit: "flower",
     pest: "pest",
     root: "root",
@@ -6075,6 +6195,24 @@ function inferFromFileName(file) {
     symptoms.push("transplant-shock", "wilting");
     setPhotoType("plant");
   }
+  if (
+    isBasilBoltingName &&
+    (
+      name.includes("aroma") ||
+      name.includes("fragrance") ||
+      name.includes("scent") ||
+      name.includes("flavor") ||
+      name.includes("flavour") ||
+      name.includes("weak-scent") ||
+      name.includes("香味") ||
+      name.includes("香气") ||
+      name.includes("不香") ||
+      name.includes("味淡")
+    )
+  ) {
+    symptoms.push("weak-aroma");
+    setPhotoType("plant");
+  }
   if (name.includes("pest") || name.includes("bug") || name.includes("fly")) {
     symptoms.push("pests");
     visuals.push("tiny-flies");
@@ -6112,7 +6250,7 @@ function addPhotoTypeScore(scores, reasons, type, points, reason) {
 function scorePhotoTypeKeywords(file, scores, reasons) {
   const name = file?.name?.toLowerCase() || "";
   const keywordGroups = {
-    plant: ["plant", "whole", "full", "overall", "side", "overview", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "苗"],
+    plant: ["plant", "whole", "full", "overall", "side", "overview", "aroma", "fragrance", "scent", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "香味", "香气", "不香", "味淡", "苗"],
     leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "powder", "mildew", "botrytis", "gray-mold", "grey-mold", "sparse", "叶", "叶片", "黄叶", "斑点", "卷叶", "焦边", "白粉", "灰霉", "霉斑", "叶少"],
     root: ["root", "xponge", "coco", "rockwool", "soil", "medium", "algae", "mold", "fungus", "gen", "根", "根区", "基质", "介质", "岩棉", "椰糠", "藻", "霉", "白毛"],
     flower: ["flower", "bloom", "bud", "bolting", "fruit", "tomato", "pepper", "strawberry", "berry", "hua", "guo", "花", "花苞", "花穗", "花序", "抽薹", "果", "果实", "番茄", "辣椒", "草莓"],
@@ -7552,6 +7690,7 @@ function renderDiagnosis(state, findings) {
   renderPhotoQuality();
   renderCustomerPhotoRescue(state);
   renderGuidedPhotoCapture(state);
+  renderBasilGuidance(state);
 
   renderList(causesList, findings, (item) =>
     `<strong>${item.title}</strong><span class="tag ${item.severity}">${severityLabel(item.severity)}</span><br>${item.why}`
@@ -7846,6 +7985,19 @@ customerMobilePrivacyBtn?.addEventListener("click", () => {
 });
 cropQuickButtons.forEach((button) => {
   button.addEventListener("click", () => chooseCustomerCrop(button.dataset.cropChoice));
+});
+basilGuideModeButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    const nextMode = button.dataset.basilGuideMode;
+    if (!basilGuidancePlans[nextMode]) return;
+    basilGuideMode = nextMode;
+    try {
+      localStorage.setItem(basilGuideStorageKey, nextMode);
+    } catch {
+      // Local storage may be blocked in private browsing; the in-memory mode still works.
+    }
+    renderBasilGuidance();
+  });
 });
 smartDiagnoseBtn.addEventListener("click", smartDiagnose);
 smartConcern.addEventListener("change", () => {

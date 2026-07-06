@@ -3,7 +3,7 @@ import { matchPathologyConditions } from "./pathology-library.mjs";
 
 const suite = buildCaseValidationSuite();
 const stats = caseValidationStats(suite);
-if (!stats.ready || stats.conditions !== 44 || stats.photoFixtures < 176 || stats.minPhotosPerCondition < 3) {
+if (!stats.ready || stats.conditions !== 45 || stats.photoFixtures < 180 || stats.minPhotosPerCondition < 3) {
   throw new Error(`Case validation coverage mismatch: ${JSON.stringify(stats)}`);
 }
 
