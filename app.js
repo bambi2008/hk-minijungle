@@ -5530,13 +5530,20 @@ function renderPublicPhotoTestMetrics(records = readPublicPhotoTestRecords()) {
   const passCount = records.filter((item) => item.result === "pass").length;
   const failCount = records.filter((item) => ["fail", "basil_default"].includes(item.result)).length;
   const retakeCount = records.filter((item) => item.result === "retake").length;
+  const capturedCount = records.filter((item) => item.result === "captured").length;
   const basilDefaultCount = records.filter((item) => item.result === "basil_default").length;
+  const reviewedCount = passCount + failCount + retakeCount;
+  const passRate = reviewedCount ? `${Math.round((passCount / reviewedCount) * 100)}%` : "0%";
+  const basilDefaultRate = records.length ? `${Math.round((basilDefaultCount / records.length) * 100)}%` : "0%";
   publicPhotoTestMetrics.innerHTML = [
     metricCell("Captures", expected ? `${records.length}/${expected}` : records.length),
     metricCell("Pass", passCount),
+    metricCell("Review", capturedCount),
     metricCell("Retake", retakeCount),
     metricCell("Fail", failCount),
     metricCell("Basil default", basilDefaultCount),
+    metricCell("Pass rate", passRate),
+    metricCell("Default rate", basilDefaultRate),
     metricCell("Groups", publicPhotoFixtures?.fixtureGroups?.length || 0)
   ].join("");
 }
@@ -5568,6 +5575,7 @@ function renderPublicPhotoGroup(group, records) {
   const passCount = groupRecords.filter((item) => item.result === "pass").length;
   const failCount = groupRecords.filter((item) => ["fail", "basil_default"].includes(item.result)).length;
   const retakeCount = groupRecords.filter((item) => item.result === "retake").length;
+  const capturedCount = groupRecords.filter((item) => item.result === "captured").length;
   const progress = expected ? Math.min(100, Math.round((groupRecords.length / expected) * 100)) : 0;
   return `
     <article class="public-photo-test-card" data-fixture-group="${escapeMarkup(group.id)}">
@@ -5584,6 +5592,7 @@ function renderPublicPhotoGroup(group, records) {
       <div class="public-photo-test-counts">
         <span>${groupRecords.length}/${expected} captures</span>
         <span>${passCount} pass</span>
+        <span>${capturedCount} review</span>
         <span>${retakeCount} retake</span>
         <span>${failCount} fail</span>
       </div>

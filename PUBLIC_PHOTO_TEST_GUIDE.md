@@ -46,6 +46,8 @@ notepad "C:\Users\ss\Documents\hk minijungle\data\public-photo-fixtures.json"
 - 给出的“今天做什么”是否合理
 - 是否又默认成“罗勒光照不足”
 
+管理端里的 `Review` / `captured` 表示手机已经自动回写了一次拍摄记录，但还需要人工点“通过 / 重拍 / 失败 / 默认罗勒”完成复核；不要把它直接当成通过。
+
 ## 五条黄金路径
 
 ### 1. 番茄落花
