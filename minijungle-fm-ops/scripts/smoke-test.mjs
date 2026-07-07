@@ -76,6 +76,8 @@ async function verifyBrowserFlow(baseUrl) {
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
     assert(title?.includes("DR FOREST Living Asset OS"), "Unexpected main title");
+    const logoCount = await page.locator('img[src="assets/dr-forest-logo.png"]').count();
+    assert(logoCount >= 2, `Expected logo in brand and hero, found ${logoCount}`);
     const platformStatus = await page.textContent("#platform-status");
     assert(platformStatus?.includes("expansion classes"), "Platform status did not load expansion scope");
     const assetScope = await page.textContent("#asset-scope-list");
@@ -333,6 +335,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/mvp-control.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
+    await verifyResource(baseUrl, "/assets/dr-forest-logo.png", "image/png");
     await verifyBrowserFlow(baseUrl);
     console.log(`Smoke test passed at ${baseUrl}`);
   } catch (error) {
