@@ -4,6 +4,7 @@ const dataFiles = {
   workorders: "data/workorders.json",
   diagnoses: "data/diagnoses.json",
   schedule: "data/schedule.json",
+  incidents: "data/incidents.json",
   dispatch: "data/dispatch.json",
   commercial: "data/commercial.json",
   billing: "data/billing.json",
@@ -23,6 +24,8 @@ let scheduleToday = "2026-07-07";
 let scheduleSlots = [];
 let scheduleRules = [];
 let scheduleBlackouts = [];
+let incidentRecords = [];
+let incidentRules = [];
 let esgTrend = [];
 let esgMethods = [];
 let esgLedger = [];
@@ -53,6 +56,7 @@ let sensorAcknowledgements = {};
 let supplyRequests = {};
 let invoicePayments = {};
 let scheduleConfirmations = {};
+let incidentResolutions = {};
 let auditEvents = [];
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
@@ -62,6 +66,7 @@ const sensorAcknowledgementStorageKey = "minijungle-fm-ops.sensor-acknowledgemen
 const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
 const invoicePaymentStorageKey = "minijungle-fm-ops.invoice-payments.v1";
 const scheduleConfirmationStorageKey = "minijungle-fm-ops.schedule-confirmations.v1";
+const incidentResolutionStorageKey = "minijungle-fm-ops.incident-resolutions.v1";
 const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
@@ -77,6 +82,7 @@ async function loadAppData() {
     loadedWorkorders,
     loadedDiagnoses,
     scheduleData,
+    incidentData,
     dispatchData,
     commercialData,
     billingData,
@@ -92,6 +98,7 @@ async function loadAppData() {
     loadJson(dataFiles.workorders),
     loadJson(dataFiles.diagnoses),
     loadJson(dataFiles.schedule),
+    loadJson(dataFiles.incidents),
     loadJson(dataFiles.dispatch),
     loadJson(dataFiles.commercial),
     loadJson(dataFiles.billing),
@@ -111,6 +118,8 @@ async function loadAppData() {
   scheduleSlots = scheduleData.slots || [];
   scheduleRules = scheduleData.rules || [];
   scheduleBlackouts = scheduleData.blackouts || [];
+  incidentRecords = incidentData.incidents || [];
+  incidentRules = incidentData.rules || [];
   crewMembers = dispatchData.crew || [];
   dispatchRoute = dispatchData.route || [];
   dispatchInventory = dispatchData.inventory || [];
@@ -228,6 +237,18 @@ function saveScheduleConfirmations() {
   localStorage.setItem(scheduleConfirmationStorageKey, JSON.stringify(scheduleConfirmations));
 }
 
+function loadIncidentResolutions() {
+  try {
+    incidentResolutions = JSON.parse(localStorage.getItem(incidentResolutionStorageKey) || "{}");
+  } catch {
+    incidentResolutions = {};
+  }
+}
+
+function saveIncidentResolutions() {
+  localStorage.setItem(incidentResolutionStorageKey, JSON.stringify(incidentResolutions));
+}
+
 function loadAuditEvents() {
   try {
     auditEvents = JSON.parse(localStorage.getItem(auditEventStorageKey) || "[]");
@@ -274,6 +295,11 @@ function isScheduleConfirmed(id) {
   return Boolean(scheduleConfirmations[id]) || slot?.status === "confirmed";
 }
 
+function isIncidentResolved(id) {
+  const incident = incidentRecords.find((item) => item.id === id);
+  return Boolean(incidentResolutions[id]) || incident?.status === "resolved";
+}
+
 function clientIdForWorkorder(id) {
   const order = workorders.find((item) => item.id === id);
   if (!order) return null;
@@ -300,6 +326,11 @@ function clientIdForScheduleSlot(id) {
   const slot = scheduleSlots.find((item) => item.id === id);
   const order = slot ? workorders.find((item) => item.id === slot.workorderId) : null;
   return order ? wallById(order.wallId)?.clientId || null : null;
+}
+
+function clientIdForIncident(id) {
+  const incident = incidentRecords.find((item) => item.id === id);
+  return incident ? wallById(incident.wallId)?.clientId || null : null;
 }
 
 function allAuditEvents() {
@@ -488,6 +519,31 @@ function confirmScheduleSlot(id) {
   renderAll();
 }
 
+function resolveIncident(id) {
+  const incident = incidentRecords.find((item) => item.id === id);
+  if (!incident) return;
+
+  if (!incidentResolutions[id]) {
+    incidentResolutions[id] = {
+      resolvedAt: new Date().toISOString(),
+      resolvedBy: "SLA desk",
+      note: "Incident closed with linked operational evidence."
+    };
+    saveIncidentResolutions();
+    recordAuditEvent({
+      actor: "SLA desk",
+      action: "Incident resolved",
+      entityType: "incident",
+      entityId: id,
+      clientId: clientIdForIncident(id),
+      tone: "resolved",
+      detail: `${incident.category} closed against SLA with linked work order ${incident.linkedWorkorderId}.`
+    });
+  }
+  state.reportGenerated = false;
+  renderAll();
+}
+
 function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
@@ -546,6 +602,10 @@ const els = {
   sensorGrid: document.querySelector("#sensor-grid"),
   sensorList: document.querySelector("#sensor-list"),
   sensorRuleList: document.querySelector("#sensor-rule-list"),
+  incidentStatus: document.querySelector("#incident-status"),
+  incidentGrid: document.querySelector("#incident-grid"),
+  incidentList: document.querySelector("#incident-list"),
+  incidentRuleList: document.querySelector("#incident-rule-list"),
   scheduleStatus: document.querySelector("#schedule-status"),
   scheduleGrid: document.querySelector("#schedule-grid"),
   scheduleSlotList: document.querySelector("#schedule-slot-list"),
@@ -656,14 +716,17 @@ function riskLabel(level) {
 function statusClass(value) {
   if (value === "risk" || value === "high") return "danger";
   if (value === "at-risk") return "danger";
+  if (value === "critical" || value === "escalated" || value === "breach") return "danger";
   if (value === "alert" || value === "offline") return "danger";
   if (value === "overdue") return "danger";
   if (value === "watch" || value === "medium") return "warn";
   if (value === "due") return "warn";
+  if (value === "due-today" || value === "triage") return "warn";
   if (value === "unconfirmed") return "warn";
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
   if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
+  if (value === "resolved") return "good";
   if (value === "confirmed") return "good";
   if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
   return "";
@@ -784,6 +847,55 @@ function scheduleCapacityView(member) {
   };
 }
 
+function incidentSource(incident) {
+  if (incident.sourceType === "sensor") return sensorReadings.find((item) => item.id === incident.sourceId);
+  if (incident.sourceType === "proof") return proofRecords.find((item) => item.id === incident.sourceId);
+  if (incident.sourceType === "workorder") return workorders.find((item) => item.id === incident.sourceId);
+  return null;
+}
+
+function incidentView(incident) {
+  const wall = wallById(incident.wallId);
+  const client = wall ? clientFor(wall) : null;
+  const order = workorders.find((item) => item.id === incident.linkedWorkorderId);
+  const source = incidentSource(incident);
+  const resolution = incidentResolutions[incident.id] || null;
+  const resolved = isIncidentResolved(incident.id);
+  const daysToDue = daysUntil(incident.dueDate);
+  const displayTone = resolved
+    ? "resolved"
+    : incident.status === "escalated" || incident.severity === "critical"
+      ? "escalated"
+      : daysToDue < 0
+        ? "breach"
+        : daysToDue === 0
+          ? "due-today"
+          : incident.status;
+  const displayStatus = resolved
+    ? "Resolved"
+    : displayTone === "escalated"
+      ? "Escalated"
+      : displayTone === "breach"
+        ? "SLA breach"
+        : displayTone === "due-today"
+          ? "Due today"
+          : incident.status === "triage"
+            ? "Triage"
+            : "Watch";
+  return {
+    ...incident,
+    wall,
+    client,
+    order,
+    source,
+    resolution,
+    resolved,
+    daysToDue,
+    displayTone,
+    displayStatus
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -811,6 +923,11 @@ function portfolioMetrics() {
   const scheduledMinutes = sum(scheduleRows, (slot) => slot.plannedMinutes);
   const capacityMinutes = sum(crewMembers, (member) => member.capacity * 75);
   const capacityLoad = capacityMinutes ? Math.round((scheduledMinutes / capacityMinutes) * 100) : 0;
+  const incidentRows = incidentRecords.map(incidentView);
+  const openIncidents = incidentRows.filter((incident) => !incident.resolved);
+  const resolvedIncidents = incidentRows.filter((incident) => incident.resolved);
+  const criticalIncidents = openIncidents.filter((incident) => incident.severity === "critical" || incident.displayTone === "escalated");
+  const dueIncidents = openIncidents.filter((incident) => incident.daysToDue <= 0);
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -839,6 +956,11 @@ function portfolioMetrics() {
     scheduledMinutes,
     capacityMinutes,
     capacityLoad,
+    incidents: incidentRows,
+    openIncidents,
+    resolvedIncidents,
+    criticalIncidents,
+    dueIncidents,
     reportReadiness
   };
 }
@@ -869,6 +991,12 @@ function metricsForClient(clientId) {
     .filter((slot) => slot.order && clientWalls.some((wall) => wall.id === slot.order.wallId));
   const confirmedScheduleSlots = clientScheduleSlots.filter((slot) => slot.confirmed);
   const openScheduleSlots = clientScheduleSlots.filter((slot) => !slot.confirmed);
+  const clientIncidents = incidentRecords
+    .map(incidentView)
+    .filter((incident) => clientWalls.some((wall) => wall.id === incident.wallId));
+  const openIncidents = clientIncidents.filter((incident) => !incident.resolved);
+  const resolvedIncidents = clientIncidents.filter((incident) => incident.resolved);
+  const criticalIncidents = openIncidents.filter((incident) => incident.severity === "critical" || incident.displayTone === "escalated");
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -901,6 +1029,10 @@ function metricsForClient(clientId) {
     scheduleSlots: clientScheduleSlots,
     confirmedScheduleSlots,
     openScheduleSlots,
+    incidents: clientIncidents,
+    openIncidents,
+    resolvedIncidents,
+    criticalIncidents,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -928,7 +1060,7 @@ function renderOverview() {
   renderStatCards(els.summaryGrid, [
     { label: "Active clients", value: data.activeClients, detail: `${data.activeWalls} walls under FM care` },
     { label: "Portfolio health", value: data.health, detail: `${data.survival}% plant survival rate` },
-    { label: "Sensor alerts", value: data.sensorAlerts, detail: `${data.issues} plant issue(s) and telemetry exceptions` },
+    { label: "SLA incidents", value: data.openIncidents.length, detail: `${data.criticalIncidents.length} critical incident(s), ${data.sensorAlerts} sensor alert(s)` },
     { label: "Managed value", value: formatCurrency(data.revenue), detail: `${formatCurrency(data.outstandingAmount)} open AR` }
   ]);
 
@@ -936,7 +1068,7 @@ function renderOverview() {
     ["Green wall area", `${data.greenArea.toFixed(1)} m2`],
     ["Water-saving estimate", `${data.waterSaved} L/mo`],
     ["Wellness reach", `${data.staffReach} people/mo`],
-    ["Overdue invoices", data.overdueInvoices.length]
+    ["SLA due now", data.dueIncidents.length]
   ].map(([label, value]) => `
     <div>
       <span>${label}</span>
@@ -1238,6 +1370,67 @@ function renderSensors() {
     <div class="method-row">
       <span>${rule.trigger}</span>
       <strong>${rule.action}</strong>
+    </div>
+  `).join("");
+}
+
+function renderIncidents() {
+  const severityRank = { critical: 0, high: 1, medium: 2, low: 3 };
+  const incidentRows = incidentRecords
+    .map(incidentView)
+    .sort((a, b) => Number(a.resolved) - Number(b.resolved) || severityRank[a.severity] - severityRank[b.severity] || a.daysToDue - b.daysToDue);
+  const openIncidents = incidentRows.filter((incident) => !incident.resolved);
+  const resolvedIncidents = incidentRows.filter((incident) => incident.resolved);
+  const criticalIncidents = openIncidents.filter((incident) => incident.severity === "critical" || incident.displayTone === "escalated");
+  const dueIncidents = openIncidents.filter((incident) => incident.daysToDue <= 0);
+
+  els.incidentStatus.textContent = `${openIncidents.length} open incident(s), ${criticalIncidents.length} critical`;
+  els.incidentStatus.classList.toggle("good", openIncidents.length === 0);
+  renderStatCards(els.incidentGrid, [
+    { label: "Open incidents", value: openIncidents.length, detail: "Sensor, proof and service exceptions" },
+    { label: "Critical queue", value: criticalIncidents.length, detail: "Renewal or SLA-sensitive response" },
+    { label: "Due now", value: dueIncidents.length, detail: "Due today or already breaching SLA" },
+    { label: "Resolved", value: resolvedIncidents.length, detail: "Closed with audit trace" }
+  ]);
+
+  els.incidentList.innerHTML = incidentRows.map((incident) => {
+    const sourceLabel = incident.source
+      ? `${incident.sourceType} ${incident.sourceId}`
+      : `${incident.sourceType} source`;
+    const resolutionDetail = incident.resolution
+      ? `Resolved by ${incident.resolution.resolvedBy} - ${new Date(incident.resolution.resolvedAt).toLocaleString("en-HK")}`
+      : `SLA ${incident.slaHours}h - due ${incident.dueDate}`;
+    return `
+      <div class="list-item incident-card ${incident.displayTone}" data-incident-card="${incident.id}">
+        <div class="item-row">
+          <strong>${incident.id} - ${incident.category}</strong>
+          <span class="tag ${statusClass(incident.displayTone)}">${incident.displayStatus}</span>
+        </div>
+        <span>${incident.client.name} - ${incident.wall.location} - ${incident.owner}</span>
+        <div class="commercial-meta">
+          <div><span>Severity</span><strong>${incident.severity}</strong></div>
+          <div><span>Source</span><strong>${sourceLabel}</strong></div>
+          <div><span>Work order</span><strong>${incident.linkedWorkorderId}</strong></div>
+        </div>
+        <small>${incident.impact}</small>
+        <small>${incident.recommendedAction}</small>
+        <div class="kit-list">
+          ${incident.proofRequired.map((item) => `<em>${item}</em>`).join("")}
+        </div>
+        <small>${resolutionDetail}</small>
+        <div class="workorder-actions">
+          <button type="button" class="mini-action" data-wall-select="${incident.wall.id}">Wall detail</button>
+          <button type="button" class="mini-action" data-complete-workorder="${incident.linkedWorkorderId}" ${isWorkorderCompleted(incident.linkedWorkorderId) ? "disabled" : ""}>${isWorkorderCompleted(incident.linkedWorkorderId) ? "Work order closed" : "Close linked work"}</button>
+          <button type="button" class="mini-action primary" data-resolve-incident="${incident.id}" ${incident.resolved ? "disabled" : ""}>${incident.resolved ? "Resolved" : "Resolve incident"}</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  els.incidentRuleList.innerHTML = incidentRules.map((rule) => `
+    <div class="method-row">
+      <span>${rule.label}</span>
+      <strong>${rule.rule}</strong>
     </div>
   `).join("");
 }
@@ -1671,6 +1864,8 @@ function renderReports() {
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
     ["Sensor alerts", data.openSensorAlerts.length],
+    ["Open incidents", data.openIncidents.length],
+    ["Resolved incidents", data.resolvedIncidents.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -1692,6 +1887,8 @@ function renderReports() {
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
     `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${data.openIncidents.length} open SLA incident(s)`,
+    `${data.resolvedIncidents.length} resolved incident(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -1726,6 +1923,8 @@ function buildReportHtml() {
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
     `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${data.openIncidents.length} open SLA incident(s)`,
+    `${data.resolvedIncidents.length} resolved incident(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -1745,6 +1944,8 @@ function buildReportHtml() {
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
     ["Sensor alerts", data.openSensorAlerts.length],
+    ["Open incidents", data.openIncidents.length],
+    ["Resolved incidents", data.resolvedIncidents.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -1903,6 +2104,12 @@ function bindDynamicActions() {
       confirmScheduleSlot(button.dataset.confirmSchedule);
     });
   });
+
+  document.querySelectorAll("[data-resolve-incident]").forEach((button) => {
+    button.addEventListener("click", () => {
+      resolveIncident(button.dataset.resolveIncident);
+    });
+  });
 }
 
 function renderAll() {
@@ -1913,6 +2120,7 @@ function renderAll() {
   renderBilling();
   renderWalls();
   renderSensors();
+  renderIncidents();
   renderService();
   renderSchedule();
   renderDispatch();
@@ -1994,6 +2202,7 @@ async function bootstrap() {
     loadSupplyRequests();
     loadInvoicePayments();
     loadScheduleConfirmations();
+    loadIncidentResolutions();
     loadAuditEvents();
     initializeSelection();
     renderAll();

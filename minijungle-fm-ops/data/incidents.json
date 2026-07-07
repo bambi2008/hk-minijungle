@@ -1,0 +1,86 @@
+{
+  "incidents": [
+    {
+      "id": "INC-2026-021",
+      "wallId": "MJ-HK-021",
+      "sourceType": "sensor",
+      "sourceId": "SNS-021-LIGHT",
+      "linkedWorkorderId": "WO-1047",
+      "category": "Low-light recovery",
+      "severity": "critical",
+      "status": "escalated",
+      "openedAt": "2026-07-07 08:04",
+      "dueDate": "2026-07-07",
+      "owner": "FM lead",
+      "slaHours": 8,
+      "impact": "Renewal-risk show suite could fail presentation-ready proof if LED schedule is not verified.",
+      "recommendedAction": "Confirm access, verify LED schedule, replace weak pods and approve recovery proof.",
+      "proofRequired": ["LED schedule screenshot", "Low-light retake", "Weak pod replacement note"]
+    },
+    {
+      "id": "INC-2026-014",
+      "wallId": "MJ-HK-014",
+      "sourceType": "sensor",
+      "sourceId": "SNS-014-WATER",
+      "linkedWorkorderId": "WO-1042",
+      "category": "Water swing watch",
+      "severity": "medium",
+      "status": "triage",
+      "openedAt": "2026-07-07 08:11",
+      "dueDate": "2026-07-08",
+      "owner": "Plant Care Lead",
+      "slaHours": 24,
+      "impact": "Clinic lounge wall may show yellowing if reservoir swing continues.",
+      "recommendedAction": "Add reservoir check to care visit and confirm nutrient dose note is report-ready.",
+      "proofRequired": ["Reservoir photo", "Nutrient dosing note"]
+    },
+    {
+      "id": "INC-2026-033",
+      "wallId": "MJ-HK-033",
+      "sourceType": "sensor",
+      "sourceId": "SNS-033-GATEWAY",
+      "linkedWorkorderId": "WO-1054",
+      "category": "Gateway offline",
+      "severity": "medium",
+      "status": "triage",
+      "openedAt": "2026-07-06 19:40",
+      "dueDate": "2026-07-08",
+      "owner": "FM Service Technician",
+      "slaHours": 36,
+      "impact": "Manual-check mode is required until gateway heartbeat recovers.",
+      "recommendedAction": "Power-cycle gateway during clubhouse visit and keep proof photos as interim evidence.",
+      "proofRequired": ["Gateway photo", "Manual health check"]
+    },
+    {
+      "id": "INC-2026-001",
+      "wallId": "MJ-HK-001",
+      "sourceType": "proof",
+      "sourceId": "PRF-1051",
+      "linkedWorkorderId": "WO-1051",
+      "category": "Monthly proof missing",
+      "severity": "low",
+      "status": "watch",
+      "openedAt": "2026-07-07 09:10",
+      "dueDate": "2026-07-09",
+      "owner": "ESG desk",
+      "slaHours": 48,
+      "impact": "Monthly ESG pack cannot be exported cleanly until tomorrow's full-wall capture is complete.",
+      "recommendedAction": "Track tomorrow's scheduled capture and verify ESG sign-off before report export.",
+      "proofRequired": ["Full-wall ESG photo", "ESG sign-off sheet"]
+    }
+  ],
+  "rules": [
+    {
+      "label": "Critical incident",
+      "rule": "Critical or renewal-risk incidents must be resolved or explicitly owner-accepted before the client proof pack is exported."
+    },
+    {
+      "label": "SLA clock",
+      "rule": "Due-today incidents stay in the executive queue until a resolution note is recorded."
+    },
+    {
+      "label": "Evidence closeout",
+      "rule": "Closing an incident requires a linked work order, proof requirement or sensor acknowledgement."
+    }
+  ]
+}
