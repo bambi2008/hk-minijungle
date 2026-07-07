@@ -874,7 +874,20 @@ small {
   margin-bottom: 14px;
 }
 
-.report-builder label {
+.quick-task-form {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: end;
+  margin: 14px 0;
+}
+
+.quick-task-form .wide {
+  grid-column: 1 / -1;
+}
+
+.report-builder label,
+.quick-task-form label {
   display: grid;
   gap: 6px;
   min-width: 220px;
@@ -883,7 +896,9 @@ small {
   font-weight: 800;
 }
 
-.report-builder select {
+.report-builder select,
+.quick-task-form select,
+.quick-task-form input {
   min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -891,6 +906,26 @@ small {
   background: var(--surface);
   color: var(--ink);
   font: inherit;
+}
+
+.mvp-readiness,
+.quick-task-card {
+  cursor: default;
+}
+
+.mvp-readiness.phase-2,
+.quick-task-card.high,
+.quick-task-card.medium,
+.quick-task-card.open {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.mvp-readiness.complete,
+.quick-task-card.closed,
+.quick-task-card.low {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
 }
 
 .report-client-profile {
@@ -995,9 +1030,10 @@ small {
   .report-client-profile,
   .detail-grid,
   .commercial-meta,
-  .sensor-meter,
-  .proof-strip,
-  .two-col,
+    .sensor-meter,
+    .proof-strip,
+    .quick-task-form,
+    .two-col,
   .workbench,
   .client-layout,
   .positioning-panel,

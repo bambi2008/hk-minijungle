@@ -17,6 +17,7 @@
 
       <nav>
         <a href="#overview" class="active">Overview</a>
+        <a href="#mvp">MVP</a>
         <a href="#positioning">Positioning</a>
         <a href="#clients">Clients</a>
         <a href="#commercial">SLA</a>
@@ -79,6 +80,79 @@
               <span>Upcoming visits and proof capture</span>
             </div>
             <div id="service-timeline" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="mvp" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">MVP handoff</p>
+            <h2>MVP Control Center</h2>
+          </div>
+          <span id="mvp-status" class="status-pill">Role and readiness view</span>
+        </div>
+        <div id="mvp-grid" class="summary-grid"></div>
+        <div class="two-col mvp-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Operator Role</h3>
+              <span>Demo permissions and current actor</span>
+            </div>
+            <div class="quick-task-form">
+              <label>
+                Active role
+                <select id="active-role-select" aria-label="Select active operator role"></select>
+              </label>
+            </div>
+            <div id="active-role-detail" class="detail-grid"></div>
+            <div id="permission-list" class="method-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>MVP Readiness</h3>
+              <span>What is demo-ready vs phase 2</span>
+            </div>
+            <div id="mvp-readiness-list" class="stack-list"></div>
+          </article>
+        </div>
+        <div class="two-col mvp-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Quick Ops Create</h3>
+              <span>Create an ad-hoc task with audit trace</span>
+            </div>
+            <div class="quick-task-form">
+              <label>
+                Client
+                <select id="quick-client-select" aria-label="Select quick task client"></select>
+              </label>
+              <label>
+                Template
+                <select id="quick-template-select" aria-label="Select quick task template"></select>
+              </label>
+              <label>
+                Priority
+                <select id="quick-priority-select" aria-label="Select quick task priority">
+                  <option value="high">High</option>
+                  <option value="medium" selected>Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </label>
+              <label class="wide">
+                Note
+                <input id="quick-note-input" type="text" value="Smoke created service note" aria-label="Quick task note">
+              </label>
+              <button type="button" id="create-quick-task-btn" class="primary-btn">Create task</button>
+            </div>
+            <div id="quick-task-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Handoff Criteria</h3>
+              <span>Review gates before product adjustment</span>
+            </div>
+            <div id="mvp-handoff-list" class="method-list"></div>
           </article>
         </div>
       </section>

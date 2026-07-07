@@ -13,6 +13,7 @@ const dataFiles = {
   sensors: "data/sensors.json",
   supply: "data/supply.json",
   audit: "data/audit.json",
+  mvpControl: "data/mvp-control.json",
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json"
 };
@@ -52,6 +53,10 @@ let supplyItems = [];
 let supplyPolicies = [];
 let auditBaselineEvents = [];
 let auditControls = [];
+let mvpRoles = [];
+let mvpReadiness = [];
+let mvpQuickTemplates = [];
+let mvpHandoffCriteria = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
@@ -61,6 +66,8 @@ let invoicePayments = {};
 let scheduleConfirmations = {};
 let incidentResolutions = {};
 let complianceClearances = {};
+let activeRoleId = null;
+let quickOpsTasks = [];
 let auditEvents = [];
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
@@ -72,6 +79,8 @@ const invoicePaymentStorageKey = "minijungle-fm-ops.invoice-payments.v1";
 const scheduleConfirmationStorageKey = "minijungle-fm-ops.schedule-confirmations.v1";
 const incidentResolutionStorageKey = "minijungle-fm-ops.incident-resolutions.v1";
 const complianceClearanceStorageKey = "minijungle-fm-ops.compliance-clearances.v1";
+const activeRoleStorageKey = "minijungle-fm-ops.active-role.v1";
+const quickOpsTaskStorageKey = "minijungle-fm-ops.quick-ops-tasks.v1";
 const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
@@ -96,6 +105,7 @@ async function loadAppData() {
     sensorData,
     supplyData,
     auditData,
+    mvpControlData,
     esgMetrics,
     productModel
   ] = await Promise.all([
@@ -113,6 +123,7 @@ async function loadAppData() {
     loadJson(dataFiles.sensors),
     loadJson(dataFiles.supply),
     loadJson(dataFiles.audit),
+    loadJson(dataFiles.mvpControl),
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel)
   ]);
@@ -145,6 +156,10 @@ async function loadAppData() {
   supplyPolicies = supplyData.policies || [];
   auditBaselineEvents = auditData.baselineEvents || [];
   auditControls = auditData.controls || [];
+  mvpRoles = mvpControlData.roles || [];
+  mvpReadiness = mvpControlData.readiness || [];
+  mvpQuickTemplates = mvpControlData.quickTemplates || [];
+  mvpHandoffCriteria = mvpControlData.handoffCriteria || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -270,6 +285,26 @@ function saveComplianceClearances() {
   localStorage.setItem(complianceClearanceStorageKey, JSON.stringify(complianceClearances));
 }
 
+function loadActiveRole() {
+  activeRoleId = localStorage.getItem(activeRoleStorageKey) || mvpRoles[0]?.id || null;
+}
+
+function saveActiveRole() {
+  if (activeRoleId) localStorage.setItem(activeRoleStorageKey, activeRoleId);
+}
+
+function loadQuickOpsTasks() {
+  try {
+    quickOpsTasks = JSON.parse(localStorage.getItem(quickOpsTaskStorageKey) || "[]");
+  } catch {
+    quickOpsTasks = [];
+  }
+}
+
+function saveQuickOpsTasks() {
+  localStorage.setItem(quickOpsTaskStorageKey, JSON.stringify(quickOpsTasks));
+}
+
 function loadAuditEvents() {
   try {
     auditEvents = JSON.parse(localStorage.getItem(auditEventStorageKey) || "[]");
@@ -361,6 +396,10 @@ function clientIdForIncident(id) {
 
 function clientIdForCompliance(id) {
   return complianceItems.find((item) => item.id === id)?.clientId || null;
+}
+
+function clientIdForQuickTask(id) {
+  return quickOpsTasks.find((item) => item.id === id)?.clientId || null;
 }
 
 function allAuditEvents() {
@@ -599,6 +638,80 @@ function clearComplianceItem(id) {
   renderAll();
 }
 
+function selectedRole() {
+  return mvpRoles.find((role) => role.id === activeRoleId) || mvpRoles[0] || null;
+}
+
+function setActiveRole(id) {
+  const role = mvpRoles.find((item) => item.id === id);
+  if (!role) return;
+  activeRoleId = id;
+  saveActiveRole();
+  recordAuditEvent({
+    actor: role.person,
+    action: "Operator role switched",
+    entityType: "role",
+    entityId: id,
+    clientId: null,
+    tone: "ready",
+    detail: `${role.label} role is active for MVP demo operations.`
+  });
+  renderAll();
+}
+
+function createQuickOpsTask({ clientId, templateId, priority, note }) {
+  const template = mvpQuickTemplates.find((item) => item.id === templateId) || mvpQuickTemplates[0];
+  const client = clients.find((item) => item.id === clientId) || clients[0];
+  const wall = walls.find((item) => item.clientId === client.id);
+  const role = selectedRole();
+  const task = {
+    id: `QOP-${Date.now()}`,
+    clientId: client.id,
+    wallId: wall?.id || null,
+    templateId: template.id,
+    type: template.type,
+    priority: priority || template.defaultPriority,
+    note: note || template.defaultNote,
+    status: "open",
+    createdAt: new Date().toISOString(),
+    createdBy: role?.person || "FM Ops"
+  };
+  quickOpsTasks = [task, ...quickOpsTasks].slice(0, 20);
+  saveQuickOpsTasks();
+  recordAuditEvent({
+    actor: task.createdBy,
+    action: "Quick task created",
+    entityType: "quick-task",
+    entityId: task.id,
+    clientId: task.clientId,
+    tone: "ready",
+    detail: `${task.type} created from MVP Control Center.`
+  });
+  state.reportGenerated = false;
+  renderAll();
+}
+
+function closeQuickOpsTask(id) {
+  const task = quickOpsTasks.find((item) => item.id === id);
+  if (!task || task.status === "closed") return;
+  const role = selectedRole();
+  task.status = "closed";
+  task.closedAt = new Date().toISOString();
+  task.closedBy = role?.person || "FM Ops";
+  saveQuickOpsTasks();
+  recordAuditEvent({
+    actor: task.closedBy,
+    action: "Quick task closed",
+    entityType: "quick-task",
+    entityId: id,
+    clientId: clientIdForQuickTask(id),
+    tone: "completed",
+    detail: `${task.type} closed from MVP Control Center.`
+  });
+  state.reportGenerated = false;
+  renderAll();
+}
+
 function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
@@ -632,6 +745,19 @@ const els = {
   proofStrip: document.querySelector("#proof-strip"),
   riskList: document.querySelector("#risk-list"),
   serviceTimeline: document.querySelector("#service-timeline"),
+  mvpStatus: document.querySelector("#mvp-status"),
+  mvpGrid: document.querySelector("#mvp-grid"),
+  activeRoleSelect: document.querySelector("#active-role-select"),
+  activeRoleDetail: document.querySelector("#active-role-detail"),
+  permissionList: document.querySelector("#permission-list"),
+  mvpReadinessList: document.querySelector("#mvp-readiness-list"),
+  quickClientSelect: document.querySelector("#quick-client-select"),
+  quickTemplateSelect: document.querySelector("#quick-template-select"),
+  quickPrioritySelect: document.querySelector("#quick-priority-select"),
+  quickNoteInput: document.querySelector("#quick-note-input"),
+  createQuickTaskBtn: document.querySelector("#create-quick-task-btn"),
+  quickTaskList: document.querySelector("#quick-task-list"),
+  mvpHandoffList: document.querySelector("#mvp-handoff-list"),
   strategyGrid: document.querySelector("#strategy-grid"),
   positioningCopy: document.querySelector("#positioning-copy"),
   clientTabs: document.querySelector("#client-tabs"),
@@ -785,9 +911,11 @@ function statusClass(value) {
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
   if (value === "expiring") return "warn";
+  if (value === "phase-2" || value === "open") return "warn";
   if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
   if (value === "resolved") return "good";
   if (value === "cleared") return "good";
+  if (value === "complete" || value === "closed") return "good";
   if (value === "confirmed") return "good";
   if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
   return "";
@@ -993,6 +1121,20 @@ function complianceView(item) {
   };
 }
 
+function quickTaskView(task) {
+  const client = clients.find((item) => item.id === task.clientId);
+  const wall = task.wallId ? wallById(task.wallId) : walls.find((item) => item.clientId === task.clientId);
+  const template = mvpQuickTemplates.find((item) => item.id === task.templateId);
+  return {
+    ...task,
+    client,
+    wall,
+    template,
+    displayTone: task.status === "closed" ? "closed" : task.priority,
+    displayStatus: task.status === "closed" ? "Closed" : "Open"
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -1030,6 +1172,11 @@ function portfolioMetrics() {
   const openComplianceItems = complianceRows.filter((item) => !item.cleared);
   const blockedComplianceItems = openComplianceItems.filter((item) => item.displayTone === "blocked");
   const expiringComplianceItems = openComplianceItems.filter((item) => item.displayTone === "expiring");
+  const quickTaskRows = quickOpsTasks.map(quickTaskView);
+  const openQuickTasks = quickTaskRows.filter((task) => task.status !== "closed");
+  const closedQuickTasks = quickTaskRows.filter((task) => task.status === "closed");
+  const completeReadiness = mvpReadiness.filter((item) => item.status === "complete");
+  const phaseTwoReadiness = mvpReadiness.filter((item) => item.status === "phase-2");
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -1068,6 +1215,11 @@ function portfolioMetrics() {
     openComplianceItems,
     blockedComplianceItems,
     expiringComplianceItems,
+    quickTasks: quickTaskRows,
+    openQuickTasks,
+    closedQuickTasks,
+    completeReadiness,
+    phaseTwoReadiness,
     reportReadiness
   };
 }
@@ -1110,6 +1262,11 @@ function metricsForClient(clientId) {
   const clearedComplianceItems = clientComplianceItems.filter((item) => item.cleared);
   const openComplianceItems = clientComplianceItems.filter((item) => !item.cleared);
   const blockedComplianceItems = openComplianceItems.filter((item) => item.displayTone === "blocked");
+  const clientQuickTasks = quickOpsTasks
+    .map(quickTaskView)
+    .filter((task) => task.clientId === clientId);
+  const openQuickTasks = clientQuickTasks.filter((task) => task.status !== "closed");
+  const closedQuickTasks = clientQuickTasks.filter((task) => task.status === "closed");
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -1150,6 +1307,9 @@ function metricsForClient(clientId) {
     clearedComplianceItems,
     openComplianceItems,
     blockedComplianceItems,
+    quickTasks: clientQuickTasks,
+    openQuickTasks,
+    closedQuickTasks,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1221,6 +1381,92 @@ function renderOverview() {
       </button>
     `;
   }).join("");
+}
+
+function renderMvpControl() {
+  const role = selectedRole();
+  const data = portfolioMetrics();
+  const readinessRatio = mvpReadiness.length ? Math.round((data.completeReadiness.length / mvpReadiness.length) * 100) : 0;
+  const openTasks = data.openQuickTasks;
+  const closedTasks = data.closedQuickTasks;
+
+  els.mvpStatus.textContent = `${readinessRatio}% MVP readiness, ${openTasks.length} open quick task(s)`;
+  els.mvpStatus.classList.toggle("good", readinessRatio >= 80);
+  renderStatCards(els.mvpGrid, [
+    { label: "MVP readiness", value: `${readinessRatio}%`, detail: `${data.completeReadiness.length}/${mvpReadiness.length} handoff items complete` },
+    { label: "Active role", value: role?.label || "No role", detail: role ? `${role.person} - ${role.scope}` : "Role model not loaded" },
+    { label: "Quick tasks", value: openTasks.length, detail: `${closedTasks.length} closed task(s) in local demo state` },
+    { label: "Phase 2 markers", value: data.phaseTwoReadiness.length, detail: "Backend, auth and integrations stay out of MVP scope" }
+  ]);
+
+  els.activeRoleSelect.innerHTML = mvpRoles.map((item) => `
+    <option value="${item.id}" ${item.id === role?.id ? "selected" : ""}>${item.label} - ${item.person}</option>
+  `).join("");
+
+  els.activeRoleDetail.innerHTML = role ? [
+    ["Role", role.label],
+    ["Actor", role.person],
+    ["Scope", role.scope],
+    ["Permissions", role.permissions.length]
+  ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("") : "";
+
+  els.permissionList.innerHTML = role ? role.permissions.map((permission) => `
+    <div class="method-row">
+      <span>${role.label}</span>
+      <strong>${permission}</strong>
+    </div>
+  `).join("") : "";
+
+  els.mvpReadinessList.innerHTML = mvpReadiness.map((item) => `
+    <div class="list-item mvp-readiness ${item.status}" data-mvp-readiness="${item.id}">
+      <div class="item-row">
+        <strong>${item.id} - ${item.label}</strong>
+        <span class="tag ${statusClass(item.status)}">${item.status === "phase-2" ? "Phase 2" : "Complete"}</span>
+      </div>
+      <span>${item.owner}</span>
+      <small>${item.evidence}</small>
+    </div>
+  `).join("");
+
+  els.quickClientSelect.innerHTML = clients.map((client) => `
+    <option value="${client.id}" ${client.id === state.selectedClientId ? "selected" : ""}>${client.name}</option>
+  `).join("");
+  els.quickTemplateSelect.innerHTML = mvpQuickTemplates.map((template) => `
+    <option value="${template.id}">${template.label}</option>
+  `).join("");
+
+  const taskRows = quickOpsTasks.map(quickTaskView);
+  els.quickTaskList.innerHTML = taskRows.length ? taskRows.map((task) => `
+    <div class="list-item quick-task-card ${task.displayTone}" data-quick-task-card="${task.id}">
+      <div class="item-row">
+        <strong>${task.id} - ${task.type}</strong>
+        <span class="tag ${statusClass(task.displayTone)}">${task.displayStatus}</span>
+      </div>
+      <span>${task.client.name} - ${task.wall?.location || "Account level"} - ${task.priority} priority</span>
+      <small>${task.note}</small>
+      <small>Created by ${task.createdBy} - ${new Date(task.createdAt).toLocaleString("en-HK")}</small>
+      ${task.status === "closed" ? `<small>Closed by ${task.closedBy} - ${new Date(task.closedAt).toLocaleString("en-HK")}</small>` : ""}
+      <div class="workorder-actions">
+        <button type="button" class="mini-action" data-client-select="${task.clientId}">View account</button>
+        <button type="button" class="mini-action primary" data-close-quick-task="${task.id}" ${task.status === "closed" ? "disabled" : ""}>${task.status === "closed" ? "Closed" : "Close task"}</button>
+      </div>
+    </div>
+  `).join("") : `
+    <div class="list-item quick-task-card open">
+      <div class="item-row">
+        <strong>No quick tasks yet</strong>
+        <span class="tag warn">Open</span>
+      </div>
+      <span>Create one task to test MVP-level CRUD and audit trace.</span>
+    </div>
+  `;
+
+  els.mvpHandoffList.innerHTML = mvpHandoffCriteria.map((item) => `
+    <div class="method-row">
+      <span>${item.label}</span>
+      <strong>${item.rule}</strong>
+    </div>
+  `).join("");
 }
 
 function renderPositioning() {
@@ -2044,6 +2290,8 @@ function renderReports() {
     ["Resolved incidents", data.resolvedIncidents.length],
     ["Open compliance", data.openComplianceItems.length],
     ["Cleared compliance", data.clearedComplianceItems.length],
+    ["Open quick tasks", data.openQuickTasks.length],
+    ["Closed quick tasks", data.closedQuickTasks.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -2069,6 +2317,8 @@ function renderReports() {
     `${data.resolvedIncidents.length} resolved incident(s)`,
     `${data.openComplianceItems.length} open compliance item(s)`,
     `${data.clearedComplianceItems.length} cleared compliance item(s)`,
+    `${data.openQuickTasks.length} open quick task(s)`,
+    `${data.closedQuickTasks.length} closed quick task(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -2107,6 +2357,8 @@ function buildReportHtml() {
     `${data.resolvedIncidents.length} resolved incident(s)`,
     `${data.openComplianceItems.length} open compliance item(s)`,
     `${data.clearedComplianceItems.length} cleared compliance item(s)`,
+    `${data.openQuickTasks.length} open quick task(s)`,
+    `${data.closedQuickTasks.length} closed quick task(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -2130,6 +2382,8 @@ function buildReportHtml() {
     ["Resolved incidents", data.resolvedIncidents.length],
     ["Open compliance", data.openComplianceItems.length],
     ["Cleared compliance", data.clearedComplianceItems.length],
+    ["Open quick tasks", data.openQuickTasks.length],
+    ["Closed quick tasks", data.closedQuickTasks.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -2300,10 +2554,17 @@ function bindDynamicActions() {
       clearComplianceItem(button.dataset.clearCompliance);
     });
   });
+
+  document.querySelectorAll("[data-close-quick-task]").forEach((button) => {
+    button.addEventListener("click", () => {
+      closeQuickOpsTask(button.dataset.closeQuickTask);
+    });
+  });
 }
 
 function renderAll() {
   renderOverview();
+  renderMvpControl();
   renderPositioning();
   renderClients();
   renderCommercial();
@@ -2337,6 +2598,19 @@ els.simulateVisitBtn.addEventListener("click", () => {
   });
   els.syncStatus.textContent = `Synced just now after ${state.simulatedVisits} completed visit${state.simulatedVisits > 1 ? "s" : ""}`;
   renderAll();
+});
+
+els.activeRoleSelect.addEventListener("change", () => {
+  setActiveRole(els.activeRoleSelect.value);
+});
+
+els.createQuickTaskBtn.addEventListener("click", () => {
+  createQuickOpsTask({
+    clientId: els.quickClientSelect.value,
+    templateId: els.quickTemplateSelect.value,
+    priority: els.quickPrioritySelect.value,
+    note: els.quickNoteInput.value.trim()
+  });
 });
 
 els.reportClientSelect.addEventListener("change", () => {
@@ -2395,6 +2669,8 @@ async function bootstrap() {
     loadScheduleConfirmations();
     loadIncidentResolutions();
     loadComplianceClearances();
+    loadActiveRole();
+    loadQuickOpsTasks();
     loadAuditEvents();
     initializeSelection();
     renderAll();

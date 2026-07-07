@@ -1,0 +1,106 @@
+{
+  "roles": [
+    {
+      "id": "ops-admin",
+      "label": "Ops Admin",
+      "person": "Mia Lau",
+      "scope": "Portfolio control, audit, commercial and report export",
+      "permissions": ["Approve evidence", "Generate reports", "Resolve incidents", "Clear compliance", "Export audit trail"]
+    },
+    {
+      "id": "field-tech",
+      "label": "Field Technician",
+      "person": "Amy Chan",
+      "scope": "Service execution, proof capture and quick field tasks",
+      "permissions": ["Complete work orders", "Confirm visit slots", "Acknowledge sensors", "Create quick tasks"]
+    },
+    {
+      "id": "account-lead",
+      "label": "Account Lead",
+      "person": "Jason Ng",
+      "scope": "Renewal risk, client proof packs and follow-up ownership",
+      "permissions": ["Prepare renewal packs", "Review SLA health", "Track compliance blockers", "Create quick tasks"]
+    },
+    {
+      "id": "finance-compliance",
+      "label": "Finance and Compliance",
+      "person": "Serena Ho",
+      "scope": "Billing, receivables, access permits and document clearance",
+      "permissions": ["Mark invoices paid", "Clear compliance", "Review contracts", "Export audit trail"]
+    }
+  ],
+  "readiness": [
+    {
+      "id": "MVP-001",
+      "label": "Independent brother app",
+      "status": "complete",
+      "owner": "Product",
+      "evidence": "MiniJungle FM Ops runs as a standalone project without changing FiveApp/FiveCrop."
+    },
+    {
+      "id": "MVP-002",
+      "label": "Core FM control flow",
+      "status": "complete",
+      "owner": "Operations",
+      "evidence": "Clients, walls, sensors, incidents, service, calendar, dispatch, stock, proof and audit are connected."
+    },
+    {
+      "id": "MVP-003",
+      "label": "Commercial and governance flow",
+      "status": "complete",
+      "owner": "Commercial",
+      "evidence": "SLA, renewal, billing, compliance and ESG report metrics are visible in the control center."
+    },
+    {
+      "id": "MVP-004",
+      "label": "Interactive evidence loop",
+      "status": "complete",
+      "owner": "Product",
+      "evidence": "Key actions write local state and create audit events for demo traceability."
+    },
+    {
+      "id": "MVP-005",
+      "label": "Production backend",
+      "status": "phase-2",
+      "owner": "Engineering",
+      "evidence": "The MVP uses JSON and localStorage; real database, auth and APIs are next-stage work."
+    }
+  ],
+  "quickTemplates": [
+    {
+      "id": "QO-CARE",
+      "label": "Ad-hoc care task",
+      "type": "Care follow-up",
+      "defaultPriority": "medium",
+      "defaultNote": "Check plant health, capture photo evidence and update client note."
+    },
+    {
+      "id": "QO-PROOF",
+      "label": "Proof gap task",
+      "type": "Evidence follow-up",
+      "defaultPriority": "high",
+      "defaultNote": "Collect missing proof before report export."
+    },
+    {
+      "id": "QO-CLIENT",
+      "label": "Client callback",
+      "type": "Account follow-up",
+      "defaultPriority": "medium",
+      "defaultNote": "Confirm client-facing next step and owner."
+    }
+  ],
+  "handoffCriteria": [
+    {
+      "label": "Demo-ready",
+      "rule": "A user can open the app, switch roles, operate key workflows, export a report and see the audit trail."
+    },
+    {
+      "label": "MVP boundary",
+      "rule": "The app validates the operating model; production data, authentication and integrations remain phase 2."
+    },
+    {
+      "label": "Review next",
+      "rule": "After this checkpoint, product review should decide whether to prioritize backend, mobile technician flow or customer portal."
+    }
+  ]
+}

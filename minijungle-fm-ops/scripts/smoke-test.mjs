@@ -70,6 +70,8 @@ async function verifyBrowserFlow(baseUrl) {
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.schedule-confirmations.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.incident-resolutions.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.compliance-clearances.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.active-role.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.quick-ops-tasks.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.audit-events.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
@@ -135,6 +137,31 @@ async function verifyBrowserFlow(baseUrl) {
     assert(complianceCardAfter?.includes("Cleared"), "Clearing compliance item did not update card");
     const complianceAudit = await page.textContent("#audit-event-list");
     assert(complianceAudit?.includes("Compliance item cleared"), "Compliance clearance did not create audit event");
+
+    await page.selectOption("#active-role-select", "field-tech");
+    await page.waitForTimeout(150);
+    const roleDetail = await page.textContent("#active-role-detail");
+    assert(roleDetail?.includes("Field Technician"), "Role switch did not update active role detail");
+    const roleAudit = await page.textContent("#audit-event-list");
+    assert(roleAudit?.includes("Operator role switched"), "Role switch did not create audit event");
+
+    await page.selectOption("#quick-client-select", "show-suite");
+    await page.selectOption("#quick-template-select", "QO-CARE");
+    await page.selectOption("#quick-priority-select", "high");
+    await page.fill("#quick-note-input", "Smoke created service note");
+    await page.click("#create-quick-task-btn");
+    await page.waitForTimeout(150);
+    const quickTaskCreated = await page.textContent("#quick-task-list");
+    assert(quickTaskCreated?.includes("Smoke created service note"), "Quick task creation did not update task list");
+    assert(quickTaskCreated?.includes("Open"), "Quick task was not created in open state");
+    const quickTaskAudit = await page.textContent("#audit-event-list");
+    assert(quickTaskAudit?.includes("Quick task created"), "Quick task creation did not create audit event");
+    await page.click("#quick-task-list [data-close-quick-task]");
+    await page.waitForTimeout(150);
+    const quickTaskClosed = await page.textContent("#quick-task-list");
+    assert(quickTaskClosed?.includes("Closed"), "Closing quick task did not update task list");
+    const quickTaskClosedAudit = await page.textContent("#audit-event-list");
+    assert(quickTaskClosedAudit?.includes("Quick task closed"), "Quick task closure did not create audit event");
 
     const commercialCard = await page.textContent('[data-commercial-card="show-suite"]');
     assert(commercialCard?.includes("Save plan"), "Commercial desk did not flag show suite renewal risk");
@@ -223,11 +250,21 @@ async function verifyBrowserFlow(baseUrl) {
       .filter({ hasText: "Cleared compliance" })
       .textContent();
     assert(clearedComplianceMetric?.includes("1"), "Cleared compliance metric did not update");
+    const openQuickTasksMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Open quick tasks" })
+      .textContent();
+    assert(openQuickTasksMetric?.includes("0"), "Open quick task metric did not update after closure");
+    const closedQuickTasksMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Closed quick tasks" })
+      .textContent();
+    assert(closedQuickTasksMetric?.includes("1"), "Closed quick task metric did not update");
     const auditMetric = await page
       .locator("#report-metrics .report-metric")
       .filter({ hasText: "Audit events" })
       .textContent();
-    assert(auditMetric?.includes("9"), "Client-linked audit event metric did not update");
+    assert(auditMetric?.includes("11"), "Client-linked audit event metric did not update");
 
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-report-btn");
@@ -285,6 +322,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/sensors.json", "application/json");
     await verifyResource(baseUrl, "/data/supply.json", "application/json");
     await verifyResource(baseUrl, "/data/audit.json", "application/json");
+    await verifyResource(baseUrl, "/data/mvp-control.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);
