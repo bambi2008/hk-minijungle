@@ -259,6 +259,11 @@ small {
   color: var(--gold);
 }
 
+.tag.good {
+  background: #e4f3e8;
+  color: var(--green);
+}
+
 .tag.danger {
   background: #f9e4e0;
   color: var(--red);
@@ -430,6 +435,45 @@ small {
 .wall-card.selected {
   border-color: rgba(31, 111, 75, 0.42);
   background: #f5faf5;
+}
+
+.workorder-item {
+  cursor: default;
+}
+
+.workorder-item.completed {
+  border-color: rgba(31, 111, 75, 0.34);
+  background: #f2f8f3;
+}
+
+.workorder-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.mini-action {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 11px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mini-action.primary {
+  border-color: rgba(31, 111, 75, 0.4);
+  background: var(--green);
+  color: #fff;
+}
+
+.mini-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .positioning-panel {

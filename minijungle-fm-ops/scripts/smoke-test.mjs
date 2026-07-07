@@ -61,6 +61,8 @@ async function verifyBrowserFlow(baseUrl) {
     page.on("pageerror", (error) => errors.push(error.message));
 
     await page.goto(baseUrl, { waitUntil: "networkidle" });
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.workorder-completions.v1"));
+    await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
     assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
 
@@ -74,6 +76,11 @@ async function verifyBrowserFlow(baseUrl) {
     const wallTitle = await page.textContent("#wall-detail-title");
     assert(wallTitle?.includes("MJ-HK-021"), "Client selection did not update selected wall");
 
+    await page.click('[data-complete-workorder="WO-1047"]');
+    await page.waitForTimeout(150);
+    const completedCard = await page.textContent('[data-workorder-card="WO-1047"]');
+    assert(completedCard?.includes("Completed"), "Completing work order did not update service card");
+
     await page.selectOption("#report-client-select", "show-suite");
     await page.selectOption("#report-month-select", "2026-05");
     await page.waitForTimeout(150);
@@ -81,6 +88,11 @@ async function verifyBrowserFlow(baseUrl) {
     assert(reportTitle?.includes("Property Show Suite"), "Report client selection did not update title");
     const reportPeriod = await page.textContent("#report-period");
     assert(reportPeriod?.includes("May 2026"), "Report month selection did not update period");
+    const completedMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Completed work orders" })
+      .textContent();
+    assert(completedMetric?.includes("1"), "Completed work order metric did not update");
 
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-report-btn");

@@ -18,6 +18,9 @@ let reportModes = [];
 let reportMonths = [];
 let strategyCards = [];
 let architectureLayers = [];
+let workorderCompletions = {};
+
+const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -54,6 +57,45 @@ function initializeSelection() {
   state.selectedReportClientId = clients[0]?.id || null;
   state.selectedReportMonth = reportMonths[0]?.id || null;
   state.reportMode = reportModes[0]?.id || null;
+}
+
+function loadWorkorderCompletions() {
+  try {
+    workorderCompletions = JSON.parse(localStorage.getItem(workorderCompletionStorageKey) || "{}");
+  } catch {
+    workorderCompletions = {};
+  }
+}
+
+function saveWorkorderCompletions() {
+  localStorage.setItem(workorderCompletionStorageKey, JSON.stringify(workorderCompletions));
+}
+
+function isWorkorderCompleted(id) {
+  return Boolean(workorderCompletions[id]);
+}
+
+function workorderView(order) {
+  const completion = workorderCompletions[order.id] || null;
+  return {
+    ...order,
+    completion,
+    displayStatus: completion ? "Completed" : order.status,
+    displayPriority: completion ? "completed" : order.priority
+  };
+}
+
+function completeWorkorder(id) {
+  if (!workorderCompletions[id]) {
+    workorderCompletions[id] = {
+      completedAt: new Date().toISOString(),
+      completedBy: "FM Ops demo",
+      proof: "Visit tasks completed and ready for report evidence."
+    };
+    saveWorkorderCompletions();
+  }
+  state.reportGenerated = false;
+  renderAll();
 }
 
 const state = {
@@ -159,6 +201,7 @@ function riskLabel(level) {
 function statusClass(value) {
   if (value === "risk" || value === "high") return "danger";
   if (value === "watch" || value === "medium") return "warn";
+  if (value === "completed") return "good";
   return "";
 }
 
@@ -197,6 +240,8 @@ function portfolioMetrics() {
 function metricsForClient(clientId) {
   const clientWalls = walls.filter((wall) => wall.clientId === clientId);
   const clientWorkorders = workorders.filter((order) => clientWalls.some((wall) => wall.id === order.wallId));
+  const completedWorkorders = clientWorkorders.filter((order) => isWorkorderCompleted(order.id));
+  const openWorkorders = clientWorkorders.filter((order) => !isWorkorderCompleted(order.id));
   const clientDiagnoses = diagnoses.filter((diagnosis) => clientWalls.some((wall) => wall.id === diagnosis.wallId));
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
@@ -211,6 +256,8 @@ function metricsForClient(clientId) {
   return {
     walls: clientWalls,
     workorders: clientWorkorders,
+    completedWorkorders,
+    openWorkorders,
     diagnoses: clientDiagnoses,
     greenArea,
     waterSaved,
@@ -261,24 +308,25 @@ function renderOverview() {
     .map((wall) => `
       <button type="button" class="list-item" data-wall-select="${wall.id}">
         <div class="item-row">
-          <strong>${wall.id} · ${wall.name}</strong>
+          <strong>${wall.id} - ${wall.name}</strong>
           <span class="tag ${statusClass(wall.status)}">${wall.status}</span>
         </div>
-        <span>${clientFor(wall).name} · ${wall.location}</span>
-        <small>Health ${wall.health} · ${wall.issues} issues · next visit ${wall.nextVisit}</small>
+        <span>${clientFor(wall).name} - ${wall.location}</span>
+        <small>Health ${wall.health} - ${wall.issues} issues - next visit ${wall.nextVisit}</small>
       </button>
     `).join("");
 
   els.serviceTimeline.innerHTML = workorders.map((order) => {
     const wall = wallById(order.wallId);
+    const view = workorderView(order);
     return `
       <button type="button" class="list-item" data-wall-select="${wall.id}">
         <div class="item-row">
-          <strong>${order.due}</strong>
-          <span class="tag ${statusClass(order.priority === "high" ? "risk" : order.priority)}">${order.status}</span>
+          <strong>${view.due}</strong>
+          <span class="tag ${statusClass(view.displayPriority === "high" ? "risk" : view.displayPriority)}">${view.displayStatus}</span>
         </div>
-        <span>${order.id} · ${order.type}</span>
-        <small>${clientFor(wall).name} · ${order.tasks.join(", ")}</small>
+        <span>${view.id} - ${view.type}</span>
+        <small>${clientFor(wall).name} - ${view.tasks.join(", ")}</small>
       </button>
     `;
   }).join("");
@@ -312,8 +360,8 @@ function renderClients() {
           <strong>${client.name}</strong>
           <span class="tag ${statusClass(client.renewalRisk)}">${riskLabel(client.renewalRisk)}</span>
         </div>
-        <span>${client.segment} · ${client.district}</span>
-        <small>${clientWalls.length} wall(s) · health ${averageHealth} · renewal ${client.renewalDate}</small>
+        <span>${client.segment} - ${client.district}</span>
+        <small>${clientWalls.length} wall(s) - health ${averageHealth} - renewal ${client.renewalDate}</small>
       </button>
     `;
   }).join("");
@@ -321,7 +369,7 @@ function renderClients() {
   const client = selectedClient();
   const clientWalls = walls.filter((wall) => wall.clientId === client.id);
   els.clientDetailTitle.textContent = client.name;
-  els.clientDetailStatus.textContent = `${client.segment} · ${client.district}`;
+  els.clientDetailStatus.textContent = `${client.segment} - ${client.district}`;
   els.clientDetail.innerHTML = [
     ["Plan", client.plan],
     ["Contract", client.contract],
@@ -364,14 +412,14 @@ function renderWalls() {
           <div><span>Pods</span><strong>${wall.pods}</strong></div>
           <div><span>Next</span><strong>${wall.nextVisit}</strong></div>
         </div>
-        <small>${client.name} · ${wall.location}</small>
+        <small>${client.name} - ${wall.location}</small>
       </button>
     `;
   }).join("");
 
   const wall = selectedWall();
-  els.wallDetailTitle.textContent = `${wall.id} · ${wall.name}`;
-  els.wallDetailStatus.textContent = `${clientFor(wall).name} · ${wall.status}`;
+  els.wallDetailTitle.textContent = `${wall.id} - ${wall.name}`;
+  els.wallDetailStatus.textContent = `${clientFor(wall).name} - ${wall.status}`;
   els.wallDetail.innerHTML = [
     ["Location", wall.location],
     ["Service cadence", wall.cadence],
@@ -388,7 +436,7 @@ function renderWalls() {
       </div>
       <div>
         <strong>${zone.name}</strong>
-        <span>${zone.pods} pods · health ${zone.health}</span>
+        <span>${zone.pods} pods - health ${zone.health}</span>
         <small>${zone.issue}</small>
       </div>
     </div>
@@ -398,15 +446,22 @@ function renderWalls() {
 function renderService() {
   els.workorderList.innerHTML = workorders.map((order) => {
     const wall = wallById(order.wallId);
+    const view = workorderView(order);
+    const completed = Boolean(view.completion);
     return `
-      <button type="button" class="list-item" data-wall-select="${wall.id}">
+      <div class="list-item workorder-item ${completed ? "completed" : ""}" data-workorder-card="${view.id}">
         <div class="item-row">
-          <strong>${order.id} · ${order.type}</strong>
-          <span class="tag ${statusClass(order.priority === "high" ? "risk" : order.priority)}">${order.status}</span>
+          <strong>${view.id} - ${view.type}</strong>
+          <span class="tag ${statusClass(view.displayPriority === "high" ? "risk" : view.displayPriority)}">${view.displayStatus}</span>
         </div>
-        <span>${clientFor(wall).name} · ${wall.location}</span>
-        <small>${order.due} · ${order.tasks.join(", ")}</small>
-      </button>
+        <span>${clientFor(wall).name} - ${wall.location}</span>
+        <small>${view.due} - ${view.tasks.join(", ")}</small>
+        ${completed ? `<small>Completed by ${view.completion.completedBy} - ${new Date(view.completion.completedAt).toLocaleString("en-HK")}</small>` : ""}
+        <div class="workorder-actions">
+          <button type="button" class="mini-action" data-wall-select="${wall.id}">Wall detail</button>
+          <button type="button" class="mini-action primary" data-complete-workorder="${view.id}" ${completed ? "disabled" : ""}>${completed ? "Completed" : "Complete work order"}</button>
+        </div>
+      </div>
     `;
   }).join("");
 
@@ -415,7 +470,7 @@ function renderService() {
     return `
       <button type="button" class="list-item" data-wall-select="${wall.id}">
         <div class="item-row">
-          <strong>${diagnosis.wallId} · ${diagnosis.finding}</strong>
+          <strong>${diagnosis.wallId} - ${diagnosis.finding}</strong>
           <span class="tag">${diagnosis.confidence}%</span>
         </div>
         <span>${diagnosis.evidence}</span>
@@ -505,7 +560,8 @@ function renderReports() {
     ["Green area", `${data.greenArea.toFixed(1)} m2`],
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Open issues", data.issues],
-    ["Work orders", data.workorders.length]
+    ["Open work orders", data.openWorkorders.length],
+    ["Completed work orders", data.completedWorkorders.length]
   ].map(([label, value]) => `
     <div class="report-metric">
       <span>${label}</span>
@@ -517,7 +573,8 @@ function renderReports() {
     ...report.evidence,
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} Doctor Forest finding(s)`,
-    `${data.workorders.length} open or scheduled work order(s)`
+    `${data.completedWorkorders.length} completed work order(s)`,
+    `${data.openWorkorders.length} open or scheduled work order(s)`
   ];
   els.reportEvidence.innerHTML = evidence.map((item) => `
     <div class="evidence-card">
@@ -542,7 +599,8 @@ function buildReportHtml() {
     ...report.evidence,
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} Doctor Forest finding(s)`,
-    `${data.workorders.length} open or scheduled work order(s)`
+    `${data.completedWorkorders.length} completed work order(s)`,
+    `${data.openWorkorders.length} open or scheduled work order(s)`
   ];
   const metricRows = [
     ["Health score", data.health],
@@ -551,7 +609,9 @@ function buildReportHtml() {
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Service miles avoided", `${data.serviceMilesSaved} km`],
     ["Wellness reach", `${data.staffReach} people/mo`],
-    ["CO2e proxy", `${data.co2eProxy} kg`]
+    ["CO2e proxy", `${data.co2eProxy} kg`],
+    ["Open work orders", data.openWorkorders.length],
+    ["Completed work orders", data.completedWorkorders.length]
   ];
 
   return `<!doctype html>
@@ -648,6 +708,12 @@ function bindDynamicActions() {
       renderReports();
     });
   });
+
+  document.querySelectorAll("[data-complete-workorder]").forEach((button) => {
+    button.addEventListener("click", () => {
+      completeWorkorder(button.dataset.completeWorkorder);
+    });
+  });
 }
 
 function renderAll() {
@@ -706,6 +772,7 @@ els.navLinks.forEach((link) => {
 async function bootstrap() {
   try {
     await loadAppData();
+    loadWorkorderCompletions();
     initializeSelection();
     renderAll();
   } catch (error) {
