@@ -74,18 +74,18 @@ let activeRoleId = null;
 let quickOpsTasks = [];
 let auditEvents = [];
 
-const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
-const dispatchStagingStorageKey = "minijungle-fm-ops.dispatch-staging.v1";
-const proofApprovalStorageKey = "minijungle-fm-ops.proof-approvals.v1";
-const sensorAcknowledgementStorageKey = "minijungle-fm-ops.sensor-acknowledgements.v1";
-const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
-const invoicePaymentStorageKey = "minijungle-fm-ops.invoice-payments.v1";
-const scheduleConfirmationStorageKey = "minijungle-fm-ops.schedule-confirmations.v1";
-const incidentResolutionStorageKey = "minijungle-fm-ops.incident-resolutions.v1";
-const complianceClearanceStorageKey = "minijungle-fm-ops.compliance-clearances.v1";
-const activeRoleStorageKey = "minijungle-fm-ops.active-role.v1";
-const quickOpsTaskStorageKey = "minijungle-fm-ops.quick-ops-tasks.v1";
-const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
+const workorderCompletionStorageKey = "dr-forest-fm-ops.workorder-completions.v1";
+const dispatchStagingStorageKey = "dr-forest-fm-ops.dispatch-staging.v1";
+const proofApprovalStorageKey = "dr-forest-fm-ops.proof-approvals.v1";
+const sensorAcknowledgementStorageKey = "dr-forest-fm-ops.sensor-acknowledgements.v1";
+const supplyRequestStorageKey = "dr-forest-fm-ops.supply-requests.v1";
+const invoicePaymentStorageKey = "dr-forest-fm-ops.invoice-payments.v1";
+const scheduleConfirmationStorageKey = "dr-forest-fm-ops.schedule-confirmations.v1";
+const incidentResolutionStorageKey = "dr-forest-fm-ops.incident-resolutions.v1";
+const complianceClearanceStorageKey = "dr-forest-fm-ops.compliance-clearances.v1";
+const activeRoleStorageKey = "dr-forest-fm-ops.active-role.v1";
+const quickOpsTaskStorageKey = "dr-forest-fm-ops.quick-ops-tasks.v1";
+const auditEventStorageKey = "dr-forest-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -1453,7 +1453,7 @@ function renderPlatform() {
     {
       title: "Investor thesis",
       value: "Living Asset OS",
-      body: "Wall proves the operating model first, then the same ledger expands across MiniJungle products."
+      body: "Wall proves the operating model first, then the same ledger expands across DR FOREST products."
     }
   ];
   els.platformThesisGrid.innerHTML = thesisCards.map((card) => `
@@ -1560,7 +1560,7 @@ function renderPositioning() {
     </article>
   `).join("");
 
-  els.positioningCopy.textContent = "MiniJungle FM Ops sits between living asset rental, field service management, IoT monitoring and ESG reporting. Wall is the first proof point, but the operating model extends to pots, plant clusters, green partitions, seasonal displays and future smart planters. The product promise is verified service quality: every asset has an owner, every visit has proof, every plant issue has a follow-up, and every ESG statement has a method note.";
+  els.positioningCopy.textContent = "DR FOREST FM Ops sits between living asset rental, field service management, IoT monitoring and ESG reporting. Wall is the first proof point, but the operating model extends to pots, plant clusters, green partitions, seasonal displays and future smart planters. The product promise is verified service quality: every asset has an owner, every visit has proof, every plant issue has a follow-up, and every ESG statement has a method note.";
 }
 
 function renderClients() {
@@ -2389,7 +2389,7 @@ function renderReports() {
   const evidence = [
     ...report.evidence,
     `${data.walls.length} wall ledger record(s)`,
-    `${data.diagnoses.length} Doctor Forest finding(s)`,
+    `${data.diagnoses.length} DR FOREST finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
     `${data.openWorkorders.length} open or scheduled work order(s)`,
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
@@ -2429,7 +2429,7 @@ function buildReportHtml() {
   const evidence = [
     ...report.evidence,
     `${data.walls.length} wall ledger record(s)`,
-    `${data.diagnoses.length} Doctor Forest finding(s)`,
+    `${data.diagnoses.length} DR FOREST finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
     `${data.openWorkorders.length} open or scheduled work order(s)`,
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
@@ -2490,7 +2490,7 @@ function buildReportHtml() {
   </style>
 </head>
 <body>
-  <span>MiniJungle FM Ops</span>
+  <span>DR FOREST FM Ops</span>
   <h1>${client.name} - ${report.title}</h1>
   <p>${period.label} (${period.period})</p>
   <p>${report.summary}</p>
@@ -2520,7 +2520,7 @@ function downloadReportHtml() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = `${client.id}-${period.id}-minijungle-report.html`;
+  link.download = `${client.id}-${period.id}-dr-forest-report.html`;
   document.body.append(link);
   link.click();
   link.remove();

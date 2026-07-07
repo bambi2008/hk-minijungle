@@ -39,14 +39,14 @@
       "label": "Audit Trail",
       "title": "Green Asset Service Audit Trail",
       "summary": "A governance pack that shows who visited, what was checked, which photos were captured and how each claim is supported.",
-      "evidence": ["Technician visit records", "Photo timestamps", "Doctor Forest findings", "Manual override notes"]
+      "evidence": ["Technician visit records", "Photo timestamps", "DR FOREST findings", "Manual override notes"]
     }
   ],
   "strategyCards": [
     {
       "title": "Positioning",
       "value": "Living Asset OS",
-      "body": "A vertical operating system for MiniJungle's recurring green assets, with Wall as the first high-value wedge."
+      "body": "A vertical operating system for DR FOREST's recurring green assets, with Wall as the first high-value wedge."
     },
     {
       "title": "Audience",
@@ -61,7 +61,7 @@
     {
       "title": "Moat",
       "value": "Pod data + service proof",
-      "body": "Standardized wall modules, Plant Pod records, Xponge replacement cycles and Doctor Forest diagnosis history."
+      "body": "Standardized wall modules, Plant Pod records, Xponge replacement cycles and DR FOREST diagnosis history."
     }
   ],
   "platformThesis": [
@@ -73,7 +73,7 @@
     {
       "title": "Wedge",
       "value": "Wall first",
-      "body": "MiniJungle Wall stays the demo hero because it is visual, high-ticket, service-heavy and easiest to prove operational leverage."
+      "body": "DR FOREST Wall stays the demo hero because it is visual, high-ticket, service-heavy and easiest to prove operational leverage."
     },
     {
       "title": "Expansion",
@@ -89,7 +89,7 @@
   "assetClasses": [
     {
       "id": "living-wall",
-      "label": "MiniJungle Wall",
+      "label": "DR FOREST Wall",
       "stage": "MVP ready",
       "status": "ready",
       "fit": "Highest-value wedge with modules, pods, sensors, SLA, proof photos and clear renewal value.",
@@ -178,7 +178,7 @@
       "label": "Living Asset Intelligence",
       "status": "phase-2",
       "proof": "Use accumulated health, replacement and route data for risk scoring, demand planning and predictive care.",
-      "investorQuestion": "Does MiniJungle own proprietary operating data?"
+      "investorQuestion": "Does DR FOREST own proprietary operating data?"
     }
   ],
   "investorBenchmarks": [
@@ -224,7 +224,7 @@
     },
     {
       "name": "Health Layer",
-      "items": ["Health score", "Doctor Forest finding", "Risk queue", "Follow-up standard"]
+      "items": ["Health score", "DR FOREST finding", "Risk queue", "Follow-up standard"]
     },
     {
       "name": "ESG Layer",
