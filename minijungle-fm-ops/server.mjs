@@ -16,7 +16,8 @@ const types = {
 };
 
 function resolvePath(url) {
-  const pathname = new URL(url, `http://${host}:${port}`).pathname;
+  const requestUrl = (url || "/").replace(/^\/+/, "/");
+  const pathname = new URL(requestUrl, `http://${host}:${port}`).pathname;
   const requested = pathname === "/" ? "/index.html" : pathname;
   const normalized = normalize(join(root, requested));
   if (!normalized.startsWith(root)) return null;

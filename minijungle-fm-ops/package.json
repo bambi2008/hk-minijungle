@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.mjs",
     "start:8010": "node server.mjs --port 8010",
-    "check": "node --check app.js && node --check server.mjs"
+    "smoke": "node scripts/smoke-test.mjs",
+    "check": "node --check app.js && node --check server.mjs && node --check scripts/smoke-test.mjs && node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1",
