@@ -23,6 +23,7 @@ const customerCareAction = document.querySelector("#customer-care-action");
 const customerCareFollowup = document.querySelector("#customer-care-followup");
 const customerCareEvidence = document.querySelector("#customer-care-evidence");
 const customerCareModeButtons = Array.from(document.querySelectorAll("[data-customer-care-mode]"));
+const localeButtons = Array.from(document.querySelectorAll("[data-locale-option]"));
 const customerModeBtn = document.querySelector("#customer-mode-btn");
 const expertModeBtn = document.querySelector("#expert-mode-btn");
 const customerTitle = document.querySelector("#customer-title");
@@ -314,6 +315,196 @@ let customerAutoArchiveInFlightSignature = null;
 let customerResetSnapshot = null;
 let customerPhotoPickerCancelTimer = null;
 
+const localeStorageKey = "fivecropLocale";
+const supportedLocales = new Set(["zh-Hant", "en"]);
+let activeLocale = (() => {
+  try {
+    const saved = localStorage.getItem(localeStorageKey);
+    return supportedLocales.has(saved) ? saved : "zh-Hant";
+  } catch {
+    return "zh-Hant";
+  }
+})();
+
+const uiCopy = {
+  "zh-Hant": {
+    htmlLang: "zh-Hant",
+    documentTitle: "FiveCrop：植物醫生",
+    backAria: "開始新的診斷",
+    privacyAria: "照片隱私說明",
+    cameraAria: "拍攝或上傳植物照片",
+    cropRailAria: "選擇你的作物",
+    heroTitle: "讓我看看哪裡在變化。",
+    heroIntro: "先拍整株。需要細節時，FiveCrop 只會再要求一張。",
+    photoCheckTitle: "拍照診斷",
+    photoCheckSubtitle: "植物看起來不對勁時",
+    careEntryTitle: "今日養護",
+    careEntrySubtitle: "日常種植指導",
+    careKicker: "今日養護",
+    careDoneKicker: "今日已完成",
+    careDoneAction: "今天的動作已完成。先保持環境穩定，到復查時間再回來拍照。",
+    today: "今天",
+    careModeAria: "起步方式",
+    careDefaultMessage: "選擇起步方式，FiveCrop 只給你下一個該做的動作。",
+    privacyInline: "預設保護隱私",
+    photoPrivacyDetail: "FiveCrop 只會為本次診斷上傳壓縮後的植物照片。預設不會用於模型訓練，你也可以隨時刪除本機病例資料。",
+    whyTitle: "為什麼這樣判斷",
+    followupHelp: "用同一角度拍攝，方便我們比較變化。",
+    diagnosisPrivacy: "照片只用於本次診斷",
+    privacyLabel: "隱私",
+    diagnosisPrivacyDetail: "只有啟用視覺分析時，FiveCrop 才會發送壓縮後的植物照片。原圖不會存入病例，也不會預設用於模型訓練。",
+    takePhoto: "拍照",
+    appEyebrow: "專注 5 種可食室內植物",
+    customerMode: "客戶",
+    expertMode: "內部",
+    viewModeAria: "視圖模式",
+    waiting: "等待輸入",
+    basilGuidanceHeader: "羅勒主動種植指導",
+    startTypeSeed: "種子培育",
+    startTypeTransplant: "移栽/換盆",
+    startTypeStore: "成品不移植"
+  },
+  en: {
+    htmlLang: "en",
+    documentTitle: "FiveCrop: Plant Doctor",
+    backAria: "Start a new diagnosis",
+    privacyAria: "Photo privacy details",
+    cameraAria: "Take or upload a plant photo",
+    cropRailAria: "Choose your crop",
+    heroTitle: "Show me what's changing.",
+    heroIntro: "Frame the whole plant. We will ask for a detail only if needed.",
+    photoCheckTitle: "Photo check",
+    photoCheckSubtitle: "When something looks off",
+    careEntryTitle: "Today's care",
+    careEntrySubtitle: "Routine guidance",
+    careKicker: "Today's care",
+    careDoneKicker: "Done today",
+    careDoneAction: "Done for today. Keep conditions steady until the review.",
+    today: "Today",
+    careModeAria: "Start type",
+    careDefaultMessage: "Pick a start type and FiveCrop will keep the next action simple.",
+    privacyInline: "Private by default",
+    photoPrivacyDetail: "FiveCrop uploads a compressed plant photo only for diagnosis. It is not used for model training by default, and you can delete local case data at any time.",
+    whyTitle: "Why we think this",
+    followupHelp: "Use the same angle so we can compare.",
+    diagnosisPrivacy: "Photos are used only for this diagnosis",
+    privacyLabel: "Privacy",
+    diagnosisPrivacyDetail: "FiveCrop sends a compressed plant photo only when vision analysis is enabled. Original photos are not saved in the case or used for model training by default.",
+    takePhoto: "Take a photo",
+    appEyebrow: "Care for 5 edible plants",
+    customerMode: "Customer",
+    expertMode: "Expert",
+    viewModeAria: "View mode",
+    waiting: "Waiting",
+    basilGuidanceHeader: "Proactive basil growing guide",
+    startTypeSeed: "Seed",
+    startTypeTransplant: "Transplant",
+    startTypeStore: "Store plant"
+  }
+};
+
+const cropNameCatalog = {
+  "zh-Hant": {
+    tomato: "矮生番茄",
+    basil: "羅勒",
+    rosemary: "迷迭香",
+    strawberry: "草莓",
+    pepper: "辣椒"
+  },
+  en: {
+    tomato: "Tomato",
+    basil: "Basil",
+    rosemary: "Rosemary",
+    strawberry: "Strawberry",
+    pepper: "Pepper"
+  }
+};
+
+const traditionalPhraseMap = [
+  ["种子培育", "種子培育"],
+  ["移栽/换盆", "移栽/換盆"],
+  ["成品不移植", "成品不移植"],
+  ["罗勒主动种植指导", "羅勒主動種植指導"],
+  ["当前重点", "當前重點"],
+  ["稳出苗", "穩出苗"],
+  ["防徒长", "防徒長"],
+  ["开花信号", "開花信號"],
+  ["第一位", "第一位"],
+  ["香味不浓", "香味不濃"],
+  ["不能靠照片直接判定", "不能靠照片直接判定"],
+  ["营养生长期", "營養生長期"],
+  ["连续采收", "連續採收"],
+  ["起步方式", "起步方式"],
+  ["下一步", "下一步"],
+  ["复查", "複查"],
+  ["同角度", "同角度"],
+  ["整株", "整株"],
+  ["叶背", "葉背"],
+  ["花苞", "花苞"],
+  ["花穗", "花穗"],
+  ["茎基部", "莖基部"],
+  ["根腐", "根腐"],
+  ["黑脚", "黑腳"],
+  ["打顶", "打頂"],
+  ["补光", "補光"],
+  ["浇水", "澆水"],
+  ["施肥", "施肥"],
+  ["通风", "通風"],
+  ["排水孔", "排水孔"],
+  ["泥炭", "泥炭"],
+  ["椰糠", "椰糠"],
+  ["珍珠岩", "珍珠岩"],
+  ["植物灯", "植物燈"],
+  ["育苗", "育苗"],
+  ["浅播", "淺播"],
+  ["薄覆", "薄覆"],
+  ["喷湿", "噴濕"],
+  ["透明盖", "透明蓋"],
+  ["小苗", "小苗"],
+  ["真叶", "真葉"],
+  ["侧枝", "側枝"],
+  ["光照", "光照"],
+  ["氮肥", "氮肥"],
+  ["模型训练", "模型訓練"]
+];
+
+const traditionalCharMap = {
+  "罗": "羅", "种": "種", "换": "換", "养": "養", "导": "導", "选": "選", "择": "擇",
+  "阶": "階", "给": "給", "应": "應", "动": "動", "当": "當", "稳": "穩", "长": "長",
+  "开": "開", "号": "號", "时": "時", "顶": "頂", "叶": "葉", "为": "為", "浓": "濃",
+  "仅": "僅", "补": "補", "诊": "診", "断": "斷", "压": "壓", "缩": "縮", "传": "傳",
+  "删": "刪", "数": "數", "据": "據", "显": "顯", "示": "示", "质": "質", "检": "檢",
+  "识": "識", "别": "別", "护": "護", "这": "這", "张": "張", "清": "清", "晰": "晰",
+  "后": "後", "实": "實", "验": "驗", "议": "議", "态": "態", "处": "處", "间": "間",
+  "轻": "輕", "复": "複", "该": "該", "摄": "攝", "较": "較", "变": "變", "隐": "隱",
+  "私": "私", "默": "默", "认": "認", "练": "練", "随": "隨", "机": "機", "资": "資",
+  "料": "料", "标": "標", "签": "籤", "层": "層", "湿": "濕", "积": "積", "缝": "縫",
+  "发": "發", "现": "現", "风": "風", "习": "習", "买": "買", "虫": "蟲", "节": "節",
+  "线": "線", "适": "適", "滤": "濾", "挥": "揮", "拟": "擬", "旧": "舊", "与": "與",
+  "产": "產", "径": "徑", "团": "團", "伤": "傷", "过": "過", "强": "強", "晒": "曬",
+  "蔫": "蔫", "黄": "黃", "园": "園", "亚": "亞", "质": "質", "测": "測", "帮": "幫",
+  "结": "結", "钟": "鐘", "够": "夠", "内": "內", "优": "優", "将": "將", "启": "啟",
+  "对": "對", "带": "帶", "确": "確", "缓": "緩", "来": "來", "请": "請", "读": "讀",
+  "录": "錄", "软": "軟", "刚": "剛", "闭": "閉", "担": "擔", "还": "還", "离": "離"
+};
+
+function t(key) {
+  return uiCopy[activeLocale]?.[key] || uiCopy.en[key] || key;
+}
+
+function toTraditional(input) {
+  let output = String(input || "");
+  traditionalPhraseMap.forEach(([from, to]) => {
+    output = output.split(from).join(to);
+  });
+  return output.replace(/[\u4e00-\u9fff]/g, (char) => traditionalCharMap[char] || char);
+}
+
+function localizeText(value) {
+  if (value == null) return "";
+  return activeLocale === "zh-Hant" ? toTraditional(value) : String(value);
+}
+
 const cropNames = {
   tomato: "矮生番茄",
   basil: "罗勒",
@@ -322,13 +513,15 @@ const cropNames = {
   pepper: "辣椒"
 };
 
-Object.assign(cropNames, {
-  tomato: "Tomato",
-  basil: "Basil",
-  rosemary: "Rosemary",
-  strawberry: "Strawberry",
-  pepper: "Pepper"
-});
+function syncCropNamesForLocale() {
+  Object.assign(cropNames, cropNameCatalog[activeLocale] || cropNameCatalog["zh-Hant"]);
+}
+
+function cropName(cropKey) {
+  return cropNameCatalog[activeLocale]?.[cropKey] || cropNameCatalog.en[cropKey] || cropKey;
+}
+
+syncCropNamesForLocale();
 
 const cropConstraints = {
   tomato: "建议限定 Micro Tom、Orange Hat、Tiny Tim、Red Robin 等微型/矮生番茄；不支持普通无限生长番茄。",
@@ -617,6 +810,128 @@ const basilGuidancePlans = {
       ["第一次打顶", "长到 15-20cm 或 4-6 对真叶时，在一对叶子上方剪掉顶端；不要只摘最下面老叶。"],
       ["日常采收", "少量用叶从顶部嫩枝采，大量采收剪带节点枝条；早上叶片恢复挺度后采更稳。"],
       ["看到花苞", "顶部出现小花穗就摘，从花苞下面一对叶子上方剪；不要等花全开才处理。"]
+    ]
+  }
+};
+
+const englishBasilGuidancePlans = {
+  seed: {
+    label: "Seed",
+    summary: "From sowing to the first pinch, basil is most vulnerable to stale humidity, weak light, and waterlogging. The goal is compact seedlings, early branching, and no flowers.",
+    currentAction: "Today, sow 2-4 seeds per cell, cover with 2-3 mm of mix, mist gently, and use a clear cover for humidity. Open it every day for airflow; do not seal it shut.",
+    pollination: "Basil is not a fruiting crop for daily harvest. It does not need hand pollination unless you are saving seed; for leaf production, remove flower spikes as soon as you see them.",
+    followup: "Come back in 7 days. Take one side photo of the seed cup and one close photo of the soil surface or seedlings.",
+    evidence: ["Sow only 2-3 mm deep", "Warm germination near 24C", "Humidity cover needs airflow"],
+    reminders: [{
+      key: "day7",
+      task: "Check germination, legginess, and any mold or damping-off.",
+      photo: "Seed cup side view and soil-surface close-up",
+      success: "Seedlings are short and upright, the surface is moist but not muddy, and there is no white mold or collapse.",
+      reason: "Basil usually germinates in 5-14 days, so day 7 is a useful first checkpoint."
+    }],
+    stageActions: {
+      seedling: {
+        currentAction: "If seedlings have emerged, move them to the brightest spot or a grow light today. Open the cover for airflow and keep only the strongest 1-2 seedlings per cup.",
+        followup: "Come back in 7 days. Take a side photo and a top close-up to check internode length and stem strength.",
+        evidence: ["Light immediately after sprouting", "Keep 1-2 seedlings per cup", "Water after the surface starts drying"],
+        reminders: [{
+          key: "day7",
+          task: "Review legginess, collapse, and true-leaf count.",
+          photo: "Seedling side view and true-leaf close-up",
+          success: "Stems are short and upright, leaf color is even, true leaves are starting, and there is no collapse or mold.",
+          reason: "Light and airflow changes usually show in the seedling shape within 7 days."
+        }]
+      },
+      vegetative: {
+        currentAction: "If it has 2-3 pairs of true leaves, transplant it today with the root ball into a draining 12-18 cm pot. Give bright indirect light for the first 1-2 days.",
+        followup: "Come back in 48 hours. Take one whole-plant photo and one stem-base close-up to confirm recovery.",
+        evidence: ["Transplant after 2-3 true-leaf pairs", "Move with the root ball", "Bright indirect light during recovery"],
+        reminders: [{
+          key: "48h",
+          task: "Check whether the transplant has stood back up and whether the stem base is darkening.",
+          photo: "Whole plant and stem-base close-up",
+          success: "New tips are upright, the stem base is not dark, and the pot drains normally.",
+          reason: "Root injury, black leg, and root-rot risk often show within the first 48 hours."
+        }]
+      },
+      flowering: {
+        currentAction: "If you see flower buds today, cut just above the leaf pair below the spike. Do not wait for full bloom, and do not pollinate basil grown for leaves.",
+        followup: "Come back in 3 days. Take a top-node photo and a whole-plant side photo to see whether it keeps flowering.",
+        evidence: ["Flower buds reduce leaf yield", "Cut above the leaf pair below the spike", "Do not keep flower spikes for leaf harvest"],
+        reminders: [{
+          key: "day3",
+          task: "Check whether flowering continues and whether side shoots resume.",
+          photo: "Top node and whole-plant side view",
+          success: "No new spike is stretching up, the top is branching, and leaf volume is not dropping.",
+          reason: "Three days is enough to see whether pinching has slowed the plant's shift into flowering."
+        }]
+      },
+      aroma: {
+        currentAction: "Weak aroma cannot be judged from a photo alone. Today, increase effective light, pause heavy nitrogen feeding, and lightly harvest from the top node.",
+        followup: "Come back in 7 days. Record aroma on new leaves and take a side photo to check whether it is still stretching.",
+        evidence: ["Weak aroma often tracks light, nitrogen, and harvest rhythm", "Top harvest encourages branching", "Photos only help rule out legginess"],
+        reminders: [{
+          key: "day7",
+          task: "Review new-leaf aroma, internode length, and branching after harvest.",
+          photo: "Whole-plant side view and top shoots",
+          success: "New leaves smell stronger, internodes stop stretching, and more side shoots appear.",
+          reason: "Aroma should be checked on new leaves after the light and harvest rhythm have had time to work."
+        }]
+      }
+    },
+    steps: [
+      ["Before sowing", "Use a tray, cup, or shallow pot with drainage holes. Choose loose seed-starting mix, or peat/coco plus perlite. Avoid heavy garden soil and containers without holes."],
+      ["Day 0", "Sow 2-4 seeds per cell, cover with 2-3 mm of mix, and mist gently. A clear cover can hold humidity, but open it daily; do not turn the mix into mud."],
+      ["Day 5-14", "As soon as it sprouts, move it into strong light or under a grow light. Mist only after the surface starts to dry; do not keep it soggy every day."],
+      ["Week 1-3", "Keep the strongest 1-2 seedlings per cup and rotate the pot every 1-2 days. Seedlings should be short, straight, and sturdy."],
+      ["Week 3-4", "After 2-3 pairs of true leaves, transplant with the root ball into a 12-18 cm pot and give bright indirect light for 1-2 days."],
+      ["15-20 cm tall", "Pinch for the first time when the plant is 15-20 cm tall or has 4-6 true-leaf pairs. Cut just above a leaf pair to create two side shoots."],
+      ["Flower buds", "Remove them immediately. Flowering shifts basil from leaf growth into reproduction, reducing leaf yield, texture, and aroma."]
+    ]
+  },
+  transplant: {
+    label: "Transplant",
+    summary: "Basil transplanting works best once the roots can hold a little soil. The first goal is to avoid root damage, keep drainage open, and let the plant recover.",
+    currentAction: "If it has 2-3 pairs of true leaves, move it today with the root ball into a draining 12-18 cm pot. Water through once, then wait until the top 1-2 cm dries before watering again.",
+    pollination: "Do not let a recovering transplant spend energy on flowers. Basil grown for leaves does not need pollination; remove flower buds first.",
+    followup: "Come back in 48 hours. Take one whole-plant photo and one stem-base close-up to check recovery and black-leg or root-rot risk.",
+    evidence: ["Transplant after 2-3 true-leaf pairs", "Start with a 12-18 cm draining pot", "No heavy feed during recovery"],
+    reminders: [{
+      key: "48h",
+      task: "Confirm whether wilting has recovered and whether the stem base is darkening.",
+      photo: "Whole plant and stem-base close-up",
+      success: "New tips are upright, the stem base is not dark, and the mix is not staying waterlogged.",
+      reason: "Transplant stress and black-leg/root-rot risk are easiest to catch in the first 48 hours."
+    }],
+    steps: [
+      ["Timing", "Wait for at least 2-3 pairs of true leaves and roots that can hold a little soil. Moving tiny seedlings too early often kills them."],
+      ["Pot and mix", "Start one plant in a 12-18 cm pot; use 20 cm or larger if you want a bigger plant. Drainage holes and airy mix are non-negotiable."],
+      ["Method", "Move it with the root ball. Do not hard-pull bare roots, and do not bury the stem too deep."],
+      ["First 1-2 days", "Use bright indirect light, not immediate harsh sun. Stabilize water and airflow; do not add strong fertilizer or hard prune."],
+      ["After recovery", "Once new tips stand upright, increase light gradually and return to pinching and light harvesting."]
+    ]
+  },
+  store: {
+    label: "Store plant",
+    summary: "A store-bought basil plant should first be isolated, adapted to light, and put on a harvest rhythm. Strong light, airflow, careful watering, and pinching keep leaf volume high.",
+    currentAction: "Today, inspect leaf undersides, new tips, and stem nodes. If it is 15-20 cm tall or has 4-6 true-leaf pairs, lightly pinch above a top node.",
+    pollination: "If a store-bought plant is already flowering, prioritize removing flower spikes and pinching. Daily basil care does not need pollination; keep flowers only for seed saving.",
+    followup: "Come back in 3 days. Take one whole-plant photo and one leaf-underside photo to check pests, new tips, and flower spikes.",
+    evidence: ["Inspect leaf undersides first", "Pinch at 15-20 cm", "Flower buds reduce leaf yield"],
+    reminders: [{
+      key: "day3",
+      task: "Review leaf-underside pest dots, new shoots after harvest, and whether it keeps flowering.",
+      photo: "Whole plant, leaf underside, and top node",
+      success: "No new pest dots appear, new tips stay upright, and the plant does not keep pushing flower spikes.",
+      reason: "After isolation, light harvest, and flower removal, stability should be visible within 3 days."
+    }],
+    steps: [
+      ["Day 0", "Isolate and inspect leaf undersides, new tips, and stem nodes. If the original pot is stable, do not rush repotting."],
+      ["Day 2-5", "Increase light gradually and reduce leaf spraying. Keep air moving; a small fan on low works indoors."],
+      ["Growth phase", "Give as much bright light as possible, ideally 6+ hours. Water through after the top 1-2 cm dries. Use light fertilizer every 2-3 weeks."],
+      ["First pinch", "At 15-20 cm tall or 4-6 true-leaf pairs, cut above a leaf pair. Do not only remove the lowest old leaves."],
+      ["Harvest", "For a few leaves, harvest tender top shoots. For more, cut a stem with a node. Morning harvest is usually steadier."],
+      ["Flower buds", "Remove small flower spikes as soon as they appear, cutting above the leaf pair below the spike. Do not wait until full bloom."]
     ]
   }
 };
@@ -1196,21 +1511,32 @@ function renderDeviceCropPlan() {
 }
 
 function basilGuidanceStageHint(state) {
-  if (state.stage === "seedling") return "当前重点是稳出苗、定苗和防徒长。";
-  if (state.stage === "flowering") return "已到开花信号时，把摘花、打顶和恢复叶量放在第一位。";
-  if (has(state, "weak-aroma")) return "香味不浓不能靠照片直接判定，需要结合光照、氮肥和采收频率判断。";
-  return "营养生长期重点是强光、通风、打顶和连续采收。";
+  if (activeLocale === "en") {
+    if (state.stage === "seedling") return "The priority now is steady germination, thinning, and preventing legginess.";
+    if (state.stage === "flowering") return "Once flowering appears, flower removal, pinching, and leaf recovery come first.";
+    if (has(state, "weak-aroma")) return "Weak aroma cannot be confirmed from a photo alone; check light, nitrogen, and harvest rhythm.";
+    return "In vegetative growth, focus on strong light, airflow, pinching, and continuous harvest.";
+  }
+  if (state.stage === "seedling") return "當前重點是穩出苗、定苗和防徒長。";
+  if (state.stage === "flowering") return "已到開花信號時，把摘花、打頂和恢復葉量放在第一位。";
+  if (has(state, "weak-aroma")) return "香味不濃不能靠照片直接判定，需要結合光照、氮肥和採收頻率判斷。";
+  return "營養生長期重點是強光、通風、打頂和連續採收。";
+}
+
+function basilGuidanceStageOverrideKey(state, plan) {
+  if (!plan?.stageActions) return null;
+  if (state.stage === "flowering" || has(state, "bolting") || sees(state, "flower-buds")) {
+    return "flowering";
+  }
+  if (has(state, "weak-aroma")) return "aroma";
+  if (state.stage === "seedling") return "seedling";
+  if (state.stage === "vegetative") return "vegetative";
+  return null;
 }
 
 function basilGuidanceStageOverride(state, plan) {
-  if (!plan?.stageActions) return null;
-  if (state.stage === "flowering" || has(state, "bolting") || sees(state, "flower-buds")) {
-    return plan.stageActions.flowering || null;
-  }
-  if (has(state, "weak-aroma")) return plan.stageActions.aroma || null;
-  if (state.stage === "seedling") return plan.stageActions.seedling || null;
-  if (state.stage === "vegetative") return plan.stageActions.vegetative || null;
-  return null;
+  const key = basilGuidanceStageOverrideKey(state, plan);
+  return key ? plan.stageActions?.[key] || null : null;
 }
 
 function resolveBasilGuidancePlan(state, plan) {
@@ -1225,14 +1551,61 @@ function resolveBasilGuidancePlan(state, plan) {
   };
 }
 
+function mapReminderText(item, mapper) {
+  return {
+    ...item,
+    task: mapper(item.task),
+    photo: mapper(item.photo),
+    success: mapper(item.success),
+    reason: mapper(item.reason)
+  };
+}
+
+function mapPlanText(plan, mapper) {
+  return {
+    ...plan,
+    label: mapper(plan.label),
+    summary: mapper(plan.summary),
+    currentAction: mapper(plan.currentAction),
+    pollination: mapper(plan.pollination),
+    followup: mapper(plan.followup),
+    evidence: (plan.evidence || []).map(mapper),
+    reminders: (plan.reminders || []).map((item) => mapReminderText(item, mapper)),
+    steps: (plan.steps || []).map(([time, text]) => [mapper(time), mapper(text)])
+  };
+}
+
+function localizedBasilGuidancePlan(mode, state = getFormState()) {
+  const basePlan = basilGuidancePlans[mode] || basilGuidancePlans.seed;
+  if (activeLocale === "en") {
+    const englishBase = englishBasilGuidancePlans[mode] || englishBasilGuidancePlans.seed;
+    const overrideKey = basilGuidanceStageOverrideKey(state, basePlan);
+    const englishOverride = overrideKey ? englishBase.stageActions?.[overrideKey] : null;
+    return englishOverride
+      ? {
+        ...englishBase,
+        currentAction: englishOverride.currentAction || englishBase.currentAction,
+        followup: englishOverride.followup || englishBase.followup,
+        evidence: englishOverride.evidence || englishBase.evidence,
+        reminders: englishOverride.reminders || englishBase.reminders
+      }
+      : englishBase;
+  }
+  return mapPlanText(resolveBasilGuidancePlan(state, basePlan), toTraditional);
+}
+
+function localizedCarePlan(cropKey, mode, basePlan, state = getFormState()) {
+  if (cropKey === "basil") return localizedBasilGuidancePlan(mode, state);
+  return activeLocale === "zh-Hant" ? mapPlanText(basePlan, toTraditional) : basePlan;
+}
+
 function renderBasilGuidance(state = getFormState()) {
   if (!basilGuidanceCard || !basilGuidanceSteps || !basilGuidanceCurrent) return;
   const isBasil = state.crop === "basil";
   basilGuidanceCard.hidden = !isBasil;
   if (!isBasil) return;
 
-  const basePlan = basilGuidancePlans[basilGuideMode] || basilGuidancePlans.seed;
-  const plan = resolveBasilGuidancePlan(state, basePlan);
+  const plan = localizedBasilGuidancePlan(basilGuideMode, state);
   if (basilGuidanceModeLabel) basilGuidanceModeLabel.textContent = plan.label;
   if (basilGuidanceSummary) {
     basilGuidanceSummary.textContent = `${plan.summary} ${basilGuidanceStageHint(state)}`;
@@ -1315,14 +1688,14 @@ function activeCarePlan(state = getFormState()) {
 }
 
 function customerCareModel(state = getFormState()) {
-  const crop = cropNames[state.crop] || "Plant";
+  const crop = cropName(state.crop) || "Plant";
   const { mode, plan: basePlan } = activeCarePlan(state);
-  const plan = state.crop === "basil" ? resolveBasilGuidancePlan(state, basePlan) : basePlan;
+  const plan = localizedCarePlan(state.crop, mode, basePlan, state);
   const model = {
     cropKey: state.crop,
     mode,
     modeLabel: plan.label,
-    title: `${crop} care today`,
+    title: activeLocale === "en" ? `${crop} care today` : `${crop}今日養護`,
     message: state.crop === "basil" ? `${plan.summary} ${basilGuidanceStageHint(state)}` : plan.summary,
     action: plan.currentAction,
     followup: plan.followup,
@@ -1437,10 +1810,10 @@ function renderCustomerCareCard(state = getFormState(), stage = customerAppShell
   if (!show) return;
 
   const model = customerCareModel(state);
-  if (customerCareKicker) customerCareKicker.textContent = model.completed ? "Done today" : "Today's care";
+  if (customerCareKicker) customerCareKicker.textContent = model.completed ? t("careDoneKicker") : t("careKicker");
   if (customerCareTitle) customerCareTitle.textContent = model.title;
   if (customerCareMessage) customerCareMessage.textContent = model.message;
-  customerCareAction.textContent = model.completed ? "Done for today. Keep conditions steady until the review." : model.action;
+  customerCareAction.textContent = model.completed ? t("careDoneAction") : model.action;
   customerCareFollowup.textContent = model.followup;
 
   const modeRow = customerCareModeButtons[0]?.closest(".customer-care-mode-row");
@@ -1448,7 +1821,7 @@ function renderCustomerCareCard(state = getFormState(), stage = customerAppShell
   customerCareModeButtons.forEach((button) => {
     const plans = carePlansForCrop(state.crop);
     const mode = button.dataset.customerCareMode;
-    const plan = plans[mode];
+    const plan = plans[mode] ? localizedCarePlan(state.crop, mode, plans[mode], state) : null;
     button.hidden = !plan;
     button.textContent = plan?.label || mode;
     const active = mode === model.mode;
@@ -1464,6 +1837,115 @@ function renderCustomerCareCard(state = getFormState(), stage = customerAppShell
       customerCareEvidence.appendChild(chip);
     });
   }
+}
+
+function setText(selector, value) {
+  const element = document.querySelector(selector);
+  if (element) element.textContent = value;
+}
+
+function setAttr(selector, attr, value) {
+  const element = document.querySelector(selector);
+  if (element) element.setAttribute(attr, value);
+}
+
+function setButtonCopy(button, title, subtitle) {
+  if (!button) return;
+  const strong = button.querySelector("strong");
+  const span = button.querySelector("span");
+  if (strong) strong.textContent = title;
+  if (span) span.textContent = subtitle;
+}
+
+function setTextBesideIcon(selector, value) {
+  const element = document.querySelector(selector);
+  if (!element) return;
+  const textNode = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+  if (textNode) textNode.textContent = value;
+  else element.appendChild(document.createTextNode(value));
+}
+
+function syncLocaleButtons() {
+  localeButtons.forEach((button) => {
+    const active = button.dataset.localeOption === activeLocale;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function renderStaticLocale() {
+  document.documentElement.lang = t("htmlLang");
+  document.body.dataset.locale = activeLocale;
+  document.title = t("documentTitle");
+  syncLocaleButtons();
+
+  setAttr("#customer-back-btn", "aria-label", t("backAria"));
+  setAttr("#customer-privacy-top-btn", "aria-label", t("privacyAria"));
+  setAttr("#customer-camera-btn", "aria-label", t("cameraAria"));
+  setAttr(".customer-crop-rail", "aria-label", t("cropRailAria"));
+  setAttr(".customer-entry-actions", "aria-label", activeLocale === "en" ? "Choose care action" : "選擇照護動作");
+  setAttr(".customer-care-mode-row", "aria-label", t("careModeAria"));
+  setAttr(".mode-switch", "aria-label", t("viewModeAria"));
+
+  setText("#customer-app-title", t("heroTitle"));
+  setText("#customer-app-intro", t("heroIntro"));
+  setButtonCopy(customerPhotoEntryBtn, t("photoCheckTitle"), t("photoCheckSubtitle"));
+  setButtonCopy(customerCareEntryBtn, t("careEntryTitle"), t("careEntrySubtitle"));
+  setTextBesideIcon(".customer-inline-privacy", t("privacyInline"));
+  setText("#customer-photo-privacy-detail", t("photoPrivacyDetail"));
+  setText(".customer-care-action > span", t("today"));
+
+  setText(".customer-evidence-section h3", t("whyTitle"));
+  setText(".followup-row strong", t("followupHelp"));
+  const privacySpan = customerMobilePrivacyBtn?.querySelector("span");
+  const privacyStrong = customerMobilePrivacyBtn?.querySelector("strong");
+  if (privacySpan) privacySpan.textContent = t("diagnosisPrivacy");
+  if (privacyStrong) privacyStrong.textContent = t("privacyLabel");
+  setText("#customer-mobile-privacy-detail", t("diagnosisPrivacyDetail"));
+  const checkSpan = customerCheckPlantBtn?.querySelector("span");
+  if (checkSpan) checkSpan.textContent = t("takePhoto");
+
+  setText(".panel-header .eyebrow", t("appEyebrow"));
+  setText("#customer-mode-btn", t("customerMode"));
+  setText("#expert-mode-btn", t("expertMode"));
+  if (readiness?.textContent === "等待输入" || readiness?.textContent === "等待輸入" || readiness?.textContent === "Waiting") {
+    readiness.textContent = t("waiting");
+  }
+  setText("#basil-guidance-card h3", t("basilGuidanceHeader"));
+
+  document.querySelectorAll("[data-crop-choice]").forEach((button) => {
+    const key = button.dataset.cropChoice;
+    const label = button.querySelector("strong") || button;
+    if (key && cropNameCatalog[activeLocale]?.[key]) label.textContent = cropName(key);
+  });
+  const cropSelectEl = document.querySelector("#crop");
+  cropSelectEl?.querySelectorAll("option").forEach((option) => {
+    if (cropNameCatalog[activeLocale]?.[option.value]) option.textContent = cropName(option.value);
+  });
+}
+
+function applyLocale({ persist = false } = {}) {
+  syncCropNamesForLocale();
+  if (persist) {
+    try {
+      localStorage.setItem(localeStorageKey, activeLocale);
+    } catch {
+      // Locale still applies for the current session if storage is blocked.
+    }
+  }
+  renderStaticLocale();
+  const state = latestState || getFormState();
+  updateCropHint();
+  updateDeviceProfile();
+  renderBasilGuidance(state);
+  renderCustomerMobileExperience(state);
+  if (latestState && latestFindings.length) renderDiagnosis(latestState, latestFindings);
+}
+
+function setLocale(locale) {
+  if (!supportedLocales.has(locale) || locale === activeLocale) return;
+  activeLocale = locale;
+  applyLocale({ persist: true });
 }
 
 function isCustomerModeActive() {
@@ -2659,8 +3141,11 @@ function updateCustomerFollowupCue(loop = null) {
   const due = loop
     ? isCustomerModeActive() && loop.due && !loop.disabled
     : isCustomerModeActive() && isReminderDue(firstPendingReminder(getReminderPlan()));
-  document.title = due ? `该复查了 · ${defaultDocumentTitle}` : defaultDocumentTitle;
-  if (due && readiness) readiness.textContent = "该复查了";
+  const localizedTitle = t("documentTitle");
+  document.title = due
+    ? `${activeLocale === "en" ? "Review due" : "該複查了"} · ${localizedTitle}`
+    : localizedTitle;
+  if (due && readiness) readiness.textContent = activeLocale === "en" ? "Review due" : "該複查了";
 }
 
 function followupPhotoTarget(loop = followupLoopInstruction()) {
@@ -3540,16 +4025,25 @@ function renderCustomerMobileExperience(state = getFormState()) {
     else step.removeAttribute("aria-current");
   });
   if (customerMobileRisk) customerMobileRisk.textContent = model.risk;
-  const stageCopy = {
-    photo: ["Show me what’s changing.", "Frame the whole plant. We’ll ask for a detail only if needed."],
-    care: ["What should I do today?", "No photo needed for this routine step."],
-    analyzing: ["Looking closely.", "Checking photo quality and visible symptoms."],
-    action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
-    followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
-  };
-  stageCopy.photo = ["Show me what's changing.", "Frame the whole plant. We'll ask for a detail only if needed."];
+  const stageCopy = activeLocale === "en"
+    ? {
+      photo: ["Show me what's changing.", "Frame the whole plant. We'll ask for a detail only if needed."],
+      care: ["What should I do today?", "No photo needed for this routine step."],
+      analyzing: ["Looking closely.", "Checking photo quality and visible symptoms."],
+      action: ["Here is what your plant needs.", "One action today, then a follow-up photo."],
+      followup: ["Let us see what changed.", "Use the same angle for a clearer comparison."]
+    }
+    : {
+      photo: ["讓我看看哪裡在變化。", "先拍整株。需要細節時，FiveCrop 只會再要求一張。"],
+      care: ["今天該做什麼？", "這是日常養護步驟，不需要先拍照。"],
+      analyzing: ["正在仔細查看。", "正在檢查照片品質和可見症狀。"],
+      action: ["這是植物今天需要的照護。", "今天只做一個動作，之後回來拍複查照。"],
+      followup: ["看看有什麼變化。", "用同一角度拍攝，方便比較。"]
+    };
   if (needsCropCheck) {
-    stageCopy.action = ["Let's confirm the plant.", "FiveCrop only diagnoses tomato, basil, rosemary, strawberry, and pepper."];
+    stageCopy.action = activeLocale === "en"
+      ? ["Let's confirm the plant.", "FiveCrop only diagnoses tomato, basil, rosemary, strawberry, and pepper."]
+      : ["先確認這是不是支援作物。", "FiveCrop 目前只診斷番茄、羅勒、迷迭香、草莓和辣椒。"];
   }
   if (customerAppTitle) customerAppTitle.textContent = stageCopy[stage][0];
   if (customerAppIntro) customerAppIntro.textContent = stageCopy[stage][1];
@@ -8531,6 +9025,9 @@ editAutoIntakeBtn.addEventListener("click", () => {
 customerModeBtn.addEventListener("click", () => setMode("customer"));
 expertModeBtn.addEventListener("click", () => setMode("expert"));
 customerInternalBtn?.addEventListener("click", () => setMode("expert"));
+localeButtons.forEach((button) => {
+  button.addEventListener("click", () => setLocale(button.dataset.localeOption));
+});
 customerCameraBtn?.addEventListener("click", openGuidedPhotoUpload);
 customerCheckPlantBtn?.addEventListener("click", handleCustomerPrimaryAction);
 customerBackBtn?.addEventListener("click", resetCustomerPlantDossier);
@@ -9450,6 +9947,7 @@ updateCropHint();
 applyNotificationChannelConfig();
 applyDeviceTemplate({ force: true });
 applyInitialCustomerUrlState();
+applyLocale({ persist: false });
 updateCropHint();
 updateDeviceProfile();
 runDiagnosis();

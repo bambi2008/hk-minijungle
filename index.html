@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -15,6 +15,10 @@
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>
         </button>
         <a class="customer-wordmark" href="#customer-app-shell" aria-label="FiveCrop home">FiveCrop</a>
+        <div class="language-switch customer-language-switch" role="group" aria-label="Language">
+          <button type="button" class="language-option active" data-locale-option="zh-Hant" aria-pressed="true">繁</button>
+          <button type="button" class="language-option" data-locale-option="en" aria-pressed="false">EN</button>
+        </div>
         <button type="button" id="customer-privacy-top-btn" class="customer-header-icon customer-privacy-top-btn" aria-label="Photo privacy details" aria-expanded="false" aria-controls="customer-photo-privacy-detail">
           <svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 3 20 6v5c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-3Z"/><rect x="9" y="10" width="6" height="5" rx="1"/><path d="M10.5 10V8.8a1.5 1.5 0 0 1 3 0V10"/></svg>
         </button>
@@ -122,6 +126,10 @@
           <h1 id="app-title">FiveCrop: Plant Doctor</h1>
         </div>
         <div class="header-tools">
+          <div class="language-switch" role="group" aria-label="Language">
+            <button type="button" class="language-option active" data-locale-option="zh-Hant" aria-pressed="true">繁</button>
+            <button type="button" class="language-option" data-locale-option="en" aria-pressed="false">EN</button>
+          </div>
           <div class="mode-switch" role="group" aria-label="视图模式">
             <button type="button" id="customer-mode-btn" class="mode-button active">客户</button>
             <button type="button" id="expert-mode-btn" class="mode-button">内部</button>
