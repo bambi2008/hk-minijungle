@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="zh-HK">
+<html lang="en-HK">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -14,16 +14,21 @@
         <span class="brand-mark">MJ</span>
         <span><strong>MiniJungle</strong><small>FM Ops</small></span>
       </a>
+
       <nav>
-        <a href="#overview" class="active">总览</a>
-        <a href="#esg">ESG 统计</a>
-        <a href="#portfolio">客户资产</a>
-        <a href="#workorders">维护工单</a>
-        <a href="#reports">月报中心</a>
+        <a href="#overview" class="active">Overview</a>
+        <a href="#positioning">Positioning</a>
+        <a href="#clients">Clients</a>
+        <a href="#walls">Wall Detail</a>
+        <a href="#service">Service</a>
+        <a href="#esg">ESG</a>
+        <a href="#reports">Reports</a>
+        <a href="#architecture">Architecture</a>
       </nav>
+
       <div class="nav-note">
-        <span>Phase 1</span>
-        <strong>AI 诊断 + 维护记录 + ESG 月报</strong>
+        <span>Brother app</span>
+        <strong>Independent FM and ESG control system. FiveCrop stays untouched.</strong>
       </div>
     </aside>
 
@@ -31,11 +36,12 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Hong Kong FM rental operations</p>
-          <h1>MiniJungle Wall 后台管控</h1>
+          <h1>Living Wall Control Center</h1>
+          <p class="topbar-copy">Manage MiniJungle Wall assets, service proof, Doctor Forest findings and ESG-ready reporting for offices, landlords, clinics and clubs.</p>
         </div>
         <div class="topbar-actions">
-          <button type="button" id="simulate-visit-btn" class="ghost-btn">模拟完成巡检</button>
-          <button type="button" id="generate-report-btn" class="primary-btn">生成 ESG 月报</button>
+          <button type="button" id="simulate-visit-btn" class="ghost-btn">Complete visit</button>
+          <button type="button" id="generate-report-btn" class="primary-btn">Generate ESG pack</button>
         </div>
       </header>
 
@@ -43,25 +49,127 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Command center</p>
-            <h2>运营总览</h2>
+            <h2>Portfolio Overview</h2>
           </div>
-          <span id="sync-status" class="status-pill">今日 08:30 已同步</span>
+          <span id="sync-status" class="status-pill">Synced today at 08:30</span>
         </div>
-        <div id="kpi-grid" class="kpi-grid"></div>
+        <div id="summary-grid" class="summary-grid"></div>
+        <div id="proof-strip" class="proof-strip"></div>
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
-              <h3>异常优先级</h3>
-              <span>需要 FM 今日关注</span>
+              <h3>Risk Queue</h3>
+              <span>Walls that need FM attention</span>
             </div>
-            <div id="risk-list" class="risk-list"></div>
+            <div id="risk-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>服务节奏</h3>
-              <span>半月/月度维护计划</span>
+              <h3>Service Rhythm</h3>
+              <span>Upcoming visits and proof capture</span>
             </div>
-            <div id="service-timeline" class="timeline"></div>
+            <div id="service-timeline" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="positioning" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Product stance</p>
+            <h2>Positioning and Image</h2>
+          </div>
+          <span class="status-pill good">Nature-as-a-Service</span>
+        </div>
+        <div id="strategy-grid" class="strategy-grid"></div>
+        <article class="panel positioning-panel">
+          <div>
+            <p class="eyebrow">Core positioning</p>
+            <h3>Not a plant care app. A green asset operations system.</h3>
+          </div>
+          <p id="positioning-copy"></p>
+        </article>
+      </section>
+
+      <section id="clients" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Accounts and sites</p>
+            <h2>Client Portfolio</h2>
+          </div>
+          <div id="client-tabs" class="segmented" role="group" aria-label="Select client"></div>
+        </div>
+        <div class="client-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Account List</h3>
+              <span>Rental, care and renewal view</span>
+            </div>
+            <div id="client-list" class="stack-list"></div>
+          </article>
+          <article class="panel client-detail">
+            <div class="panel-title">
+              <h3 id="client-detail-title">Client detail</h3>
+              <span id="client-detail-status">Selected account</span>
+            </div>
+            <div id="client-detail" class="detail-grid"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="walls" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Living asset ledger</p>
+            <h2>Wall Detail</h2>
+          </div>
+          <div class="filters" role="group" aria-label="Wall filters">
+            <button type="button" class="filter-btn active" data-filter="all">All</button>
+            <button type="button" class="filter-btn" data-filter="risk">Risk</button>
+            <button type="button" class="filter-btn" data-filter="smart">Smart</button>
+          </div>
+        </div>
+        <div id="wall-grid" class="wall-grid"></div>
+        <div class="two-col">
+          <article class="panel">
+            <div class="panel-title">
+              <h3 id="wall-detail-title">Selected wall</h3>
+              <span id="wall-detail-status">Zone, pod and service view</span>
+            </div>
+            <div id="wall-detail" class="detail-grid"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Pod Health Map</h3>
+              <span>Plant Pod status by zone</span>
+            </div>
+            <div id="pod-health-list" class="pod-health-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="service" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Field service</p>
+            <h2>Work Orders and Doctor Forest</h2>
+          </div>
+          <span class="status-pill">Phase 1: photo + record + report</span>
+        </div>
+        <div class="workbench">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Open Work Orders</h3>
+              <span>Inspection, care, replacement, follow-up</span>
+            </div>
+            <div id="workorder-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Doctor Forest Queue</h3>
+              <span>Photo findings translated into actions</span>
+            </div>
+            <div id="diagnosis-list" class="stack-list"></div>
           </article>
         </div>
       </section>
@@ -69,87 +177,72 @@
       <section id="esg" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">ESG-ready metrics</p>
-            <h2>ESG 统计</h2>
+            <p class="eyebrow">ESG proof layer</p>
+            <h2>ESG Statistics</h2>
           </div>
-          <span class="status-pill good">客户报告可用口径</span>
+          <span class="status-pill good">Evidence first, claims second</span>
         </div>
         <div id="esg-grid" class="esg-grid"></div>
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
-              <h3>ESG 指标趋势</h3>
-              <span>近 6 个月组合表现</span>
+              <h3>ESG Score Trend</h3>
+              <span>6-month portfolio trend</span>
             </div>
-            <div id="esg-bars" class="bar-chart" aria-label="ESG trend chart"></div>
+            <div id="esg-bars" class="bar-chart" aria-label="ESG score trend"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>报告叙事</h3>
-              <span>给物业 / 办公室客户使用</span>
+              <h3>Metric Governance</h3>
+              <span>What is proven vs estimated</span>
             </div>
-            <div id="esg-narrative" class="narrative"></div>
+            <div id="esg-methods" class="method-list"></div>
           </article>
         </div>
-      </section>
-
-      <section id="portfolio" class="section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Living assets</p>
-            <h2>客户资产台账</h2>
+        <article class="panel">
+          <div class="panel-title">
+            <h3>ESG Narrative Ledger</h3>
+            <span>Client-facing proof language</span>
           </div>
-          <div class="filters" role="group" aria-label="Portfolio filters">
-            <button type="button" class="filter-btn active" data-filter="all">全部</button>
-            <button type="button" class="filter-btn" data-filter="at-risk">风险</button>
-            <button type="button" class="filter-btn" data-filter="smart">Smart</button>
-          </div>
-        </div>
-        <div id="wall-grid" class="wall-grid"></div>
-      </section>
-
-      <section id="workorders" class="section">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Field service</p>
-            <h2>维护工单</h2>
-          </div>
-          <span class="status-pill">Doctor Forest Lite</span>
-        </div>
-        <div class="workbench">
-          <article class="panel">
-            <div class="panel-title">
-              <h3>今日工单</h3>
-              <span>拍照、养护、换植、复查</span>
-            </div>
-            <div id="workorder-list" class="workorder-list"></div>
-          </article>
-          <article class="panel">
-            <div class="panel-title">
-              <h3>AI 诊断队列</h3>
-              <span>维护照片转为可追踪结论</span>
-            </div>
-            <div id="diagnosis-list" class="diagnosis-list"></div>
-          </article>
-        </div>
+          <div id="esg-ledger" class="ledger-grid"></div>
+        </article>
       </section>
 
       <section id="reports" class="section">
         <div class="section-heading">
           <div>
             <p class="eyebrow">Client proof</p>
-            <h2>月报中心</h2>
+            <h2>Report Center</h2>
           </div>
-          <span id="report-status" class="status-pill">等待生成</span>
+          <span id="report-status" class="status-pill">Draft pack</span>
         </div>
+        <div id="report-tabs" class="segmented report-tabs" role="group" aria-label="Report type"></div>
         <article class="report-preview">
           <div>
-            <p class="eyebrow">June 2026</p>
+            <p class="eyebrow" id="report-period">June 2026</p>
             <h3 id="report-title">Central Portfolio ESG Health Report</h3>
-            <p id="report-summary">本月报告会汇总植物健康、维护响应、替换率、水资源节约和绿色面积贡献，作为续费与 ESG 沟通材料。</p>
+            <p id="report-summary"></p>
           </div>
           <div id="report-metrics" class="report-metrics"></div>
         </article>
+        <article class="panel">
+          <div class="panel-title">
+            <h3>Evidence Included</h3>
+            <span>What the client can trust</span>
+          </div>
+          <div id="report-evidence" class="evidence-grid"></div>
+        </article>
+      </section>
+
+      <section id="architecture" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">System design</p>
+            <h2>Product Architecture</h2>
+          </div>
+          <span class="status-pill">Ready for sensor phase later</span>
+        </div>
+        <div id="architecture-layers" class="architecture-layers"></div>
       </section>
     </main>
   </div>
