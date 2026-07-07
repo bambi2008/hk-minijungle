@@ -1,0 +1,74 @@
+{
+  "today": "2026-07-07",
+  "slots": [
+    {
+      "id": "SCH-2026-071",
+      "workorderId": "WO-1042",
+      "date": "2026-07-07",
+      "window": "10:30-11:15",
+      "technicianId": "tech-amy",
+      "status": "confirmed",
+      "durationMinutes": 45,
+      "travelMinutes": 18,
+      "proofGate": "12 proof photos and care note",
+      "clientMessage": "Clinic front desk has cleared access for the morning care visit."
+    },
+    {
+      "id": "SCH-2026-072",
+      "workorderId": "WO-1047",
+      "date": "2026-07-07",
+      "window": "15:00-16:00",
+      "technicianId": "tech-amy",
+      "status": "at-risk",
+      "durationMinutes": 60,
+      "travelMinutes": 24,
+      "proofGate": "LED schedule photo, weak pod replacement proof and low-light zone retake",
+      "clientMessage": "Show suite access needs final confirmation before technician departs."
+    },
+    {
+      "id": "SCH-2026-073",
+      "workorderId": "WO-1051",
+      "date": "2026-07-08",
+      "window": "09:30-10:30",
+      "technicianId": "tech-ken",
+      "status": "unconfirmed",
+      "durationMinutes": 60,
+      "travelMinutes": 20,
+      "proofGate": "Full-wall ESG photo and tenant experience sign-off",
+      "clientMessage": "Reception access window is proposed and awaiting FM manager approval."
+    },
+    {
+      "id": "SCH-2026-074",
+      "workorderId": "WO-1054",
+      "date": "2026-07-12",
+      "window": "14:00-15:00",
+      "technicianId": "tech-ken",
+      "status": "confirmed",
+      "durationMinutes": 60,
+      "travelMinutes": 15,
+      "proofGate": "Before/after showcase photos and frame-cleaning note",
+      "clientMessage": "Clubhouse visit confirmed outside peak member hours."
+    }
+  ],
+  "rules": [
+    {
+      "label": "Next-day access",
+      "rule": "Unconfirmed next-day slots must be chased before 16:00 to protect technician capacity."
+    },
+    {
+      "label": "High-risk walls",
+      "rule": "At-risk smart wall visits require kit staging, access confirmation and proof gate review."
+    },
+    {
+      "label": "Capacity guardrail",
+      "rule": "Keep each technician below 80% planned minutes unless the visit is tied to renewal risk."
+    }
+  ],
+  "blackouts": [
+    {
+      "date": "2026-07-09",
+      "label": "Typhoon standby buffer",
+      "impact": "Avoid non-critical visits and preserve same-day rescue capacity."
+    }
+  ]
+}

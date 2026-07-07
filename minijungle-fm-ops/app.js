@@ -3,6 +3,7 @@ const dataFiles = {
   walls: "data/walls.json",
   workorders: "data/workorders.json",
   diagnoses: "data/diagnoses.json",
+  schedule: "data/schedule.json",
   dispatch: "data/dispatch.json",
   commercial: "data/commercial.json",
   billing: "data/billing.json",
@@ -18,6 +19,10 @@ let clients = [];
 let walls = [];
 let workorders = [];
 let diagnoses = [];
+let scheduleToday = "2026-07-07";
+let scheduleSlots = [];
+let scheduleRules = [];
+let scheduleBlackouts = [];
 let esgTrend = [];
 let esgMethods = [];
 let esgLedger = [];
@@ -47,6 +52,7 @@ let proofApprovals = {};
 let sensorAcknowledgements = {};
 let supplyRequests = {};
 let invoicePayments = {};
+let scheduleConfirmations = {};
 let auditEvents = [];
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
@@ -55,6 +61,7 @@ const proofApprovalStorageKey = "minijungle-fm-ops.proof-approvals.v1";
 const sensorAcknowledgementStorageKey = "minijungle-fm-ops.sensor-acknowledgements.v1";
 const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
 const invoicePaymentStorageKey = "minijungle-fm-ops.invoice-payments.v1";
+const scheduleConfirmationStorageKey = "minijungle-fm-ops.schedule-confirmations.v1";
 const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
@@ -69,6 +76,7 @@ async function loadAppData() {
     loadedWalls,
     loadedWorkorders,
     loadedDiagnoses,
+    scheduleData,
     dispatchData,
     commercialData,
     billingData,
@@ -83,6 +91,7 @@ async function loadAppData() {
     loadJson(dataFiles.walls),
     loadJson(dataFiles.workorders),
     loadJson(dataFiles.diagnoses),
+    loadJson(dataFiles.schedule),
     loadJson(dataFiles.dispatch),
     loadJson(dataFiles.commercial),
     loadJson(dataFiles.billing),
@@ -98,6 +107,10 @@ async function loadAppData() {
   walls = loadedWalls;
   workorders = loadedWorkorders;
   diagnoses = loadedDiagnoses;
+  scheduleToday = scheduleData.today || scheduleToday;
+  scheduleSlots = scheduleData.slots || [];
+  scheduleRules = scheduleData.rules || [];
+  scheduleBlackouts = scheduleData.blackouts || [];
   crewMembers = dispatchData.crew || [];
   dispatchRoute = dispatchData.route || [];
   dispatchInventory = dispatchData.inventory || [];
@@ -203,6 +216,18 @@ function saveInvoicePayments() {
   localStorage.setItem(invoicePaymentStorageKey, JSON.stringify(invoicePayments));
 }
 
+function loadScheduleConfirmations() {
+  try {
+    scheduleConfirmations = JSON.parse(localStorage.getItem(scheduleConfirmationStorageKey) || "{}");
+  } catch {
+    scheduleConfirmations = {};
+  }
+}
+
+function saveScheduleConfirmations() {
+  localStorage.setItem(scheduleConfirmationStorageKey, JSON.stringify(scheduleConfirmations));
+}
+
 function loadAuditEvents() {
   try {
     auditEvents = JSON.parse(localStorage.getItem(auditEventStorageKey) || "[]");
@@ -244,6 +269,11 @@ function isInvoicePaid(id) {
   return Boolean(invoicePayments[id]) || invoice?.status === "paid";
 }
 
+function isScheduleConfirmed(id) {
+  const slot = scheduleSlots.find((item) => item.id === id);
+  return Boolean(scheduleConfirmations[id]) || slot?.status === "confirmed";
+}
+
 function clientIdForWorkorder(id) {
   const order = workorders.find((item) => item.id === id);
   if (!order) return null;
@@ -264,6 +294,12 @@ function clientIdForSensor(id) {
 
 function clientIdForInvoice(id) {
   return billingInvoices.find((item) => item.id === id)?.clientId || null;
+}
+
+function clientIdForScheduleSlot(id) {
+  const slot = scheduleSlots.find((item) => item.id === id);
+  const order = slot ? workorders.find((item) => item.id === slot.workorderId) : null;
+  return order ? wallById(order.wallId)?.clientId || null : null;
 }
 
 function allAuditEvents() {
@@ -428,6 +464,30 @@ function markInvoicePaid(id) {
   renderAll();
 }
 
+function confirmScheduleSlot(id) {
+  const slot = scheduleSlots.find((item) => item.id === id);
+  if (!slot) return;
+
+  if (!scheduleConfirmations[id]) {
+    scheduleConfirmations[id] = {
+      confirmedAt: new Date().toISOString(),
+      confirmedBy: "Service desk"
+    };
+    saveScheduleConfirmations();
+    recordAuditEvent({
+      actor: "Service desk",
+      action: "Visit slot confirmed",
+      entityType: "schedule",
+      entityId: id,
+      clientId: clientIdForScheduleSlot(id),
+      tone: "confirmed",
+      detail: `${slot.date} ${slot.window} service access confirmed for ${slot.workorderId}.`
+    });
+  }
+  state.reportGenerated = false;
+  renderAll();
+}
+
 function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
@@ -486,6 +546,11 @@ const els = {
   sensorGrid: document.querySelector("#sensor-grid"),
   sensorList: document.querySelector("#sensor-list"),
   sensorRuleList: document.querySelector("#sensor-rule-list"),
+  scheduleStatus: document.querySelector("#schedule-status"),
+  scheduleGrid: document.querySelector("#schedule-grid"),
+  scheduleSlotList: document.querySelector("#schedule-slot-list"),
+  scheduleCapacityList: document.querySelector("#schedule-capacity-list"),
+  scheduleRuleList: document.querySelector("#schedule-rule-list"),
   workorderList: document.querySelector("#workorder-list"),
   diagnosisList: document.querySelector("#diagnosis-list"),
   dispatchStatus: document.querySelector("#dispatch-status"),
@@ -590,13 +655,16 @@ function riskLabel(level) {
 
 function statusClass(value) {
   if (value === "risk" || value === "high") return "danger";
+  if (value === "at-risk") return "danger";
   if (value === "alert" || value === "offline") return "danger";
   if (value === "overdue") return "danger";
   if (value === "watch" || value === "medium") return "warn";
   if (value === "due") return "warn";
+  if (value === "unconfirmed") return "warn";
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
   if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
+  if (value === "confirmed") return "good";
   if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
   return "";
 }
@@ -677,6 +745,45 @@ function invoiceView(invoice) {
   };
 }
 
+function scheduleSlotView(slot) {
+  const order = workorders.find((item) => item.id === slot.workorderId);
+  const wall = order ? wallById(order.wallId) : null;
+  const client = wall ? clientFor(wall) : null;
+  const technician = crewById(slot.technicianId);
+  const confirmation = scheduleConfirmations[slot.id] || null;
+  const confirmed = isScheduleConfirmed(slot.id);
+  const displayTone = confirmed ? "confirmed" : slot.status === "at-risk" ? "at-risk" : "unconfirmed";
+  return {
+    ...slot,
+    order,
+    wall,
+    client,
+    technician,
+    confirmation,
+    confirmed,
+    plannedMinutes: slot.durationMinutes + slot.travelMinutes,
+    displayTone,
+    displayStatus: confirmed ? "Confirmed" : slot.status === "at-risk" ? "At risk" : "Unconfirmed"
+  };
+}
+
+function scheduleCapacityView(member) {
+  const memberSlots = scheduleSlots
+    .map(scheduleSlotView)
+    .filter((slot) => slot.technicianId === member.id);
+  const plannedMinutes = sum(memberSlots, (slot) => slot.plannedMinutes);
+  const capacityMinutes = member.capacity * 75;
+  const utilization = capacityMinutes ? Math.round((plannedMinutes / capacityMinutes) * 100) : 0;
+  return {
+    member,
+    slots: memberSlots,
+    plannedMinutes,
+    capacityMinutes,
+    utilization,
+    tone: utilization >= 80 ? "watch" : "confirmed"
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -697,6 +804,13 @@ function portfolioMetrics() {
   const overdueInvoices = openInvoices.filter((invoice) => invoice.displayTone === "overdue");
   const outstandingAmount = sum(openInvoices, (invoice) => invoice.amount);
   const paidAmount = sum(invoiceRows.filter((invoice) => invoice.paid), (invoice) => invoice.amount);
+  const scheduleRows = scheduleSlots.map(scheduleSlotView);
+  const confirmedScheduleSlots = scheduleRows.filter((slot) => slot.confirmed);
+  const openScheduleSlots = scheduleRows.filter((slot) => !slot.confirmed);
+  const atRiskScheduleSlots = openScheduleSlots.filter((slot) => slot.displayTone === "at-risk");
+  const scheduledMinutes = sum(scheduleRows, (slot) => slot.plannedMinutes);
+  const capacityMinutes = sum(crewMembers, (member) => member.capacity * 75);
+  const capacityLoad = capacityMinutes ? Math.round((scheduledMinutes / capacityMinutes) * 100) : 0;
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -718,6 +832,13 @@ function portfolioMetrics() {
     overdueInvoices,
     outstandingAmount,
     paidAmount,
+    scheduleSlots: scheduleRows,
+    confirmedScheduleSlots,
+    openScheduleSlots,
+    atRiskScheduleSlots,
+    scheduledMinutes,
+    capacityMinutes,
+    capacityLoad,
     reportReadiness
   };
 }
@@ -743,6 +864,11 @@ function metricsForClient(clientId) {
   const overdueInvoices = openInvoices.filter((invoice) => invoice.displayTone === "overdue");
   const outstandingAmount = sum(openInvoices, (invoice) => invoice.amount);
   const paidAmount = sum(paidInvoices, (invoice) => invoice.amount);
+  const clientScheduleSlots = scheduleSlots
+    .map(scheduleSlotView)
+    .filter((slot) => slot.order && clientWalls.some((wall) => wall.id === slot.order.wallId));
+  const confirmedScheduleSlots = clientScheduleSlots.filter((slot) => slot.confirmed);
+  const openScheduleSlots = clientScheduleSlots.filter((slot) => !slot.confirmed);
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -772,6 +898,9 @@ function metricsForClient(clientId) {
     overdueInvoices,
     outstandingAmount,
     paidAmount,
+    scheduleSlots: clientScheduleSlots,
+    confirmedScheduleSlots,
+    openScheduleSlots,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1154,6 +1283,83 @@ function crewById(id) {
   return crewMembers.find((member) => member.id === id);
 }
 
+function renderSchedule() {
+  const slotRows = scheduleSlots
+    .map(scheduleSlotView)
+    .sort((a, b) => dateValue(a.date) - dateValue(b.date) || a.window.localeCompare(b.window));
+  const openSlots = slotRows.filter((slot) => !slot.confirmed);
+  const atRiskSlots = openSlots.filter((slot) => slot.displayTone === "at-risk");
+  const confirmedSlots = slotRows.filter((slot) => slot.confirmed);
+  const capacityRows = crewMembers.map(scheduleCapacityView);
+  const scheduledMinutes = sum(slotRows, (slot) => slot.plannedMinutes);
+  const capacityMinutes = sum(capacityRows, (row) => row.capacityMinutes);
+  const capacityLoad = capacityMinutes ? Math.round((scheduledMinutes / capacityMinutes) * 100) : 0;
+
+  els.scheduleStatus.textContent = `${openSlots.length} open slot(s), ${capacityLoad}% capacity planned`;
+  els.scheduleStatus.classList.toggle("good", openSlots.length === 0 && capacityLoad < 80);
+  renderStatCards(els.scheduleGrid, [
+    { label: "Scheduled visits", value: slotRows.length, detail: `Planning date ${scheduleToday}` },
+    { label: "Confirmed slots", value: confirmedSlots.length, detail: "Access and service window locked" },
+    { label: "Action windows", value: openSlots.length, detail: `${atRiskSlots.length} at-risk visit(s)` },
+    { label: "Capacity load", value: `${capacityLoad}%`, detail: `${scheduledMinutes}/${capacityMinutes} planned minutes` }
+  ]);
+
+  els.scheduleSlotList.innerHTML = slotRows.map((slot) => {
+    const confirmationDetail = slot.confirmation
+      ? `Confirmed by ${slot.confirmation.confirmedBy} - ${new Date(slot.confirmation.confirmedAt).toLocaleString("en-HK")}`
+      : slot.confirmed
+        ? "Confirmed in baseline plan"
+        : "Needs service desk confirmation";
+    return `
+      <div class="list-item schedule-slot ${slot.displayTone}" data-schedule-card="${slot.id}">
+        <div class="item-row">
+          <strong>${slot.date} ${slot.window}</strong>
+          <span class="tag ${statusClass(slot.displayTone)}">${slot.displayStatus}</span>
+        </div>
+        <span>${slot.client.name} - ${slot.wall.location} - ${slot.order.type}</span>
+        <div class="commercial-meta">
+          <div><span>Technician</span><strong>${slot.technician.name}</strong></div>
+          <div><span>Work order</span><strong>${slot.order.id}</strong></div>
+          <div><span>Minutes</span><strong>${slot.plannedMinutes}</strong></div>
+        </div>
+        <small>${slot.proofGate}</small>
+        <small>${slot.clientMessage}</small>
+        <small>${confirmationDetail}</small>
+        <div class="workorder-actions">
+          <button type="button" class="mini-action" data-wall-select="${slot.wall.id}">Wall detail</button>
+          <button type="button" class="mini-action primary" data-confirm-schedule="${slot.id}" ${slot.confirmed ? "disabled" : ""}>${slot.confirmed ? "Confirmed" : "Confirm slot"}</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  els.scheduleCapacityList.innerHTML = capacityRows.map((row) => `
+    <div class="crew-row schedule-capacity ${row.tone}">
+      <div class="item-row">
+        <strong>${row.member.name}</strong>
+        <span class="tag ${statusClass(row.tone)}">${row.utilization}% load</span>
+      </div>
+      <span>${row.member.role} - ${row.slots.length}/${row.member.capacity} planned stop(s)</span>
+      <small>${row.plannedMinutes}/${row.capacityMinutes} planned minutes - ${row.member.skills.join(", ")}</small>
+    </div>
+  `).join("");
+
+  els.scheduleRuleList.innerHTML = [
+    ...scheduleRules.map((rule) => `
+      <div class="method-row">
+        <span>${rule.label}</span>
+        <strong>${rule.rule}</strong>
+      </div>
+    `),
+    ...scheduleBlackouts.map((blackout) => `
+      <div class="method-row schedule-blackout">
+        <span>${blackout.date} - ${blackout.label}</span>
+        <strong>${blackout.impact}</strong>
+      </div>
+    `)
+  ].join("");
+}
+
 function routeView(routeItem) {
   const order = workorders.find((item) => item.id === routeItem.workorderId);
   const wall = wallById(order.wallId);
@@ -1465,6 +1671,8 @@ function renderReports() {
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
     ["Sensor alerts", data.openSensorAlerts.length],
+    ["Confirmed visits", data.confirmedScheduleSlots.length],
+    ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
     ["Paid invoices", data.paidInvoices.length],
     ["Audit events", data.auditEvents.length]
@@ -1484,6 +1692,8 @@ function renderReports() {
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
     `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
+    `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
     `${data.paidInvoices.length} paid invoice(s)`,
     `${data.auditEvents.length} client-linked audit event(s)`
@@ -1516,6 +1726,8 @@ function buildReportHtml() {
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
     `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
+    `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
     `${data.paidInvoices.length} paid invoice(s)`,
     `${data.auditEvents.length} client-linked audit event(s)`
@@ -1533,6 +1745,8 @@ function buildReportHtml() {
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
     ["Sensor alerts", data.openSensorAlerts.length],
+    ["Confirmed visits", data.confirmedScheduleSlots.length],
+    ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
     ["Paid invoices", data.paidInvoices.length],
     ["Audit events", data.auditEvents.length]
@@ -1683,6 +1897,12 @@ function bindDynamicActions() {
       markInvoicePaid(button.dataset.markInvoicePaid);
     });
   });
+
+  document.querySelectorAll("[data-confirm-schedule]").forEach((button) => {
+    button.addEventListener("click", () => {
+      confirmScheduleSlot(button.dataset.confirmSchedule);
+    });
+  });
 }
 
 function renderAll() {
@@ -1694,6 +1914,7 @@ function renderAll() {
   renderWalls();
   renderSensors();
   renderService();
+  renderSchedule();
   renderDispatch();
   renderSupply();
   renderProof();
@@ -1772,6 +1993,7 @@ async function bootstrap() {
     loadSensorAcknowledgements();
     loadSupplyRequests();
     loadInvoicePayments();
+    loadScheduleConfirmations();
     loadAuditEvents();
     initializeSelection();
     renderAll();

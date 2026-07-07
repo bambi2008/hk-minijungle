@@ -24,6 +24,7 @@
         <a href="#walls">Wall Detail</a>
         <a href="#sensors">Sensors</a>
         <a href="#service">Service</a>
+        <a href="#schedule">Calendar</a>
         <a href="#dispatch">Dispatch</a>
         <a href="#supply">Stock</a>
         <a href="#proof">Proof</a>
@@ -259,6 +260,34 @@
               <span>Photo findings translated into actions</span>
             </div>
             <div id="diagnosis-list" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="schedule" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Service planning</p>
+            <h2>Service Calendar</h2>
+          </div>
+          <span id="schedule-status" class="status-pill">Visit confirmation view</span>
+        </div>
+        <div id="schedule-grid" class="summary-grid"></div>
+        <div class="two-col schedule-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Visit Timeline</h3>
+              <span>Access, proof gate and service window control</span>
+            </div>
+            <div id="schedule-slot-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Capacity and Rules</h3>
+              <span>Technician load and planning guardrails</span>
+            </div>
+            <div id="schedule-capacity-list" class="stack-list"></div>
+            <div id="schedule-rule-list" class="method-list"></div>
           </article>
         </div>
       </section>

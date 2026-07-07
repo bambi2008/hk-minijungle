@@ -477,13 +477,27 @@ small {
 }
 
 .dispatch-stop,
-.crew-row {
+.crew-row,
+.schedule-slot {
   cursor: default;
 }
 
-.dispatch-stop.completed {
+.dispatch-stop.completed,
+.schedule-slot.confirmed {
   border-color: rgba(31, 111, 75, 0.34);
   background: #f2f8f3;
+}
+
+.schedule-slot.unconfirmed,
+.schedule-capacity.watch {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.schedule-slot.at-risk,
+.schedule-blackout {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
 }
 
 .kit-list {
@@ -515,7 +529,8 @@ small {
   background: #fff2d8;
 }
 
-.dispatch-layout .method-list {
+.dispatch-layout .method-list,
+.schedule-layout .method-list {
   margin-top: 12px;
 }
 

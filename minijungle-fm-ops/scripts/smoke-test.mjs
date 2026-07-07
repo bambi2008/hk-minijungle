@@ -67,6 +67,7 @@ async function verifyBrowserFlow(baseUrl) {
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.sensor-acknowledgements.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.supply-requests.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.invoice-payments.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.schedule-confirmations.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.audit-events.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
@@ -105,6 +106,15 @@ async function verifyBrowserFlow(baseUrl) {
     assert(invoiceCardAfter?.includes("Paid"), "Marking invoice paid did not update invoice card");
     const invoiceAudit = await page.textContent("#audit-event-list");
     assert(invoiceAudit?.includes("Invoice marked paid"), "Invoice payment did not create audit event");
+
+    const scheduleCardBefore = await page.textContent('[data-schedule-card="SCH-2026-072"]');
+    assert(scheduleCardBefore?.includes("At risk"), "Service calendar did not load at-risk show-suite slot");
+    await page.click('[data-confirm-schedule="SCH-2026-072"]');
+    await page.waitForTimeout(150);
+    const scheduleCardAfter = await page.textContent('[data-schedule-card="SCH-2026-072"]');
+    assert(scheduleCardAfter?.includes("Confirmed"), "Confirming schedule slot did not update calendar card");
+    const scheduleAudit = await page.textContent("#audit-event-list");
+    assert(scheduleAudit?.includes("Visit slot confirmed"), "Schedule confirmation did not create audit event");
 
     const commercialCard = await page.textContent('[data-commercial-card="show-suite"]');
     assert(commercialCard?.includes("Save plan"), "Commercial desk did not flag show suite renewal risk");
@@ -163,11 +173,21 @@ async function verifyBrowserFlow(baseUrl) {
       .filter({ hasText: "Paid invoices" })
       .textContent();
     assert(paidInvoiceMetric?.includes("1"), "Paid invoice metric did not update");
+    const confirmedVisitsMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Confirmed visits" })
+      .textContent();
+    assert(confirmedVisitsMetric?.includes("1"), "Confirmed visits metric did not update");
+    const openVisitSlotsMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Open visit slots" })
+      .textContent();
+    assert(openVisitSlotsMetric?.includes("0"), "Open visit slots metric did not update");
     const auditMetric = await page
       .locator("#report-metrics .report-metric")
       .filter({ hasText: "Audit events" })
       .textContent();
-    assert(auditMetric?.includes("6"), "Client-linked audit event metric did not update");
+    assert(auditMetric?.includes("7"), "Client-linked audit event metric did not update");
 
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-report-btn");
@@ -215,6 +235,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/walls.json", "application/json");
     await verifyResource(baseUrl, "/data/workorders.json", "application/json");
     await verifyResource(baseUrl, "/data/diagnoses.json", "application/json");
+    await verifyResource(baseUrl, "/data/schedule.json", "application/json");
     await verifyResource(baseUrl, "/data/dispatch.json", "application/json");
     await verifyResource(baseUrl, "/data/commercial.json", "application/json");
     await verifyResource(baseUrl, "/data/billing.json", "application/json");
