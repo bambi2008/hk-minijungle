@@ -6,6 +6,8 @@ const dataFiles = {
   dispatch: "data/dispatch.json",
   commercial: "data/commercial.json",
   proof: "data/proof.json",
+  sensors: "data/sensors.json",
+  supply: "data/supply.json",
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json"
 };
@@ -29,13 +31,21 @@ let commercialAccounts = [];
 let commercialPlaybook = [];
 let proofRecords = [];
 let proofRequirements = [];
+let sensorReadings = [];
+let sensorRules = [];
+let supplyItems = [];
+let supplyPolicies = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
+let sensorAcknowledgements = {};
+let supplyRequests = {};
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
 const dispatchStagingStorageKey = "minijungle-fm-ops.dispatch-staging.v1";
 const proofApprovalStorageKey = "minijungle-fm-ops.proof-approvals.v1";
+const sensorAcknowledgementStorageKey = "minijungle-fm-ops.sensor-acknowledgements.v1";
+const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -44,7 +54,19 @@ async function loadJson(path) {
 }
 
 async function loadAppData() {
-  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, dispatchData, commercialData, proofData, esgMetrics, productModel] = await Promise.all([
+  const [
+    loadedClients,
+    loadedWalls,
+    loadedWorkorders,
+    loadedDiagnoses,
+    dispatchData,
+    commercialData,
+    proofData,
+    sensorData,
+    supplyData,
+    esgMetrics,
+    productModel
+  ] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
     loadJson(dataFiles.workorders),
@@ -52,6 +74,8 @@ async function loadAppData() {
     loadJson(dataFiles.dispatch),
     loadJson(dataFiles.commercial),
     loadJson(dataFiles.proof),
+    loadJson(dataFiles.sensors),
+    loadJson(dataFiles.supply),
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel)
   ]);
@@ -68,6 +92,10 @@ async function loadAppData() {
   commercialPlaybook = commercialData.playbook || [];
   proofRecords = proofData.records || [];
   proofRequirements = proofData.requirements || [];
+  sensorReadings = sensorData.readings || [];
+  sensorRules = sensorData.rules || [];
+  supplyItems = supplyData.items || [];
+  supplyPolicies = supplyData.policies || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -121,6 +149,30 @@ function saveProofApprovals() {
   localStorage.setItem(proofApprovalStorageKey, JSON.stringify(proofApprovals));
 }
 
+function loadSensorAcknowledgements() {
+  try {
+    sensorAcknowledgements = JSON.parse(localStorage.getItem(sensorAcknowledgementStorageKey) || "{}");
+  } catch {
+    sensorAcknowledgements = {};
+  }
+}
+
+function saveSensorAcknowledgements() {
+  localStorage.setItem(sensorAcknowledgementStorageKey, JSON.stringify(sensorAcknowledgements));
+}
+
+function loadSupplyRequests() {
+  try {
+    supplyRequests = JSON.parse(localStorage.getItem(supplyRequestStorageKey) || "{}");
+  } catch {
+    supplyRequests = {};
+  }
+}
+
+function saveSupplyRequests() {
+  localStorage.setItem(supplyRequestStorageKey, JSON.stringify(supplyRequests));
+}
+
 function isWorkorderCompleted(id) {
   return Boolean(workorderCompletions[id]);
 }
@@ -135,6 +187,14 @@ function isProofApproved(id) {
 
 function proofRecordReady(record) {
   return isProofApproved(record.id) || record.tone === "ready";
+}
+
+function isSensorAcknowledged(id) {
+  return Boolean(sensorAcknowledgements[id]);
+}
+
+function isSupplyRequested(sku) {
+  return Boolean(supplyRequests[sku]);
 }
 
 function workorderView(order) {
@@ -183,6 +243,28 @@ function approveProofRecord(id) {
   renderAll();
 }
 
+function acknowledgeSensorAlert(id) {
+  if (!sensorAcknowledgements[id]) {
+    sensorAcknowledgements[id] = {
+      acknowledgedAt: new Date().toISOString(),
+      acknowledgedBy: "FM control"
+    };
+    saveSensorAcknowledgements();
+  }
+  renderAll();
+}
+
+function requestSupplyReorder(sku) {
+  if (!supplyRequests[sku]) {
+    supplyRequests[sku] = {
+      requestedAt: new Date().toISOString(),
+      requestedBy: "Dispatch desk"
+    };
+    saveSupplyRequests();
+  }
+  renderAll();
+}
+
 function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
@@ -224,6 +306,10 @@ const els = {
   wallDetailStatus: document.querySelector("#wall-detail-status"),
   wallDetail: document.querySelector("#wall-detail"),
   podHealthList: document.querySelector("#pod-health-list"),
+  sensorStatus: document.querySelector("#sensor-status"),
+  sensorGrid: document.querySelector("#sensor-grid"),
+  sensorList: document.querySelector("#sensor-list"),
+  sensorRuleList: document.querySelector("#sensor-rule-list"),
   workorderList: document.querySelector("#workorder-list"),
   diagnosisList: document.querySelector("#diagnosis-list"),
   dispatchStatus: document.querySelector("#dispatch-status"),
@@ -231,6 +317,10 @@ const els = {
   dispatchRouteList: document.querySelector("#dispatch-route-list"),
   dispatchCrewList: document.querySelector("#dispatch-crew-list"),
   dispatchInventoryList: document.querySelector("#dispatch-inventory-list"),
+  supplyStatus: document.querySelector("#supply-status"),
+  supplyGrid: document.querySelector("#supply-grid"),
+  supplyList: document.querySelector("#supply-list"),
+  supplyPolicyList: document.querySelector("#supply-policy-list"),
   proofStatus: document.querySelector("#proof-status"),
   proofGrid: document.querySelector("#proof-grid"),
   proofRecordList: document.querySelector("#proof-record-list"),
@@ -320,10 +410,12 @@ function riskLabel(level) {
 
 function statusClass(value) {
   if (value === "risk" || value === "high") return "danger";
+  if (value === "alert" || value === "offline") return "danger";
   if (value === "watch" || value === "medium") return "warn";
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
   if (value === "completed" || value === "ready" || value === "approved") return "good";
+  if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
   return "";
 }
 
@@ -357,6 +449,37 @@ function commercialView(client) {
   return view;
 }
 
+function sensorView(reading) {
+  const wall = wallById(reading.wallId);
+  const client = clientFor(wall);
+  const acknowledged = isSensorAcknowledged(reading.id);
+  return {
+    ...reading,
+    wall,
+    client,
+    acknowledged,
+    displayStatus: acknowledged ? "Acknowledged" : reading.status,
+    displayTone: acknowledged ? "acknowledged" : reading.status
+  };
+}
+
+function sensorNeedsAction(reading) {
+  return !isSensorAcknowledged(reading.id) && (reading.status === "alert" || reading.status === "offline" || reading.status === "watch");
+}
+
+function supplyView(item) {
+  const available = item.onHand - item.reserved;
+  const requested = isSupplyRequested(item.sku);
+  const displayTone = requested ? "requested" : available <= item.reorderAt ? "alert" : available <= item.reorderAt * 2 ? "watch" : "ok";
+  return {
+    ...item,
+    available,
+    requested,
+    displayTone,
+    displayStatus: requested ? "Reorder requested" : available <= item.reorderAt ? "Reorder now" : available <= item.reorderAt * 2 ? "Watch stock" : "Ready"
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -370,6 +493,8 @@ function portfolioMetrics() {
   const survival = avg(walls, (wall) => wall.survival);
   const issues = Math.max(0, sum(walls, (wall) => wall.issues) - state.simulatedVisits * 2);
   const revenue = sum(clients, (client) => client.revenue);
+  const sensorAlerts = sensorReadings.filter(sensorNeedsAction).length;
+  const supplyReorderItems = supplyItems.map(supplyView).filter((item) => item.displayTone === "alert").length;
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -385,6 +510,8 @@ function portfolioMetrics() {
     survival,
     issues,
     revenue,
+    sensorAlerts,
+    supplyReorderItems,
     reportReadiness
   };
 }
@@ -399,6 +526,8 @@ function metricsForClient(clientId) {
   const approvedProofRecords = clientProofRecords.filter((record) => isProofApproved(record.id));
   const reportReadyProofRecords = clientProofRecords.filter(proofRecordReady);
   const proofGaps = clientProofRecords.filter((record) => !proofRecordReady(record));
+  const clientSensorReadings = sensorReadings.filter((reading) => clientWalls.some((wall) => wall.id === reading.wallId));
+  const openSensorAlerts = clientSensorReadings.filter(sensorNeedsAction);
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -419,6 +548,8 @@ function metricsForClient(clientId) {
     approvedProofRecords,
     reportReadyProofRecords,
     proofGaps,
+    sensorReadings: clientSensorReadings,
+    openSensorAlerts,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -446,7 +577,7 @@ function renderOverview() {
   renderStatCards(els.summaryGrid, [
     { label: "Active clients", value: data.activeClients, detail: `${data.activeWalls} walls under FM care` },
     { label: "Portfolio health", value: data.health, detail: `${data.survival}% plant survival rate` },
-    { label: "Open issues", value: data.issues, detail: "Low light, yellowing, replacement follow-up" },
+    { label: "Sensor alerts", value: data.sensorAlerts, detail: `${data.issues} plant issue(s) and telemetry exceptions` },
     { label: "Managed value", value: formatCurrency(data.revenue), detail: "Setup, care and DF Pro base" }
   ]);
 
@@ -454,7 +585,7 @@ function renderOverview() {
     ["Green wall area", `${data.greenArea.toFixed(1)} m2`],
     ["Water-saving estimate", `${data.waterSaved} L/mo`],
     ["Wellness reach", `${data.staffReach} people/mo`],
-    ["Report readiness", `${data.reportReadiness}%`]
+    ["Stock reorder flags", data.supplyReorderItems]
   ].map(([label, value]) => `
     <div>
       <span>${label}</span>
@@ -662,6 +793,49 @@ function renderWalls() {
   `).join("");
 }
 
+function renderSensors() {
+  const sensorItems = sensorReadings.map(sensorView);
+  const actionItems = sensorItems.filter((item) => sensorNeedsAction(item));
+  const acknowledged = sensorItems.filter((item) => item.acknowledged);
+  const offline = sensorItems.filter((item) => item.status === "offline" && !item.acknowledged);
+  const alertItems = sensorItems.filter((item) => item.status === "alert" && !item.acknowledged);
+
+  els.sensorStatus.textContent = `${actionItems.length} active telemetry exception(s)`;
+  els.sensorStatus.classList.toggle("good", actionItems.length === 0);
+  renderStatCards(els.sensorGrid, [
+    { label: "Sensor readings", value: sensorItems.length, detail: "Water, light and gateway inputs" },
+    { label: "Active alerts", value: alertItems.length, detail: "Needs same-day FM review" },
+    { label: "Offline gateways", value: offline.length, detail: "Manual-check until restored" },
+    { label: "Acknowledged", value: acknowledged.length, detail: "Alerts accepted by control desk" }
+  ]);
+
+  els.sensorList.innerHTML = sensorItems.map((item) => `
+    <div class="list-item sensor-card ${item.displayTone}" data-sensor-card="${item.id}">
+      <div class="item-row">
+        <strong>${item.id} - ${item.type}</strong>
+        <span class="tag ${statusClass(item.displayTone)}">${item.displayStatus}</span>
+      </div>
+      <span>${item.client.name} - ${item.wall.location} - ${item.lastSeen}</span>
+      <div class="sensor-meter">
+        <div><span>Reading</span><strong>${item.value}${item.unit}</strong></div>
+        <div><span>Target</span><strong>${item.target}</strong></div>
+      </div>
+      <small>${item.action}</small>
+      <div class="workorder-actions">
+        <button type="button" class="mini-action" data-wall-select="${item.wall.id}">Wall detail</button>
+        <button type="button" class="mini-action primary" data-ack-sensor="${item.id}" ${item.acknowledged || item.status === "ok" ? "disabled" : ""}>${item.acknowledged ? "Acknowledged" : "Acknowledge alert"}</button>
+      </div>
+    </div>
+  `).join("");
+
+  els.sensorRuleList.innerHTML = sensorRules.map((rule) => `
+    <div class="method-row">
+      <span>${rule.trigger}</span>
+      <strong>${rule.action}</strong>
+    </div>
+  `).join("");
+}
+
 function renderService() {
   els.workorderList.innerHTML = workorders.map((order) => {
     const wall = wallById(order.wallId);
@@ -784,6 +958,49 @@ function renderDispatch() {
       </div>
     `;
   }).join("");
+}
+
+function renderSupply() {
+  const supplyRows = supplyItems.map(supplyView);
+  const reorderNow = supplyRows.filter((item) => item.displayTone === "alert");
+  const watchStock = supplyRows.filter((item) => item.displayTone === "watch");
+  const requested = supplyRows.filter((item) => item.requested);
+  const reservedUnits = sum(supplyRows, (item) => item.reserved);
+
+  els.supplyStatus.textContent = `${reorderNow.length} reorder flag(s), ${requested.length} request(s) raised`;
+  els.supplyStatus.classList.toggle("good", reorderNow.length === 0);
+  renderStatCards(els.supplyGrid, [
+    { label: "Tracked SKUs", value: supplyRows.length, detail: "Pods, sleeves, nutrients and tools" },
+    { label: "Reorder now", value: reorderNow.length, detail: "Available stock at or below threshold" },
+    { label: "Watch stock", value: watchStock.length, detail: "Approaching reorder level" },
+    { label: "Reserved units", value: reservedUnits, detail: "Held for dispatch and proof continuity" }
+  ]);
+
+  els.supplyList.innerHTML = supplyRows.map((item) => `
+    <div class="list-item supply-card ${item.displayTone}" data-supply-card="${item.sku}">
+      <div class="item-row">
+        <strong>${item.sku} - ${item.label}</strong>
+        <span class="tag ${statusClass(item.displayTone)}">${item.displayStatus}</span>
+      </div>
+      <span>${item.category} - ${item.supplier} - ${item.leadTimeDays} day lead time</span>
+      <div class="commercial-meta">
+        <div><span>Available</span><strong>${item.available}</strong></div>
+        <div><span>Reserved</span><strong>${item.reserved}</strong></div>
+        <div><span>Reorder point</span><strong>${item.reorderAt}</strong></div>
+      </div>
+      <small>Recommended reorder quantity: ${item.reorderQty}</small>
+      <div class="workorder-actions">
+        <button type="button" class="mini-action primary" data-request-supply="${item.sku}" ${item.requested || item.displayTone === "ok" ? "disabled" : ""}>${item.requested ? "Requested" : "Request reorder"}</button>
+      </div>
+    </div>
+  `).join("");
+
+  els.supplyPolicyList.innerHTML = supplyPolicies.map((policy) => `
+    <div class="method-row">
+      <span>${policy.label}</span>
+      <strong>${policy.rule}</strong>
+    </div>
+  `).join("");
 }
 
 function proofView(record) {
@@ -930,7 +1147,8 @@ function renderReports() {
     ["Open work orders", data.openWorkorders.length],
     ["Completed work orders", data.completedWorkorders.length],
     ["Approved proof", data.approvedProofRecords.length],
-    ["Proof gaps", data.proofGaps.length]
+    ["Proof gaps", data.proofGaps.length],
+    ["Sensor alerts", data.openSensorAlerts.length]
   ].map(([label, value]) => `
     <div class="report-metric">
       <span>${label}</span>
@@ -945,7 +1163,8 @@ function renderReports() {
     `${data.completedWorkorders.length} completed work order(s)`,
     `${data.openWorkorders.length} open or scheduled work order(s)`,
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
-    `${data.proofGaps.length} proof gap(s)`
+    `${data.proofGaps.length} proof gap(s)`,
+    `${data.openSensorAlerts.length} open sensor alert(s)`
   ];
   els.reportEvidence.innerHTML = evidence.map((item) => `
     <div class="evidence-card">
@@ -973,7 +1192,8 @@ function buildReportHtml() {
     `${data.completedWorkorders.length} completed work order(s)`,
     `${data.openWorkorders.length} open or scheduled work order(s)`,
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
-    `${data.proofGaps.length} proof gap(s)`
+    `${data.proofGaps.length} proof gap(s)`,
+    `${data.openSensorAlerts.length} open sensor alert(s)`
   ];
   const metricRows = [
     ["Health score", data.health],
@@ -986,7 +1206,8 @@ function buildReportHtml() {
     ["Open work orders", data.openWorkorders.length],
     ["Completed work orders", data.completedWorkorders.length],
     ["Approved proof", data.approvedProofRecords.length],
-    ["Proof gaps", data.proofGaps.length]
+    ["Proof gaps", data.proofGaps.length],
+    ["Sensor alerts", data.openSensorAlerts.length]
   ];
 
   return `<!doctype html>
@@ -1107,6 +1328,18 @@ function bindDynamicActions() {
       approveProofRecord(button.dataset.approveProof);
     });
   });
+
+  document.querySelectorAll("[data-ack-sensor]").forEach((button) => {
+    button.addEventListener("click", () => {
+      acknowledgeSensorAlert(button.dataset.ackSensor);
+    });
+  });
+
+  document.querySelectorAll("[data-request-supply]").forEach((button) => {
+    button.addEventListener("click", () => {
+      requestSupplyReorder(button.dataset.requestSupply);
+    });
+  });
 }
 
 function renderAll() {
@@ -1115,8 +1348,10 @@ function renderAll() {
   renderClients();
   renderCommercial();
   renderWalls();
+  renderSensors();
   renderService();
   renderDispatch();
+  renderSupply();
   renderProof();
   renderEsg();
   renderReports();
@@ -1171,6 +1406,8 @@ async function bootstrap() {
     loadWorkorderCompletions();
     loadDispatchStaging();
     loadProofApprovals();
+    loadSensorAcknowledgements();
+    loadSupplyRequests();
     initializeSelection();
     renderAll();
   } catch (error) {

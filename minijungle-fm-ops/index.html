@@ -21,8 +21,10 @@
         <a href="#clients">Clients</a>
         <a href="#commercial">SLA</a>
         <a href="#walls">Wall Detail</a>
+        <a href="#sensors">Sensors</a>
         <a href="#service">Service</a>
         <a href="#dispatch">Dispatch</a>
+        <a href="#supply">Stock</a>
         <a href="#proof">Proof</a>
         <a href="#esg">ESG</a>
         <a href="#reports">Reports</a>
@@ -179,6 +181,33 @@
         </div>
       </section>
 
+      <section id="sensors" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Smart wall telemetry</p>
+            <h2>Sensor Monitor</h2>
+          </div>
+          <span id="sensor-status" class="status-pill">Live sensor watch</span>
+        </div>
+        <div id="sensor-grid" class="summary-grid"></div>
+        <div class="two-col sensor-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Sensor Alerts</h3>
+              <span>Water, light and gateway exceptions</span>
+            </div>
+            <div id="sensor-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Sensor Rules</h3>
+              <span>How telemetry becomes FM action</span>
+            </div>
+            <div id="sensor-rule-list" class="method-list"></div>
+          </article>
+        </div>
+      </section>
+
       <section id="service" class="section">
         <div class="section-heading">
           <div>
@@ -229,6 +258,33 @@
             </div>
             <div id="dispatch-crew-list" class="stack-list"></div>
             <div id="dispatch-inventory-list" class="method-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="supply" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Inventory and purchasing</p>
+            <h2>Inventory Control</h2>
+          </div>
+          <span id="supply-status" class="status-pill">Stock readiness view</span>
+        </div>
+        <div id="supply-grid" class="summary-grid"></div>
+        <div class="two-col supply-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Stock Ledger</h3>
+              <span>Available, reserved, reorder point and lead time</span>
+            </div>
+            <div id="supply-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Stock Policy</h3>
+              <span>Operational rules for service continuity</span>
+            </div>
+            <div id="supply-policy-list" class="method-list"></div>
           </article>
         </div>
       </section>

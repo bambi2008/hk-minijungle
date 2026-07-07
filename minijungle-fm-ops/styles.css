@@ -595,6 +595,53 @@ small {
   margin-top: 12px;
 }
 
+.sensor-card,
+.supply-card {
+  cursor: default;
+}
+
+.sensor-card.alert,
+.sensor-card.offline,
+.supply-card.alert {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.sensor-card.watch,
+.supply-card.watch {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.sensor-card.acknowledged,
+.sensor-card.ok,
+.supply-card.requested,
+.supply-card.ok {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
+}
+
+.sensor-meter {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.sensor-meter div {
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface-soft);
+}
+
+.sensor-meter strong {
+  display: block;
+}
+
+.sensor-layout .method-list,
+.supply-layout .method-list {
+  margin-top: 12px;
+}
+
 .positioning-panel {
   display: grid;
   grid-template-columns: minmax(240px, 0.45fr) 1fr;
@@ -858,6 +905,7 @@ small {
   .report-client-profile,
   .detail-grid,
   .commercial-meta,
+  .sensor-meter,
   .proof-strip,
   .two-col,
   .workbench,

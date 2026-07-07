@@ -64,9 +64,25 @@ async function verifyBrowserFlow(baseUrl) {
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.workorder-completions.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.dispatch-staging.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.proof-approvals.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.sensor-acknowledgements.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.supply-requests.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
     assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
+
+    const sensorCardBefore = await page.textContent('[data-sensor-card="SNS-021-LIGHT"]');
+    assert(sensorCardBefore?.includes("alert"), "Sensor monitor did not load the light alert");
+    await page.click('[data-ack-sensor="SNS-021-LIGHT"]');
+    await page.waitForTimeout(150);
+    const sensorCardAfter = await page.textContent('[data-sensor-card="SNS-021-LIGHT"]');
+    assert(sensorCardAfter?.includes("Acknowledged"), "Acknowledging sensor alert did not update sensor card");
+
+    const supplyCardBefore = await page.textContent('[data-supply-card="NUT-A"]');
+    assert(supplyCardBefore?.includes("Reorder now"), "Inventory control did not flag low nutrient stock");
+    await page.click('[data-request-supply="NUT-A"]');
+    await page.waitForTimeout(150);
+    const supplyCardAfter = await page.textContent('[data-supply-card="NUT-A"]');
+    assert(supplyCardAfter?.includes("Reorder requested"), "Requesting reorder did not update supply card");
 
     const proofCardBefore = await page.textContent('[data-proof-card="PRF-1047"]');
     assert(proofCardBefore?.includes("Needs review"), "Proof vault did not load review state");
@@ -172,6 +188,8 @@ async function main() {
     await verifyResource(baseUrl, "/data/dispatch.json", "application/json");
     await verifyResource(baseUrl, "/data/commercial.json", "application/json");
     await verifyResource(baseUrl, "/data/proof.json", "application/json");
+    await verifyResource(baseUrl, "/data/sensors.json", "application/json");
+    await verifyResource(baseUrl, "/data/supply.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);

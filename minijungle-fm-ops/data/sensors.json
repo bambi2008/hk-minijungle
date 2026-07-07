@@ -1,0 +1,62 @@
+{
+  "readings": [
+    {
+      "id": "SNS-001-WATER",
+      "wallId": "MJ-HK-001",
+      "type": "Water level",
+      "value": 74,
+      "unit": "%",
+      "target": "60-85%",
+      "status": "ok",
+      "lastSeen": "2026-07-07 08:18",
+      "action": "No action required"
+    },
+    {
+      "id": "SNS-014-WATER",
+      "wallId": "MJ-HK-014",
+      "type": "Water swing",
+      "value": 42,
+      "unit": "%",
+      "target": "55-80%",
+      "status": "watch",
+      "lastSeen": "2026-07-07 08:08",
+      "action": "Check reservoir during next clinic visit"
+    },
+    {
+      "id": "SNS-021-LIGHT",
+      "wallId": "MJ-HK-021",
+      "type": "Light exposure",
+      "value": 38,
+      "unit": "%",
+      "target": "65-90%",
+      "status": "alert",
+      "lastSeen": "2026-07-07 08:02",
+      "action": "Verify LED schedule before renewal proof pack"
+    },
+    {
+      "id": "SNS-033-GATEWAY",
+      "wallId": "MJ-HK-033",
+      "type": "Gateway heartbeat",
+      "value": 0,
+      "unit": "ping",
+      "target": "online",
+      "status": "offline",
+      "lastSeen": "2026-07-06 19:34",
+      "action": "Ask technician to power-cycle gateway on Jul 12"
+    }
+  ],
+  "rules": [
+    {
+      "trigger": "Light exposure below target",
+      "action": "Create or link follow-up work order before client report"
+    },
+    {
+      "trigger": "Gateway offline over 12 hours",
+      "action": "Mark wall as manual-check until signal recovers"
+    },
+    {
+      "trigger": "Water swing watch",
+      "action": "Add reservoir check to the next care visit"
+    }
+  ]
+}

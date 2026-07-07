@@ -1,0 +1,62 @@
+{
+  "items": [
+    {
+      "sku": "POD-S",
+      "label": "Small replacement pods",
+      "category": "Plant Pod",
+      "onHand": 42,
+      "reserved": 18,
+      "reorderAt": 18,
+      "reorderQty": 36,
+      "supplier": "MiniJungle Nursery HK",
+      "leadTimeDays": 3
+    },
+    {
+      "sku": "NUT-A",
+      "label": "Nutrient A concentrate",
+      "category": "Consumable",
+      "onHand": 12,
+      "reserved": 7,
+      "reorderAt": 6,
+      "reorderQty": 12,
+      "supplier": "GreenCare Supply",
+      "leadTimeDays": 2
+    },
+    {
+      "sku": "XSP-90",
+      "label": "Xponge sleeve 90mm",
+      "category": "Sleeve",
+      "onHand": 26,
+      "reserved": 4,
+      "reorderAt": 12,
+      "reorderQty": 24,
+      "supplier": "MiniJungle Nursery HK",
+      "leadTimeDays": 4
+    },
+    {
+      "sku": "LED-T",
+      "label": "Portable LED tester",
+      "category": "Tool",
+      "onHand": 3,
+      "reserved": 2,
+      "reorderAt": 1,
+      "reorderQty": 2,
+      "supplier": "Tooling desk",
+      "leadTimeDays": 5
+    }
+  ],
+  "policies": [
+    {
+      "label": "Critical SKU",
+      "rule": "Available stock at or below reorder point requires same-day purchase request"
+    },
+    {
+      "label": "Reserved stock",
+      "rule": "Dispatch reservations are held until work order completion or manual release"
+    },
+    {
+      "label": "Proof dependency",
+      "rule": "Replacement proof cannot be approved if required replacement pods are unavailable"
+    }
+  ]
+}
