@@ -300,6 +300,7 @@ small {
 }
 
 .report-metrics,
+.report-client-profile,
 .detail-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -372,6 +373,7 @@ small {
 
 .proof-strip div,
 .detail-grid div,
+.report-client-profile div,
 .report-metric,
 .method-row {
   border-radius: 8px;
@@ -381,6 +383,7 @@ small {
 
 .proof-strip strong,
 .detail-grid strong,
+.report-client-profile strong,
 .report-metric strong {
   display: block;
   margin-top: 4px;
@@ -563,6 +566,37 @@ small {
   margin-bottom: 14px;
 }
 
+.report-builder {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin-bottom: 14px;
+}
+
+.report-builder label {
+  display: grid;
+  gap: 6px;
+  min-width: 220px;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.report-builder select {
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+}
+
+.report-client-profile {
+  margin-bottom: 14px;
+}
+
 .report-preview {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(320px, 0.8fr);
@@ -577,6 +611,10 @@ small {
 
 .evidence-grid {
   margin-top: 14px;
+}
+
+.evidence-grid.compact {
+  grid-template-columns: 1fr;
 }
 
 .architecture-card {
@@ -654,6 +692,7 @@ small {
   .evidence-grid,
   .architecture-layers,
   .report-metrics,
+  .report-client-profile,
   .detail-grid,
   .proof-strip,
   .two-col,

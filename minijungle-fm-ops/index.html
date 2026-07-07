@@ -216,7 +216,19 @@
           </div>
           <span id="report-status" class="status-pill">Draft pack</span>
         </div>
+        <div class="report-builder">
+          <label>
+            Client
+            <select id="report-client-select" aria-label="Select report client"></select>
+          </label>
+          <label>
+            Period
+            <select id="report-month-select" aria-label="Select report period"></select>
+          </label>
+          <button type="button" id="download-report-btn" class="ghost-btn">Download HTML report</button>
+        </div>
         <div id="report-tabs" class="segmented report-tabs" role="group" aria-label="Report type"></div>
+        <div id="report-client-profile" class="report-client-profile"></div>
         <article class="report-preview">
           <div>
             <p class="eyebrow" id="report-period">June 2026</p>
@@ -225,13 +237,22 @@
           </div>
           <div id="report-metrics" class="report-metrics"></div>
         </article>
-        <article class="panel">
-          <div class="panel-title">
-            <h3>Evidence Included</h3>
-            <span>What the client can trust</span>
-          </div>
-          <div id="report-evidence" class="evidence-grid"></div>
-        </article>
+        <div class="two-col">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Evidence Included</h3>
+              <span>What the client can trust</span>
+            </div>
+            <div id="report-evidence" class="evidence-grid compact"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Method Notes</h3>
+              <span>Proof status for ESG claims</span>
+            </div>
+            <div id="report-methods" class="method-list"></div>
+          </article>
+        </div>
       </section>
 
       <section id="architecture" class="section">

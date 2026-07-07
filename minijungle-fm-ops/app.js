@@ -15,6 +15,7 @@ let esgTrend = [];
 let esgMethods = [];
 let esgLedger = [];
 let reportModes = [];
+let reportMonths = [];
 let strategyCards = [];
 let architectureLayers = [];
 
@@ -42,6 +43,7 @@ async function loadAppData() {
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
   reportModes = productModel.reportModes || [];
+  reportMonths = productModel.reportMonths || [];
   strategyCards = productModel.strategyCards || [];
   architectureLayers = productModel.architectureLayers || [];
 }
@@ -49,6 +51,8 @@ async function loadAppData() {
 function initializeSelection() {
   state.selectedClientId = clients[0]?.id || null;
   state.selectedWallId = walls[0]?.id || null;
+  state.selectedReportClientId = clients[0]?.id || null;
+  state.selectedReportMonth = reportMonths[0]?.id || null;
   state.reportMode = reportModes[0]?.id || null;
 }
 
@@ -57,6 +61,8 @@ const state = {
   filter: "all",
   selectedClientId: null,
   selectedWallId: null,
+  selectedReportClientId: null,
+  selectedReportMonth: null,
   reportMode: null,
   reportGenerated: false
 };
@@ -85,12 +91,17 @@ const els = {
   esgMethods: document.querySelector("#esg-methods"),
   esgLedger: document.querySelector("#esg-ledger"),
   reportTabs: document.querySelector("#report-tabs"),
+  reportClientSelect: document.querySelector("#report-client-select"),
+  reportMonthSelect: document.querySelector("#report-month-select"),
+  downloadReportBtn: document.querySelector("#download-report-btn"),
+  reportClientProfile: document.querySelector("#report-client-profile"),
   reportStatus: document.querySelector("#report-status"),
   reportPeriod: document.querySelector("#report-period"),
   reportTitle: document.querySelector("#report-title"),
   reportSummary: document.querySelector("#report-summary"),
   reportMetrics: document.querySelector("#report-metrics"),
   reportEvidence: document.querySelector("#report-evidence"),
+  reportMethods: document.querySelector("#report-methods"),
   architectureLayers: document.querySelector("#architecture-layers"),
   syncStatus: document.querySelector("#sync-status"),
   simulateVisitBtn: document.querySelector("#simulate-visit-btn"),
@@ -129,6 +140,14 @@ function selectedWall() {
 
 function selectedReport() {
   return reportModes.find((mode) => mode.id === state.reportMode) || reportModes[0];
+}
+
+function selectedReportClient() {
+  return clients.find((client) => client.id === state.selectedReportClientId) || clients[0];
+}
+
+function selectedReportMonth() {
+  return reportMonths.find((month) => month.id === state.selectedReportMonth) || reportMonths[0];
 }
 
 function riskLabel(level) {
@@ -171,6 +190,36 @@ function portfolioMetrics() {
     survival,
     issues,
     revenue,
+    reportReadiness
+  };
+}
+
+function metricsForClient(clientId) {
+  const clientWalls = walls.filter((wall) => wall.clientId === clientId);
+  const clientWorkorders = workorders.filter((order) => clientWalls.some((wall) => wall.id === order.wallId));
+  const clientDiagnoses = diagnoses.filter((diagnosis) => clientWalls.some((wall) => wall.id === diagnosis.wallId));
+  const greenArea = sum(clientWalls, (wall) => wall.greenArea);
+  const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
+  const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
+  const staffReach = sum(clientWalls, (wall) => wall.staffReach);
+  const co2eProxy = sum(clientWalls, (wall) => wall.co2eProxy);
+  const health = clientWalls.length ? Math.min(99, avg(clientWalls, (wall) => wall.health + state.simulatedVisits)) : 0;
+  const survival = clientWalls.length ? avg(clientWalls, (wall) => wall.survival) : 0;
+  const issues = Math.max(0, sum(clientWalls, (wall) => wall.issues) - state.simulatedVisits * 2);
+  const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
+
+  return {
+    walls: clientWalls,
+    workorders: clientWorkorders,
+    diagnoses: clientDiagnoses,
+    greenArea,
+    waterSaved,
+    serviceMilesSaved,
+    staffReach,
+    co2eProxy,
+    health,
+    survival,
+    issues,
     reportReadiness
   };
 }
@@ -417,8 +466,16 @@ function renderEsg() {
 }
 
 function renderReports() {
-  const data = portfolioMetrics();
+  const client = selectedReportClient();
+  const period = selectedReportMonth();
+  const data = metricsForClient(client.id);
   const report = selectedReport();
+  els.reportClientSelect.innerHTML = clients.map((item) => `
+    <option value="${item.id}" ${item.id === client.id ? "selected" : ""}>${item.name}</option>
+  `).join("");
+  els.reportMonthSelect.innerHTML = reportMonths.map((month) => `
+    <option value="${month.id}" ${month.id === period.id ? "selected" : ""}>${month.label}</option>
+  `).join("");
   els.reportTabs.innerHTML = reportModes.map((mode) => `
     <button type="button" class="${mode.id === state.reportMode ? "active" : ""}" data-report-tab="${mode.id}">
       ${mode.label}
@@ -427,14 +484,28 @@ function renderReports() {
 
   els.reportStatus.textContent = state.reportGenerated ? "Generated" : "Draft pack";
   els.reportStatus.classList.toggle("good", state.reportGenerated);
-  els.reportPeriod.textContent = state.reportGenerated ? "Generated today" : "June 2026";
-  els.reportTitle.textContent = report.title;
+  els.reportPeriod.textContent = `${period.label} - ${period.period}`;
+  els.reportTitle.textContent = `${client.name} - ${report.title}`;
   els.reportSummary.textContent = report.summary;
+  els.reportClientProfile.innerHTML = [
+    ["Client", client.name],
+    ["Segment", `${client.segment} - ${client.district}`],
+    ["Plan", client.plan],
+    ["Renewal", client.renewalDate],
+    ["Proof need", client.proofNeed]
+  ].map(([label, value]) => `
+    <div>
+      <span>${label}</span>
+      <strong>${value}</strong>
+    </div>
+  `).join("");
   els.reportMetrics.innerHTML = [
     ["Health score", data.health],
     ["Report readiness", `${data.reportReadiness}%`],
     ["Green area", `${data.greenArea.toFixed(1)} m2`],
-    ["Water estimate", `${data.waterSaved} L/mo`]
+    ["Water estimate", `${data.waterSaved} L/mo`],
+    ["Open issues", data.issues],
+    ["Work orders", data.workorders.length]
   ].map(([label, value]) => `
     <div class="report-metric">
       <span>${label}</span>
@@ -442,12 +513,101 @@ function renderReports() {
     </div>
   `).join("");
 
-  els.reportEvidence.innerHTML = report.evidence.map((item) => `
+  const evidence = [
+    ...report.evidence,
+    `${data.walls.length} wall ledger record(s)`,
+    `${data.diagnoses.length} Doctor Forest finding(s)`,
+    `${data.workorders.length} open or scheduled work order(s)`
+  ];
+  els.reportEvidence.innerHTML = evidence.map((item) => `
     <div class="evidence-card">
       <span>Included</span>
       <strong>${item}</strong>
     </div>
   `).join("");
+  els.reportMethods.innerHTML = esgMethods.map((method) => `
+    <div class="method-row">
+      <span>${method.label}</span>
+      <strong>${method.body}</strong>
+    </div>
+  `).join("");
+}
+
+function buildReportHtml() {
+  const client = selectedReportClient();
+  const period = selectedReportMonth();
+  const report = selectedReport();
+  const data = metricsForClient(client.id);
+  const evidence = [
+    ...report.evidence,
+    `${data.walls.length} wall ledger record(s)`,
+    `${data.diagnoses.length} Doctor Forest finding(s)`,
+    `${data.workorders.length} open or scheduled work order(s)`
+  ];
+  const metricRows = [
+    ["Health score", data.health],
+    ["Report readiness", `${data.reportReadiness}%`],
+    ["Green area", `${data.greenArea.toFixed(1)} m2`],
+    ["Water estimate", `${data.waterSaved} L/mo`],
+    ["Service miles avoided", `${data.serviceMilesSaved} km`],
+    ["Wellness reach", `${data.staffReach} people/mo`],
+    ["CO2e proxy", `${data.co2eProxy} kg`]
+  ];
+
+  return `<!doctype html>
+<html lang="en-HK">
+<head>
+  <meta charset="utf-8">
+  <title>${client.name} - ${report.label}</title>
+  <style>
+    body { margin: 40px; color: #18211d; font-family: Inter, Arial, sans-serif; line-height: 1.5; }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    h2 { margin: 28px 0 10px; font-size: 20px; }
+    .meta, .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .card { border: 1px solid #d8e1d8; border-radius: 8px; padding: 14px; background: #f7faf7; }
+    span { display: block; color: #63716a; font-size: 12px; font-weight: 700; text-transform: uppercase; }
+    strong { display: block; margin-top: 4px; }
+    li { margin: 6px 0; }
+  </style>
+</head>
+<body>
+  <span>MiniJungle FM Ops</span>
+  <h1>${client.name} - ${report.title}</h1>
+  <p>${period.label} (${period.period})</p>
+  <p>${report.summary}</p>
+  <div class="meta">
+    <div class="card"><span>Client</span><strong>${client.segment} - ${client.district}</strong></div>
+    <div class="card"><span>Plan</span><strong>${client.plan}</strong></div>
+    <div class="card"><span>Renewal</span><strong>${client.renewalDate}</strong></div>
+    <div class="card"><span>Proof need</span><strong>${client.proofNeed}</strong></div>
+  </div>
+  <h2>Metrics</h2>
+  <div class="grid">
+    ${metricRows.map(([label, value]) => `<div class="card"><span>${label}</span><strong>${value}</strong></div>`).join("")}
+  </div>
+  <h2>Evidence Included</h2>
+  <ul>${evidence.map((item) => `<li>${item}</li>`).join("")}</ul>
+  <h2>Method Notes</h2>
+  <ul>${esgMethods.map((method) => `<li><strong>${method.label}:</strong> ${method.body}</li>`).join("")}</ul>
+</body>
+</html>`;
+}
+
+function downloadReportHtml() {
+  const client = selectedReportClient();
+  const period = selectedReportMonth();
+  const html = buildReportHtml();
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${client.id}-${period.id}-minijungle-report.html`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
+  state.reportGenerated = true;
+  renderReports();
 }
 
 function renderArchitecture() {
@@ -508,9 +668,22 @@ els.simulateVisitBtn.addEventListener("click", () => {
   renderAll();
 });
 
+els.reportClientSelect.addEventListener("change", () => {
+  state.selectedReportClientId = els.reportClientSelect.value;
+  renderReports();
+});
+
+els.reportMonthSelect.addEventListener("change", () => {
+  state.selectedReportMonth = els.reportMonthSelect.value;
+  renderReports();
+});
+
+els.downloadReportBtn.addEventListener("click", downloadReportHtml);
+
 els.generateReportBtn.addEventListener("click", () => {
   state.reportGenerated = true;
   state.reportMode = "monthly";
+  state.selectedReportClientId = state.selectedClientId || state.selectedReportClientId;
   renderReports();
   document.querySelector("#reports").scrollIntoView({ behavior: "smooth", block: "start" });
 });

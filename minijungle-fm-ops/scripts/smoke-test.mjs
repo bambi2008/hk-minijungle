@@ -74,6 +74,19 @@ async function verifyBrowserFlow(baseUrl) {
     const wallTitle = await page.textContent("#wall-detail-title");
     assert(wallTitle?.includes("MJ-HK-021"), "Client selection did not update selected wall");
 
+    await page.selectOption("#report-client-select", "show-suite");
+    await page.selectOption("#report-month-select", "2026-05");
+    await page.waitForTimeout(150);
+    const reportTitle = await page.textContent("#report-title");
+    assert(reportTitle?.includes("Property Show Suite"), "Report client selection did not update title");
+    const reportPeriod = await page.textContent("#report-period");
+    assert(reportPeriod?.includes("May 2026"), "Report month selection did not update period");
+
+    const downloadPromise = page.waitForEvent("download");
+    await page.click("#download-report-btn");
+    const download = await downloadPromise;
+    assert(download.suggestedFilename().includes("show-suite-2026-05"), "Report download filename is not client/month scoped");
+
     await page.click('[data-filter="risk"]');
     await page.waitForTimeout(150);
     const riskWallCount = await page.locator(".wall-card").count();
