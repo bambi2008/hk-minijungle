@@ -18,12 +18,13 @@
       <nav>
         <a href="#overview" class="active">Overview</a>
         <a href="#mvp">MVP</a>
+        <a href="#platform">Platform</a>
         <a href="#positioning">Positioning</a>
         <a href="#clients">Clients</a>
         <a href="#commercial">SLA</a>
         <a href="#billing">Billing</a>
         <a href="#compliance">Compliance</a>
-        <a href="#walls">Wall Detail</a>
+        <a href="#walls">Asset Detail</a>
         <a href="#sensors">Sensors</a>
         <a href="#incidents">Incidents</a>
         <a href="#service">Service</a>
@@ -47,8 +48,8 @@
       <header class="topbar">
         <div>
           <p class="eyebrow">Hong Kong FM rental operations</p>
-          <h1>Living Wall Control Center</h1>
-          <p class="topbar-copy">Manage MiniJungle Wall assets, service proof, Doctor Forest findings and ESG-ready reporting for offices, landlords, clinics and clubs.</p>
+          <h1>MiniJungle Living Asset OS</h1>
+          <p class="topbar-copy">Use MiniJungle Wall as the first high-value wedge, then extend the same operating ledger to pots, plant clusters, green partitions, seasonal displays and ESG-ready client proof.</p>
         </div>
         <div class="topbar-actions">
           <button type="button" id="simulate-visit-btn" class="ghost-btn">Complete visit</button>
@@ -70,7 +71,7 @@
           <article class="panel">
             <div class="panel-title">
               <h3>Risk Queue</h3>
-              <span>Walls that need FM attention</span>
+              <span>Living assets that need FM attention</span>
             </div>
             <div id="risk-list" class="stack-list"></div>
           </article>
@@ -157,6 +158,41 @@
         </div>
       </section>
 
+      <section id="platform" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Investor platform frame</p>
+            <h2>Living Asset OS</h2>
+          </div>
+          <span id="platform-status" class="status-pill">Asset scope and expansion thesis</span>
+        </div>
+        <div id="platform-thesis-grid" class="strategy-grid"></div>
+        <div id="platform-grid" class="summary-grid"></div>
+        <div class="two-col platform-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Asset Scope</h3>
+              <span>What can enter the operating system</span>
+            </div>
+            <div id="asset-scope-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Expansion Ladder</h3>
+              <span>How Wall becomes a multi-product platform</span>
+            </div>
+            <div id="expansion-roadmap-list" class="method-list"></div>
+          </article>
+        </div>
+        <article class="panel benchmark-panel">
+          <div class="panel-title">
+            <h3>Comparable Funding Signals</h3>
+            <span>How similar categories were valued by investors</span>
+          </div>
+          <div id="investor-benchmark-list" class="method-list"></div>
+        </article>
+      </section>
+
       <section id="positioning" class="section">
         <div class="section-heading">
           <div>
@@ -169,7 +205,7 @@
         <article class="panel positioning-panel">
           <div>
             <p class="eyebrow">Core positioning</p>
-            <h3>Not a plant care app. A green asset operations system.</h3>
+            <h3>Not a plant care app. A living asset operations system.</h3>
           </div>
           <p id="positioning-copy"></p>
         </article>
@@ -287,9 +323,9 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Living asset ledger</p>
-            <h2>Wall Detail</h2>
+            <h2>Asset Detail</h2>
           </div>
-          <div class="filters" role="group" aria-label="Wall filters">
+          <div class="filters" role="group" aria-label="Asset filters">
             <button type="button" class="filter-btn active" data-filter="all">All</button>
             <button type="button" class="filter-btn" data-filter="risk">Risk</button>
             <button type="button" class="filter-btn" data-filter="smart">Smart</button>
@@ -299,7 +335,7 @@
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
-              <h3 id="wall-detail-title">Selected wall</h3>
+              <h3 id="wall-detail-title">Selected asset</h3>
               <span id="wall-detail-status">Zone, pod and service view</span>
             </div>
             <div id="wall-detail" class="detail-grid"></div>
@@ -317,7 +353,7 @@
       <section id="sensors" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Smart wall telemetry</p>
+            <p class="eyebrow">Smart asset telemetry</p>
             <h2>Sensor Monitor</h2>
           </div>
           <span id="sensor-status" class="status-pill">Live sensor watch</span>

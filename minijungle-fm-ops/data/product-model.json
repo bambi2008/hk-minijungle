@@ -45,8 +45,8 @@
   "strategyCards": [
     {
       "title": "Positioning",
-      "value": "Living Green Wall OS",
-      "body": "A vertical green asset operating system for HK commercial spaces, not a consumer plant diary."
+      "value": "Living Asset OS",
+      "body": "A vertical operating system for MiniJungle's recurring green assets, with Wall as the first high-value wedge."
     },
     {
       "title": "Audience",
@@ -64,10 +64,159 @@
       "body": "Standardized wall modules, Plant Pod records, Xponge replacement cycles and Doctor Forest diagnosis history."
     }
   ],
+  "platformThesis": [
+    {
+      "title": "Investor thesis",
+      "value": "From rental service to asset OS",
+      "body": "The app turns each living product into a managed asset with contract value, service history, health risk, ESG evidence and renewal proof."
+    },
+    {
+      "title": "Wedge",
+      "value": "Wall first",
+      "body": "MiniJungle Wall stays the demo hero because it is visual, high-ticket, service-heavy and easiest to prove operational leverage."
+    },
+    {
+      "title": "Expansion",
+      "value": "Same ledger, more products",
+      "body": "Pots, plant clusters, green partitions and seasonal displays can use the same site, protocol, work order, proof and ESG model."
+    },
+    {
+      "title": "Moat",
+      "value": "Living asset data network",
+      "body": "Health scores, replacement cycles, route cost, survival rates and proof packs compound into data that a pure rental operator does not own."
+    }
+  ],
+  "assetClasses": [
+    {
+      "id": "living-wall",
+      "label": "MiniJungle Wall",
+      "stage": "MVP ready",
+      "status": "ready",
+      "fit": "Highest-value wedge with modules, pods, sensors, SLA, proof photos and clear renewal value.",
+      "signals": ["Health score", "Zone risk", "Water estimate", "Service proof"],
+      "monetization": "Rental, care subscription, ESG report pack and renewal proof."
+    },
+    {
+      "id": "plant-pod-rental",
+      "label": "Plant Pod / Pot Rental",
+      "stage": "Next asset class",
+      "status": "next",
+      "fit": "Recurring office plant rental with replacement risk, route visits and client-visible quality requirements.",
+      "signals": ["Survival rate", "Replacement cycle", "Visit cadence", "Client feedback"],
+      "monetization": "Monthly rental, replacement plan and care bundle."
+    },
+    {
+      "id": "green-cluster",
+      "label": "Office Green Cluster",
+      "stage": "Next asset class",
+      "status": "next",
+      "fit": "Grouped desk, pantry and lounge plants can be managed as a site-level asset rather than single pots.",
+      "signals": ["Cluster health", "Staff reach", "Photo proof", "Refresh need"],
+      "monetization": "Wellness package, office refresh plan and account expansion."
+    },
+    {
+      "id": "green-partition",
+      "label": "Green Partition / Mobile Wall",
+      "stage": "Premium expansion",
+      "status": "next",
+      "fit": "A spatial product with similar service complexity to Wall and stronger workplace design value.",
+      "signals": ["Module count", "Movement history", "Visibility zone", "Care protocol"],
+      "monetization": "Premium rental, event add-on and space planning upsell."
+    },
+    {
+      "id": "seasonal-display",
+      "label": "Lobby / Retail Seasonal Display",
+      "stage": "Commercial expansion",
+      "status": "next",
+      "fit": "Short-cycle green installations need setup proof, teardown tasks, replacement control and client sign-off.",
+      "signals": ["Install window", "Photo proof", "Waste record", "Client sign-off"],
+      "monetization": "Campaign package, venue retainer and proof-of-service archive."
+    },
+    {
+      "id": "smart-planter",
+      "label": "Smart Planter / IAQ Add-on",
+      "stage": "Phase 2 sensor layer",
+      "status": "phase-2",
+      "fit": "Adds data depth when sensors and indoor air quality integrations become production-ready.",
+      "signals": ["Moisture", "Light", "Air quality", "Alert history"],
+      "monetization": "Hardware margin, monitoring fee and data subscription."
+    },
+    {
+      "id": "preserved-green",
+      "label": "Preserved Moss / Bio-based Decor",
+      "stage": "Adjacent category",
+      "status": "adjacent",
+      "fit": "Useful for green interior coverage, but not a living asset unless it has service, proof and renewal obligations.",
+      "signals": ["Condition check", "Dusting log", "Visual proof", "Refresh date"],
+      "monetization": "Project sale, refresh plan and design maintenance."
+    }
+  ],
+  "expansionRoadmap": [
+    {
+      "phase": "01",
+      "label": "Wall Operating System",
+      "status": "ready",
+      "proof": "Control Center already covers service, sensors, incidents, proof, ESG, billing, compliance and reports.",
+      "investorQuestion": "Can one high-value product prove recurring operations and retention?"
+    },
+    {
+      "phase": "02",
+      "label": "Multi-Asset Ledger",
+      "status": "next",
+      "proof": "Abstract wall records into asset type, site, care protocol, health score and service ledger.",
+      "investorQuestion": "Can the same workflow manage pots, clusters, partitions and displays?"
+    },
+    {
+      "phase": "03",
+      "label": "Customer Proof Portal",
+      "status": "next",
+      "proof": "Give clients live access to service proof, ESG summary, renewal value and issue resolution.",
+      "investorQuestion": "Does the platform increase renewal rate and account expansion?"
+    },
+    {
+      "phase": "04",
+      "label": "Living Asset Intelligence",
+      "status": "phase-2",
+      "proof": "Use accumulated health, replacement and route data for risk scoring, demand planning and predictive care.",
+      "investorQuestion": "Does MiniJungle own proprietary operating data?"
+    }
+  ],
+  "investorBenchmarks": [
+    {
+      "company": "MaintainX",
+      "category": "Maintenance and asset management",
+      "signal": "$150M Series D, $2.5B valuation, later Autodesk acquisition announcement",
+      "lesson": "Investors value frontline workflows when asset data, work orders and AI-ready maintenance history compound."
+    },
+    {
+      "company": "Facilio",
+      "category": "Property operations platform",
+      "signal": "$35M Series B led by Dragoneer with Brookfield Growth participation",
+      "lesson": "Property operators pay for a unified layer across CMMS, IoT, sustainability and mobile field execution."
+    },
+    {
+      "company": "Measurabl",
+      "category": "Real estate ESG data",
+      "signal": "$93M Series D with 16B sqft real estate install base",
+      "lesson": "ESG becomes valuable when it connects measured assets, customer reporting and capital-market language."
+    },
+    {
+      "company": "Deepki",
+      "category": "Real estate ESG intelligence",
+      "signal": "EUR150M Series C for ESG data intelligence and net-zero transition",
+      "lesson": "The story should connect operational data to asset value, disclosure readiness and investment planning."
+    },
+    {
+      "company": "Infogrid",
+      "category": "Smart building intelligence",
+      "signal": "$90M Series B for AI-powered building monitoring",
+      "lesson": "Real-time building data wins when it reduces waste, protects service quality and creates sustainability evidence."
+    }
+  ],
   "architectureLayers": [
     {
       "name": "Asset Layer",
-      "items": ["Client", "Site", "Wall", "Module", "Plant Pod", "Xponge Sleeve", "Sensor"]
+      "items": ["Client", "Site", "Asset", "Asset Type", "Module", "Plant Pod", "Xponge Sleeve", "Sensor"]
     },
     {
       "name": "Service Layer",

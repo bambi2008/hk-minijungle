@@ -75,7 +75,15 @@ async function verifyBrowserFlow(baseUrl) {
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.audit-events.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
-    assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
+    assert(title?.includes("MiniJungle Living Asset OS"), "Unexpected main title");
+    const platformStatus = await page.textContent("#platform-status");
+    assert(platformStatus?.includes("expansion classes"), "Platform status did not load expansion scope");
+    const assetScope = await page.textContent("#asset-scope-list");
+    assert(assetScope?.includes("MiniJungle Wall"), "Asset scope did not include Wall wedge");
+    assert(assetScope?.includes("Plant Pod / Pot Rental"), "Asset scope did not include next MiniJungle product class");
+    const benchmarkList = await page.textContent("#investor-benchmark-list");
+    assert(benchmarkList?.includes("MaintainX"), "Investor benchmark mapping did not load MaintainX");
+    assert(benchmarkList?.includes("Measurabl"), "Investor benchmark mapping did not load Measurabl");
 
     const sensorCardBefore = await page.textContent('[data-sensor-card="SNS-021-LIGHT"]');
     assert(sensorCardBefore?.includes("alert"), "Sensor monitor did not load the light alert");

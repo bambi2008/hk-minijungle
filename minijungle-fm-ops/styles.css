@@ -909,11 +909,17 @@ small {
 }
 
 .mvp-readiness,
-.quick-task-card {
+.quick-task-card,
+.asset-scope-card,
+.roadmap-row,
+.benchmark-row {
   cursor: default;
 }
 
 .mvp-readiness.phase-2,
+.asset-scope-card.phase-2,
+.asset-scope-card.adjacent,
+.roadmap-row.phase-2,
 .quick-task-card.high,
 .quick-task-card.medium,
 .quick-task-card.open {
@@ -922,10 +928,45 @@ small {
 }
 
 .mvp-readiness.complete,
+.asset-scope-card.ready,
+.roadmap-row.ready,
 .quick-task-card.closed,
 .quick-task-card.low {
   border-color: rgba(31, 111, 75, 0.3);
   background: #f2f8f3;
+}
+
+.asset-scope-card.next,
+.roadmap-row.next {
+  border-color: rgba(48, 97, 139, 0.25);
+  background: #f1f7fb;
+}
+
+.platform-layout {
+  margin-top: 14px;
+}
+
+#platform-grid {
+  margin-top: 14px;
+}
+
+.benchmark-panel {
+  margin-top: 14px;
+}
+
+.roadmap-row,
+.benchmark-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-soft);
+}
+
+.method-row em {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-style: normal;
+  line-height: 1.45;
 }
 
 .report-client-profile {

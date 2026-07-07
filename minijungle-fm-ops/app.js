@@ -36,6 +36,10 @@ let esgLedger = [];
 let reportModes = [];
 let reportMonths = [];
 let strategyCards = [];
+let platformThesis = [];
+let assetClasses = [];
+let expansionRoadmap = [];
+let investorBenchmarks = [];
 let architectureLayers = [];
 let crewMembers = [];
 let dispatchRoute = [];
@@ -166,6 +170,10 @@ async function loadAppData() {
   reportModes = productModel.reportModes || [];
   reportMonths = productModel.reportMonths || [];
   strategyCards = productModel.strategyCards || [];
+  platformThesis = productModel.platformThesis || [];
+  assetClasses = productModel.assetClasses || [];
+  expansionRoadmap = productModel.expansionRoadmap || [];
+  investorBenchmarks = productModel.investorBenchmarks || [];
   architectureLayers = productModel.architectureLayers || [];
 }
 
@@ -758,6 +766,12 @@ const els = {
   createQuickTaskBtn: document.querySelector("#create-quick-task-btn"),
   quickTaskList: document.querySelector("#quick-task-list"),
   mvpHandoffList: document.querySelector("#mvp-handoff-list"),
+  platformStatus: document.querySelector("#platform-status"),
+  platformThesisGrid: document.querySelector("#platform-thesis-grid"),
+  platformGrid: document.querySelector("#platform-grid"),
+  assetScopeList: document.querySelector("#asset-scope-list"),
+  expansionRoadmapList: document.querySelector("#expansion-roadmap-list"),
+  investorBenchmarkList: document.querySelector("#investor-benchmark-list"),
   strategyGrid: document.querySelector("#strategy-grid"),
   positioningCopy: document.querySelector("#positioning-copy"),
   clientTabs: document.querySelector("#client-tabs"),
@@ -911,7 +925,8 @@ function statusClass(value) {
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
   if (value === "expiring") return "warn";
-  if (value === "phase-2" || value === "open") return "warn";
+  if (value === "phase-2" || value === "open" || value === "adjacent") return "warn";
+  if (value === "next") return "warn";
   if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
   if (value === "resolved") return "good";
   if (value === "cleared") return "good";
@@ -1177,6 +1192,10 @@ function portfolioMetrics() {
   const closedQuickTasks = quickTaskRows.filter((task) => task.status === "closed");
   const completeReadiness = mvpReadiness.filter((item) => item.status === "complete");
   const phaseTwoReadiness = mvpReadiness.filter((item) => item.status === "phase-2");
+  const readyAssetClasses = assetClasses.filter((item) => item.status === "ready");
+  const nextAssetClasses = assetClasses.filter((item) => item.status === "next");
+  const phaseTwoAssetClasses = assetClasses.filter((item) => item.status === "phase-2");
+  const adjacentAssetClasses = assetClasses.filter((item) => item.status === "adjacent");
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -1220,6 +1239,10 @@ function portfolioMetrics() {
     closedQuickTasks,
     completeReadiness,
     phaseTwoReadiness,
+    readyAssetClasses,
+    nextAssetClasses,
+    phaseTwoAssetClasses,
+    adjacentAssetClasses,
     reportReadiness
   };
 }
@@ -1335,17 +1358,17 @@ function renderStatCards(container, cards, className = "stat-card") {
 function renderOverview() {
   const data = portfolioMetrics();
   renderStatCards(els.summaryGrid, [
-    { label: "Active clients", value: data.activeClients, detail: `${data.activeWalls} walls under FM care` },
+    { label: "Active clients", value: data.activeClients, detail: `${data.activeWalls} Wall assets under FM care` },
     { label: "Portfolio health", value: data.health, detail: `${data.survival}% plant survival rate` },
     { label: "SLA incidents", value: data.openIncidents.length, detail: `${data.criticalIncidents.length} critical incident(s), ${data.sensorAlerts} sensor alert(s)` },
     { label: "Managed value", value: formatCurrency(data.revenue), detail: `${formatCurrency(data.outstandingAmount)} open AR` }
   ]);
 
   els.proofStrip.innerHTML = [
-    ["Green wall area", `${data.greenArea.toFixed(1)} m2`],
+    ["Living asset classes", `${assetClasses.length} mapped`],
+    ["Wall green area", `${data.greenArea.toFixed(1)} m2`],
     ["Water-saving estimate", `${data.waterSaved} L/mo`],
-    ["Wellness reach", `${data.staffReach} people/mo`],
-    ["Compliance blockers", data.blockedComplianceItems.length]
+    ["Wellness reach", `${data.staffReach} people/mo`]
   ].map(([label, value]) => `
     <div>
       <span>${label}</span>
@@ -1381,6 +1404,65 @@ function renderOverview() {
       </button>
     `;
   }).join("");
+}
+
+function renderPlatform() {
+  const data = portfolioMetrics();
+  const readyCount = data.readyAssetClasses.length;
+  const nextCount = data.nextAssetClasses.length;
+
+  els.platformStatus.textContent = `${readyCount} MVP asset class, ${nextCount} expansion classes`;
+  els.platformStatus.classList.toggle("good", readyCount > 0 && nextCount >= 3);
+
+  renderStatCards(els.platformGrid, [
+    { label: "Platform scope", value: assetClasses.length, detail: "Living and adjacent green asset classes mapped" },
+    { label: "Wall wedge", value: data.activeWalls, detail: "Current MVP assets with real service, proof and ESG data" },
+    { label: "Expansion runway", value: nextCount, detail: "Product families that can reuse the same operating ledger" },
+    { label: "Investor comps", value: investorBenchmarks.length, detail: "Funding cases mapped into product lessons" }
+  ]);
+
+  els.assetScopeList.innerHTML = assetClasses.map((asset) => `
+    <article class="list-item asset-scope-card ${asset.status}" data-asset-scope="${asset.id}">
+      <div class="item-row">
+        <strong>${asset.label}</strong>
+        <span class="tag ${statusClass(asset.status)}">${asset.stage}</span>
+      </div>
+      <span>${asset.fit}</span>
+      <small>${asset.signals.join(" / ")}</small>
+      <small>${asset.monetization}</small>
+    </article>
+  `).join("");
+
+  els.expansionRoadmapList.innerHTML = expansionRoadmap.map((phase) => `
+    <article class="method-row roadmap-row ${phase.status}" data-expansion-phase="${phase.phase}">
+      <span>${phase.phase} - ${phase.label}</span>
+      <strong>${phase.proof}</strong>
+      <em>${phase.investorQuestion}</em>
+    </article>
+  `).join("");
+
+  els.investorBenchmarkList.innerHTML = investorBenchmarks.map((item) => `
+    <article class="method-row benchmark-row">
+      <span>${item.company} - ${item.category}</span>
+      <strong>${item.signal}</strong>
+      <em>${item.lesson}</em>
+    </article>
+  `).join("");
+
+  const thesisCards = platformThesis.length ? platformThesis : [
+    {
+      title: "Investor thesis",
+      value: "Living Asset OS",
+      body: "Wall proves the operating model first, then the same ledger expands across MiniJungle products."
+    }
+  ];
+  els.platformThesisGrid.innerHTML = thesisCards.map((card) => `
+    <article class="strategy-card">
+      <span>${card.title}</span>
+      <strong>${card.value}</strong>
+      <p>${card.body}</p>
+    </article>
+  `).join("");
 }
 
 function renderMvpControl() {
@@ -1478,7 +1560,7 @@ function renderPositioning() {
     </article>
   `).join("");
 
-  els.positioningCopy.textContent = "MiniJungle FM Ops sits between smart green wall services, field service management, IoT monitoring and ESG reporting. The product promise is not full automation. It is verified service quality: every wall has an owner, every visit has proof, every plant issue has a follow-up, and every ESG statement has a method note.";
+  els.positioningCopy.textContent = "MiniJungle FM Ops sits between living asset rental, field service management, IoT monitoring and ESG reporting. Wall is the first proof point, but the operating model extends to pots, plant clusters, green partitions, seasonal displays and future smart planters. The product promise is verified service quality: every asset has an owner, every visit has proof, every plant issue has a follow-up, and every ESG statement has a method note.";
 }
 
 function renderClients() {
@@ -2565,6 +2647,7 @@ function bindDynamicActions() {
 function renderAll() {
   renderOverview();
   renderMvpControl();
+  renderPlatform();
   renderPositioning();
   renderClients();
   renderCommercial();
