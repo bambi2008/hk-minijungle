@@ -642,6 +642,35 @@ small {
   margin-top: 12px;
 }
 
+.audit-card {
+  cursor: default;
+}
+
+.audit-card.ready,
+.audit-card.completed,
+.audit-card.approved,
+.audit-card.acknowledged,
+.audit-card.requested {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
+}
+
+.audit-card.review,
+.audit-card.watch {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.audit-card.alert,
+.audit-card.danger {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.audit-layout .method-list {
+  margin-top: 12px;
+}
+
 .positioning-panel {
   display: grid;
   grid-template-columns: minmax(240px, 0.45fr) 1fr;

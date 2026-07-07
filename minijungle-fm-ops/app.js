@@ -8,6 +8,7 @@ const dataFiles = {
   proof: "data/proof.json",
   sensors: "data/sensors.json",
   supply: "data/supply.json",
+  audit: "data/audit.json",
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json"
 };
@@ -35,17 +36,21 @@ let sensorReadings = [];
 let sensorRules = [];
 let supplyItems = [];
 let supplyPolicies = [];
+let auditBaselineEvents = [];
+let auditControls = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
 let sensorAcknowledgements = {};
 let supplyRequests = {};
+let auditEvents = [];
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
 const dispatchStagingStorageKey = "minijungle-fm-ops.dispatch-staging.v1";
 const proofApprovalStorageKey = "minijungle-fm-ops.proof-approvals.v1";
 const sensorAcknowledgementStorageKey = "minijungle-fm-ops.sensor-acknowledgements.v1";
 const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
+const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -64,6 +69,7 @@ async function loadAppData() {
     proofData,
     sensorData,
     supplyData,
+    auditData,
     esgMetrics,
     productModel
   ] = await Promise.all([
@@ -76,6 +82,7 @@ async function loadAppData() {
     loadJson(dataFiles.proof),
     loadJson(dataFiles.sensors),
     loadJson(dataFiles.supply),
+    loadJson(dataFiles.audit),
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel)
   ]);
@@ -96,6 +103,8 @@ async function loadAppData() {
   sensorRules = sensorData.rules || [];
   supplyItems = supplyData.items || [];
   supplyPolicies = supplyData.policies || [];
+  auditBaselineEvents = auditData.baselineEvents || [];
+  auditControls = auditData.controls || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -173,6 +182,18 @@ function saveSupplyRequests() {
   localStorage.setItem(supplyRequestStorageKey, JSON.stringify(supplyRequests));
 }
 
+function loadAuditEvents() {
+  try {
+    auditEvents = JSON.parse(localStorage.getItem(auditEventStorageKey) || "[]");
+  } catch {
+    auditEvents = [];
+  }
+}
+
+function saveAuditEvents() {
+  localStorage.setItem(auditEventStorageKey, JSON.stringify(auditEvents));
+}
+
 function isWorkorderCompleted(id) {
   return Boolean(workorderCompletions[id]);
 }
@@ -197,6 +218,48 @@ function isSupplyRequested(sku) {
   return Boolean(supplyRequests[sku]);
 }
 
+function clientIdForWorkorder(id) {
+  const order = workorders.find((item) => item.id === id);
+  if (!order) return null;
+  return wallById(order.wallId)?.clientId || null;
+}
+
+function clientIdForProof(id) {
+  const record = proofRecords.find((item) => item.id === id);
+  if (!record) return null;
+  return wallById(record.wallId)?.clientId || null;
+}
+
+function clientIdForSensor(id) {
+  const reading = sensorReadings.find((item) => item.id === id);
+  if (!reading) return null;
+  return wallById(reading.wallId)?.clientId || null;
+}
+
+function allAuditEvents() {
+  return [...auditEvents, ...auditBaselineEvents]
+    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+}
+
+function auditEventsForClient(clientId) {
+  return allAuditEvents().filter((event) => event.clientId === clientId);
+}
+
+function recordAuditEvent(event) {
+  auditEvents = [{
+    id: `AUD-${Date.now()}-${Math.round(Math.random() * 1000)}`,
+    timestamp: new Date().toISOString(),
+    actor: event.actor || "FM Ops",
+    action: event.action,
+    entityType: event.entityType,
+    entityId: event.entityId,
+    clientId: event.clientId || null,
+    tone: event.tone || "ready",
+    detail: event.detail
+  }, ...auditEvents].slice(0, 80);
+  saveAuditEvents();
+}
+
 function workorderView(order) {
   const completion = workorderCompletions[order.id] || null;
   return {
@@ -215,6 +278,15 @@ function completeWorkorder(id) {
       proof: "Visit tasks completed and ready for report evidence."
     };
     saveWorkorderCompletions();
+    recordAuditEvent({
+      actor: "FM Ops demo",
+      action: "Work order completed",
+      entityType: "workorder",
+      entityId: id,
+      clientId: clientIdForWorkorder(id),
+      tone: "completed",
+      detail: "Service visit marked complete and report evidence can reference the closure."
+    });
   }
   state.reportGenerated = false;
   renderAll();
@@ -227,6 +299,15 @@ function stageDispatchKit(id) {
       stagedBy: "Dispatch desk"
     };
     saveDispatchStaging();
+    recordAuditEvent({
+      actor: "Dispatch desk",
+      action: "Dispatch kit staged",
+      entityType: "workorder",
+      entityId: id,
+      clientId: clientIdForWorkorder(id),
+      tone: "ready",
+      detail: "Technician kit staged for route handoff."
+    });
   }
   renderAll();
 }
@@ -238,6 +319,15 @@ function approveProofRecord(id) {
       approvedBy: "Evidence desk"
     };
     saveProofApprovals();
+    recordAuditEvent({
+      actor: "Evidence desk",
+      action: "Proof approved",
+      entityType: "proof",
+      entityId: id,
+      clientId: clientIdForProof(id),
+      tone: "approved",
+      detail: "Evidence record approved for client-facing report use."
+    });
   }
   state.reportGenerated = false;
   renderAll();
@@ -250,6 +340,15 @@ function acknowledgeSensorAlert(id) {
       acknowledgedBy: "FM control"
     };
     saveSensorAcknowledgements();
+    recordAuditEvent({
+      actor: "FM control",
+      action: "Sensor alert acknowledged",
+      entityType: "sensor",
+      entityId: id,
+      clientId: clientIdForSensor(id),
+      tone: "acknowledged",
+      detail: "Telemetry exception acknowledged by operations control."
+    });
   }
   renderAll();
 }
@@ -261,6 +360,15 @@ function requestSupplyReorder(sku) {
       requestedBy: "Dispatch desk"
     };
     saveSupplyRequests();
+    recordAuditEvent({
+      actor: "Dispatch desk",
+      action: "Supply reorder requested",
+      entityType: "supply",
+      entityId: sku,
+      clientId: null,
+      tone: "requested",
+      detail: "Stock replenishment request raised for service continuity."
+    });
   }
   renderAll();
 }
@@ -269,6 +377,15 @@ function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
   state.reportGenerated = false;
+  recordAuditEvent({
+    actor: "Account lead",
+    action: "Renewal proof pack prepared",
+    entityType: "client",
+    entityId: clientId,
+    clientId,
+    tone: "ready",
+    detail: "Report center switched to Renewal Proof mode for the account."
+  });
   renderAll();
   document.querySelector("#reports").scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -325,6 +442,10 @@ const els = {
   proofGrid: document.querySelector("#proof-grid"),
   proofRecordList: document.querySelector("#proof-record-list"),
   proofRequirementList: document.querySelector("#proof-requirement-list"),
+  auditStatus: document.querySelector("#audit-status"),
+  auditGrid: document.querySelector("#audit-grid"),
+  auditEventList: document.querySelector("#audit-event-list"),
+  auditControlList: document.querySelector("#audit-control-list"),
   esgGrid: document.querySelector("#esg-grid"),
   esgBars: document.querySelector("#esg-bars"),
   esgMethods: document.querySelector("#esg-methods"),
@@ -528,6 +649,7 @@ function metricsForClient(clientId) {
   const proofGaps = clientProofRecords.filter((record) => !proofRecordReady(record));
   const clientSensorReadings = sensorReadings.filter((reading) => clientWalls.some((wall) => wall.id === reading.wallId));
   const openSensorAlerts = clientSensorReadings.filter(sensorNeedsAction);
+  const clientAuditEvents = auditEventsForClient(clientId);
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -550,6 +672,7 @@ function metricsForClient(clientId) {
     proofGaps,
     sensorReadings: clientSensorReadings,
     openSensorAlerts,
+    auditEvents: clientAuditEvents,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1064,6 +1187,45 @@ function renderProof() {
   `).join("");
 }
 
+function renderAudit() {
+  const events = allAuditEvents();
+  const localCount = auditEvents.length;
+  const clientLinked = events.filter((event) => event.clientId).length;
+  const reviewEvents = events.filter((event) => event.tone === "review" || event.tone === "alert").length;
+  const latest = events[0];
+
+  els.auditStatus.textContent = latest ? `Latest: ${latest.action}` : "No audit events yet";
+  els.auditStatus.classList.toggle("good", localCount > 0);
+  renderStatCards(els.auditGrid, [
+    { label: "Audit events", value: events.length, detail: `${localCount} local control action(s)` },
+    { label: "Client-linked", value: clientLinked, detail: "Events available for client reports" },
+    { label: "Review signals", value: reviewEvents, detail: "Events that need management attention" },
+    { label: "Control rules", value: auditControls.length, detail: "Traceability rules in force" }
+  ]);
+
+  els.auditEventList.innerHTML = events.map((event) => {
+    const client = event.clientId ? clients.find((item) => item.id === event.clientId) : null;
+    return `
+      <div class="list-item audit-card ${event.tone}" data-audit-event="${event.id}">
+        <div class="item-row">
+          <strong>${event.action}</strong>
+          <span class="tag ${statusClass(event.tone)}">${event.entityType}</span>
+        </div>
+        <span>${event.actor} - ${new Date(event.timestamp).toLocaleString("en-HK")}</span>
+        <small>${client ? `${client.name} - ` : ""}${event.entityId}</small>
+        <small>${event.detail}</small>
+      </div>
+    `;
+  }).join("");
+
+  els.auditControlList.innerHTML = auditControls.map((control) => `
+    <div class="method-row">
+      <span>${control.label}</span>
+      <strong>${control.rule}</strong>
+    </div>
+  `).join("");
+}
+
 function fillEsgTemplate(template, data) {
   return template
     .replaceAll("{{greenArea}}", data.greenArea.toFixed(1))
@@ -1148,7 +1310,8 @@ function renderReports() {
     ["Completed work orders", data.completedWorkorders.length],
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
-    ["Sensor alerts", data.openSensorAlerts.length]
+    ["Sensor alerts", data.openSensorAlerts.length],
+    ["Audit events", data.auditEvents.length]
   ].map(([label, value]) => `
     <div class="report-metric">
       <span>${label}</span>
@@ -1164,7 +1327,8 @@ function renderReports() {
     `${data.openWorkorders.length} open or scheduled work order(s)`,
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
-    `${data.openSensorAlerts.length} open sensor alert(s)`
+    `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${data.auditEvents.length} client-linked audit event(s)`
   ];
   els.reportEvidence.innerHTML = evidence.map((item) => `
     <div class="evidence-card">
@@ -1193,7 +1357,8 @@ function buildReportHtml() {
     `${data.openWorkorders.length} open or scheduled work order(s)`,
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
-    `${data.openSensorAlerts.length} open sensor alert(s)`
+    `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${data.auditEvents.length} client-linked audit event(s)`
   ];
   const metricRows = [
     ["Health score", data.health],
@@ -1207,7 +1372,8 @@ function buildReportHtml() {
     ["Completed work orders", data.completedWorkorders.length],
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
-    ["Sensor alerts", data.openSensorAlerts.length]
+    ["Sensor alerts", data.openSensorAlerts.length],
+    ["Audit events", data.auditEvents.length]
   ];
 
   return `<!doctype html>
@@ -1263,7 +1429,16 @@ function downloadReportHtml() {
   link.remove();
   URL.revokeObjectURL(url);
   state.reportGenerated = true;
-  renderReports();
+  recordAuditEvent({
+    actor: "ESG desk",
+    action: "HTML report exported",
+    entityType: "report",
+    entityId: `${client.id}-${period.id}`,
+    clientId: client.id,
+    tone: "ready",
+    detail: "Client-scoped HTML report was exported from Report Center."
+  });
+  renderAll();
 }
 
 function renderArchitecture() {
@@ -1354,6 +1529,7 @@ function renderAll() {
   renderSupply();
   renderProof();
   renderEsg();
+  renderAudit();
   renderReports();
   renderArchitecture();
   bindDynamicActions();
@@ -1361,6 +1537,15 @@ function renderAll() {
 
 els.simulateVisitBtn.addEventListener("click", () => {
   state.simulatedVisits += 1;
+  recordAuditEvent({
+    actor: "FM Ops demo",
+    action: "Portfolio visit simulated",
+    entityType: "portfolio",
+    entityId: "visit-simulation",
+    clientId: null,
+    tone: "completed",
+    detail: "Demo visit completion adjusted portfolio health and issue counts."
+  });
   els.syncStatus.textContent = `Synced just now after ${state.simulatedVisits} completed visit${state.simulatedVisits > 1 ? "s" : ""}`;
   renderAll();
 });
@@ -1381,6 +1566,15 @@ els.generateReportBtn.addEventListener("click", () => {
   state.reportGenerated = true;
   state.reportMode = "monthly";
   state.selectedReportClientId = state.selectedClientId || state.selectedReportClientId;
+  recordAuditEvent({
+    actor: "ESG desk",
+    action: "ESG pack generated",
+    entityType: "report",
+    entityId: state.reportMode,
+    clientId: state.selectedReportClientId,
+    tone: "ready",
+    detail: "Report center marked the ESG pack as generated."
+  });
   renderReports();
   document.querySelector("#reports").scrollIntoView({ behavior: "smooth", block: "start" });
 });
@@ -1408,6 +1602,7 @@ async function bootstrap() {
     loadProofApprovals();
     loadSensorAcknowledgements();
     loadSupplyRequests();
+    loadAuditEvents();
     initializeSelection();
     renderAll();
   } catch (error) {

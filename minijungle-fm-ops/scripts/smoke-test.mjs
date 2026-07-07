@@ -66,6 +66,7 @@ async function verifyBrowserFlow(baseUrl) {
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.proof-approvals.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.sensor-acknowledgements.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.supply-requests.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.audit-events.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
     assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
@@ -76,6 +77,8 @@ async function verifyBrowserFlow(baseUrl) {
     await page.waitForTimeout(150);
     const sensorCardAfter = await page.textContent('[data-sensor-card="SNS-021-LIGHT"]');
     assert(sensorCardAfter?.includes("Acknowledged"), "Acknowledging sensor alert did not update sensor card");
+    const sensorAudit = await page.textContent("#audit-event-list");
+    assert(sensorAudit?.includes("Sensor alert acknowledged"), "Sensor acknowledgement did not create audit event");
 
     const supplyCardBefore = await page.textContent('[data-supply-card="NUT-A"]');
     assert(supplyCardBefore?.includes("Reorder now"), "Inventory control did not flag low nutrient stock");
@@ -83,6 +86,8 @@ async function verifyBrowserFlow(baseUrl) {
     await page.waitForTimeout(150);
     const supplyCardAfter = await page.textContent('[data-supply-card="NUT-A"]');
     assert(supplyCardAfter?.includes("Reorder requested"), "Requesting reorder did not update supply card");
+    const supplyAudit = await page.textContent("#audit-event-list");
+    assert(supplyAudit?.includes("Supply reorder requested"), "Supply reorder did not create audit event");
 
     const proofCardBefore = await page.textContent('[data-proof-card="PRF-1047"]');
     assert(proofCardBefore?.includes("Needs review"), "Proof vault did not load review state");
@@ -138,6 +143,11 @@ async function verifyBrowserFlow(baseUrl) {
       .filter({ hasText: "Approved proof" })
       .textContent();
     assert(approvedProofMetric?.includes("1"), "Approved proof metric did not update");
+    const auditMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Audit events" })
+      .textContent();
+    assert(auditMetric?.includes("5"), "Client-linked audit event metric did not update");
 
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-report-btn");
@@ -190,6 +200,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/proof.json", "application/json");
     await verifyResource(baseUrl, "/data/sensors.json", "application/json");
     await verifyResource(baseUrl, "/data/supply.json", "application/json");
+    await verifyResource(baseUrl, "/data/audit.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);

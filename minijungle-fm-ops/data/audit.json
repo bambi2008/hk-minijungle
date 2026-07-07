@@ -1,0 +1,40 @@
+{
+  "baselineEvents": [
+    {
+      "id": "AUD-BASE-001",
+      "timestamp": "2026-07-07T08:30:00.000Z",
+      "actor": "System sync",
+      "action": "Portfolio data synchronized",
+      "entityType": "portfolio",
+      "entityId": "hk-fm",
+      "clientId": null,
+      "tone": "ready",
+      "detail": "Morning sync loaded client, wall, work order, ESG and commercial records."
+    },
+    {
+      "id": "AUD-BASE-002",
+      "timestamp": "2026-07-07T08:32:00.000Z",
+      "actor": "FM control",
+      "action": "Daily risk queue reviewed",
+      "entityType": "risk",
+      "entityId": "daily-risk",
+      "clientId": null,
+      "tone": "review",
+      "detail": "Risk queue includes low-light, water swing and gateway heartbeat exceptions."
+    }
+  ],
+  "controls": [
+    {
+      "label": "Action trace",
+      "rule": "Every operational control action creates a timestamped audit event."
+    },
+    {
+      "label": "Client evidence",
+      "rule": "Report exports include audit event counts for the selected client."
+    },
+    {
+      "label": "Review discipline",
+      "rule": "Sensor alerts, proof approval, stock reorder and work order closure must be attributable."
+    }
+  ]
+}
