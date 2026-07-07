@@ -1,0 +1,70 @@
+{
+  "today": "2026-07-07",
+  "accounts": [
+    {
+      "clientId": "central-office",
+      "owner": "Mia Lau",
+      "renewalStage": "Proof building",
+      "nextTouch": "Send June ESG pack before Aug tenant review",
+      "responseTargetHours": 48,
+      "targetHealth": 88,
+      "targetSurvival": 94,
+      "visitsPerMonth": 2,
+      "proofPackDue": "2026-09-30",
+      "qbrDate": "2026-08-15"
+    },
+    {
+      "clientId": "wellness-clinic",
+      "owner": "Jason Ng",
+      "renewalStage": "Service recovery",
+      "nextTouch": "Confirm yellowing recovery after next care visit",
+      "responseTargetHours": 36,
+      "targetHealth": 86,
+      "targetSurvival": 93,
+      "visitsPerMonth": 2,
+      "proofPackDue": "2026-08-16",
+      "qbrDate": "2026-08-01"
+    },
+    {
+      "clientId": "show-suite",
+      "owner": "Mia Lau",
+      "renewalStage": "Executive save plan",
+      "nextTouch": "Stage renewal proof pack after high-priority follow-up",
+      "responseTargetHours": 24,
+      "targetHealth": 88,
+      "targetSurvival": 94,
+      "visitsPerMonth": 4,
+      "proofPackDue": "2026-07-25",
+      "qbrDate": "2026-07-28"
+    },
+    {
+      "clientId": "members-club",
+      "owner": "Jason Ng",
+      "renewalStage": "Expansion watch",
+      "nextTouch": "Offer second-wall concept after showcase prep",
+      "responseTargetHours": 48,
+      "targetHealth": 87,
+      "targetSurvival": 94,
+      "visitsPerMonth": 1,
+      "proofPackDue": "2026-10-25",
+      "qbrDate": "2026-09-20"
+    }
+  ],
+  "playbook": [
+    {
+      "trigger": "Renewal under 60 days",
+      "action": "Prepare Renewal Proof report and schedule account owner call",
+      "owner": "Account lead"
+    },
+    {
+      "trigger": "Health below SLA target",
+      "action": "Link open work orders to the renewal save plan",
+      "owner": "FM lead"
+    },
+    {
+      "trigger": "High-value client with proof due",
+      "action": "Attach ESG method notes and before/after photo evidence",
+      "owner": "ESG desk"
+    }
+  ]
+}

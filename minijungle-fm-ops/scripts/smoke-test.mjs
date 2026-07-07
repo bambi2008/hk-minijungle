@@ -67,6 +67,14 @@ async function verifyBrowserFlow(baseUrl) {
     const title = await page.textContent("h1");
     assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
 
+    const commercialCard = await page.textContent('[data-commercial-card="show-suite"]');
+    assert(commercialCard?.includes("Save plan"), "Commercial desk did not flag show suite renewal risk");
+    await page.click('[data-renewal-pack="show-suite"]');
+    await page.waitForTimeout(150);
+    const renewalTitle = await page.textContent("#report-title");
+    assert(renewalTitle?.includes("Property Show Suite"), "Renewal pack action did not select the client");
+    assert(renewalTitle?.includes("Renewal Value"), "Renewal pack action did not select renewal report mode");
+
     await page.click("#generate-report-btn");
     await page.waitForTimeout(150);
     const reportStatus = await page.textContent("#report-status");
@@ -149,6 +157,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/workorders.json", "application/json");
     await verifyResource(baseUrl, "/data/diagnoses.json", "application/json");
     await verifyResource(baseUrl, "/data/dispatch.json", "application/json");
+    await verifyResource(baseUrl, "/data/commercial.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);

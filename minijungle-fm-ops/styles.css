@@ -519,6 +519,53 @@ small {
   margin-top: 12px;
 }
 
+.commercial-card,
+.sla-row {
+  cursor: default;
+}
+
+.commercial-card.high,
+.sla-row.high {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.commercial-card.medium,
+.sla-row.medium {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.commercial-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.commercial-meta div {
+  border-radius: 8px;
+  padding: 8px;
+  background: var(--surface-soft);
+}
+
+.commercial-meta strong,
+.sla-row strong {
+  display: block;
+}
+
+.sla-row {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: #fbfcfa;
+}
+
+.commercial-layout .method-list {
+  margin-top: 12px;
+}
+
 .positioning-panel {
   display: grid;
   grid-template-columns: minmax(240px, 0.45fr) 1fr;
@@ -781,6 +828,7 @@ small {
   .report-metrics,
   .report-client-profile,
   .detail-grid,
+  .commercial-meta,
   .proof-strip,
   .two-col,
   .workbench,

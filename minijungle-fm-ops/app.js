@@ -4,6 +4,7 @@ const dataFiles = {
   workorders: "data/workorders.json",
   diagnoses: "data/diagnoses.json",
   dispatch: "data/dispatch.json",
+  commercial: "data/commercial.json",
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json"
 };
@@ -22,6 +23,9 @@ let architectureLayers = [];
 let crewMembers = [];
 let dispatchRoute = [];
 let dispatchInventory = [];
+let commercialToday = "2026-07-07";
+let commercialAccounts = [];
+let commercialPlaybook = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 
@@ -35,12 +39,13 @@ async function loadJson(path) {
 }
 
 async function loadAppData() {
-  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, dispatchData, esgMetrics, productModel] = await Promise.all([
+  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, dispatchData, commercialData, esgMetrics, productModel] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
     loadJson(dataFiles.workorders),
     loadJson(dataFiles.diagnoses),
     loadJson(dataFiles.dispatch),
+    loadJson(dataFiles.commercial),
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel)
   ]);
@@ -52,6 +57,9 @@ async function loadAppData() {
   crewMembers = dispatchData.crew || [];
   dispatchRoute = dispatchData.route || [];
   dispatchInventory = dispatchData.inventory || [];
+  commercialToday = commercialData.today || commercialToday;
+  commercialAccounts = commercialData.accounts || [];
+  commercialPlaybook = commercialData.playbook || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -135,6 +143,14 @@ function stageDispatchKit(id) {
   renderAll();
 }
 
+function prepareRenewalPack(clientId) {
+  state.selectedReportClientId = clientId;
+  state.reportMode = "renewal";
+  state.reportGenerated = false;
+  renderAll();
+  document.querySelector("#reports").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 const state = {
   simulatedVisits: 0,
   filter: "all",
@@ -158,6 +174,11 @@ const els = {
   clientDetailTitle: document.querySelector("#client-detail-title"),
   clientDetailStatus: document.querySelector("#client-detail-status"),
   clientDetail: document.querySelector("#client-detail"),
+  commercialStatus: document.querySelector("#commercial-status"),
+  commercialGrid: document.querySelector("#commercial-grid"),
+  renewalList: document.querySelector("#renewal-list"),
+  slaList: document.querySelector("#sla-list"),
+  successPlaybook: document.querySelector("#success-playbook"),
   wallGrid: document.querySelector("#wall-grid"),
   wallDetailTitle: document.querySelector("#wall-detail-title"),
   wallDetailStatus: document.querySelector("#wall-detail-status"),
@@ -234,6 +255,19 @@ function selectedReportMonth() {
   return reportMonths.find((month) => month.id === state.selectedReportMonth) || reportMonths[0];
 }
 
+function commercialAccountFor(clientId) {
+  return commercialAccounts.find((account) => account.clientId === clientId);
+}
+
+function dateValue(dateText) {
+  const [year, month, day] = dateText.split("-").map(Number);
+  return Date.UTC(year, month - 1, day);
+}
+
+function daysUntil(dateText) {
+  return Math.round((dateValue(dateText) - dateValue(commercialToday)) / 86400000);
+}
+
 function riskLabel(level) {
   if (level === "high") return "High risk";
   if (level === "medium") return "Watch";
@@ -245,6 +279,36 @@ function statusClass(value) {
   if (value === "watch" || value === "medium") return "warn";
   if (value === "completed") return "good";
   return "";
+}
+
+function commercialTone(view) {
+  if (
+    view.client.renewalRisk === "high" ||
+    view.daysToRenewal <= 60 ||
+    view.healthGap > 0 ||
+    view.data.openWorkorders.length > 0 && view.daysToProof <= 45
+  ) return "high";
+  if (view.client.renewalRisk === "medium" || view.daysToRenewal <= 90 || view.data.openWorkorders.length > 0) return "medium";
+  return "low";
+}
+
+function commercialView(client) {
+  const account = commercialAccountFor(client.id);
+  const data = metricsForClient(client.id);
+  const daysToRenewal = daysUntil(client.renewalDate);
+  const daysToProof = account ? daysUntil(account.proofPackDue) : daysToRenewal - 30;
+  const healthGap = account ? Math.max(0, account.targetHealth - data.health) : 0;
+  const view = {
+    client,
+    account,
+    data,
+    daysToRenewal,
+    daysToProof,
+    healthGap
+  };
+  view.tone = commercialTone(view);
+  view.priorityLabel = view.tone === "high" ? "Save plan" : view.tone === "medium" ? "Watch" : "On track";
+  return view;
 }
 
 function portfolioMetrics() {
@@ -420,6 +484,65 @@ function renderClients() {
     ["Proof need", client.proofNeed],
     ["Walls", `${clientWalls.length} wall(s), ${sum(clientWalls, (wall) => wall.pods)} Plant Pods`]
   ].map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join("");
+}
+
+function renderCommercial() {
+  const severity = { high: 0, medium: 1, low: 2 };
+  const views = clients
+    .map(commercialView)
+    .sort((a, b) => severity[a.tone] - severity[b.tone] || a.daysToRenewal - b.daysToRenewal);
+  const riskViews = views.filter((view) => view.tone === "high");
+  const renewalWindow = views.filter((view) => view.daysToRenewal <= 90);
+  const slaExceptions = views.filter((view) => view.healthGap > 0 || view.data.openWorkorders.length > 0);
+  const proofDue = views.filter((view) => view.daysToProof <= 45);
+  const revenueAtRisk = sum(riskViews, (view) => view.client.revenue);
+
+  els.commercialStatus.textContent = `${riskViews.length} save plan account(s), ${renewalWindow.length} renewal window`;
+  els.commercialStatus.classList.toggle("good", riskViews.length === 0);
+  renderStatCards(els.commercialGrid, [
+    { label: "Revenue at risk", value: formatCurrency(revenueAtRisk), detail: "Setup and recurring value under save plan" },
+    { label: "Renewal window", value: renewalWindow.length, detail: "Accounts renewing in 90 days" },
+    { label: "SLA exceptions", value: slaExceptions.length, detail: "Health gaps or open work orders" },
+    { label: "Proof packs due", value: proofDue.length, detail: "Client evidence due in 45 days" }
+  ]);
+
+  els.renewalList.innerHTML = views.map((view) => `
+    <div class="list-item commercial-card ${view.tone}" data-commercial-card="${view.client.id}">
+      <div class="item-row">
+        <strong>${view.client.name}</strong>
+        <span class="tag ${statusClass(view.tone)}">${view.priorityLabel}</span>
+      </div>
+      <span>${view.account.owner} - ${view.account.renewalStage} - renewal in ${view.daysToRenewal} days</span>
+      <small>${view.account.nextTouch}</small>
+      <div class="commercial-meta">
+        <div><span>Revenue</span><strong>${formatCurrency(view.client.revenue)}</strong></div>
+        <div><span>Proof due</span><strong>${view.daysToProof} days</strong></div>
+        <div><span>QBR</span><strong>${view.account.qbrDate}</strong></div>
+      </div>
+      <div class="workorder-actions">
+        <button type="button" class="mini-action" data-client-select="${view.client.id}">View account</button>
+        <button type="button" class="mini-action primary" data-renewal-pack="${view.client.id}">Prepare renewal pack</button>
+      </div>
+    </div>
+  `).join("");
+
+  els.slaList.innerHTML = views.map((view) => `
+    <div class="sla-row ${view.tone}" data-sla-card="${view.client.id}">
+      <div class="item-row">
+        <strong>${view.client.name}</strong>
+        <span class="tag ${statusClass(view.tone)}">${view.data.health}/${view.account.targetHealth} health</span>
+      </div>
+      <span>${view.account.visitsPerMonth} visit(s)/mo - ${view.account.responseTargetHours}h response target</span>
+      <small>${view.data.openWorkorders.length} open work order(s) - ${view.data.issues} open issue(s) - ${view.data.survival}% survival</small>
+    </div>
+  `).join("");
+
+  els.successPlaybook.innerHTML = commercialPlaybook.map((item) => `
+    <div class="method-row">
+      <span>${item.trigger}</span>
+      <strong>${item.action} - ${item.owner}</strong>
+    </div>
+  `).join("");
 }
 
 function podClass(zone) {
@@ -849,12 +972,19 @@ function bindDynamicActions() {
       stageDispatchKit(button.dataset.stageDispatch);
     });
   });
+
+  document.querySelectorAll("[data-renewal-pack]").forEach((button) => {
+    button.addEventListener("click", () => {
+      prepareRenewalPack(button.dataset.renewalPack);
+    });
+  });
 }
 
 function renderAll() {
   renderOverview();
   renderPositioning();
   renderClients();
+  renderCommercial();
   renderWalls();
   renderService();
   renderDispatch();
