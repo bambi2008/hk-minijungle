@@ -566,6 +566,35 @@ small {
   margin-top: 12px;
 }
 
+.proof-card {
+  cursor: default;
+}
+
+.proof-card.ready,
+.proof-card.approved {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
+}
+
+.proof-card.review {
+  border-color: rgba(166, 121, 34, 0.3);
+  background: #fffaf0;
+}
+
+.proof-card.missing {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.proof-requirement small {
+  display: block;
+  margin-top: 4px;
+}
+
+.proof-layout .method-list {
+  margin-top: 12px;
+}
+
 .positioning-panel {
   display: grid;
   grid-template-columns: minmax(240px, 0.45fr) 1fr;

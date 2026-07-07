@@ -63,9 +63,17 @@ async function verifyBrowserFlow(baseUrl) {
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.workorder-completions.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.dispatch-staging.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.proof-approvals.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
     assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
+
+    const proofCardBefore = await page.textContent('[data-proof-card="PRF-1047"]');
+    assert(proofCardBefore?.includes("Needs review"), "Proof vault did not load review state");
+    await page.click('[data-approve-proof="PRF-1047"]');
+    await page.waitForTimeout(150);
+    const proofCardAfter = await page.textContent('[data-proof-card="PRF-1047"]');
+    assert(proofCardAfter?.includes("Approved"), "Approving proof did not update proof card");
 
     const commercialCard = await page.textContent('[data-commercial-card="show-suite"]');
     assert(commercialCard?.includes("Save plan"), "Commercial desk did not flag show suite renewal risk");
@@ -109,6 +117,11 @@ async function verifyBrowserFlow(baseUrl) {
       .filter({ hasText: "Completed work orders" })
       .textContent();
     assert(completedMetric?.includes("1"), "Completed work order metric did not update");
+    const approvedProofMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Approved proof" })
+      .textContent();
+    assert(approvedProofMetric?.includes("1"), "Approved proof metric did not update");
 
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-report-btn");
@@ -158,6 +171,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/diagnoses.json", "application/json");
     await verifyResource(baseUrl, "/data/dispatch.json", "application/json");
     await verifyResource(baseUrl, "/data/commercial.json", "application/json");
+    await verifyResource(baseUrl, "/data/proof.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);

@@ -1,0 +1,85 @@
+{
+  "records": [
+    {
+      "id": "PRF-1042",
+      "workorderId": "WO-1042",
+      "wallId": "MJ-HK-014",
+      "category": "Care visit photo set",
+      "capturedAt": "2026-07-07 10:46",
+      "source": "Technician mobile",
+      "status": "Ready for report",
+      "tone": "ready",
+      "reviewer": "ESG desk",
+      "evidence": ["12 proof photos", "Nutrient dosing note", "Trim completion photo"],
+      "note": "Clinic lounge set is ready for monthly client pack."
+    },
+    {
+      "id": "PRF-1047",
+      "workorderId": "WO-1047",
+      "wallId": "MJ-HK-021",
+      "category": "Risk recovery evidence",
+      "capturedAt": "2026-07-07 15:42",
+      "source": "Technician mobile",
+      "status": "Needs review",
+      "tone": "review",
+      "reviewer": "FM lead",
+      "evidence": ["Low-light retake", "LED schedule screenshot", "Weak pod replacement note"],
+      "note": "Approve after checking the replacement photo and light schedule timestamp."
+    },
+    {
+      "id": "PRF-1051",
+      "workorderId": "WO-1051",
+      "wallId": "MJ-HK-001",
+      "category": "Monthly ESG capture",
+      "capturedAt": "Pending",
+      "source": "Scheduled visit",
+      "status": "Missing proof",
+      "tone": "missing",
+      "reviewer": "ESG desk",
+      "evidence": ["Full-wall photo", "Pod sample check", "ESG sign-off sheet"],
+      "note": "Not available until tomorrow's report capture visit is completed."
+    },
+    {
+      "id": "PRF-1054",
+      "workorderId": "WO-1054",
+      "wallId": "MJ-HK-033",
+      "category": "Showcase prep proof",
+      "capturedAt": "Scheduled Jul 12",
+      "source": "Scheduled visit",
+      "status": "Missing proof",
+      "tone": "missing",
+      "reviewer": "Account lead",
+      "evidence": ["Frame clean photo", "After-photo card", "Visible edge trim photo"],
+      "note": "Needed before the private club expansion conversation."
+    }
+  ],
+  "requirements": [
+    {
+      "id": "REQ-WALL-PHOTO",
+      "label": "Full-wall before/after photos",
+      "scope": "Monthly ESG and renewal proof",
+      "owner": "Technician",
+      "requiredFor": ["monthly", "renewal"],
+      "cadence": "Every visit",
+      "status": "Required"
+    },
+    {
+      "id": "REQ-TIMESTAMP",
+      "label": "Timestamp and site trace",
+      "scope": "Audit trail",
+      "owner": "FM lead",
+      "requiredFor": ["audit", "renewal"],
+      "cadence": "Every proof upload",
+      "status": "Required"
+    },
+    {
+      "id": "REQ-ESG-METHOD",
+      "label": "ESG method note",
+      "scope": "Client-facing ESG language",
+      "owner": "ESG desk",
+      "requiredFor": ["monthly", "audit"],
+      "cadence": "Monthly",
+      "status": "Required"
+    }
+  ]
+}

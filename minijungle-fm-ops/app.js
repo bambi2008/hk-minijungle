@@ -5,6 +5,7 @@ const dataFiles = {
   diagnoses: "data/diagnoses.json",
   dispatch: "data/dispatch.json",
   commercial: "data/commercial.json",
+  proof: "data/proof.json",
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json"
 };
@@ -26,11 +27,15 @@ let dispatchInventory = [];
 let commercialToday = "2026-07-07";
 let commercialAccounts = [];
 let commercialPlaybook = [];
+let proofRecords = [];
+let proofRequirements = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
+let proofApprovals = {};
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
 const dispatchStagingStorageKey = "minijungle-fm-ops.dispatch-staging.v1";
+const proofApprovalStorageKey = "minijungle-fm-ops.proof-approvals.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -39,13 +44,14 @@ async function loadJson(path) {
 }
 
 async function loadAppData() {
-  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, dispatchData, commercialData, esgMetrics, productModel] = await Promise.all([
+  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, dispatchData, commercialData, proofData, esgMetrics, productModel] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
     loadJson(dataFiles.workorders),
     loadJson(dataFiles.diagnoses),
     loadJson(dataFiles.dispatch),
     loadJson(dataFiles.commercial),
+    loadJson(dataFiles.proof),
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel)
   ]);
@@ -60,6 +66,8 @@ async function loadAppData() {
   commercialToday = commercialData.today || commercialToday;
   commercialAccounts = commercialData.accounts || [];
   commercialPlaybook = commercialData.playbook || [];
+  proofRecords = proofData.records || [];
+  proofRequirements = proofData.requirements || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -101,12 +109,32 @@ function saveDispatchStaging() {
   localStorage.setItem(dispatchStagingStorageKey, JSON.stringify(dispatchStaging));
 }
 
+function loadProofApprovals() {
+  try {
+    proofApprovals = JSON.parse(localStorage.getItem(proofApprovalStorageKey) || "{}");
+  } catch {
+    proofApprovals = {};
+  }
+}
+
+function saveProofApprovals() {
+  localStorage.setItem(proofApprovalStorageKey, JSON.stringify(proofApprovals));
+}
+
 function isWorkorderCompleted(id) {
   return Boolean(workorderCompletions[id]);
 }
 
 function isDispatchStaged(id) {
   return Boolean(dispatchStaging[id]);
+}
+
+function isProofApproved(id) {
+  return Boolean(proofApprovals[id]);
+}
+
+function proofRecordReady(record) {
+  return isProofApproved(record.id) || record.tone === "ready";
 }
 
 function workorderView(order) {
@@ -140,6 +168,18 @@ function stageDispatchKit(id) {
     };
     saveDispatchStaging();
   }
+  renderAll();
+}
+
+function approveProofRecord(id) {
+  if (!proofApprovals[id]) {
+    proofApprovals[id] = {
+      approvedAt: new Date().toISOString(),
+      approvedBy: "Evidence desk"
+    };
+    saveProofApprovals();
+  }
+  state.reportGenerated = false;
   renderAll();
 }
 
@@ -191,6 +231,10 @@ const els = {
   dispatchRouteList: document.querySelector("#dispatch-route-list"),
   dispatchCrewList: document.querySelector("#dispatch-crew-list"),
   dispatchInventoryList: document.querySelector("#dispatch-inventory-list"),
+  proofStatus: document.querySelector("#proof-status"),
+  proofGrid: document.querySelector("#proof-grid"),
+  proofRecordList: document.querySelector("#proof-record-list"),
+  proofRequirementList: document.querySelector("#proof-requirement-list"),
   esgGrid: document.querySelector("#esg-grid"),
   esgBars: document.querySelector("#esg-bars"),
   esgMethods: document.querySelector("#esg-methods"),
@@ -277,7 +321,9 @@ function riskLabel(level) {
 function statusClass(value) {
   if (value === "risk" || value === "high") return "danger";
   if (value === "watch" || value === "medium") return "warn";
-  if (value === "completed") return "good";
+  if (value === "needs-review" || value === "review") return "warn";
+  if (value === "missing" || value === "blocked") return "danger";
+  if (value === "completed" || value === "ready" || value === "approved") return "good";
   return "";
 }
 
@@ -349,6 +395,10 @@ function metricsForClient(clientId) {
   const completedWorkorders = clientWorkorders.filter((order) => isWorkorderCompleted(order.id));
   const openWorkorders = clientWorkorders.filter((order) => !isWorkorderCompleted(order.id));
   const clientDiagnoses = diagnoses.filter((diagnosis) => clientWalls.some((wall) => wall.id === diagnosis.wallId));
+  const clientProofRecords = proofRecords.filter((record) => clientWalls.some((wall) => wall.id === record.wallId));
+  const approvedProofRecords = clientProofRecords.filter((record) => isProofApproved(record.id));
+  const reportReadyProofRecords = clientProofRecords.filter(proofRecordReady);
+  const proofGaps = clientProofRecords.filter((record) => !proofRecordReady(record));
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -365,6 +415,10 @@ function metricsForClient(clientId) {
     completedWorkorders,
     openWorkorders,
     diagnoses: clientDiagnoses,
+    proofRecords: clientProofRecords,
+    approvedProofRecords,
+    reportReadyProofRecords,
+    proofGaps,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -732,6 +786,67 @@ function renderDispatch() {
   }).join("");
 }
 
+function proofView(record) {
+  const wall = wallById(record.wallId);
+  const client = clientFor(wall);
+  const order = workorders.find((item) => item.id === record.workorderId);
+  const approved = isProofApproved(record.id);
+  return {
+    ...record,
+    wall,
+    client,
+    order,
+    approved,
+    displayStatus: approved ? "Approved" : record.status,
+    displayTone: approved ? "approved" : record.tone
+  };
+}
+
+function renderProof() {
+  const proofItems = proofRecords.map(proofView);
+  const reportReady = proofItems.filter((item) => proofRecordReady(item));
+  const approved = proofItems.filter((item) => item.approved);
+  const needsReview = proofItems.filter((item) => item.displayTone === "review");
+  const missing = proofItems.filter((item) => item.displayTone === "missing");
+  const readiness = proofItems.length ? Math.round((reportReady.length / proofItems.length) * 100) : 0;
+
+  els.proofStatus.textContent = `${readiness}% report-ready evidence`;
+  els.proofStatus.classList.toggle("good", missing.length === 0 && needsReview.length === 0);
+  renderStatCards(els.proofGrid, [
+    { label: "Proof records", value: proofItems.length, detail: "Photos, notes and trace evidence" },
+    { label: "Report-ready", value: reportReady.length, detail: "Ready or explicitly approved" },
+    { label: "Needs review", value: needsReview.length, detail: "Evidence desk check required" },
+    { label: "Missing proof", value: missing.length, detail: "Blocks clean client export" }
+  ]);
+
+  els.proofRecordList.innerHTML = proofItems.map((item) => `
+    <div class="list-item proof-card ${item.displayTone}" data-proof-card="${item.id}">
+      <div class="item-row">
+        <strong>${item.id} - ${item.category}</strong>
+        <span class="tag ${statusClass(item.displayTone)}">${item.displayStatus}</span>
+      </div>
+      <span>${item.client.name} - ${item.wall.location} - ${item.capturedAt}</span>
+      <small>${item.source} - reviewer: ${item.reviewer}</small>
+      <div class="kit-list">
+        ${item.evidence.map((evidenceItem) => `<em>${evidenceItem}</em>`).join("")}
+      </div>
+      <small>${item.note}</small>
+      <div class="workorder-actions">
+        <button type="button" class="mini-action" data-wall-select="${item.wall.id}">Wall detail</button>
+        <button type="button" class="mini-action primary" data-approve-proof="${item.id}" ${item.approved || item.displayTone === "missing" ? "disabled" : ""}>${item.approved ? "Approved" : "Approve proof"}</button>
+      </div>
+    </div>
+  `).join("");
+
+  els.proofRequirementList.innerHTML = proofRequirements.map((item) => `
+    <div class="method-row proof-requirement">
+      <span>${item.label}</span>
+      <strong>${item.scope} - ${item.owner} - ${item.cadence}</strong>
+      <small>${item.requiredFor.join(", ")} - ${item.status}</small>
+    </div>
+  `).join("");
+}
+
 function fillEsgTemplate(template, data) {
   return template
     .replaceAll("{{greenArea}}", data.greenArea.toFixed(1))
@@ -813,7 +928,9 @@ function renderReports() {
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Open issues", data.issues],
     ["Open work orders", data.openWorkorders.length],
-    ["Completed work orders", data.completedWorkorders.length]
+    ["Completed work orders", data.completedWorkorders.length],
+    ["Approved proof", data.approvedProofRecords.length],
+    ["Proof gaps", data.proofGaps.length]
   ].map(([label, value]) => `
     <div class="report-metric">
       <span>${label}</span>
@@ -826,7 +943,9 @@ function renderReports() {
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} Doctor Forest finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
-    `${data.openWorkorders.length} open or scheduled work order(s)`
+    `${data.openWorkorders.length} open or scheduled work order(s)`,
+    `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
+    `${data.proofGaps.length} proof gap(s)`
   ];
   els.reportEvidence.innerHTML = evidence.map((item) => `
     <div class="evidence-card">
@@ -852,7 +971,9 @@ function buildReportHtml() {
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} Doctor Forest finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
-    `${data.openWorkorders.length} open or scheduled work order(s)`
+    `${data.openWorkorders.length} open or scheduled work order(s)`,
+    `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
+    `${data.proofGaps.length} proof gap(s)`
   ];
   const metricRows = [
     ["Health score", data.health],
@@ -863,7 +984,9 @@ function buildReportHtml() {
     ["Wellness reach", `${data.staffReach} people/mo`],
     ["CO2e proxy", `${data.co2eProxy} kg`],
     ["Open work orders", data.openWorkorders.length],
-    ["Completed work orders", data.completedWorkorders.length]
+    ["Completed work orders", data.completedWorkorders.length],
+    ["Approved proof", data.approvedProofRecords.length],
+    ["Proof gaps", data.proofGaps.length]
   ];
 
   return `<!doctype html>
@@ -978,6 +1101,12 @@ function bindDynamicActions() {
       prepareRenewalPack(button.dataset.renewalPack);
     });
   });
+
+  document.querySelectorAll("[data-approve-proof]").forEach((button) => {
+    button.addEventListener("click", () => {
+      approveProofRecord(button.dataset.approveProof);
+    });
+  });
 }
 
 function renderAll() {
@@ -988,6 +1117,7 @@ function renderAll() {
   renderWalls();
   renderService();
   renderDispatch();
+  renderProof();
   renderEsg();
   renderReports();
   renderArchitecture();
@@ -1040,6 +1170,7 @@ async function bootstrap() {
     await loadAppData();
     loadWorkorderCompletions();
     loadDispatchStaging();
+    loadProofApprovals();
     initializeSelection();
     renderAll();
   } catch (error) {
