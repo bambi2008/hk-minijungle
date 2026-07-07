@@ -520,20 +520,28 @@ small {
 }
 
 .commercial-card,
-.sla-row {
+.sla-row,
+.invoice-card {
   cursor: default;
 }
 
 .commercial-card.high,
-.sla-row.high {
+.sla-row.high,
+.invoice-card.overdue {
   border-color: rgba(173, 75, 66, 0.28);
   background: #fff8f6;
 }
 
 .commercial-card.medium,
-.sla-row.medium {
+.sla-row.medium,
+.invoice-card.due {
   border-color: rgba(166, 121, 34, 0.28);
   background: #fffaf0;
+}
+
+.invoice-card.paid {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
 }
 
 .commercial-meta {
@@ -562,7 +570,8 @@ small {
   background: #fbfcfa;
 }
 
-.commercial-layout .method-list {
+.commercial-layout .method-list,
+.billing-layout .method-list {
   margin-top: 12px;
 }
 
@@ -650,7 +659,8 @@ small {
 .audit-card.completed,
 .audit-card.approved,
 .audit-card.acknowledged,
-.audit-card.requested {
+.audit-card.requested,
+.audit-card.paid {
   border-color: rgba(31, 111, 75, 0.3);
   background: #f2f8f3;
 }

@@ -1,0 +1,78 @@
+{
+  "invoices": [
+    {
+      "id": "INV-2026-069",
+      "clientId": "central-office",
+      "period": "Jul 2026",
+      "issueDate": "2026-07-01",
+      "dueDate": "2026-07-08",
+      "amount": 1280,
+      "status": "paid",
+      "category": "Premium Care rental",
+      "method": "FPS autopay",
+      "notes": "Monthly wall rental, care visit bundle and DF Pro dashboard access."
+    },
+    {
+      "id": "INV-2026-070",
+      "clientId": "wellness-clinic",
+      "period": "Jul 2026",
+      "issueDate": "2026-07-01",
+      "dueDate": "2026-07-10",
+      "amount": 699,
+      "status": "due",
+      "category": "Standard Care rental",
+      "method": "Bank transfer",
+      "notes": "Monthly rental and plant care service for clinic reception wall."
+    },
+    {
+      "id": "INV-2026-071",
+      "clientId": "show-suite",
+      "period": "Jul 2026",
+      "issueDate": "2026-07-01",
+      "dueDate": "2026-07-05",
+      "amount": 1280,
+      "status": "overdue",
+      "category": "Premium Care + DF Pro",
+      "method": "Bank transfer",
+      "notes": "Renewal-risk account. Payment confirmation should be linked to save plan evidence."
+    },
+    {
+      "id": "INV-2026-072",
+      "clientId": "members-club",
+      "period": "Jul 2026",
+      "issueDate": "2026-07-01",
+      "dueDate": "2026-07-12",
+      "amount": 980,
+      "status": "due",
+      "category": "Premium Care rental",
+      "method": "Monthly invoice",
+      "notes": "Monthly care service and ambience assurance for clubhouse wall."
+    },
+    {
+      "id": "INV-2026-073",
+      "clientId": "members-club",
+      "period": "Jul 2026",
+      "issueDate": "2026-07-03",
+      "dueDate": "2026-07-17",
+      "amount": 1800,
+      "status": "due",
+      "category": "Expansion concept deposit",
+      "method": "Bank transfer",
+      "notes": "Optional second-wall concept deposit for account expansion scenario."
+    }
+  ],
+  "policies": [
+    {
+      "label": "Recurring rental cadence",
+      "rule": "Issue on the 1st working day; route unresolved balances to the account owner before proof-pack handoff."
+    },
+    {
+      "label": "Overdue escalation",
+      "rule": "Three-day overdue invoices enter save-plan review when the account is also renewal-risk or SLA-risk."
+    },
+    {
+      "label": "Report evidence link",
+      "rule": "Paid status, proof readiness and service closure are all visible in client report metrics."
+    }
+  ]
+}

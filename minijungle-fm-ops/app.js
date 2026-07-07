@@ -5,6 +5,7 @@ const dataFiles = {
   diagnoses: "data/diagnoses.json",
   dispatch: "data/dispatch.json",
   commercial: "data/commercial.json",
+  billing: "data/billing.json",
   proof: "data/proof.json",
   sensors: "data/sensors.json",
   supply: "data/supply.json",
@@ -30,6 +31,8 @@ let dispatchInventory = [];
 let commercialToday = "2026-07-07";
 let commercialAccounts = [];
 let commercialPlaybook = [];
+let billingInvoices = [];
+let billingPolicies = [];
 let proofRecords = [];
 let proofRequirements = [];
 let sensorReadings = [];
@@ -43,6 +46,7 @@ let dispatchStaging = {};
 let proofApprovals = {};
 let sensorAcknowledgements = {};
 let supplyRequests = {};
+let invoicePayments = {};
 let auditEvents = [];
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
@@ -50,6 +54,7 @@ const dispatchStagingStorageKey = "minijungle-fm-ops.dispatch-staging.v1";
 const proofApprovalStorageKey = "minijungle-fm-ops.proof-approvals.v1";
 const sensorAcknowledgementStorageKey = "minijungle-fm-ops.sensor-acknowledgements.v1";
 const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
+const invoicePaymentStorageKey = "minijungle-fm-ops.invoice-payments.v1";
 const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
@@ -66,6 +71,7 @@ async function loadAppData() {
     loadedDiagnoses,
     dispatchData,
     commercialData,
+    billingData,
     proofData,
     sensorData,
     supplyData,
@@ -79,6 +85,7 @@ async function loadAppData() {
     loadJson(dataFiles.diagnoses),
     loadJson(dataFiles.dispatch),
     loadJson(dataFiles.commercial),
+    loadJson(dataFiles.billing),
     loadJson(dataFiles.proof),
     loadJson(dataFiles.sensors),
     loadJson(dataFiles.supply),
@@ -97,6 +104,8 @@ async function loadAppData() {
   commercialToday = commercialData.today || commercialToday;
   commercialAccounts = commercialData.accounts || [];
   commercialPlaybook = commercialData.playbook || [];
+  billingInvoices = billingData.invoices || [];
+  billingPolicies = billingData.policies || [];
   proofRecords = proofData.records || [];
   proofRequirements = proofData.requirements || [];
   sensorReadings = sensorData.readings || [];
@@ -182,6 +191,18 @@ function saveSupplyRequests() {
   localStorage.setItem(supplyRequestStorageKey, JSON.stringify(supplyRequests));
 }
 
+function loadInvoicePayments() {
+  try {
+    invoicePayments = JSON.parse(localStorage.getItem(invoicePaymentStorageKey) || "{}");
+  } catch {
+    invoicePayments = {};
+  }
+}
+
+function saveInvoicePayments() {
+  localStorage.setItem(invoicePaymentStorageKey, JSON.stringify(invoicePayments));
+}
+
 function loadAuditEvents() {
   try {
     auditEvents = JSON.parse(localStorage.getItem(auditEventStorageKey) || "[]");
@@ -218,6 +239,11 @@ function isSupplyRequested(sku) {
   return Boolean(supplyRequests[sku]);
 }
 
+function isInvoicePaid(id) {
+  const invoice = billingInvoices.find((item) => item.id === id);
+  return Boolean(invoicePayments[id]) || invoice?.status === "paid";
+}
+
 function clientIdForWorkorder(id) {
   const order = workorders.find((item) => item.id === id);
   if (!order) return null;
@@ -234,6 +260,10 @@ function clientIdForSensor(id) {
   const reading = sensorReadings.find((item) => item.id === id);
   if (!reading) return null;
   return wallById(reading.wallId)?.clientId || null;
+}
+
+function clientIdForInvoice(id) {
+  return billingInvoices.find((item) => item.id === id)?.clientId || null;
 }
 
 function allAuditEvents() {
@@ -373,6 +403,31 @@ function requestSupplyReorder(sku) {
   renderAll();
 }
 
+function markInvoicePaid(id) {
+  const invoice = billingInvoices.find((item) => item.id === id);
+  if (!invoice) return;
+
+  if (!invoicePayments[id]) {
+    invoicePayments[id] = {
+      paidAt: new Date().toISOString(),
+      paidBy: "Finance desk",
+      amount: invoice.amount
+    };
+    saveInvoicePayments();
+    recordAuditEvent({
+      actor: "Finance desk",
+      action: "Invoice marked paid",
+      entityType: "invoice",
+      entityId: id,
+      clientId: clientIdForInvoice(id),
+      tone: "paid",
+      detail: `${formatCurrency(invoice.amount)} receivable marked paid and available for client report evidence.`
+    });
+  }
+  state.reportGenerated = false;
+  renderAll();
+}
+
 function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
@@ -418,6 +473,10 @@ const els = {
   renewalList: document.querySelector("#renewal-list"),
   slaList: document.querySelector("#sla-list"),
   successPlaybook: document.querySelector("#success-playbook"),
+  billingStatus: document.querySelector("#billing-status"),
+  billingGrid: document.querySelector("#billing-grid"),
+  invoiceList: document.querySelector("#invoice-list"),
+  billingPolicyList: document.querySelector("#billing-policy-list"),
   wallGrid: document.querySelector("#wall-grid"),
   wallDetailTitle: document.querySelector("#wall-detail-title"),
   wallDetailStatus: document.querySelector("#wall-detail-status"),
@@ -532,10 +591,12 @@ function riskLabel(level) {
 function statusClass(value) {
   if (value === "risk" || value === "high") return "danger";
   if (value === "alert" || value === "offline") return "danger";
+  if (value === "overdue") return "danger";
   if (value === "watch" || value === "medium") return "warn";
+  if (value === "due") return "warn";
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
-  if (value === "completed" || value === "ready" || value === "approved") return "good";
+  if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
   if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
   return "";
 }
@@ -601,6 +662,21 @@ function supplyView(item) {
   };
 }
 
+function invoiceView(invoice) {
+  const client = clients.find((item) => item.id === invoice.clientId);
+  const payment = invoicePayments[invoice.id] || null;
+  const paid = isInvoicePaid(invoice.id);
+  const displayTone = paid ? "paid" : invoice.status;
+  return {
+    ...invoice,
+    client,
+    payment,
+    paid,
+    displayTone,
+    displayStatus: paid ? "Paid" : invoice.status === "overdue" ? "Overdue" : "Due"
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -616,6 +692,11 @@ function portfolioMetrics() {
   const revenue = sum(clients, (client) => client.revenue);
   const sensorAlerts = sensorReadings.filter(sensorNeedsAction).length;
   const supplyReorderItems = supplyItems.map(supplyView).filter((item) => item.displayTone === "alert").length;
+  const invoiceRows = billingInvoices.map(invoiceView);
+  const openInvoices = invoiceRows.filter((invoice) => !invoice.paid);
+  const overdueInvoices = openInvoices.filter((invoice) => invoice.displayTone === "overdue");
+  const outstandingAmount = sum(openInvoices, (invoice) => invoice.amount);
+  const paidAmount = sum(invoiceRows.filter((invoice) => invoice.paid), (invoice) => invoice.amount);
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -633,6 +714,10 @@ function portfolioMetrics() {
     revenue,
     sensorAlerts,
     supplyReorderItems,
+    openInvoices,
+    overdueInvoices,
+    outstandingAmount,
+    paidAmount,
     reportReadiness
   };
 }
@@ -650,6 +735,14 @@ function metricsForClient(clientId) {
   const clientSensorReadings = sensorReadings.filter((reading) => clientWalls.some((wall) => wall.id === reading.wallId));
   const openSensorAlerts = clientSensorReadings.filter(sensorNeedsAction);
   const clientAuditEvents = auditEventsForClient(clientId);
+  const clientInvoices = billingInvoices
+    .map(invoiceView)
+    .filter((invoice) => invoice.clientId === clientId);
+  const paidInvoices = clientInvoices.filter((invoice) => invoice.paid);
+  const openInvoices = clientInvoices.filter((invoice) => !invoice.paid);
+  const overdueInvoices = openInvoices.filter((invoice) => invoice.displayTone === "overdue");
+  const outstandingAmount = sum(openInvoices, (invoice) => invoice.amount);
+  const paidAmount = sum(paidInvoices, (invoice) => invoice.amount);
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -673,6 +766,12 @@ function metricsForClient(clientId) {
     sensorReadings: clientSensorReadings,
     openSensorAlerts,
     auditEvents: clientAuditEvents,
+    invoices: clientInvoices,
+    paidInvoices,
+    openInvoices,
+    overdueInvoices,
+    outstandingAmount,
+    paidAmount,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -701,14 +800,14 @@ function renderOverview() {
     { label: "Active clients", value: data.activeClients, detail: `${data.activeWalls} walls under FM care` },
     { label: "Portfolio health", value: data.health, detail: `${data.survival}% plant survival rate` },
     { label: "Sensor alerts", value: data.sensorAlerts, detail: `${data.issues} plant issue(s) and telemetry exceptions` },
-    { label: "Managed value", value: formatCurrency(data.revenue), detail: "Setup, care and DF Pro base" }
+    { label: "Managed value", value: formatCurrency(data.revenue), detail: `${formatCurrency(data.outstandingAmount)} open AR` }
   ]);
 
   els.proofStrip.innerHTML = [
     ["Green wall area", `${data.greenArea.toFixed(1)} m2`],
     ["Water-saving estimate", `${data.waterSaved} L/mo`],
     ["Wellness reach", `${data.staffReach} people/mo`],
-    ["Stock reorder flags", data.supplyReorderItems]
+    ["Overdue invoices", data.overdueInvoices.length]
   ].map(([label, value]) => `
     <div>
       <span>${label}</span>
@@ -849,6 +948,61 @@ function renderCommercial() {
     <div class="method-row">
       <span>${item.trigger}</span>
       <strong>${item.action} - ${item.owner}</strong>
+    </div>
+  `).join("");
+}
+
+function renderBilling() {
+  const invoiceRows = billingInvoices
+    .map(invoiceView)
+    .sort((a, b) => Number(a.paid) - Number(b.paid) || dateValue(a.dueDate) - dateValue(b.dueDate));
+  const openInvoices = invoiceRows.filter((invoice) => !invoice.paid);
+  const overdueInvoices = openInvoices.filter((invoice) => invoice.displayTone === "overdue");
+  const paidInvoices = invoiceRows.filter((invoice) => invoice.paid);
+  const invoiceTotal = sum(invoiceRows, (invoice) => invoice.amount);
+  const outstandingAmount = sum(openInvoices, (invoice) => invoice.amount);
+  const paidAmount = sum(paidInvoices, (invoice) => invoice.amount);
+
+  els.billingStatus.textContent = `${overdueInvoices.length} overdue invoice(s), ${formatCurrency(outstandingAmount)} open AR`;
+  els.billingStatus.classList.toggle("good", openInvoices.length === 0);
+  renderStatCards(els.billingGrid, [
+    { label: "July invoice run", value: formatCurrency(invoiceTotal), detail: `${invoiceRows.length} invoice(s) across active accounts` },
+    { label: "Outstanding AR", value: formatCurrency(outstandingAmount), detail: "Unpaid rental, DF Pro and expansion charges" },
+    { label: "Overdue invoices", value: overdueInvoices.length, detail: "Escalate when paired with renewal risk" },
+    { label: "Collected", value: formatCurrency(paidAmount), detail: `${paidInvoices.length} invoice(s) marked paid` }
+  ]);
+
+  els.invoiceList.innerHTML = invoiceRows.map((invoice) => {
+    const paidDetail = invoice.payment
+      ? `Paid by ${invoice.payment.paidBy} - ${new Date(invoice.payment.paidAt).toLocaleString("en-HK")}`
+      : invoice.status === "paid"
+        ? `Paid through ${invoice.method}`
+        : `Due ${invoice.dueDate}`;
+    return `
+      <div class="list-item invoice-card ${invoice.displayTone}" data-invoice-card="${invoice.id}">
+        <div class="item-row">
+          <strong>${invoice.id} - ${invoice.category}</strong>
+          <span class="tag ${statusClass(invoice.displayTone)}">${invoice.displayStatus}</span>
+        </div>
+        <span>${invoice.client.name} - ${invoice.period} - ${invoice.method}</span>
+        <div class="commercial-meta">
+          <div><span>Amount</span><strong>${formatCurrency(invoice.amount)}</strong></div>
+          <div><span>Issued</span><strong>${invoice.issueDate}</strong></div>
+          <div><span>Payment</span><strong>${paidDetail}</strong></div>
+        </div>
+        <small>${invoice.notes}</small>
+        <div class="workorder-actions">
+          <button type="button" class="mini-action" data-client-select="${invoice.clientId}">View account</button>
+          <button type="button" class="mini-action primary" data-mark-invoice-paid="${invoice.id}" ${invoice.paid ? "disabled" : ""}>${invoice.paid ? "Paid" : "Mark paid"}</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  els.billingPolicyList.innerHTML = billingPolicies.map((policy) => `
+    <div class="method-row">
+      <span>${policy.label}</span>
+      <strong>${policy.rule}</strong>
     </div>
   `).join("");
 }
@@ -1311,6 +1465,8 @@ function renderReports() {
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
     ["Sensor alerts", data.openSensorAlerts.length],
+    ["Outstanding AR", formatCurrency(data.outstandingAmount)],
+    ["Paid invoices", data.paidInvoices.length],
     ["Audit events", data.auditEvents.length]
   ].map(([label, value]) => `
     <div class="report-metric">
@@ -1328,6 +1484,8 @@ function renderReports() {
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
     `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${formatCurrency(data.outstandingAmount)} outstanding AR`,
+    `${data.paidInvoices.length} paid invoice(s)`,
     `${data.auditEvents.length} client-linked audit event(s)`
   ];
   els.reportEvidence.innerHTML = evidence.map((item) => `
@@ -1358,6 +1516,8 @@ function buildReportHtml() {
     `${data.reportReadyProofRecords.length} report-ready proof record(s)`,
     `${data.proofGaps.length} proof gap(s)`,
     `${data.openSensorAlerts.length} open sensor alert(s)`,
+    `${formatCurrency(data.outstandingAmount)} outstanding AR`,
+    `${data.paidInvoices.length} paid invoice(s)`,
     `${data.auditEvents.length} client-linked audit event(s)`
   ];
   const metricRows = [
@@ -1373,6 +1533,8 @@ function buildReportHtml() {
     ["Approved proof", data.approvedProofRecords.length],
     ["Proof gaps", data.proofGaps.length],
     ["Sensor alerts", data.openSensorAlerts.length],
+    ["Outstanding AR", formatCurrency(data.outstandingAmount)],
+    ["Paid invoices", data.paidInvoices.length],
     ["Audit events", data.auditEvents.length]
   ];
 
@@ -1515,6 +1677,12 @@ function bindDynamicActions() {
       requestSupplyReorder(button.dataset.requestSupply);
     });
   });
+
+  document.querySelectorAll("[data-mark-invoice-paid]").forEach((button) => {
+    button.addEventListener("click", () => {
+      markInvoicePaid(button.dataset.markInvoicePaid);
+    });
+  });
 }
 
 function renderAll() {
@@ -1522,6 +1690,7 @@ function renderAll() {
   renderPositioning();
   renderClients();
   renderCommercial();
+  renderBilling();
   renderWalls();
   renderSensors();
   renderService();
@@ -1602,6 +1771,7 @@ async function bootstrap() {
     loadProofApprovals();
     loadSensorAcknowledgements();
     loadSupplyRequests();
+    loadInvoicePayments();
     loadAuditEvents();
     initializeSelection();
     renderAll();
