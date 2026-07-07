@@ -3,6 +3,7 @@ const dataFiles = {
   walls: "data/walls.json",
   workorders: "data/workorders.json",
   diagnoses: "data/diagnoses.json",
+  dispatch: "data/dispatch.json",
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json"
 };
@@ -18,9 +19,14 @@ let reportModes = [];
 let reportMonths = [];
 let strategyCards = [];
 let architectureLayers = [];
+let crewMembers = [];
+let dispatchRoute = [];
+let dispatchInventory = [];
 let workorderCompletions = {};
+let dispatchStaging = {};
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
+const dispatchStagingStorageKey = "minijungle-fm-ops.dispatch-staging.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -29,11 +35,12 @@ async function loadJson(path) {
 }
 
 async function loadAppData() {
-  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, esgMetrics, productModel] = await Promise.all([
+  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, dispatchData, esgMetrics, productModel] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
     loadJson(dataFiles.workorders),
     loadJson(dataFiles.diagnoses),
+    loadJson(dataFiles.dispatch),
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel)
   ]);
@@ -42,6 +49,9 @@ async function loadAppData() {
   walls = loadedWalls;
   workorders = loadedWorkorders;
   diagnoses = loadedDiagnoses;
+  crewMembers = dispatchData.crew || [];
+  dispatchRoute = dispatchData.route || [];
+  dispatchInventory = dispatchData.inventory || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -71,8 +81,24 @@ function saveWorkorderCompletions() {
   localStorage.setItem(workorderCompletionStorageKey, JSON.stringify(workorderCompletions));
 }
 
+function loadDispatchStaging() {
+  try {
+    dispatchStaging = JSON.parse(localStorage.getItem(dispatchStagingStorageKey) || "{}");
+  } catch {
+    dispatchStaging = {};
+  }
+}
+
+function saveDispatchStaging() {
+  localStorage.setItem(dispatchStagingStorageKey, JSON.stringify(dispatchStaging));
+}
+
 function isWorkorderCompleted(id) {
   return Boolean(workorderCompletions[id]);
+}
+
+function isDispatchStaged(id) {
+  return Boolean(dispatchStaging[id]);
 }
 
 function workorderView(order) {
@@ -95,6 +121,17 @@ function completeWorkorder(id) {
     saveWorkorderCompletions();
   }
   state.reportGenerated = false;
+  renderAll();
+}
+
+function stageDispatchKit(id) {
+  if (!dispatchStaging[id]) {
+    dispatchStaging[id] = {
+      stagedAt: new Date().toISOString(),
+      stagedBy: "Dispatch desk"
+    };
+    saveDispatchStaging();
+  }
   renderAll();
 }
 
@@ -128,6 +165,11 @@ const els = {
   podHealthList: document.querySelector("#pod-health-list"),
   workorderList: document.querySelector("#workorder-list"),
   diagnosisList: document.querySelector("#diagnosis-list"),
+  dispatchStatus: document.querySelector("#dispatch-status"),
+  dispatchGrid: document.querySelector("#dispatch-grid"),
+  dispatchRouteList: document.querySelector("#dispatch-route-list"),
+  dispatchCrewList: document.querySelector("#dispatch-crew-list"),
+  dispatchInventoryList: document.querySelector("#dispatch-inventory-list"),
   esgGrid: document.querySelector("#esg-grid"),
   esgBars: document.querySelector("#esg-bars"),
   esgMethods: document.querySelector("#esg-methods"),
@@ -480,6 +522,93 @@ function renderService() {
   }).join("");
 }
 
+function crewById(id) {
+  return crewMembers.find((member) => member.id === id);
+}
+
+function routeView(routeItem) {
+  const order = workorders.find((item) => item.id === routeItem.workorderId);
+  const wall = wallById(order.wallId);
+  const client = clientFor(wall);
+  const technician = crewById(routeItem.technicianId);
+  const completed = isWorkorderCompleted(order.id);
+  const staged = isDispatchStaged(order.id);
+  return {
+    ...routeItem,
+    order,
+    wall,
+    client,
+    technician,
+    completed,
+    staged,
+    displayStatus: completed ? "Completed" : staged ? "Kit staged" : routeItem.readiness,
+    statusTone: completed || staged ? "completed" : order.priority
+  };
+}
+
+function renderDispatch() {
+  const routeItems = dispatchRoute
+    .map(routeView)
+    .sort((a, b) => a.sequence - b.sequence);
+  const openStops = routeItems.filter((item) => !item.completed);
+  const stagedStops = routeItems.filter((item) => item.staged && !item.completed);
+  const highPriorityStops = openStops.filter((item) => item.order.priority === "high");
+  const reservedUnits = sum(dispatchInventory, (item) => item.reserved);
+
+  els.dispatchStatus.textContent = `${openStops.length} open stop(s), ${stagedStops.length} kit staged`;
+  els.dispatchStatus.classList.toggle("good", openStops.length === 0);
+  renderStatCards(els.dispatchGrid, [
+    { label: "Route stops", value: routeItems.length, detail: "Sequenced across today and next visits" },
+    { label: "Kits staged", value: stagedStops.length, detail: "Ready for technician handoff" },
+    { label: "High priority", value: highPriorityStops.length, detail: "Needs same-day attention" },
+    { label: "Reserved stock", value: reservedUnits, detail: "Pods, nutrients and tools held for work orders" }
+  ]);
+
+  els.dispatchRouteList.innerHTML = routeItems.map((item) => `
+    <div class="list-item dispatch-stop ${item.completed ? "completed" : ""}" data-dispatch-card="${item.order.id}">
+      <div class="item-row">
+        <strong>#${item.sequence} ${item.window}</strong>
+        <span class="tag ${statusClass(item.statusTone === "high" ? "risk" : item.statusTone)}">${item.displayStatus}</span>
+      </div>
+      <span>${item.order.id} - ${item.client.name} - ${item.wall.location}</span>
+      <small>${item.technician.name} - ${item.technician.role} - ${item.travelBuffer} min travel buffer</small>
+      <div class="kit-list">
+        ${item.kit.map((kitItem) => `<em>${kitItem}</em>`).join("")}
+      </div>
+      <div class="workorder-actions">
+        <button type="button" class="mini-action" data-wall-select="${item.wall.id}">Wall detail</button>
+        <button type="button" class="mini-action" data-stage-dispatch="${item.order.id}" ${item.staged || item.completed ? "disabled" : ""}>${item.staged ? "Kit staged" : "Stage kit"}</button>
+        <button type="button" class="mini-action primary" data-complete-workorder="${item.order.id}" ${item.completed ? "disabled" : ""}>${item.completed ? "Completed" : "Complete stop"}</button>
+      </div>
+    </div>
+  `).join("");
+
+  els.dispatchCrewList.innerHTML = crewMembers.map((member) => {
+    const assigned = routeItems.filter((item) => item.technician.id === member.id);
+    return `
+      <div class="crew-row">
+        <div class="item-row">
+          <strong>${member.name}</strong>
+          <span class="tag ${assigned.length > member.capacity ? "danger" : ""}">${assigned.length}/${member.capacity} stops</span>
+        </div>
+        <span>${member.role} - ${member.base}</span>
+        <small>${member.skills.join(", ")}</small>
+      </div>
+    `;
+  }).join("");
+
+  els.dispatchInventoryList.innerHTML = dispatchInventory.map((item) => {
+    const available = item.onHand - item.reserved;
+    const risk = available <= item.reorderAt;
+    return `
+      <div class="method-row inventory-row ${risk ? "at-risk" : ""}">
+        <span>${item.sku} - ${item.label}</span>
+        <strong>${available} available - ${item.reserved} reserved - reorder at ${item.reorderAt}</strong>
+      </div>
+    `;
+  }).join("");
+}
+
 function fillEsgTemplate(template, data) {
   return template
     .replaceAll("{{greenArea}}", data.greenArea.toFixed(1))
@@ -714,6 +843,12 @@ function bindDynamicActions() {
       completeWorkorder(button.dataset.completeWorkorder);
     });
   });
+
+  document.querySelectorAll("[data-stage-dispatch]").forEach((button) => {
+    button.addEventListener("click", () => {
+      stageDispatchKit(button.dataset.stageDispatch);
+    });
+  });
 }
 
 function renderAll() {
@@ -722,6 +857,7 @@ function renderAll() {
   renderClients();
   renderWalls();
   renderService();
+  renderDispatch();
   renderEsg();
   renderReports();
   renderArchitecture();
@@ -773,6 +909,7 @@ async function bootstrap() {
   try {
     await loadAppData();
     loadWorkorderCompletions();
+    loadDispatchStaging();
     initializeSelection();
     renderAll();
   } catch (error) {

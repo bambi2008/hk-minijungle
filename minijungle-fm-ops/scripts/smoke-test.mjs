@@ -62,6 +62,7 @@ async function verifyBrowserFlow(baseUrl) {
 
     await page.goto(baseUrl, { waitUntil: "networkidle" });
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.workorder-completions.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.dispatch-staging.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
     assert(title?.includes("Living Wall Control Center"), "Unexpected main title");
@@ -76,10 +77,17 @@ async function verifyBrowserFlow(baseUrl) {
     const wallTitle = await page.textContent("#wall-detail-title");
     assert(wallTitle?.includes("MJ-HK-021"), "Client selection did not update selected wall");
 
-    await page.click('[data-complete-workorder="WO-1047"]');
+    await page.click('#dispatch [data-stage-dispatch="WO-1047"]');
+    await page.waitForTimeout(150);
+    const stagedCard = await page.textContent('[data-dispatch-card="WO-1047"]');
+    assert(stagedCard?.includes("Kit staged"), "Dispatch staging did not update route card");
+
+    await page.click('#workorder-list [data-complete-workorder="WO-1047"]');
     await page.waitForTimeout(150);
     const completedCard = await page.textContent('[data-workorder-card="WO-1047"]');
     assert(completedCard?.includes("Completed"), "Completing work order did not update service card");
+    const completedDispatchCard = await page.textContent('[data-dispatch-card="WO-1047"]');
+    assert(completedDispatchCard?.includes("Completed"), "Completing work order did not update dispatch card");
 
     await page.selectOption("#report-client-select", "show-suite");
     await page.selectOption("#report-month-select", "2026-05");
@@ -140,6 +148,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/walls.json", "application/json");
     await verifyResource(baseUrl, "/data/workorders.json", "application/json");
     await verifyResource(baseUrl, "/data/diagnoses.json", "application/json");
+    await verifyResource(baseUrl, "/data/dispatch.json", "application/json");
     await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);

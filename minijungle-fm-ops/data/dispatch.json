@@ -1,0 +1,81 @@
+{
+  "crew": [
+    {
+      "id": "tech-amy",
+      "name": "Amy Chan",
+      "role": "Plant Care Lead",
+      "base": "Kowloon Bay",
+      "capacity": 3,
+      "skills": ["Pod replacement", "LED schedule", "Client proof photo"]
+    },
+    {
+      "id": "tech-ken",
+      "name": "Ken Wong",
+      "role": "FM Service Technician",
+      "base": "Tsuen Wan",
+      "capacity": 2,
+      "skills": ["Trimming", "Watering", "Frame cleaning"]
+    }
+  ],
+  "route": [
+    {
+      "workorderId": "WO-1042",
+      "sequence": 1,
+      "technicianId": "tech-amy",
+      "window": "10:30-11:15",
+      "travelBuffer": 18,
+      "readiness": "Ready to depart",
+      "kit": ["Nutrients A", "Trimming kit", "Proof photo board"]
+    },
+    {
+      "workorderId": "WO-1047",
+      "sequence": 2,
+      "technicianId": "tech-amy",
+      "window": "15:00-16:00",
+      "travelBuffer": 24,
+      "readiness": "Needs LED check kit",
+      "kit": ["LED tester", "Weak pod replacement set", "Low-light photo card"]
+    },
+    {
+      "workorderId": "WO-1051",
+      "sequence": 3,
+      "technicianId": "tech-ken",
+      "window": "Tomorrow AM",
+      "travelBuffer": 20,
+      "readiness": "Report capture pack",
+      "kit": ["Full-wall photo lens", "Pod sample tray", "ESG sign-off sheet"]
+    },
+    {
+      "workorderId": "WO-1054",
+      "sequence": 4,
+      "technicianId": "tech-ken",
+      "window": "Jul 12 PM",
+      "travelBuffer": 15,
+      "readiness": "Showcase clean-up",
+      "kit": ["Edge trimmer", "Frame cloth", "After-photo card"]
+    }
+  ],
+  "inventory": [
+    {
+      "sku": "POD-S",
+      "label": "Small replacement pods",
+      "onHand": 42,
+      "reserved": 8,
+      "reorderAt": 18
+    },
+    {
+      "sku": "NUT-A",
+      "label": "Nutrient A concentrate",
+      "onHand": 12,
+      "reserved": 3,
+      "reorderAt": 6
+    },
+    {
+      "sku": "LED-T",
+      "label": "Portable LED tester",
+      "onHand": 3,
+      "reserved": 1,
+      "reorderAt": 1
+    }
+  ]
+}
