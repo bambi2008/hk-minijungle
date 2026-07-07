@@ -69,6 +69,7 @@ async function verifyBrowserFlow(baseUrl) {
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.invoice-payments.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.schedule-confirmations.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.incident-resolutions.v1"));
+    await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.compliance-clearances.v1"));
     await page.evaluate(() => localStorage.removeItem("minijungle-fm-ops.audit-events.v1"));
     await page.reload({ waitUntil: "networkidle" });
     const title = await page.textContent("h1");
@@ -125,6 +126,15 @@ async function verifyBrowserFlow(baseUrl) {
     assert(incidentCardAfter?.includes("Resolved"), "Resolving incident did not update incident card");
     const incidentAudit = await page.textContent("#audit-event-list");
     assert(incidentAudit?.includes("Incident resolved"), "Incident resolution did not create audit event");
+
+    const complianceCardBefore = await page.textContent('[data-compliance-card="CMP-2026-021"]');
+    assert(complianceCardBefore?.includes("Blocked"), "Compliance center did not load blocked show-suite item");
+    await page.click('[data-clear-compliance="CMP-2026-021"]');
+    await page.waitForTimeout(150);
+    const complianceCardAfter = await page.textContent('[data-compliance-card="CMP-2026-021"]');
+    assert(complianceCardAfter?.includes("Cleared"), "Clearing compliance item did not update card");
+    const complianceAudit = await page.textContent("#audit-event-list");
+    assert(complianceAudit?.includes("Compliance item cleared"), "Compliance clearance did not create audit event");
 
     const commercialCard = await page.textContent('[data-commercial-card="show-suite"]');
     assert(commercialCard?.includes("Save plan"), "Commercial desk did not flag show suite renewal risk");
@@ -203,11 +213,21 @@ async function verifyBrowserFlow(baseUrl) {
       .filter({ hasText: "Resolved incidents" })
       .textContent();
     assert(resolvedIncidentsMetric?.includes("1"), "Resolved incident metric did not update");
+    const openComplianceMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Open compliance" })
+      .textContent();
+    assert(openComplianceMetric?.includes("0"), "Open compliance metric did not update after clearance");
+    const clearedComplianceMetric = await page
+      .locator("#report-metrics .report-metric")
+      .filter({ hasText: "Cleared compliance" })
+      .textContent();
+    assert(clearedComplianceMetric?.includes("1"), "Cleared compliance metric did not update");
     const auditMetric = await page
       .locator("#report-metrics .report-metric")
       .filter({ hasText: "Audit events" })
       .textContent();
-    assert(auditMetric?.includes("8"), "Client-linked audit event metric did not update");
+    assert(auditMetric?.includes("9"), "Client-linked audit event metric did not update");
 
     const downloadPromise = page.waitForEvent("download");
     await page.click("#download-report-btn");
@@ -257,6 +277,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/diagnoses.json", "application/json");
     await verifyResource(baseUrl, "/data/schedule.json", "application/json");
     await verifyResource(baseUrl, "/data/incidents.json", "application/json");
+    await verifyResource(baseUrl, "/data/compliance.json", "application/json");
     await verifyResource(baseUrl, "/data/dispatch.json", "application/json");
     await verifyResource(baseUrl, "/data/commercial.json", "application/json");
     await verifyResource(baseUrl, "/data/billing.json", "application/json");

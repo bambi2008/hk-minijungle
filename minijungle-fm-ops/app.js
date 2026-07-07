@@ -5,6 +5,7 @@ const dataFiles = {
   diagnoses: "data/diagnoses.json",
   schedule: "data/schedule.json",
   incidents: "data/incidents.json",
+  compliance: "data/compliance.json",
   dispatch: "data/dispatch.json",
   commercial: "data/commercial.json",
   billing: "data/billing.json",
@@ -26,6 +27,8 @@ let scheduleRules = [];
 let scheduleBlackouts = [];
 let incidentRecords = [];
 let incidentRules = [];
+let complianceItems = [];
+let complianceRules = [];
 let esgTrend = [];
 let esgMethods = [];
 let esgLedger = [];
@@ -57,6 +60,7 @@ let supplyRequests = {};
 let invoicePayments = {};
 let scheduleConfirmations = {};
 let incidentResolutions = {};
+let complianceClearances = {};
 let auditEvents = [];
 
 const workorderCompletionStorageKey = "minijungle-fm-ops.workorder-completions.v1";
@@ -67,6 +71,7 @@ const supplyRequestStorageKey = "minijungle-fm-ops.supply-requests.v1";
 const invoicePaymentStorageKey = "minijungle-fm-ops.invoice-payments.v1";
 const scheduleConfirmationStorageKey = "minijungle-fm-ops.schedule-confirmations.v1";
 const incidentResolutionStorageKey = "minijungle-fm-ops.incident-resolutions.v1";
+const complianceClearanceStorageKey = "minijungle-fm-ops.compliance-clearances.v1";
 const auditEventStorageKey = "minijungle-fm-ops.audit-events.v1";
 
 async function loadJson(path) {
@@ -83,6 +88,7 @@ async function loadAppData() {
     loadedDiagnoses,
     scheduleData,
     incidentData,
+    complianceData,
     dispatchData,
     commercialData,
     billingData,
@@ -99,6 +105,7 @@ async function loadAppData() {
     loadJson(dataFiles.diagnoses),
     loadJson(dataFiles.schedule),
     loadJson(dataFiles.incidents),
+    loadJson(dataFiles.compliance),
     loadJson(dataFiles.dispatch),
     loadJson(dataFiles.commercial),
     loadJson(dataFiles.billing),
@@ -120,6 +127,8 @@ async function loadAppData() {
   scheduleBlackouts = scheduleData.blackouts || [];
   incidentRecords = incidentData.incidents || [];
   incidentRules = incidentData.rules || [];
+  complianceItems = complianceData.items || [];
+  complianceRules = complianceData.rules || [];
   crewMembers = dispatchData.crew || [];
   dispatchRoute = dispatchData.route || [];
   dispatchInventory = dispatchData.inventory || [];
@@ -249,6 +258,18 @@ function saveIncidentResolutions() {
   localStorage.setItem(incidentResolutionStorageKey, JSON.stringify(incidentResolutions));
 }
 
+function loadComplianceClearances() {
+  try {
+    complianceClearances = JSON.parse(localStorage.getItem(complianceClearanceStorageKey) || "{}");
+  } catch {
+    complianceClearances = {};
+  }
+}
+
+function saveComplianceClearances() {
+  localStorage.setItem(complianceClearanceStorageKey, JSON.stringify(complianceClearances));
+}
+
 function loadAuditEvents() {
   try {
     auditEvents = JSON.parse(localStorage.getItem(auditEventStorageKey) || "[]");
@@ -300,6 +321,11 @@ function isIncidentResolved(id) {
   return Boolean(incidentResolutions[id]) || incident?.status === "resolved";
 }
 
+function isComplianceCleared(id) {
+  const item = complianceItems.find((record) => record.id === id);
+  return Boolean(complianceClearances[id]) || item?.status === "ready";
+}
+
 function clientIdForWorkorder(id) {
   const order = workorders.find((item) => item.id === id);
   if (!order) return null;
@@ -331,6 +357,10 @@ function clientIdForScheduleSlot(id) {
 function clientIdForIncident(id) {
   const incident = incidentRecords.find((item) => item.id === id);
   return incident ? wallById(incident.wallId)?.clientId || null : null;
+}
+
+function clientIdForCompliance(id) {
+  return complianceItems.find((item) => item.id === id)?.clientId || null;
 }
 
 function allAuditEvents() {
@@ -544,6 +574,31 @@ function resolveIncident(id) {
   renderAll();
 }
 
+function clearComplianceItem(id) {
+  const item = complianceItems.find((record) => record.id === id);
+  if (!item) return;
+
+  if (!complianceClearances[id]) {
+    complianceClearances[id] = {
+      clearedAt: new Date().toISOString(),
+      clearedBy: "Compliance desk",
+      evidence: "Compliance evidence accepted for FM operation and client reporting."
+    };
+    saveComplianceClearances();
+    recordAuditEvent({
+      actor: "Compliance desk",
+      action: "Compliance item cleared",
+      entityType: "compliance",
+      entityId: id,
+      clientId: clientIdForCompliance(id),
+      tone: "cleared",
+      detail: `${item.category} cleared for ${item.document}.`
+    });
+  }
+  state.reportGenerated = false;
+  renderAll();
+}
+
 function prepareRenewalPack(clientId) {
   state.selectedReportClientId = clientId;
   state.reportMode = "renewal";
@@ -593,6 +648,10 @@ const els = {
   billingGrid: document.querySelector("#billing-grid"),
   invoiceList: document.querySelector("#invoice-list"),
   billingPolicyList: document.querySelector("#billing-policy-list"),
+  complianceStatus: document.querySelector("#compliance-status"),
+  complianceGrid: document.querySelector("#compliance-grid"),
+  complianceList: document.querySelector("#compliance-list"),
+  complianceRuleList: document.querySelector("#compliance-rule-list"),
   wallGrid: document.querySelector("#wall-grid"),
   wallDetailTitle: document.querySelector("#wall-detail-title"),
   wallDetailStatus: document.querySelector("#wall-detail-status"),
@@ -725,8 +784,10 @@ function statusClass(value) {
   if (value === "unconfirmed") return "warn";
   if (value === "needs-review" || value === "review") return "warn";
   if (value === "missing" || value === "blocked") return "danger";
+  if (value === "expiring") return "warn";
   if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
   if (value === "resolved") return "good";
+  if (value === "cleared") return "good";
   if (value === "confirmed") return "good";
   if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
   return "";
@@ -896,6 +957,42 @@ function incidentView(incident) {
   };
 }
 
+function complianceView(item) {
+  const client = clients.find((record) => record.id === item.clientId);
+  const wall = item.wallId ? wallById(item.wallId) : null;
+  const clearance = complianceClearances[item.id] || null;
+  const cleared = isComplianceCleared(item.id);
+  const daysToDue = daysUntil(item.dueDate);
+  const displayTone = cleared
+    ? "cleared"
+    : item.status === "blocked"
+      ? "blocked"
+      : item.status === "expiring" || daysToDue <= 14
+        ? "expiring"
+        : item.status === "review"
+          ? "review"
+          : item.status;
+  const displayStatus = cleared
+    ? "Cleared"
+    : displayTone === "blocked"
+      ? "Blocked"
+      : displayTone === "expiring"
+        ? "Expiring"
+        : displayTone === "review"
+          ? "Review"
+          : "Ready";
+  return {
+    ...item,
+    client,
+    wall,
+    clearance,
+    cleared,
+    daysToDue,
+    displayTone,
+    displayStatus
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -928,6 +1025,11 @@ function portfolioMetrics() {
   const resolvedIncidents = incidentRows.filter((incident) => incident.resolved);
   const criticalIncidents = openIncidents.filter((incident) => incident.severity === "critical" || incident.displayTone === "escalated");
   const dueIncidents = openIncidents.filter((incident) => incident.daysToDue <= 0);
+  const complianceRows = complianceItems.map(complianceView);
+  const clearedComplianceItems = complianceRows.filter((item) => item.cleared);
+  const openComplianceItems = complianceRows.filter((item) => !item.cleared);
+  const blockedComplianceItems = openComplianceItems.filter((item) => item.displayTone === "blocked");
+  const expiringComplianceItems = openComplianceItems.filter((item) => item.displayTone === "expiring");
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -961,6 +1063,11 @@ function portfolioMetrics() {
     resolvedIncidents,
     criticalIncidents,
     dueIncidents,
+    complianceItems: complianceRows,
+    clearedComplianceItems,
+    openComplianceItems,
+    blockedComplianceItems,
+    expiringComplianceItems,
     reportReadiness
   };
 }
@@ -997,6 +1104,12 @@ function metricsForClient(clientId) {
   const openIncidents = clientIncidents.filter((incident) => !incident.resolved);
   const resolvedIncidents = clientIncidents.filter((incident) => incident.resolved);
   const criticalIncidents = openIncidents.filter((incident) => incident.severity === "critical" || incident.displayTone === "escalated");
+  const clientComplianceItems = complianceItems
+    .map(complianceView)
+    .filter((item) => item.clientId === clientId);
+  const clearedComplianceItems = clientComplianceItems.filter((item) => item.cleared);
+  const openComplianceItems = clientComplianceItems.filter((item) => !item.cleared);
+  const blockedComplianceItems = openComplianceItems.filter((item) => item.displayTone === "blocked");
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -1033,6 +1146,10 @@ function metricsForClient(clientId) {
     openIncidents,
     resolvedIncidents,
     criticalIncidents,
+    complianceItems: clientComplianceItems,
+    clearedComplianceItems,
+    openComplianceItems,
+    blockedComplianceItems,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1068,7 +1185,7 @@ function renderOverview() {
     ["Green wall area", `${data.greenArea.toFixed(1)} m2`],
     ["Water-saving estimate", `${data.waterSaved} L/mo`],
     ["Wellness reach", `${data.staffReach} people/mo`],
-    ["SLA due now", data.dueIncidents.length]
+    ["Compliance blockers", data.blockedComplianceItems.length]
   ].map(([label, value]) => `
     <div>
       <span>${label}</span>
@@ -1264,6 +1381,65 @@ function renderBilling() {
     <div class="method-row">
       <span>${policy.label}</span>
       <strong>${policy.rule}</strong>
+    </div>
+  `).join("");
+}
+
+function renderCompliance() {
+  const rank = { blocked: 0, expiring: 1, review: 2, ready: 3, cleared: 4 };
+  const rows = complianceItems
+    .map(complianceView)
+    .sort((a, b) => rank[a.displayTone] - rank[b.displayTone] || a.daysToDue - b.daysToDue);
+  const openItems = rows.filter((item) => !item.cleared);
+  const clearedItems = rows.filter((item) => item.cleared);
+  const blockers = openItems.filter((item) => item.displayTone === "blocked");
+  const expiring = openItems.filter((item) => item.displayTone === "expiring");
+
+  els.complianceStatus.textContent = `${blockers.length} blocker(s), ${expiring.length} expiring item(s)`;
+  els.complianceStatus.classList.toggle("good", openItems.length === 0);
+  renderStatCards(els.complianceGrid, [
+    { label: "Compliance items", value: rows.length, detail: "Access, insurance, method and proof release" },
+    { label: "Blockers", value: blockers.length, detail: "Items that can block visits or reports" },
+    { label: "Expiring soon", value: expiring.length, detail: "Refresh before site or renewal use" },
+    { label: "Cleared", value: clearedItems.length, detail: "Accepted for FM operations" }
+  ]);
+
+  els.complianceList.innerHTML = rows.map((item) => {
+    const clearanceDetail = item.clearance
+      ? `Cleared by ${item.clearance.clearedBy} - ${new Date(item.clearance.clearedAt).toLocaleString("en-HK")}`
+      : item.cleared
+        ? "Ready in baseline compliance pack"
+        : `Due ${item.dueDate} - ${item.owner}`;
+    return `
+      <div class="list-item compliance-card ${item.displayTone}" data-compliance-card="${item.id}">
+        <div class="item-row">
+          <strong>${item.id} - ${item.category}</strong>
+          <span class="tag ${statusClass(item.displayTone)}">${item.displayStatus}</span>
+        </div>
+        <span>${item.client.name} - ${item.wall.location} - ${item.document}</span>
+        <div class="commercial-meta">
+          <div><span>Owner</span><strong>${item.owner}</strong></div>
+          <div><span>Due</span><strong>${item.dueDate}</strong></div>
+          <div><span>Scope</span><strong>${item.scope}</strong></div>
+        </div>
+        <small>${item.impact}</small>
+        <div class="kit-list">
+          ${item.evidence.map((evidence) => `<em>${evidence}</em>`).join("")}
+        </div>
+        <small>${clearanceDetail}</small>
+        <div class="workorder-actions">
+          <button type="button" class="mini-action" data-client-select="${item.clientId}">View account</button>
+          <button type="button" class="mini-action" data-wall-select="${item.wall.id}">Wall detail</button>
+          <button type="button" class="mini-action primary" data-clear-compliance="${item.id}" ${item.cleared ? "disabled" : ""}>${item.cleared ? "Cleared" : "Clear item"}</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  els.complianceRuleList.innerHTML = complianceRules.map((rule) => `
+    <div class="method-row">
+      <span>${rule.label}</span>
+      <strong>${rule.rule}</strong>
     </div>
   `).join("");
 }
@@ -1866,6 +2042,8 @@ function renderReports() {
     ["Sensor alerts", data.openSensorAlerts.length],
     ["Open incidents", data.openIncidents.length],
     ["Resolved incidents", data.resolvedIncidents.length],
+    ["Open compliance", data.openComplianceItems.length],
+    ["Cleared compliance", data.clearedComplianceItems.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -1889,6 +2067,8 @@ function renderReports() {
     `${data.openSensorAlerts.length} open sensor alert(s)`,
     `${data.openIncidents.length} open SLA incident(s)`,
     `${data.resolvedIncidents.length} resolved incident(s)`,
+    `${data.openComplianceItems.length} open compliance item(s)`,
+    `${data.clearedComplianceItems.length} cleared compliance item(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -1925,6 +2105,8 @@ function buildReportHtml() {
     `${data.openSensorAlerts.length} open sensor alert(s)`,
     `${data.openIncidents.length} open SLA incident(s)`,
     `${data.resolvedIncidents.length} resolved incident(s)`,
+    `${data.openComplianceItems.length} open compliance item(s)`,
+    `${data.clearedComplianceItems.length} cleared compliance item(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -1946,6 +2128,8 @@ function buildReportHtml() {
     ["Sensor alerts", data.openSensorAlerts.length],
     ["Open incidents", data.openIncidents.length],
     ["Resolved incidents", data.resolvedIncidents.length],
+    ["Open compliance", data.openComplianceItems.length],
+    ["Cleared compliance", data.clearedComplianceItems.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -2110,6 +2294,12 @@ function bindDynamicActions() {
       resolveIncident(button.dataset.resolveIncident);
     });
   });
+
+  document.querySelectorAll("[data-clear-compliance]").forEach((button) => {
+    button.addEventListener("click", () => {
+      clearComplianceItem(button.dataset.clearCompliance);
+    });
+  });
 }
 
 function renderAll() {
@@ -2118,6 +2308,7 @@ function renderAll() {
   renderClients();
   renderCommercial();
   renderBilling();
+  renderCompliance();
   renderWalls();
   renderSensors();
   renderIncidents();
@@ -2203,6 +2394,7 @@ async function bootstrap() {
     loadInvoicePayments();
     loadScheduleConfirmations();
     loadIncidentResolutions();
+    loadComplianceClearances();
     loadAuditEvents();
     initializeSelection();
     renderAll();

@@ -1,0 +1,70 @@
+{
+  "items": [
+    {
+      "id": "CMP-2026-001",
+      "clientId": "central-office",
+      "wallId": "MJ-HK-001",
+      "category": "Building access",
+      "document": "26/F reception access permit",
+      "status": "ready",
+      "owner": "FM Manager",
+      "dueDate": "2026-08-01",
+      "scope": "Technician access and lift booking",
+      "impact": "Allows monthly ESG capture visit and bi-weekly care access.",
+      "evidence": ["Visitor QR", "Lift booking rule", "Security desk contact"]
+    },
+    {
+      "id": "CMP-2026-014",
+      "clientId": "wellness-clinic",
+      "wallId": "MJ-HK-014",
+      "category": "Clinic hygiene",
+      "document": "Care visit hygiene method statement",
+      "status": "review",
+      "owner": "Operations lead",
+      "dueDate": "2026-07-10",
+      "scope": "Patient lounge service protocol",
+      "impact": "Care visit can proceed, but renewal report should reference approved hygiene method.",
+      "evidence": ["Method statement", "Disinfection note", "After-hours service option"]
+    },
+    {
+      "id": "CMP-2026-021",
+      "clientId": "show-suite",
+      "wallId": "MJ-HK-021",
+      "category": "Renewal proof release",
+      "document": "Photo usage and landlord approval",
+      "status": "blocked",
+      "owner": "Asset team",
+      "dueDate": "2026-07-07",
+      "scope": "Lobby photos for renewal proof pack",
+      "impact": "Renewal proof pack cannot be sent until lobby photo usage is cleared.",
+      "evidence": ["Landlord approval email", "Photo usage consent", "Sensitive-area crop check"]
+    },
+    {
+      "id": "CMP-2026-033",
+      "clientId": "members-club",
+      "wallId": "MJ-HK-033",
+      "category": "Insurance and venue access",
+      "document": "Clubhouse contractor insurance certificate",
+      "status": "expiring",
+      "owner": "Venue manager",
+      "dueDate": "2026-07-20",
+      "scope": "Monthly care and showcase preparation",
+      "impact": "Insurance certificate needs refresh before second-wall expansion discussion.",
+      "evidence": ["Insurance certificate", "Contractor induction", "Quiet-hours access note"]
+    }
+  ],
+  "rules": [
+    {
+      "label": "Blocked proof",
+      "rule": "Blocked compliance items prevent renewal proof export until cleared or owner-accepted."
+    },
+    {
+      "label": "Access readiness",
+      "rule": "Every scheduled visit should have access permission, site contact and service method evidence."
+    },
+    {
+      "label": "Document shelf life",
+      "rule": "Expiring insurance, permits or photo consents should enter review at least 14 days before due date."
+    }
+  ]
+}

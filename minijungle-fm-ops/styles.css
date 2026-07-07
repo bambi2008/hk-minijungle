@@ -628,20 +628,29 @@ small {
   cursor: default;
 }
 
+.compliance-card {
+  cursor: default;
+}
+
 .incident-card.escalated,
 .incident-card.breach,
-.incident-card.due-today {
+.incident-card.due-today,
+.compliance-card.blocked {
   border-color: rgba(173, 75, 66, 0.28);
   background: #fff8f6;
 }
 
 .incident-card.triage,
-.incident-card.watch {
+.incident-card.watch,
+.compliance-card.review,
+.compliance-card.expiring {
   border-color: rgba(166, 121, 34, 0.28);
   background: #fffaf0;
 }
 
-.incident-card.resolved {
+.incident-card.resolved,
+.compliance-card.cleared,
+.compliance-card.ready {
   border-color: rgba(31, 111, 75, 0.3);
   background: #f2f8f3;
 }
@@ -685,7 +694,8 @@ small {
 
 .sensor-layout .method-list,
 .supply-layout .method-list,
-.incident-layout .method-list {
+.incident-layout .method-list,
+.compliance-layout .method-list {
   margin-top: 12px;
 }
 
@@ -700,7 +710,8 @@ small {
 .audit-card.requested,
 .audit-card.paid,
 .audit-card.confirmed,
-.audit-card.resolved {
+.audit-card.resolved,
+.audit-card.cleared {
   border-color: rgba(31, 111, 75, 0.3);
   background: #f2f8f3;
 }
