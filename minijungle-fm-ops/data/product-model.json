@@ -1,0 +1,69 @@
+{
+  "reportModes": [
+    {
+      "id": "monthly",
+      "label": "Monthly ESG",
+      "title": "Central Portfolio ESG Health Report",
+      "summary": "A client-facing monthly pack covering wall health, service response, green wall area, water-saving estimates and photo evidence.",
+      "evidence": ["Full-wall before/after photos", "Health score trend", "Work order closure log", "ESG metric method notes"]
+    },
+    {
+      "id": "renewal",
+      "label": "Renewal Proof",
+      "title": "Renewal Value and Service Proof Pack",
+      "summary": "A commercial pack for FM and procurement teams showing service reliability, visible improvement and risks handled before renewal.",
+      "evidence": ["Issue closure rate", "Replacement history", "Client risk notes", "Contract and attach-rate summary"]
+    },
+    {
+      "id": "audit",
+      "label": "Audit Trail",
+      "title": "Green Asset Service Audit Trail",
+      "summary": "A governance pack that shows who visited, what was checked, which photos were captured and how each claim is supported.",
+      "evidence": ["Technician visit records", "Photo timestamps", "Doctor Forest findings", "Manual override notes"]
+    }
+  ],
+  "strategyCards": [
+    {
+      "title": "Positioning",
+      "value": "Living Green Wall OS",
+      "body": "A vertical green asset operating system for HK commercial spaces, not a consumer plant diary."
+    },
+    {
+      "title": "Audience",
+      "value": "FM + ESG + Landlord",
+      "body": "Designed for facility teams, asset managers and customer-facing venue operators."
+    },
+    {
+      "title": "Image",
+      "value": "Premium, calm, auditable",
+      "body": "More enterprise dashboard than garden app: restrained UI, proof-first language, clear service actions."
+    },
+    {
+      "title": "Moat",
+      "value": "Pod data + service proof",
+      "body": "Standardized wall modules, Plant Pod records, Xponge replacement cycles and Doctor Forest diagnosis history."
+    }
+  ],
+  "architectureLayers": [
+    {
+      "name": "Asset Layer",
+      "items": ["Client", "Site", "Wall", "Module", "Plant Pod", "Xponge Sleeve", "Sensor"]
+    },
+    {
+      "name": "Service Layer",
+      "items": ["Visit schedule", "Work order", "Photo proof", "Replacement record", "Inventory"]
+    },
+    {
+      "name": "Health Layer",
+      "items": ["Health score", "Doctor Forest finding", "Risk queue", "Follow-up standard"]
+    },
+    {
+      "name": "ESG Layer",
+      "items": ["Green area", "Water estimate", "Service miles", "Wellness reach", "Evidence status"]
+    },
+    {
+      "name": "Client Proof Layer",
+      "items": ["Monthly report", "Renewal pack", "Audit trail", "Export API"]
+    }
+  ]
+}

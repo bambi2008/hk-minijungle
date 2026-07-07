@@ -1,0 +1,38 @@
+{
+  "trend": [
+    { "month": "Jan", "score": 72 },
+    { "month": "Feb", "score": 76 },
+    { "month": "Mar", "score": 81 },
+    { "month": "Apr", "score": 84 },
+    { "month": "May", "score": 87 },
+    { "month": "Jun", "score": 89 }
+  ],
+  "methods": [
+    {
+      "label": "Proven",
+      "body": "Wall count, Plant Pod count, visit records, photos, replacement records."
+    },
+    {
+      "label": "Estimated",
+      "body": "Water saving, service miles avoided, wellness reach, CO2e proxy."
+    },
+    {
+      "label": "Not claimed",
+      "body": "Carbon credits, formal air purification guarantees, certified WELL/LEED points."
+    }
+  ],
+  "ledger": [
+    {
+      "label": "Environmental",
+      "template": "{{greenArea}} m2 live green wall area, {{waterSaved}} L/mo water-saving estimate, Plant Pod replacement traceability."
+    },
+    {
+      "label": "Social",
+      "template": "{{staffReach}} monthly staff and visitor touchpoints supported by visible biophilic space and stable presentation quality."
+    },
+    {
+      "label": "Governance",
+      "template": "Each visit links work orders, photos, Doctor Forest findings, manual actions and report method notes."
+    }
+  ]
+}

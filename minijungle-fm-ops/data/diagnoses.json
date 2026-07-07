@@ -1,0 +1,23 @@
+[
+  {
+    "wallId": "MJ-HK-021",
+    "finding": "Low light plus leggy growth risk",
+    "action": "Raise zone 1 LED output to 70% and retake the same angle in 7 days.",
+    "confidence": 82,
+    "evidence": "Lower density and elongated stems in the north zone"
+  },
+  {
+    "wallId": "MJ-HK-014",
+    "finding": "Local yellowing, likely water swing",
+    "action": "Reduce top-up volume this week and replace 6 weak Plant Pods.",
+    "confidence": 76,
+    "evidence": "Yellowing concentrated in lower middle zone"
+  },
+  {
+    "wallId": "MJ-HK-001",
+    "finding": "Stable presentation condition",
+    "action": "Keep current service rhythm and include this wall in the ESG pack.",
+    "confidence": 91,
+    "evidence": "High survival rate, low issue count, consistent photos"
+  }
+]

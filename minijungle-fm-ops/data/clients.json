@@ -1,0 +1,54 @@
+[
+  {
+    "id": "central-office",
+    "name": "Central Grade A Office",
+    "segment": "Office tenant",
+    "district": "Central",
+    "contact": "FM Manager: Ms. Lee",
+    "plan": "Premium Care + DF Pro",
+    "contract": "HK$12,800 setup + HK$1,280/mo",
+    "renewalDate": "2026-10-31",
+    "renewalRisk": "low",
+    "revenue": 48640,
+    "proofNeed": "ESG and wellness report for tenant experience review"
+  },
+  {
+    "id": "wellness-clinic",
+    "name": "Wellness Clinic Group",
+    "segment": "Clinic",
+    "district": "Causeway Bay",
+    "contact": "Operations: Dr. Wong",
+    "plan": "Standard Care",
+    "contract": "HK$9,800 setup + HK$699/mo",
+    "renewalDate": "2026-09-15",
+    "renewalRisk": "medium",
+    "revenue": 26572,
+    "proofNeed": "Patient comfort and brand freshness proof"
+  },
+  {
+    "id": "show-suite",
+    "name": "Property Show Suite",
+    "segment": "Landlord / showroom",
+    "district": "Tsim Sha Tsui",
+    "contact": "Asset team: Mr. Chan",
+    "plan": "Premium Care + DF Pro",
+    "contract": "HK$11,800 setup + HK$1,280/mo",
+    "renewalDate": "2026-08-20",
+    "renewalRisk": "high",
+    "revenue": 42520,
+    "proofNeed": "Photo evidence that lobby upgrade remains presentation-ready"
+  },
+  {
+    "id": "members-club",
+    "name": "Private Members Club",
+    "segment": "Clubhouse",
+    "district": "Wan Chai",
+    "contact": "Venue manager: Ms. Ho",
+    "plan": "Premium Care",
+    "contract": "HK$10,800 setup + HK$980/mo",
+    "renewalDate": "2026-12-01",
+    "renewalRisk": "low",
+    "revenue": 34320,
+    "proofNeed": "Consistent premium ambience and low disruption service"
+  }
+]

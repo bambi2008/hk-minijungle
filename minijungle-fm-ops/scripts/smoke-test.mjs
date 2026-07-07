@@ -111,6 +111,12 @@ async function main() {
     await verifyResource(baseUrl, "/", "text/html");
     await verifyResource(baseUrl, "/styles.css", "text/css");
     await verifyResource(baseUrl, "/app.js", "text/javascript");
+    await verifyResource(baseUrl, "/data/clients.json", "application/json");
+    await verifyResource(baseUrl, "/data/walls.json", "application/json");
+    await verifyResource(baseUrl, "/data/workorders.json", "application/json");
+    await verifyResource(baseUrl, "/data/diagnoses.json", "application/json");
+    await verifyResource(baseUrl, "/data/esg-metrics.json", "application/json");
+    await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyBrowserFlow(baseUrl);
     console.log(`Smoke test passed at ${baseUrl}`);
   } catch (error) {

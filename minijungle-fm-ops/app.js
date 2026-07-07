@@ -1,318 +1,63 @@
-const clients = [
-  {
-    id: "central-office",
-    name: "Central Grade A Office",
-    segment: "Office tenant",
-    district: "Central",
-    contact: "FM Manager: Ms. Lee",
-    plan: "Premium Care + DF Pro",
-    contract: "HK$12,800 setup + HK$1,280/mo",
-    renewalDate: "2026-10-31",
-    renewalRisk: "low",
-    revenue: 48640,
-    proofNeed: "ESG and wellness report for tenant experience review"
-  },
-  {
-    id: "wellness-clinic",
-    name: "Wellness Clinic Group",
-    segment: "Clinic",
-    district: "Causeway Bay",
-    contact: "Operations: Dr. Wong",
-    plan: "Standard Care",
-    contract: "HK$9,800 setup + HK$699/mo",
-    renewalDate: "2026-09-15",
-    renewalRisk: "medium",
-    revenue: 26572,
-    proofNeed: "Patient comfort and brand freshness proof"
-  },
-  {
-    id: "show-suite",
-    name: "Property Show Suite",
-    segment: "Landlord / showroom",
-    district: "Tsim Sha Tsui",
-    contact: "Asset team: Mr. Chan",
-    plan: "Premium Care + DF Pro",
-    contract: "HK$11,800 setup + HK$1,280/mo",
-    renewalDate: "2026-08-20",
-    renewalRisk: "high",
-    revenue: 42520,
-    proofNeed: "Photo evidence that lobby upgrade remains presentation-ready"
-  },
-  {
-    id: "members-club",
-    name: "Private Members Club",
-    segment: "Clubhouse",
-    district: "Wan Chai",
-    contact: "Venue manager: Ms. Ho",
-    plan: "Premium Care",
-    contract: "HK$10,800 setup + HK$980/mo",
-    renewalDate: "2026-12-01",
-    renewalRisk: "low",
-    revenue: 34320,
-    proofNeed: "Consistent premium ambience and low disruption service"
-  }
-];
+const dataFiles = {
+  clients: "data/clients.json",
+  walls: "data/walls.json",
+  workorders: "data/workorders.json",
+  diagnoses: "data/diagnoses.json",
+  esgMetrics: "data/esg-metrics.json",
+  productModel: "data/product-model.json"
+};
 
-const walls = [
-  {
-    id: "MJ-HK-001",
-    clientId: "central-office",
-    name: "Reception Living Wall",
-    location: "26/F Reception",
-    version: "Smart",
-    modules: 4,
-    pods: 180,
-    health: 91,
-    survival: 96,
-    issues: 3,
-    nextVisit: "Jul 08",
-    cadence: "Twice monthly",
-    greenArea: 8.7,
-    waterSaved: 184,
-    serviceMilesSaved: 22,
-    staffReach: 260,
-    co2eProxy: 109,
-    status: "stable",
-    sensors: ["water level", "temperature", "humidity"],
-    tags: ["ESG report ready", "DF Pro"],
-    zones: [
-      { name: "Left", pods: 45, health: 92, issue: "none" },
-      { name: "Center-left", pods: 45, health: 89, issue: "minor yellowing" },
-      { name: "Center-right", pods: 45, health: 93, issue: "none" },
-      { name: "Right", pods: 45, health: 90, issue: "trim due" }
-    ]
-  },
-  {
-    id: "MJ-HK-014",
-    clientId: "wellness-clinic",
-    name: "Waiting Lounge Wall",
-    location: "Patient lounge",
-    version: "Standard",
-    modules: 2,
-    pods: 90,
-    health: 84,
-    survival: 92,
-    issues: 7,
-    nextVisit: "Jul 06",
-    cadence: "Twice monthly",
-    greenArea: 4.4,
-    waterSaved: 76,
-    serviceMilesSaved: 12,
-    staffReach: 180,
-    co2eProxy: 55,
-    status: "watch",
-    sensors: ["manual photo check"],
-    tags: ["replacement suggested"],
-    zones: [
-      { name: "Upper", pods: 30, health: 86, issue: "none" },
-      { name: "Middle", pods: 30, health: 81, issue: "yellowing" },
-      { name: "Lower", pods: 30, health: 85, issue: "water swing" }
-    ]
-  },
-  {
-    id: "MJ-HK-021",
-    clientId: "show-suite",
-    name: "Lift Lobby Feature Wall",
-    location: "Show suite lift lobby",
-    version: "Smart",
-    modules: 3,
-    pods: 135,
-    health: 78,
-    survival: 88,
-    issues: 11,
-    nextVisit: "Jul 07",
-    cadence: "Weekly until stable",
-    greenArea: 6.6,
-    waterSaved: 129,
-    serviceMilesSaved: 18,
-    staffReach: 420,
-    co2eProxy: 83,
-    status: "risk",
-    sensors: ["water level", "temperature", "humidity", "light"],
-    tags: ["low light", "renewal risk"],
-    zones: [
-      { name: "North", pods: 45, health: 73, issue: "low light" },
-      { name: "Center", pods: 45, health: 79, issue: "leggy growth" },
-      { name: "South", pods: 45, health: 82, issue: "follow-up photo due" }
-    ]
-  },
-  {
-    id: "MJ-HK-033",
-    clientId: "members-club",
-    name: "Pantry Lounge Wall",
-    location: "Member pantry lounge",
-    version: "Standard",
-    modules: 3,
-    pods: 135,
-    health: 89,
-    survival: 95,
-    issues: 4,
-    nextVisit: "Jul 12",
-    cadence: "Monthly",
-    greenArea: 6.6,
-    waterSaved: 118,
-    serviceMilesSaved: 16,
-    staffReach: 210,
-    co2eProxy: 83,
-    status: "stable",
-    sensors: ["manual photo check"],
-    tags: ["client showcase"],
-    zones: [
-      { name: "Bar side", pods: 45, health: 90, issue: "none" },
-      { name: "Bench side", pods: 45, health: 88, issue: "trim due" },
-      { name: "Corner", pods: 45, health: 89, issue: "none" }
-    ]
-  }
-];
+let clients = [];
+let walls = [];
+let workorders = [];
+let diagnoses = [];
+let esgTrend = [];
+let esgMethods = [];
+let esgLedger = [];
+let reportModes = [];
+let strategyCards = [];
+let architectureLayers = [];
 
-const workorders = [
-  {
-    id: "WO-1042",
-    wallId: "MJ-HK-014",
-    type: "Bi-weekly care visit",
-    due: "Today 10:30",
-    status: "Ready",
-    priority: "medium",
-    tasks: ["Top up water", "Nutrient dose", "Trim", "Capture 12 proof photos"]
-  },
-  {
-    id: "WO-1047",
-    wallId: "MJ-HK-021",
-    type: "Risk follow-up",
-    due: "Today 15:00",
-    status: "High priority",
-    priority: "high",
-    tasks: ["Retake low-light zone", "Check LED schedule", "Replace weak pods"]
-  },
-  {
-    id: "WO-1051",
-    wallId: "MJ-HK-001",
-    type: "Monthly report capture",
-    due: "Tomorrow",
-    status: "Scheduled",
-    priority: "low",
-    tasks: ["Full-wall photo", "Pod sample check", "ESG proof sign-off"]
-  },
-  {
-    id: "WO-1054",
-    wallId: "MJ-HK-033",
-    type: "Client showcase prep",
-    due: "Jul 12",
-    status: "Scheduled",
-    priority: "low",
-    tasks: ["Trim visible edges", "Clean frame", "Capture after photo"]
-  }
-];
+async function loadJson(path) {
+  const response = await fetch(path);
+  if (!response.ok) throw new Error(`Failed to load ${path}: ${response.status}`);
+  return response.json();
+}
 
-const diagnoses = [
-  {
-    wallId: "MJ-HK-021",
-    finding: "Low light plus leggy growth risk",
-    action: "Raise zone 1 LED output to 70% and retake the same angle in 7 days.",
-    confidence: 82,
-    evidence: "Lower density and elongated stems in the north zone"
-  },
-  {
-    wallId: "MJ-HK-014",
-    finding: "Local yellowing, likely water swing",
-    action: "Reduce top-up volume this week and replace 6 weak Plant Pods.",
-    confidence: 76,
-    evidence: "Yellowing concentrated in lower middle zone"
-  },
-  {
-    wallId: "MJ-HK-001",
-    finding: "Stable presentation condition",
-    action: "Keep current service rhythm and include this wall in the ESG pack.",
-    confidence: 91,
-    evidence: "High survival rate, low issue count, consistent photos"
-  }
-];
+async function loadAppData() {
+  const [loadedClients, loadedWalls, loadedWorkorders, loadedDiagnoses, esgMetrics, productModel] = await Promise.all([
+    loadJson(dataFiles.clients),
+    loadJson(dataFiles.walls),
+    loadJson(dataFiles.workorders),
+    loadJson(dataFiles.diagnoses),
+    loadJson(dataFiles.esgMetrics),
+    loadJson(dataFiles.productModel)
+  ]);
 
-const esgTrend = [
-  { month: "Jan", score: 72 },
-  { month: "Feb", score: 76 },
-  { month: "Mar", score: 81 },
-  { month: "Apr", score: 84 },
-  { month: "May", score: 87 },
-  { month: "Jun", score: 89 }
-];
+  clients = loadedClients;
+  walls = loadedWalls;
+  workorders = loadedWorkorders;
+  diagnoses = loadedDiagnoses;
+  esgTrend = esgMetrics.trend || [];
+  esgMethods = esgMetrics.methods || [];
+  esgLedger = esgMetrics.ledger || [];
+  reportModes = productModel.reportModes || [];
+  strategyCards = productModel.strategyCards || [];
+  architectureLayers = productModel.architectureLayers || [];
+}
 
-const reportModes = [
-  {
-    id: "monthly",
-    label: "Monthly ESG",
-    title: "Central Portfolio ESG Health Report",
-    summary: "A client-facing monthly pack covering wall health, service response, green wall area, water-saving estimates and photo evidence.",
-    evidence: ["Full-wall before/after photos", "Health score trend", "Work order closure log", "ESG metric method notes"]
-  },
-  {
-    id: "renewal",
-    label: "Renewal Proof",
-    title: "Renewal Value and Service Proof Pack",
-    summary: "A commercial pack for FM and procurement teams showing service reliability, visible improvement and risks handled before renewal.",
-    evidence: ["Issue closure rate", "Replacement history", "Client risk notes", "Contract and attach-rate summary"]
-  },
-  {
-    id: "audit",
-    label: "Audit Trail",
-    title: "Green Asset Service Audit Trail",
-    summary: "A governance pack that shows who visited, what was checked, which photos were captured and how each claim is supported.",
-    evidence: ["Technician visit records", "Photo timestamps", "Doctor Forest findings", "Manual override notes"]
-  }
-];
-
-const strategyCards = [
-  {
-    title: "Positioning",
-    value: "Living Green Wall OS",
-    body: "A vertical green asset operating system for HK commercial spaces, not a consumer plant diary."
-  },
-  {
-    title: "Audience",
-    value: "FM + ESG + Landlord",
-    body: "Designed for facility teams, asset managers and customer-facing venue operators."
-  },
-  {
-    title: "Image",
-    value: "Premium, calm, auditable",
-    body: "More enterprise dashboard than garden app: restrained UI, proof-first language, clear service actions."
-  },
-  {
-    title: "Moat",
-    value: "Pod data + service proof",
-    body: "Standardized wall modules, Plant Pod records, Xponge replacement cycles and Doctor Forest diagnosis history."
-  }
-];
-
-const architectureLayers = [
-  {
-    name: "Asset Layer",
-    items: ["Client", "Site", "Wall", "Module", "Plant Pod", "Xponge Sleeve", "Sensor"]
-  },
-  {
-    name: "Service Layer",
-    items: ["Visit schedule", "Work order", "Photo proof", "Replacement record", "Inventory"]
-  },
-  {
-    name: "Health Layer",
-    items: ["Health score", "Doctor Forest finding", "Risk queue", "Follow-up standard"]
-  },
-  {
-    name: "ESG Layer",
-    items: ["Green area", "Water estimate", "Service miles", "Wellness reach", "Evidence status"]
-  },
-  {
-    name: "Client Proof Layer",
-    items: ["Monthly report", "Renewal pack", "Audit trail", "Export API"]
-  }
-];
+function initializeSelection() {
+  state.selectedClientId = clients[0]?.id || null;
+  state.selectedWallId = walls[0]?.id || null;
+  state.reportMode = reportModes[0]?.id || null;
+}
 
 const state = {
   simulatedVisits: 0,
   filter: "all",
-  selectedClientId: clients[0].id,
-  selectedWallId: walls[0].id,
-  reportMode: reportModes[0].id,
+  selectedClientId: null,
+  selectedWallId: null,
+  reportMode: null,
   reportGenerated: false
 };
 
@@ -383,7 +128,7 @@ function selectedWall() {
 }
 
 function selectedReport() {
-  return reportModes.find((mode) => mode.id === state.reportMode);
+  return reportModes.find((mode) => mode.id === state.reportMode) || reportModes[0];
 }
 
 function riskLabel(level) {
@@ -631,6 +376,13 @@ function renderService() {
   }).join("");
 }
 
+function fillEsgTemplate(template, data) {
+  return template
+    .replaceAll("{{greenArea}}", data.greenArea.toFixed(1))
+    .replaceAll("{{waterSaved}}", String(data.waterSaved))
+    .replaceAll("{{staffReach}}", String(data.staffReach));
+}
+
 function renderEsg() {
   const data = portfolioMetrics();
   renderStatCards(els.esgGrid, [
@@ -649,25 +401,17 @@ function renderEsg() {
     </div>
   `).join("");
 
-  els.esgMethods.innerHTML = [
-    ["Proven", "Wall count, Plant Pod count, visit records, photos, replacement records."],
-    ["Estimated", "Water saving, service miles avoided, wellness reach, CO2e proxy."],
-    ["Not claimed", "Carbon credits, formal air purification guarantees, certified WELL/LEED points."]
-  ].map(([label, body]) => `
+  els.esgMethods.innerHTML = esgMethods.map((method) => `
     <div class="method-row">
-      <span>${label}</span>
-      <strong>${body}</strong>
+      <span>${method.label}</span>
+      <strong>${method.body}</strong>
     </div>
   `).join("");
 
-  els.esgLedger.innerHTML = [
-    ["Environmental", `${data.greenArea.toFixed(1)} m2 live green wall area, ${data.waterSaved} L/mo water-saving estimate, Plant Pod replacement traceability.`],
-    ["Social", `${data.staffReach} monthly staff and visitor touchpoints supported by visible biophilic space and stable presentation quality.`],
-    ["Governance", "Each visit links work orders, photos, Doctor Forest findings, manual actions and report method notes."]
-  ].map(([label, body]) => `
+  els.esgLedger.innerHTML = esgLedger.map((entry) => `
     <div class="ledger-card">
-      <span>${label}</span>
-      <p>${body}</p>
+      <span>${entry.label}</span>
+      <p>${fillEsgTemplate(entry.template, data)}</p>
     </div>
   `).join("");
 }
@@ -786,4 +530,22 @@ els.navLinks.forEach((link) => {
   });
 });
 
-renderAll();
+async function bootstrap() {
+  try {
+    await loadAppData();
+    initializeSelection();
+    renderAll();
+  } catch (error) {
+    console.error(error);
+    els.syncStatus.textContent = "Data load failed";
+    els.summaryGrid.innerHTML = `
+      <article class="stat-card">
+        <span>Startup error</span>
+        <strong>Data unavailable</strong>
+        <em>${error.message}</em>
+      </article>
+    `;
+  }
+}
+
+bootstrap();
