@@ -1348,9 +1348,9 @@ function metricsForClient(clientId) {
 function renderStatCards(container, cards, className = "stat-card") {
   container.innerHTML = cards.map((card) => `
     <article class="${className}">
-      <span>${card.label}</span>
+      <span>${card.label}${card.labelZh ? `<small class="zh">${card.labelZh}</small>` : ""}</span>
       <strong>${card.value}</strong>
-      <em>${card.detail}</em>
+      <em>${card.detail}${card.detailZh ? `<small class="zh">${card.detailZh}</small>` : ""}</em>
     </article>
   `).join("");
 }
@@ -1358,20 +1358,20 @@ function renderStatCards(container, cards, className = "stat-card") {
 function renderOverview() {
   const data = portfolioMetrics();
   renderStatCards(els.summaryGrid, [
-    { label: "Active clients", value: data.activeClients, detail: `${data.activeWalls} Wall assets under FM care` },
-    { label: "Portfolio health", value: data.health, detail: `${data.survival}% plant survival rate` },
-    { label: "SLA incidents", value: data.openIncidents.length, detail: `${data.criticalIncidents.length} critical incident(s), ${data.sensorAlerts} sensor alert(s)` },
-    { label: "Managed value", value: formatCurrency(data.revenue), detail: `${formatCurrency(data.outstandingAmount)} open AR` }
+    { label: "Active clients", labelZh: "活跃客户", value: data.activeClients, detail: `${data.activeWalls} Wall assets under FM care`, detailZh: "已纳入运营管理的绿墙资产" },
+    { label: "Portfolio health", labelZh: "资产健康度", value: data.health, detail: `${data.survival}% plant survival rate`, detailZh: "植物存活率和整体健康表现" },
+    { label: "SLA incidents", labelZh: "服务事件", value: data.openIncidents.length, detail: `${data.criticalIncidents.length} critical incident(s), ${data.sensorAlerts} sensor alert(s)`, detailZh: "需要响应的服务和传感器异常" },
+    { label: "Managed value", labelZh: "管理合同价值", value: formatCurrency(data.revenue), detail: `${formatCurrency(data.outstandingAmount)} open AR`, detailZh: "合同收入和未收账款视图" }
   ]);
 
   els.proofStrip.innerHTML = [
-    ["Living asset classes", `${assetClasses.length} mapped`],
-    ["Wall green area", `${data.greenArea.toFixed(1)} m2`],
-    ["Water-saving estimate", `${data.waterSaved} L/mo`],
-    ["Wellness reach", `${data.staffReach} people/mo`]
-  ].map(([label, value]) => `
+    ["Living asset classes", "活体资产类别", `${assetClasses.length} mapped`],
+    ["Wall green area", "绿墙面积", `${data.greenArea.toFixed(1)} m2`],
+    ["Water-saving estimate", "节水估算", `${data.waterSaved} L/mo`],
+    ["Wellness reach", "健康办公触达", `${data.staffReach} people/mo`]
+  ].map(([label, zh, value]) => `
     <div>
-      <span>${label}</span>
+      <span>${label}<small class="zh">${zh}</small></span>
       <strong>${value}</strong>
     </div>
   `).join("");
@@ -1387,6 +1387,7 @@ function renderOverview() {
         </div>
         <span>${clientFor(wall).name} - ${wall.location}</span>
         <small>Health ${wall.health} - ${wall.issues} issues - next visit ${wall.nextVisit}</small>
+        <small class="zh-copy">健康分 ${wall.health}，${wall.issues} 个问题，下次巡检 ${wall.nextVisit}</small>
       </button>
     `).join("");
 
@@ -1401,6 +1402,7 @@ function renderOverview() {
         </div>
         <span>${view.id} - ${view.type}</span>
         <small>${clientFor(wall).name} - ${view.tasks.join(", ")}</small>
+        <small class="zh-copy">服务节奏：按计划巡检、拍照、处理养护任务。</small>
       </button>
     `;
   }).join("");
@@ -1411,14 +1413,14 @@ function renderPlatform() {
   const readyCount = data.readyAssetClasses.length;
   const nextCount = data.nextAssetClasses.length;
 
-  els.platformStatus.textContent = `${readyCount} MVP asset class, ${nextCount} expansion classes`;
+  els.platformStatus.textContent = `${readyCount} MVP asset class, ${nextCount} expansion classes / ${readyCount} 个 MVP 资产类别，${nextCount} 个可扩展类别`;
   els.platformStatus.classList.toggle("good", readyCount > 0 && nextCount >= 3);
 
   renderStatCards(els.platformGrid, [
-    { label: "Platform scope", value: assetClasses.length, detail: "Living and adjacent green asset classes mapped" },
-    { label: "Wall wedge", value: data.activeWalls, detail: "Current MVP assets with real service, proof and ESG data" },
-    { label: "Expansion runway", value: nextCount, detail: "Product families that can reuse the same operating ledger" },
-    { label: "Investor comps", value: investorBenchmarks.length, detail: "Funding cases mapped into product lessons" }
+    { label: "Platform scope", labelZh: "平台范围", value: assetClasses.length, detail: "Living and adjacent green asset classes mapped", detailZh: "已映射可纳入系统的产品类别" },
+    { label: "Wall wedge", labelZh: "绿墙切入点", value: data.activeWalls, detail: "Current MVP assets with real service, proof and ESG data", detailZh: "先用绿墙证明服务、凭证和 ESG 价值" },
+    { label: "Expansion runway", labelZh: "扩展空间", value: nextCount, detail: "Product families that can reuse the same operating ledger", detailZh: "可复用同一资产台账的产品线" },
+    { label: "Investor comps", labelZh: "融资参照", value: investorBenchmarks.length, detail: "Funding cases mapped into product lessons", detailZh: "用类似融资案例解释价值逻辑" }
   ]);
 
   els.assetScopeList.innerHTML = assetClasses.map((asset) => `
@@ -1428,6 +1430,7 @@ function renderPlatform() {
         <span class="tag ${statusClass(asset.status)}">${asset.stage}</span>
       </div>
       <span>${asset.fit}</span>
+      <small class="zh-copy">中文理解：这类产品只要有合同、点位、养护责任、健康状态和续约价值，就能进入系统。</small>
       <small>${asset.signals.join(" / ")}</small>
       <small>${asset.monetization}</small>
     </article>
@@ -1438,6 +1441,7 @@ function renderPlatform() {
       <span>${phase.phase} - ${phase.label}</span>
       <strong>${phase.proof}</strong>
       <em>${phase.investorQuestion}</em>
+      <em class="zh-copy">中文理解：这是从单一绿墙产品走向多产品平台的阶段路径。</em>
     </article>
   `).join("");
 
@@ -1446,6 +1450,7 @@ function renderPlatform() {
       <span>${item.company} - ${item.category}</span>
       <strong>${item.signal}</strong>
       <em>${item.lesson}</em>
+      <em class="zh-copy">中文理解：投资人看重的是持续运营数据、客户留存、资产价值和可扩展性。</em>
     </article>
   `).join("");
 
@@ -1472,13 +1477,13 @@ function renderMvpControl() {
   const openTasks = data.openQuickTasks;
   const closedTasks = data.closedQuickTasks;
 
-  els.mvpStatus.textContent = `${readinessRatio}% MVP readiness, ${openTasks.length} open quick task(s)`;
+  els.mvpStatus.textContent = `${readinessRatio}% MVP readiness, ${openTasks.length} open quick task(s) / MVP 准备度 ${readinessRatio}%，${openTasks.length} 个快速任务`;
   els.mvpStatus.classList.toggle("good", readinessRatio >= 80);
   renderStatCards(els.mvpGrid, [
-    { label: "MVP readiness", value: `${readinessRatio}%`, detail: `${data.completeReadiness.length}/${mvpReadiness.length} handoff items complete` },
-    { label: "Active role", value: role?.label || "No role", detail: role ? `${role.person} - ${role.scope}` : "Role model not loaded" },
-    { label: "Quick tasks", value: openTasks.length, detail: `${closedTasks.length} closed task(s) in local demo state` },
-    { label: "Phase 2 markers", value: data.phaseTwoReadiness.length, detail: "Backend, auth and integrations stay out of MVP scope" }
+    { label: "MVP readiness", labelZh: "MVP 准备度", value: `${readinessRatio}%`, detail: `${data.completeReadiness.length}/${mvpReadiness.length} handoff items complete`, detailZh: "当前可演示功能完成比例" },
+    { label: "Active role", labelZh: "当前角色", value: role?.label || "No role", detail: role ? `${role.person} - ${role.scope}` : "Role model not loaded", detailZh: "演示时模拟不同运营角色权限" },
+    { label: "Quick tasks", labelZh: "快速任务", value: openTasks.length, detail: `${closedTasks.length} closed task(s) in local demo state`, detailZh: "用于演示创建、关闭和审计记录" },
+    { label: "Phase 2 markers", labelZh: "二期标记", value: data.phaseTwoReadiness.length, detail: "Backend, auth and integrations stay out of MVP scope", detailZh: "正式上线前再接后端、权限和集成" }
   ]);
 
   els.activeRoleSelect.innerHTML = mvpRoles.map((item) => `
@@ -1610,13 +1615,13 @@ function renderCommercial() {
   const proofDue = views.filter((view) => view.daysToProof <= 45);
   const revenueAtRisk = sum(riskViews, (view) => view.client.revenue);
 
-  els.commercialStatus.textContent = `${riskViews.length} save plan account(s), ${renewalWindow.length} renewal window`;
+  els.commercialStatus.textContent = `${riskViews.length} save plan account(s), ${renewalWindow.length} renewal window / ${riskViews.length} 个挽留客户，${renewalWindow.length} 个续约窗口`;
   els.commercialStatus.classList.toggle("good", riskViews.length === 0);
   renderStatCards(els.commercialGrid, [
-    { label: "Revenue at risk", value: formatCurrency(revenueAtRisk), detail: "Setup and recurring value under save plan" },
-    { label: "Renewal window", value: renewalWindow.length, detail: "Accounts renewing in 90 days" },
-    { label: "SLA exceptions", value: slaExceptions.length, detail: "Health gaps or open work orders" },
-    { label: "Proof packs due", value: proofDue.length, detail: "Client evidence due in 45 days" }
+    { label: "Revenue at risk", labelZh: "风险收入", value: formatCurrency(revenueAtRisk), detail: "Setup and recurring value under save plan", detailZh: "需要重点挽留的安装和持续服务价值" },
+    { label: "Renewal window", labelZh: "续约窗口", value: renewalWindow.length, detail: "Accounts renewing in 90 days", detailZh: "90 天内进入续约期的客户" },
+    { label: "SLA exceptions", labelZh: "SLA 异常", value: slaExceptions.length, detail: "Health gaps or open work orders", detailZh: "健康差距或未完成工单" },
+    { label: "Proof packs due", labelZh: "凭证包到期", value: proofDue.length, detail: "Client evidence due in 45 days", detailZh: "45 天内需要交付的客户凭证" }
   ]);
 
   els.renewalList.innerHTML = views.map((view) => `
@@ -1669,13 +1674,13 @@ function renderBilling() {
   const outstandingAmount = sum(openInvoices, (invoice) => invoice.amount);
   const paidAmount = sum(paidInvoices, (invoice) => invoice.amount);
 
-  els.billingStatus.textContent = `${overdueInvoices.length} overdue invoice(s), ${formatCurrency(outstandingAmount)} open AR`;
+  els.billingStatus.textContent = `${overdueInvoices.length} overdue invoice(s), ${formatCurrency(outstandingAmount)} open AR / ${overdueInvoices.length} 张逾期，${formatCurrency(outstandingAmount)} 应收`;
   els.billingStatus.classList.toggle("good", openInvoices.length === 0);
   renderStatCards(els.billingGrid, [
-    { label: "July invoice run", value: formatCurrency(invoiceTotal), detail: `${invoiceRows.length} invoice(s) across active accounts` },
-    { label: "Outstanding AR", value: formatCurrency(outstandingAmount), detail: "Unpaid rental, DF Pro and expansion charges" },
-    { label: "Overdue invoices", value: overdueInvoices.length, detail: "Escalate when paired with renewal risk" },
-    { label: "Collected", value: formatCurrency(paidAmount), detail: `${paidInvoices.length} invoice(s) marked paid` }
+    { label: "July invoice run", labelZh: "7 月账单批次", value: formatCurrency(invoiceTotal), detail: `${invoiceRows.length} invoice(s) across active accounts`, detailZh: "活跃客户本月账单总额" },
+    { label: "Outstanding AR", labelZh: "未收应收", value: formatCurrency(outstandingAmount), detail: "Unpaid rental, DF Pro and expansion charges", detailZh: "租摆、DF Pro 和扩展服务未收款" },
+    { label: "Overdue invoices", labelZh: "逾期账单", value: overdueInvoices.length, detail: "Escalate when paired with renewal risk", detailZh: "与续约风险叠加时需升级处理" },
+    { label: "Collected", labelZh: "已回款", value: formatCurrency(paidAmount), detail: `${paidInvoices.length} invoice(s) marked paid`, detailZh: "已标记支付的账单金额" }
   ]);
 
   els.invoiceList.innerHTML = invoiceRows.map((invoice) => {
@@ -1723,13 +1728,13 @@ function renderCompliance() {
   const blockers = openItems.filter((item) => item.displayTone === "blocked");
   const expiring = openItems.filter((item) => item.displayTone === "expiring");
 
-  els.complianceStatus.textContent = `${blockers.length} blocker(s), ${expiring.length} expiring item(s)`;
+  els.complianceStatus.textContent = `${blockers.length} blocker(s), ${expiring.length} expiring item(s) / ${blockers.length} 个阻塞，${expiring.length} 个即将到期`;
   els.complianceStatus.classList.toggle("good", openItems.length === 0);
   renderStatCards(els.complianceGrid, [
-    { label: "Compliance items", value: rows.length, detail: "Access, insurance, method and proof release" },
-    { label: "Blockers", value: blockers.length, detail: "Items that can block visits or reports" },
-    { label: "Expiring soon", value: expiring.length, detail: "Refresh before site or renewal use" },
-    { label: "Cleared", value: clearedItems.length, detail: "Accepted for FM operations" }
+    { label: "Compliance items", labelZh: "合规事项", value: rows.length, detail: "Access, insurance, method and proof release", detailZh: "准入、保险、作业方法和报告发布" },
+    { label: "Blockers", labelZh: "阻塞项", value: blockers.length, detail: "Items that can block visits or reports", detailZh: "会阻止到访或报告导出的事项" },
+    { label: "Expiring soon", labelZh: "即将到期", value: expiring.length, detail: "Refresh before site or renewal use", detailZh: "现场服务或续约前需要更新" },
+    { label: "Cleared", labelZh: "已清理", value: clearedItems.length, detail: "Accepted for FM operations", detailZh: "已满足 FM 运营要求" }
   ]);
 
   els.complianceList.innerHTML = rows.map((item) => {
@@ -1842,13 +1847,13 @@ function renderSensors() {
   const offline = sensorItems.filter((item) => item.status === "offline" && !item.acknowledged);
   const alertItems = sensorItems.filter((item) => item.status === "alert" && !item.acknowledged);
 
-  els.sensorStatus.textContent = `${actionItems.length} active telemetry exception(s)`;
+  els.sensorStatus.textContent = `${actionItems.length} active telemetry exception(s) / ${actionItems.length} 个实时遥测异常`;
   els.sensorStatus.classList.toggle("good", actionItems.length === 0);
   renderStatCards(els.sensorGrid, [
-    { label: "Sensor readings", value: sensorItems.length, detail: "Water, light and gateway inputs" },
-    { label: "Active alerts", value: alertItems.length, detail: "Needs same-day FM review" },
-    { label: "Offline gateways", value: offline.length, detail: "Manual-check until restored" },
-    { label: "Acknowledged", value: acknowledged.length, detail: "Alerts accepted by control desk" }
+    { label: "Sensor readings", labelZh: "传感器读数", value: sensorItems.length, detail: "Water, light and gateway inputs", detailZh: "水分、光照和网关输入" },
+    { label: "Active alerts", labelZh: "活跃预警", value: alertItems.length, detail: "Needs same-day FM review", detailZh: "需要当天运营复核" },
+    { label: "Offline gateways", labelZh: "离线网关", value: offline.length, detail: "Manual-check until restored", detailZh: "恢复前需要人工检查" },
+    { label: "Acknowledged", labelZh: "已确认", value: acknowledged.length, detail: "Alerts accepted by control desk", detailZh: "运营台已接收的预警" }
   ]);
 
   els.sensorList.innerHTML = sensorItems.map((item) => `
@@ -1888,13 +1893,13 @@ function renderIncidents() {
   const criticalIncidents = openIncidents.filter((incident) => incident.severity === "critical" || incident.displayTone === "escalated");
   const dueIncidents = openIncidents.filter((incident) => incident.daysToDue <= 0);
 
-  els.incidentStatus.textContent = `${openIncidents.length} open incident(s), ${criticalIncidents.length} critical`;
+  els.incidentStatus.textContent = `${openIncidents.length} open incident(s), ${criticalIncidents.length} critical / ${openIncidents.length} 个未关闭事件，${criticalIncidents.length} 个关键事件`;
   els.incidentStatus.classList.toggle("good", openIncidents.length === 0);
   renderStatCards(els.incidentGrid, [
-    { label: "Open incidents", value: openIncidents.length, detail: "Sensor, proof and service exceptions" },
-    { label: "Critical queue", value: criticalIncidents.length, detail: "Renewal or SLA-sensitive response" },
-    { label: "Due now", value: dueIncidents.length, detail: "Due today or already breaching SLA" },
-    { label: "Resolved", value: resolvedIncidents.length, detail: "Closed with audit trace" }
+    { label: "Open incidents", labelZh: "未关闭事件", value: openIncidents.length, detail: "Sensor, proof and service exceptions", detailZh: "传感器、凭证和服务异常" },
+    { label: "Critical queue", labelZh: "关键队列", value: criticalIncidents.length, detail: "Renewal or SLA-sensitive response", detailZh: "影响续约或服务承诺的响应" },
+    { label: "Due now", labelZh: "当前到期", value: dueIncidents.length, detail: "Due today or already breaching SLA", detailZh: "今天到期或已触发 SLA 风险" },
+    { label: "Resolved", labelZh: "已解决", value: resolvedIncidents.length, detail: "Closed with audit trace", detailZh: "带审计记录的关闭事件" }
   ]);
 
   els.incidentList.innerHTML = incidentRows.map((incident) => {
@@ -1992,13 +1997,13 @@ function renderSchedule() {
   const capacityMinutes = sum(capacityRows, (row) => row.capacityMinutes);
   const capacityLoad = capacityMinutes ? Math.round((scheduledMinutes / capacityMinutes) * 100) : 0;
 
-  els.scheduleStatus.textContent = `${openSlots.length} open slot(s), ${capacityLoad}% capacity planned`;
+  els.scheduleStatus.textContent = `${openSlots.length} open slot(s), ${capacityLoad}% capacity planned / ${openSlots.length} 个待确认时段，产能已排 ${capacityLoad}%`;
   els.scheduleStatus.classList.toggle("good", openSlots.length === 0 && capacityLoad < 80);
   renderStatCards(els.scheduleGrid, [
-    { label: "Scheduled visits", value: slotRows.length, detail: `Planning date ${scheduleToday}` },
-    { label: "Confirmed slots", value: confirmedSlots.length, detail: "Access and service window locked" },
-    { label: "Action windows", value: openSlots.length, detail: `${atRiskSlots.length} at-risk visit(s)` },
-    { label: "Capacity load", value: `${capacityLoad}%`, detail: `${scheduledMinutes}/${capacityMinutes} planned minutes` }
+    { label: "Scheduled visits", labelZh: "已排到访", value: slotRows.length, detail: `Planning date ${scheduleToday}`, detailZh: "当前计划日期内的服务安排" },
+    { label: "Confirmed slots", labelZh: "已确认时段", value: confirmedSlots.length, detail: "Access and service window locked", detailZh: "准入与服务窗口已锁定" },
+    { label: "Action windows", labelZh: "待处理窗口", value: openSlots.length, detail: `${atRiskSlots.length} at-risk visit(s)`, detailZh: "仍需确认或有风险的到访窗口" },
+    { label: "Capacity load", labelZh: "产能负载", value: `${capacityLoad}%`, detail: `${scheduledMinutes}/${capacityMinutes} planned minutes`, detailZh: "已规划分钟数与团队产能" }
   ]);
 
   els.scheduleSlotList.innerHTML = slotRows.map((slot) => {
@@ -2086,13 +2091,13 @@ function renderDispatch() {
   const highPriorityStops = openStops.filter((item) => item.order.priority === "high");
   const reservedUnits = sum(dispatchInventory, (item) => item.reserved);
 
-  els.dispatchStatus.textContent = `${openStops.length} open stop(s), ${stagedStops.length} kit staged`;
+  els.dispatchStatus.textContent = `${openStops.length} open stop(s), ${stagedStops.length} kit staged / ${openStops.length} 个未完成点位，${stagedStops.length} 个工具包已备`;
   els.dispatchStatus.classList.toggle("good", openStops.length === 0);
   renderStatCards(els.dispatchGrid, [
-    { label: "Route stops", value: routeItems.length, detail: "Sequenced across today and next visits" },
-    { label: "Kits staged", value: stagedStops.length, detail: "Ready for technician handoff" },
-    { label: "High priority", value: highPriorityStops.length, detail: "Needs same-day attention" },
-    { label: "Reserved stock", value: reservedUnits, detail: "Pods, nutrients and tools held for work orders" }
+    { label: "Route stops", labelZh: "路线点位", value: routeItems.length, detail: "Sequenced across today and next visits", detailZh: "今日与后续到访的顺序安排" },
+    { label: "Kits staged", labelZh: "工具包已备", value: stagedStops.length, detail: "Ready for technician handoff", detailZh: "可交接给技师的物料准备" },
+    { label: "High priority", labelZh: "高优先级", value: highPriorityStops.length, detail: "Needs same-day attention", detailZh: "需要当天关注的任务" },
+    { label: "Reserved stock", labelZh: "已预留库存", value: reservedUnits, detail: "Pods, nutrients and tools held for work orders", detailZh: "为工单锁定的植物舱、营养液和工具" }
   ]);
 
   els.dispatchRouteList.innerHTML = routeItems.map((item) => `
@@ -2147,13 +2152,13 @@ function renderSupply() {
   const requested = supplyRows.filter((item) => item.requested);
   const reservedUnits = sum(supplyRows, (item) => item.reserved);
 
-  els.supplyStatus.textContent = `${reorderNow.length} reorder flag(s), ${requested.length} request(s) raised`;
+  els.supplyStatus.textContent = `${reorderNow.length} reorder flag(s), ${requested.length} request(s) raised / ${reorderNow.length} 个补货预警，${requested.length} 个已发起请求`;
   els.supplyStatus.classList.toggle("good", reorderNow.length === 0);
   renderStatCards(els.supplyGrid, [
-    { label: "Tracked SKUs", value: supplyRows.length, detail: "Pods, sleeves, nutrients and tools" },
-    { label: "Reorder now", value: reorderNow.length, detail: "Available stock at or below threshold" },
-    { label: "Watch stock", value: watchStock.length, detail: "Approaching reorder level" },
-    { label: "Reserved units", value: reservedUnits, detail: "Held for dispatch and proof continuity" }
+    { label: "Tracked SKUs", labelZh: "跟踪 SKU", value: supplyRows.length, detail: "Pods, sleeves, nutrients and tools", detailZh: "植物舱、套件、营养液和工具" },
+    { label: "Reorder now", labelZh: "立即补货", value: reorderNow.length, detail: "Available stock at or below threshold", detailZh: "可用库存低于或等于阈值" },
+    { label: "Watch stock", labelZh: "观察库存", value: watchStock.length, detail: "Approaching reorder level", detailZh: "接近补货水位的物料" },
+    { label: "Reserved units", labelZh: "预留数量", value: reservedUnits, detail: "Held for dispatch and proof continuity", detailZh: "为派工和凭证连续性预留" }
   ]);
 
   els.supplyList.innerHTML = supplyRows.map((item) => `
@@ -2207,13 +2212,13 @@ function renderProof() {
   const missing = proofItems.filter((item) => item.displayTone === "missing");
   const readiness = proofItems.length ? Math.round((reportReady.length / proofItems.length) * 100) : 0;
 
-  els.proofStatus.textContent = `${readiness}% report-ready evidence`;
+  els.proofStatus.textContent = `${readiness}% report-ready evidence / ${readiness}% 可用于报告的凭证`;
   els.proofStatus.classList.toggle("good", missing.length === 0 && needsReview.length === 0);
   renderStatCards(els.proofGrid, [
-    { label: "Proof records", value: proofItems.length, detail: "Photos, notes and trace evidence" },
-    { label: "Report-ready", value: reportReady.length, detail: "Ready or explicitly approved" },
-    { label: "Needs review", value: needsReview.length, detail: "Evidence desk check required" },
-    { label: "Missing proof", value: missing.length, detail: "Blocks clean client export" }
+    { label: "Proof records", labelZh: "凭证记录", value: proofItems.length, detail: "Photos, notes and trace evidence", detailZh: "照片、备注和可追溯证据" },
+    { label: "Report-ready", labelZh: "报告可用", value: reportReady.length, detail: "Ready or explicitly approved", detailZh: "已准备好或已明确批准" },
+    { label: "Needs review", labelZh: "需要复核", value: needsReview.length, detail: "Evidence desk check required", detailZh: "需要凭证台人工检查" },
+    { label: "Missing proof", labelZh: "缺失凭证", value: missing.length, detail: "Blocks clean client export", detailZh: "会阻止干净的客户报告导出" }
   ]);
 
   els.proofRecordList.innerHTML = proofItems.map((item) => `
@@ -2251,13 +2256,13 @@ function renderAudit() {
   const reviewEvents = events.filter((event) => event.tone === "review" || event.tone === "alert").length;
   const latest = events[0];
 
-  els.auditStatus.textContent = latest ? `Latest: ${latest.action}` : "No audit events yet";
+  els.auditStatus.textContent = latest ? `Latest: ${latest.action} / 最新动作` : "No audit events yet / 暂无审计事件";
   els.auditStatus.classList.toggle("good", localCount > 0);
   renderStatCards(els.auditGrid, [
-    { label: "Audit events", value: events.length, detail: `${localCount} local control action(s)` },
-    { label: "Client-linked", value: clientLinked, detail: "Events available for client reports" },
-    { label: "Review signals", value: reviewEvents, detail: "Events that need management attention" },
-    { label: "Control rules", value: auditControls.length, detail: "Traceability rules in force" }
+    { label: "Audit events", labelZh: "审计事件", value: events.length, detail: `${localCount} local control action(s)`, detailZh: "本地演示产生的控制动作" },
+    { label: "Client-linked", labelZh: "客户关联", value: clientLinked, detail: "Events available for client reports", detailZh: "可写入客户报告的事件" },
+    { label: "Review signals", labelZh: "复核信号", value: reviewEvents, detail: "Events that need management attention", detailZh: "需要管理层关注的事件" },
+    { label: "Control rules", labelZh: "控制规则", value: auditControls.length, detail: "Traceability rules in force", detailZh: "当前生效的可追溯规则" }
   ]);
 
   els.auditEventList.innerHTML = events.map((event) => {
@@ -2293,11 +2298,11 @@ function fillEsgTemplate(template, data) {
 function renderEsg() {
   const data = portfolioMetrics();
   renderStatCards(els.esgGrid, [
-    { label: "Green wall area", value: `${data.greenArea.toFixed(1)} m2`, detail: "Directly measured wall ledger metric" },
-    { label: "Water saved", value: `${data.waterSaved} L/mo`, detail: "Estimated vs loose-pot service baseline" },
-    { label: "Service miles avoided", value: `${data.serviceMilesSaved} km`, detail: "Estimated by optimized FM route planning" },
-    { label: "Wellness reach", value: data.staffReach, detail: "Estimated monthly visitor and staff touchpoints" },
-    { label: "CO2e proxy", value: `${data.co2eProxy} kg`, detail: "Narrative proxy, not a carbon credit claim" }
+    { label: "Green wall area", labelZh: "绿墙面积", value: `${data.greenArea.toFixed(1)} m2`, detail: "Directly measured wall ledger metric", detailZh: "来自绿墙台账的直接测量指标" },
+    { label: "Water saved", labelZh: "节水估算", value: `${data.waterSaved} L/mo`, detail: "Estimated vs loose-pot service baseline", detailZh: "相对散盆服务基线的估算" },
+    { label: "Service miles avoided", labelZh: "减少服务里程", value: `${data.serviceMilesSaved} km`, detail: "Estimated by optimized FM route planning", detailZh: "根据优化路线计划估算" },
+    { label: "Wellness reach", labelZh: "健康办公触达", value: data.staffReach, detail: "Estimated monthly visitor and staff touchpoints", detailZh: "月度员工与访客触点估算" },
+    { label: "CO2e proxy", labelZh: "碳代理指标", value: `${data.co2eProxy} kg`, detail: "Narrative proxy, not a carbon credit claim", detailZh: "仅用于叙事，不等同碳信用主张" }
   ], "esg-card");
 
   els.esgBars.innerHTML = esgTrend.map((row) => `
@@ -2340,11 +2345,18 @@ function renderReports() {
     </button>
   `).join("");
 
-  els.reportStatus.textContent = state.reportGenerated ? "Generated" : "Draft pack";
+  els.reportStatus.textContent = state.reportGenerated ? "Generated / 已生成" : "Draft pack / 报告草稿包";
   els.reportStatus.classList.toggle("good", state.reportGenerated);
   els.reportPeriod.textContent = `${period.label} - ${period.period}`;
   els.reportTitle.textContent = `${client.name} - ${report.title}`;
   els.reportSummary.textContent = report.summary;
+  const profileLabelZh = {
+    Client: "客户",
+    Segment: "业态与区域",
+    Plan: "方案",
+    Renewal: "续约日",
+    "Proof need": "凭证需求"
+  };
   els.reportClientProfile.innerHTML = [
     ["Client", client.name],
     ["Segment", `${client.segment} - ${client.district}`],
@@ -2353,10 +2365,33 @@ function renderReports() {
     ["Proof need", client.proofNeed]
   ].map(([label, value]) => `
     <div>
-      <span>${label}</span>
+      <span>${label}<small class="zh">${profileLabelZh[label] || ""}</small></span>
       <strong>${value}</strong>
     </div>
   `).join("");
+  const metricLabelZh = {
+    "Health score": "健康分",
+    "Report readiness": "报告准备度",
+    "Green area": "绿化面积",
+    "Water estimate": "节水估算",
+    "Open issues": "未关闭问题",
+    "Open work orders": "未完成工单",
+    "Completed work orders": "已完成工单",
+    "Approved proof": "已批准凭证",
+    "Proof gaps": "凭证缺口",
+    "Sensor alerts": "传感器预警",
+    "Open incidents": "未关闭事件",
+    "Resolved incidents": "已解决事件",
+    "Open compliance": "未关闭合规项",
+    "Cleared compliance": "已清理合规项",
+    "Open quick tasks": "未关闭快速任务",
+    "Closed quick tasks": "已关闭快速任务",
+    "Confirmed visits": "已确认到访",
+    "Open visit slots": "待确认到访",
+    "Outstanding AR": "未收应收",
+    "Paid invoices": "已支付账单",
+    "Audit events": "审计事件"
+  };
   els.reportMetrics.innerHTML = [
     ["Health score", data.health],
     ["Report readiness", `${data.reportReadiness}%`],
@@ -2381,7 +2416,7 @@ function renderReports() {
     ["Audit events", data.auditEvents.length]
   ].map(([label, value]) => `
     <div class="report-metric">
-      <span>${label}</span>
+      <span>${label}<small class="zh">${metricLabelZh[label] || ""}</small></span>
       <strong>${value}</strong>
     </div>
   `).join("");

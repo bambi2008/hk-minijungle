@@ -7,66 +7,69 @@
   <link rel="icon" href="assets/dr-forest-logo.png">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+<body class="bilingual-draft">
   <div class="ops-shell">
     <aside class="side-nav" aria-label="DR FOREST FM Ops navigation">
       <a class="brand" href="#overview" aria-label="DR FOREST FM Ops home">
         <span class="brand-mark logo-mark">
           <img src="assets/dr-forest-logo.png" alt="" aria-hidden="true">
         </span>
-        <span><strong>DR FOREST</strong><small>FM Ops</small></span>
+        <span><strong>DR FOREST</strong><small>FM Ops / 设施运营</small></span>
       </a>
 
       <nav>
-        <a href="#overview" class="active">Overview</a>
-        <a href="#mvp">MVP</a>
-        <a href="#platform">Platform</a>
-        <a href="#positioning">Positioning</a>
-        <a href="#clients">Clients</a>
-        <a href="#commercial">SLA</a>
-        <a href="#billing">Billing</a>
-        <a href="#compliance">Compliance</a>
-        <a href="#walls">Asset Detail</a>
-        <a href="#sensors">Sensors</a>
-        <a href="#incidents">Incidents</a>
-        <a href="#service">Service</a>
-        <a href="#schedule">Calendar</a>
-        <a href="#dispatch">Dispatch</a>
-        <a href="#supply">Stock</a>
-        <a href="#proof">Proof</a>
-        <a href="#esg">ESG</a>
-        <a href="#audit">Audit</a>
-        <a href="#reports">Reports</a>
-        <a href="#architecture">Architecture</a>
+        <a href="#overview" class="active"><span>Overview</span><small>总览</small></a>
+        <a href="#guide"><span>Guide</span><small>导读</small></a>
+        <a href="#mvp"><span>MVP</span><small>最小可演示版</small></a>
+        <a href="#platform"><span>Platform</span><small>平台故事</small></a>
+        <a href="#positioning"><span>Positioning</span><small>定位</small></a>
+        <a href="#clients"><span>Clients</span><small>客户</small></a>
+        <a href="#commercial"><span>SLA</span><small>续约</small></a>
+        <a href="#billing"><span>Billing</span><small>账款</small></a>
+        <a href="#compliance"><span>Compliance</span><small>合规</small></a>
+        <a href="#walls"><span>Asset Detail</span><small>资产详情</small></a>
+        <a href="#sensors"><span>Sensors</span><small>传感器</small></a>
+        <a href="#incidents"><span>Incidents</span><small>事件</small></a>
+        <a href="#service"><span>Service</span><small>工单</small></a>
+        <a href="#schedule"><span>Calendar</span><small>日程</small></a>
+        <a href="#dispatch"><span>Dispatch</span><small>派工</small></a>
+        <a href="#supply"><span>Stock</span><small>库存</small></a>
+        <a href="#proof"><span>Proof</span><small>凭证</small></a>
+        <a href="#esg"><span>ESG</span><small>可持续统计</small></a>
+        <a href="#audit"><span>Audit</span><small>审计</small></a>
+        <a href="#reports"><span>Reports</span><small>报告</small></a>
+        <a href="#architecture"><span>Architecture</span><small>架构</small></a>
       </nav>
 
       <div class="nav-note">
-        <span>Brother app</span>
-        <strong>Independent FM and ESG control system. FiveCrop stays untouched.</strong>
+        <span>Working draft / 双语理解版</span>
+        <strong>English remains the release language. Chinese notes help internal explanation before launch.</strong>
+        <small>正式发布前可收回为全英文。</small>
       </div>
     </aside>
 
     <main class="main">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Hong Kong FM rental operations</p>
+          <p class="eyebrow">Hong Kong FM rental operations / 香港 FM 租摆运营</p>
           <h1>DR FOREST Living Asset OS</h1>
           <p class="topbar-copy">Use DR FOREST Wall as the first high-value wedge, then extend the same operating ledger to pots, plant clusters, green partitions, seasonal displays and ESG-ready client proof.</p>
+          <p class="topbar-copy zh-copy">中文理解：先用高客单价、服务复杂度高的绿墙证明系统价值，再把同一套资产台账、养护工单、凭证和 ESG 报告复制到其他绿植租摆产品。</p>
         </div>
         <div class="topbar-actions">
           <div class="hero-logo" aria-label="DR FOREST logo">
             <img src="assets/dr-forest-logo.png" alt="DR FOREST">
           </div>
-          <button type="button" id="simulate-visit-btn" class="ghost-btn">Complete visit</button>
-          <button type="button" id="generate-report-btn" class="primary-btn">Generate ESG pack</button>
+          <button type="button" id="simulate-visit-btn" class="ghost-btn">Complete visit / 完成巡检</button>
+          <button type="button" id="generate-report-btn" class="primary-btn">Generate ESG pack / 生成 ESG 包</button>
         </div>
       </header>
 
       <section id="overview" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Command center</p>
-            <h2>Portfolio Overview</h2>
+            <p class="eyebrow">Command center / 指挥中心</p>
+            <h2>Portfolio Overview <span class="zh-inline">资产组合总览</span></h2>
           </div>
           <span id="sync-status" class="status-pill">Synced today at 08:30</span>
         </div>
@@ -76,16 +79,48 @@
           <article class="panel">
             <div class="panel-title">
               <h3>Risk Queue</h3>
-              <span>Living assets that need FM attention</span>
+              <span>Living assets that need FM attention / 需要运营关注的活体资产</span>
             </div>
             <div id="risk-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
               <h3>Service Rhythm</h3>
-              <span>Upcoming visits and proof capture</span>
+              <span>Upcoming visits and proof capture / 未来巡检和服务凭证</span>
             </div>
             <div id="service-timeline" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="guide" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Bilingual reading guide / 中文导读</p>
+            <h2>How to Read This Demo <span class="zh-inline">如何理解这套演示</span></h2>
+          </div>
+          <span class="status-pill good">Internal bilingual draft</span>
+        </div>
+        <div class="strategy-grid guide-grid">
+          <article class="strategy-card">
+            <span>Investor lens</span>
+            <strong>Not a dashboard. An operating system.</strong>
+            <p>中文：投资人看的不是后台页面，而是 DR FOREST 是否能把租摆服务变成可复制、可度量、可续约的平台能力。</p>
+          </article>
+          <article class="strategy-card">
+            <span>Product wedge</span>
+            <strong>Wall first, portfolio later.</strong>
+            <p>中文：绿墙先做样板，因为它客单价高、服务链条长、ESG 价值更明显；以后再扩到盆栽、组合绿植、隔断和季节陈列。</p>
+          </article>
+          <article class="strategy-card">
+            <span>Data moat</span>
+            <strong>Every living asset has a ledger.</strong>
+            <p>中文：每个资产都有健康分、养护记录、照片凭证、替换风险、合同价值和 ESG 证据，这些长期积累就是壁垒。</p>
+          </article>
+          <article class="strategy-card">
+            <span>Launch mode</span>
+            <strong>Bilingual now, English at release.</strong>
+            <p>中文：现在保留中文帮助理解和演示；正式发布时保留英文产品语言，中文辅助层可以删除。</p>
           </article>
         </div>
       </section>
@@ -93,17 +128,17 @@
       <section id="mvp" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">MVP handoff</p>
-            <h2>MVP Control Center</h2>
+            <p class="eyebrow">MVP handoff / MVP 交付</p>
+            <h2>MVP Control Center <span class="zh-inline">最小可演示控制台</span></h2>
           </div>
-          <span id="mvp-status" class="status-pill">Role and readiness view</span>
+          <span id="mvp-status" class="status-pill">Role and readiness view / 角色与准备度</span>
         </div>
         <div id="mvp-grid" class="summary-grid"></div>
         <div class="two-col mvp-layout">
           <article class="panel">
             <div class="panel-title">
               <h3>Operator Role</h3>
-              <span>Demo permissions and current actor</span>
+              <span>Demo permissions and current actor / 演示权限和当前操作者</span>
             </div>
             <div class="quick-task-form">
               <label>
@@ -117,7 +152,7 @@
           <article class="panel">
             <div class="panel-title">
               <h3>MVP Readiness</h3>
-              <span>What is demo-ready vs phase 2</span>
+              <span>What is demo-ready vs phase 2 / 哪些已可演示，哪些留到二期</span>
             </div>
             <div id="mvp-readiness-list" class="stack-list"></div>
           </article>
@@ -126,19 +161,19 @@
           <article class="panel">
             <div class="panel-title">
               <h3>Quick Ops Create</h3>
-              <span>Create an ad-hoc task with audit trace</span>
+              <span>Create an ad-hoc task with audit trace / 创建临时任务并留下审计记录</span>
             </div>
             <div class="quick-task-form">
               <label>
-                Client
+                Client / 客户
                 <select id="quick-client-select" aria-label="Select quick task client"></select>
               </label>
               <label>
-                Template
+                Template / 模板
                 <select id="quick-template-select" aria-label="Select quick task template"></select>
               </label>
               <label>
-                Priority
+                Priority / 优先级
                 <select id="quick-priority-select" aria-label="Select quick task priority">
                   <option value="high">High</option>
                   <option value="medium" selected>Medium</option>
@@ -146,17 +181,17 @@
                 </select>
               </label>
               <label class="wide">
-                Note
+                Note / 备注
                 <input id="quick-note-input" type="text" value="Smoke created service note" aria-label="Quick task note">
               </label>
-              <button type="button" id="create-quick-task-btn" class="primary-btn">Create task</button>
+              <button type="button" id="create-quick-task-btn" class="primary-btn">Create task / 创建任务</button>
             </div>
             <div id="quick-task-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
               <h3>Handoff Criteria</h3>
-              <span>Review gates before product adjustment</span>
+              <span>Review gates before product adjustment / 产品调整前的复盘门槛</span>
             </div>
             <div id="mvp-handoff-list" class="method-list"></div>
           </article>
@@ -166,10 +201,10 @@
       <section id="platform" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Investor platform frame</p>
-            <h2>Living Asset OS</h2>
+            <p class="eyebrow">Investor platform frame / 投资人平台框架</p>
+            <h2>Living Asset OS <span class="zh-inline">活体资产操作系统</span></h2>
           </div>
-          <span id="platform-status" class="status-pill">Asset scope and expansion thesis</span>
+          <span id="platform-status" class="status-pill">Asset scope and expansion thesis / 资产范围与扩展逻辑</span>
         </div>
         <div id="platform-thesis-grid" class="strategy-grid"></div>
         <div id="platform-grid" class="summary-grid"></div>
@@ -177,14 +212,14 @@
           <article class="panel">
             <div class="panel-title">
               <h3>Asset Scope</h3>
-              <span>What can enter the operating system</span>
+              <span>What can enter the operating system / 哪些产品能进入系统</span>
             </div>
             <div id="asset-scope-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
               <h3>Expansion Ladder</h3>
-              <span>How Wall becomes a multi-product platform</span>
+              <span>How Wall becomes a multi-product platform / 绿墙如何扩展成多产品平台</span>
             </div>
             <div id="expansion-roadmap-list" class="method-list"></div>
           </article>
@@ -192,7 +227,7 @@
         <article class="panel benchmark-panel">
           <div class="panel-title">
             <h3>Comparable Funding Signals</h3>
-            <span>How similar categories were valued by investors</span>
+            <span>How similar categories were valued by investors / 类似赛道如何被投资人定价</span>
           </div>
           <div id="investor-benchmark-list" class="method-list"></div>
         </article>
@@ -201,16 +236,17 @@
       <section id="positioning" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Product stance</p>
-            <h2>Positioning and Image</h2>
+            <p class="eyebrow">Product stance / 产品姿态</p>
+            <h2>Positioning and Image <span class="zh-inline">定位与形象</span></h2>
           </div>
           <span class="status-pill good">Nature-as-a-Service</span>
         </div>
         <div id="strategy-grid" class="strategy-grid"></div>
         <article class="panel positioning-panel">
           <div>
-            <p class="eyebrow">Core positioning</p>
+            <p class="eyebrow">Core positioning / 核心定位</p>
             <h3>Not a plant care app. A living asset operations system.</h3>
+            <p class="zh-copy">中文理解：这不是给个人养花用的 app，而是给 FM、业主、ESG 团队管理商业空间绿植资产的运营系统。</p>
           </div>
           <p id="positioning-copy"></p>
         </article>
@@ -219,23 +255,23 @@
       <section id="clients" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Accounts and sites</p>
-            <h2>Client Portfolio</h2>
+            <p class="eyebrow">Accounts and sites / 客户与点位</p>
+            <h2>Client Portfolio <span class="zh-inline">客户资产组合</span></h2>
           </div>
           <div id="client-tabs" class="segmented" role="group" aria-label="Select client"></div>
         </div>
         <div class="client-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Account List</h3>
-              <span>Rental, care and renewal view</span>
+              <h3>Account List <span class="zh-inline">客户列表</span></h3>
+              <span>Rental, care and renewal view / 租摆、养护、续约视图</span>
             </div>
             <div id="client-list" class="stack-list"></div>
           </article>
           <article class="panel client-detail">
             <div class="panel-title">
-              <h3 id="client-detail-title">Client detail</h3>
-              <span id="client-detail-status">Selected account</span>
+              <h3 id="client-detail-title">Client detail / 客户详情</h3>
+              <span id="client-detail-status">Selected account / 当前客户</span>
             </div>
             <div id="client-detail" class="detail-grid"></div>
           </article>
@@ -245,24 +281,24 @@
       <section id="commercial" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Commercial control</p>
-            <h2>SLA and Renewal Desk</h2>
+            <p class="eyebrow">Commercial control / 商务管控</p>
+            <h2>SLA and Renewal Desk <span class="zh-inline">服务承诺与续约台</span></h2>
           </div>
-          <span id="commercial-status" class="status-pill">Portfolio renewal view</span>
+          <span id="commercial-status" class="status-pill">Portfolio renewal view / 组合续约视图</span>
         </div>
         <div id="commercial-grid" class="summary-grid"></div>
         <div class="two-col commercial-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Renewal Priority</h3>
-              <span>Revenue, proof deadline and save plan</span>
+              <h3>Renewal Priority <span class="zh-inline">续约优先级</span></h3>
+              <span>Revenue, proof deadline and save plan / 收入、凭证期限、挽留计划</span>
             </div>
             <div id="renewal-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>SLA Watch</h3>
-              <span>Health target, response target and open work</span>
+              <h3>SLA Watch <span class="zh-inline">服务承诺监控</span></h3>
+              <span>Health target, response target and open work / 健康目标、响应目标、未完成任务</span>
             </div>
             <div id="sla-list" class="stack-list"></div>
             <div id="success-playbook" class="method-list"></div>
@@ -273,24 +309,24 @@
       <section id="billing" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Revenue control</p>
-            <h2>Billing Center</h2>
+            <p class="eyebrow">Revenue control / 收入管控</p>
+            <h2>Billing Center <span class="zh-inline">账款中心</span></h2>
           </div>
-          <span id="billing-status" class="status-pill">Receivables view</span>
+          <span id="billing-status" class="status-pill">Receivables view / 应收账款视图</span>
         </div>
         <div id="billing-grid" class="summary-grid"></div>
         <div class="two-col billing-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Invoice Queue</h3>
-              <span>Rental, DF Pro and expansion billing</span>
+              <h3>Invoice Queue <span class="zh-inline">发票队列</span></h3>
+              <span>Rental, DF Pro and expansion billing / 租摆、DF Pro、扩展服务计费</span>
             </div>
             <div id="invoice-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Receivables Policy</h3>
-              <span>How billing status becomes account action</span>
+              <h3>Receivables Policy <span class="zh-inline">回款策略</span></h3>
+              <span>How billing status becomes account action / 账款状态如何触发客户动作</span>
             </div>
             <div id="billing-policy-list" class="method-list"></div>
           </article>
@@ -300,24 +336,24 @@
       <section id="compliance" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Access and governance</p>
-            <h2>Compliance Center</h2>
+            <p class="eyebrow">Access and governance / 准入与治理</p>
+            <h2>Compliance Center <span class="zh-inline">合规中心</span></h2>
           </div>
-          <span id="compliance-status" class="status-pill">Permit and document view</span>
+          <span id="compliance-status" class="status-pill">Permit and document view / 许可与文件视图</span>
         </div>
         <div id="compliance-grid" class="summary-grid"></div>
         <div class="two-col compliance-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Compliance Queue</h3>
-              <span>Access, insurance, method and proof release</span>
+              <h3>Compliance Queue <span class="zh-inline">合规队列</span></h3>
+              <span>Access, insurance, method and proof release / 准入、保险、作业方法、报告发布</span>
             </div>
             <div id="compliance-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Compliance Rules</h3>
-              <span>How documents affect service and reporting</span>
+              <h3>Compliance Rules <span class="zh-inline">合规规则</span></h3>
+              <span>How documents affect service and reporting / 文件如何影响服务与报告</span>
             </div>
             <div id="compliance-rule-list" class="method-list"></div>
           </article>
@@ -327,28 +363,28 @@
       <section id="walls" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Living asset ledger</p>
-            <h2>Asset Detail</h2>
+            <p class="eyebrow">Living asset ledger / 活体资产台账</p>
+            <h2>Asset Detail <span class="zh-inline">资产详情</span></h2>
           </div>
           <div class="filters" role="group" aria-label="Asset filters">
-            <button type="button" class="filter-btn active" data-filter="all">All</button>
-            <button type="button" class="filter-btn" data-filter="risk">Risk</button>
-            <button type="button" class="filter-btn" data-filter="smart">Smart</button>
+            <button type="button" class="filter-btn active" data-filter="all">All / 全部</button>
+            <button type="button" class="filter-btn" data-filter="risk">Risk / 风险</button>
+            <button type="button" class="filter-btn" data-filter="smart">Smart / 智能</button>
           </div>
         </div>
         <div id="wall-grid" class="wall-grid"></div>
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
-              <h3 id="wall-detail-title">Selected asset</h3>
-              <span id="wall-detail-status">Zone, pod and service view</span>
+              <h3 id="wall-detail-title">Selected asset / 当前资产</h3>
+              <span id="wall-detail-status">Zone, pod and service view / 区域、植物舱、服务视图</span>
             </div>
             <div id="wall-detail" class="detail-grid"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Pod Health Map</h3>
-              <span>Plant Pod status by zone</span>
+              <h3>Pod Health Map <span class="zh-inline">植物舱健康图</span></h3>
+              <span>Plant Pod status by zone / 按区域查看植物舱状态</span>
             </div>
             <div id="pod-health-list" class="pod-health-list"></div>
           </article>
@@ -358,24 +394,24 @@
       <section id="sensors" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Smart asset telemetry</p>
-            <h2>Sensor Monitor</h2>
+            <p class="eyebrow">Smart asset telemetry / 智能资产遥测</p>
+            <h2>Sensor Monitor <span class="zh-inline">传感器监控</span></h2>
           </div>
-          <span id="sensor-status" class="status-pill">Live sensor watch</span>
+          <span id="sensor-status" class="status-pill">Live sensor watch / 实时传感器监控</span>
         </div>
         <div id="sensor-grid" class="summary-grid"></div>
         <div class="two-col sensor-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Sensor Alerts</h3>
-              <span>Water, light and gateway exceptions</span>
+              <h3>Sensor Alerts <span class="zh-inline">传感器预警</span></h3>
+              <span>Water, light and gateway exceptions / 水分、光照、网关异常</span>
             </div>
             <div id="sensor-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Sensor Rules</h3>
-              <span>How telemetry becomes FM action</span>
+              <h3>Sensor Rules <span class="zh-inline">传感器规则</span></h3>
+              <span>How telemetry becomes FM action / 遥测数据如何转成 FM 动作</span>
             </div>
             <div id="sensor-rule-list" class="method-list"></div>
           </article>
@@ -385,24 +421,24 @@
       <section id="incidents" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">SLA response</p>
-            <h2>Incident Center</h2>
+            <p class="eyebrow">SLA response / 服务承诺响应</p>
+            <h2>Incident Center <span class="zh-inline">事件中心</span></h2>
           </div>
-          <span id="incident-status" class="status-pill">Exception queue</span>
+          <span id="incident-status" class="status-pill">Exception queue / 异常队列</span>
         </div>
         <div id="incident-grid" class="summary-grid"></div>
         <div class="two-col incident-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Incident Queue</h3>
-              <span>Sensor, proof and renewal-risk exceptions</span>
+              <h3>Incident Queue <span class="zh-inline">事件队列</span></h3>
+              <span>Sensor, proof and renewal-risk exceptions / 传感器、凭证、续约风险异常</span>
             </div>
             <div id="incident-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>SLA Rules</h3>
-              <span>How exceptions become managed commitments</span>
+              <h3>SLA Rules <span class="zh-inline">SLA 规则</span></h3>
+              <span>How exceptions become managed commitments / 异常如何转成可管理承诺</span>
             </div>
             <div id="incident-rule-list" class="method-list"></div>
           </article>
@@ -412,23 +448,23 @@
       <section id="service" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Field service</p>
-            <h2>Work Orders and DR FOREST</h2>
+            <p class="eyebrow">Field service / 现场服务</p>
+            <h2>Work Orders and DR FOREST <span class="zh-inline">工单与 DR FOREST</span></h2>
           </div>
-          <span class="status-pill">Phase 1: photo + record + report</span>
+          <span class="status-pill">Phase 1: photo + record + report / 一期：照片、记录、报告</span>
         </div>
         <div class="workbench">
           <article class="panel">
             <div class="panel-title">
-              <h3>Work Orders</h3>
-              <span>Inspection, care, replacement, completion proof</span>
+              <h3>Work Orders <span class="zh-inline">服务工单</span></h3>
+              <span>Inspection, care, replacement, completion proof / 巡检、养护、更换、完工凭证</span>
             </div>
             <div id="workorder-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>DR FOREST Queue</h3>
-              <span>Photo findings translated into actions</span>
+              <h3>DR FOREST Queue <span class="zh-inline">植物诊断队列</span></h3>
+              <span>Photo findings translated into actions / 照片问题转成服务动作</span>
             </div>
             <div id="diagnosis-list" class="stack-list"></div>
           </article>
@@ -438,24 +474,24 @@
       <section id="schedule" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Service planning</p>
-            <h2>Service Calendar</h2>
+            <p class="eyebrow">Service planning / 服务计划</p>
+            <h2>Service Calendar <span class="zh-inline">服务日程</span></h2>
           </div>
-          <span id="schedule-status" class="status-pill">Visit confirmation view</span>
+          <span id="schedule-status" class="status-pill">Visit confirmation view / 到访确认视图</span>
         </div>
         <div id="schedule-grid" class="summary-grid"></div>
         <div class="two-col schedule-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Visit Timeline</h3>
-              <span>Access, proof gate and service window control</span>
+              <h3>Visit Timeline <span class="zh-inline">到访时间线</span></h3>
+              <span>Access, proof gate and service window control / 准入、凭证关口、服务窗口控制</span>
             </div>
             <div id="schedule-slot-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Capacity and Rules</h3>
-              <span>Technician load and planning guardrails</span>
+              <h3>Capacity and Rules <span class="zh-inline">产能与规则</span></h3>
+              <span>Technician load and planning guardrails / 技师负载与排班护栏</span>
             </div>
             <div id="schedule-capacity-list" class="stack-list"></div>
             <div id="schedule-rule-list" class="method-list"></div>
@@ -466,24 +502,24 @@
       <section id="dispatch" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Route and readiness</p>
-            <h2>Dispatch Board</h2>
+            <p class="eyebrow">Route and readiness / 路线与准备度</p>
+            <h2>Dispatch Board <span class="zh-inline">派工看板</span></h2>
           </div>
-          <span id="dispatch-status" class="status-pill">Today route in planning</span>
+          <span id="dispatch-status" class="status-pill">Today route in planning / 今日路线规划中</span>
         </div>
         <div id="dispatch-grid" class="summary-grid"></div>
         <div class="two-col dispatch-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Route Plan</h3>
-              <span>Technician, window, kit and proof path</span>
+              <h3>Route Plan <span class="zh-inline">路线计划</span></h3>
+              <span>Technician, window, kit and proof path / 技师、时间窗、工具包、凭证路径</span>
             </div>
             <div id="dispatch-route-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Crew and Inventory</h3>
-              <span>Capacity and readiness blockers</span>
+              <h3>Crew and Inventory <span class="zh-inline">人员与物料</span></h3>
+              <span>Capacity and readiness blockers / 产能与准备度阻塞点</span>
             </div>
             <div id="dispatch-crew-list" class="stack-list"></div>
             <div id="dispatch-inventory-list" class="method-list"></div>
@@ -494,24 +530,24 @@
       <section id="supply" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Inventory and purchasing</p>
-            <h2>Inventory Control</h2>
+            <p class="eyebrow">Inventory and purchasing / 库存与采购</p>
+            <h2>Inventory Control <span class="zh-inline">库存管控</span></h2>
           </div>
-          <span id="supply-status" class="status-pill">Stock readiness view</span>
+          <span id="supply-status" class="status-pill">Stock readiness view / 库存准备度视图</span>
         </div>
         <div id="supply-grid" class="summary-grid"></div>
         <div class="two-col supply-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Stock Ledger</h3>
-              <span>Available, reserved, reorder point and lead time</span>
+              <h3>Stock Ledger <span class="zh-inline">库存台账</span></h3>
+              <span>Available, reserved, reorder point and lead time / 可用、已预留、补货点、交期</span>
             </div>
             <div id="supply-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Stock Policy</h3>
-              <span>Operational rules for service continuity</span>
+              <h3>Stock Policy <span class="zh-inline">库存策略</span></h3>
+              <span>Operational rules for service continuity / 保证服务连续性的运营规则</span>
             </div>
             <div id="supply-policy-list" class="method-list"></div>
           </article>
@@ -521,24 +557,24 @@
       <section id="proof" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Evidence control</p>
-            <h2>Proof Vault</h2>
+            <p class="eyebrow">Evidence control / 凭证管控</p>
+            <h2>Proof Vault <span class="zh-inline">凭证库</span></h2>
           </div>
-          <span id="proof-status" class="status-pill">Report evidence review</span>
+          <span id="proof-status" class="status-pill">Report evidence review / 报告凭证复核</span>
         </div>
         <div id="proof-grid" class="summary-grid"></div>
         <div class="two-col proof-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Proof Records</h3>
-              <span>Photos, timestamps, notes and approval status</span>
+              <h3>Proof Records <span class="zh-inline">凭证记录</span></h3>
+              <span>Photos, timestamps, notes and approval status / 照片、时间戳、备注、审批状态</span>
             </div>
             <div id="proof-record-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Report Requirements</h3>
-              <span>What must be present before client export</span>
+              <h3>Report Requirements <span class="zh-inline">报告要求</span></h3>
+              <span>What must be present before client export / 客户导出前必须具备的内容</span>
             </div>
             <div id="proof-requirement-list" class="method-list"></div>
           </article>
@@ -548,32 +584,32 @@
       <section id="esg" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">ESG proof layer</p>
-            <h2>ESG Statistics</h2>
+            <p class="eyebrow">ESG proof layer / ESG 凭证层</p>
+            <h2>ESG Statistics <span class="zh-inline">可持续统计</span></h2>
           </div>
-          <span class="status-pill good">Evidence first, claims second</span>
+          <span class="status-pill good">Evidence first, claims second / 先凭证，后主张</span>
         </div>
         <div id="esg-grid" class="esg-grid"></div>
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
-              <h3>ESG Score Trend</h3>
-              <span>6-month portfolio trend</span>
+              <h3>ESG Score Trend <span class="zh-inline">ESG 分数趋势</span></h3>
+              <span>6-month portfolio trend / 6 个月资产组合趋势</span>
             </div>
             <div id="esg-bars" class="bar-chart" aria-label="ESG score trend"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Metric Governance</h3>
-              <span>What is proven vs estimated</span>
+              <h3>Metric Governance <span class="zh-inline">指标治理</span></h3>
+              <span>What is proven vs estimated / 哪些已证明，哪些为估算</span>
             </div>
             <div id="esg-methods" class="method-list"></div>
           </article>
         </div>
         <article class="panel">
           <div class="panel-title">
-            <h3>ESG Narrative Ledger</h3>
-            <span>Client-facing proof language</span>
+            <h3>ESG Narrative Ledger <span class="zh-inline">ESG 叙事台账</span></h3>
+            <span>Client-facing proof language / 面向客户的凭证表达</span>
           </div>
           <div id="esg-ledger" class="ledger-grid"></div>
         </article>
@@ -582,24 +618,24 @@
       <section id="audit" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Control trace</p>
-            <h2>Audit Ledger</h2>
+            <p class="eyebrow">Control trace / 管控追踪</p>
+            <h2>Audit Ledger <span class="zh-inline">审计台账</span></h2>
           </div>
-          <span id="audit-status" class="status-pill">Operational control log</span>
+          <span id="audit-status" class="status-pill">Operational control log / 运营管控日志</span>
         </div>
         <div id="audit-grid" class="summary-grid"></div>
         <div class="two-col audit-layout">
           <article class="panel">
             <div class="panel-title">
-              <h3>Activity Stream</h3>
-              <span>Who did what, when, and to which client</span>
+              <h3>Activity Stream <span class="zh-inline">活动流水</span></h3>
+              <span>Who did what, when, and to which client / 谁在何时对哪个客户做了什么</span>
             </div>
             <div id="audit-event-list" class="stack-list"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Audit Controls</h3>
-              <span>Rules for evidence and operational traceability</span>
+              <h3>Audit Controls <span class="zh-inline">审计控制</span></h3>
+              <span>Rules for evidence and operational traceability / 凭证与运营可追溯规则</span>
             </div>
             <div id="audit-control-list" class="method-list"></div>
           </article>
@@ -609,21 +645,21 @@
       <section id="reports" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Client proof</p>
-            <h2>Report Center</h2>
+            <p class="eyebrow">Client proof / 客户证明</p>
+            <h2>Report Center <span class="zh-inline">报告中心</span></h2>
           </div>
-          <span id="report-status" class="status-pill">Draft pack</span>
+          <span id="report-status" class="status-pill">Draft pack / 报告草稿包</span>
         </div>
         <div class="report-builder">
           <label>
-            Client
+            Client / 客户
             <select id="report-client-select" aria-label="Select report client"></select>
           </label>
           <label>
-            Period
+            Period / 周期
             <select id="report-month-select" aria-label="Select report period"></select>
           </label>
-          <button type="button" id="download-report-btn" class="ghost-btn">Download HTML report</button>
+          <button type="button" id="download-report-btn" class="ghost-btn">Download HTML report / 下载 HTML 报告</button>
         </div>
         <div id="report-tabs" class="segmented report-tabs" role="group" aria-label="Report type"></div>
         <div id="report-client-profile" class="report-client-profile"></div>
@@ -638,15 +674,15 @@
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
-              <h3>Evidence Included</h3>
-              <span>What the client can trust</span>
+              <h3>Evidence Included <span class="zh-inline">已包含凭证</span></h3>
+              <span>What the client can trust / 客户可相信的内容</span>
             </div>
             <div id="report-evidence" class="evidence-grid compact"></div>
           </article>
           <article class="panel">
             <div class="panel-title">
-              <h3>Method Notes</h3>
-              <span>Proof status for ESG claims</span>
+              <h3>Method Notes <span class="zh-inline">方法说明</span></h3>
+              <span>Proof status for ESG claims / ESG 主张的凭证状态</span>
             </div>
             <div id="report-methods" class="method-list"></div>
           </article>
@@ -656,10 +692,10 @@
       <section id="architecture" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">System design</p>
-            <h2>Product Architecture</h2>
+            <p class="eyebrow">System design / 系统设计</p>
+            <h2>Product Architecture <span class="zh-inline">产品架构</span></h2>
           </div>
-          <span class="status-pill">Ready for sensor phase later</span>
+          <span class="status-pill">Ready for sensor phase later / 为后续传感器阶段预留</span>
         </div>
         <div id="architecture-layers" class="architecture-layers"></div>
       </section>

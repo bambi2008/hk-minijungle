@@ -30,6 +30,10 @@ body {
   line-height: 1.45;
 }
 
+.bilingual-draft {
+  --zh-size: 0.78rem;
+}
+
 button {
   font: inherit;
 }
@@ -101,12 +105,21 @@ button {
 }
 
 .side-nav nav a {
+  display: grid;
+  gap: 2px;
   border-radius: 8px;
   padding: 10px 12px;
   color: var(--muted);
   font-size: 0.94rem;
   font-weight: 750;
   text-decoration: none;
+}
+
+.side-nav nav a small {
+  color: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.78;
 }
 
 .side-nav nav a.active,
@@ -136,6 +149,13 @@ button {
   display: block;
   margin-top: 6px;
   font-size: 0.92rem;
+}
+
+.nav-note small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: var(--zh-size);
 }
 
 .main {
@@ -179,6 +199,36 @@ button {
   max-width: 820px;
   margin-top: 10px;
   color: var(--muted);
+}
+
+.zh,
+.zh-inline,
+.zh-copy {
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.zh {
+  display: block;
+  margin-top: 3px;
+  font-size: var(--zh-size);
+  line-height: 1.35;
+}
+
+.zh-inline {
+  margin-left: 8px;
+  font-size: 0.9rem;
+}
+
+.zh-copy {
+  max-width: 820px;
+  color: #45544b;
+  font-size: 0.94rem;
+}
+
+.guide-grid .strategy-card p {
+  color: #45544b;
+  font-weight: 650;
 }
 
 h1,
@@ -270,6 +320,8 @@ small {
   background: var(--surface);
   color: var(--muted);
   font-size: 0.82rem;
+  line-height: 1.25;
+  white-space: normal;
 }
 
 .status-pill.good {

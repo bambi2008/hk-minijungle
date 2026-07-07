@@ -78,6 +78,13 @@ async function verifyBrowserFlow(baseUrl) {
     assert(title?.includes("DR FOREST Living Asset OS"), "Unexpected main title");
     const logoCount = await page.locator('img[src="assets/dr-forest-logo.png"]').count();
     assert(logoCount >= 2, `Expected logo in brand and hero, found ${logoCount}`);
+    const navText = await page.textContent(".side-nav nav");
+    assert(navText?.includes("导读"), "Bilingual navigation did not load");
+    const guideText = await page.textContent("#guide");
+    assert(guideText?.includes("中文导读"), "Bilingual guide did not load");
+    assert(guideText?.includes("正式发布"), "Bilingual release note did not load");
+    const esgText = await page.textContent("#esg");
+    assert(esgText?.includes("可持续统计"), "Bilingual ESG section did not load");
     const platformStatus = await page.textContent("#platform-status");
     assert(platformStatus?.includes("expansion classes"), "Platform status did not load expansion scope");
     const assetScope = await page.textContent("#asset-scope-list");
