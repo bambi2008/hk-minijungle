@@ -28,6 +28,13 @@
       "evidence": ["Full-wall before/after photos", "Health score trend", "Work order closure log", "ESG metric method notes"]
     },
     {
+      "id": "esg-proof",
+      "label": "ESG Proof Pack",
+      "title": "Audit-ready ESG Evidence Pack",
+      "summary": "A conservative ESG proof pack separating measured supplier evidence, estimated indicators and non-claimed items for client reporting review.",
+      "evidence": ["Measured-vs-estimated claim table", "Framework mapping", "Source evidence chain", "Claims boundary note"]
+    },
+    {
       "id": "renewal",
       "label": "Renewal Proof",
       "title": "Renewal Value and Service Proof Pack",
@@ -45,8 +52,8 @@
   "strategyCards": [
     {
       "title": "Positioning",
-      "value": "Living Asset OS",
-      "body": "A vertical operating system for DR FOREST's recurring green assets, with Wall as the first high-value wedge."
+      "value": "AI-native Living Asset OS",
+      "body": "A vertical operating system for DR FOREST's recurring green assets, with Wall as the first high-value wedge and AI as the intelligence layer."
     },
     {
       "title": "Audience",
@@ -62,13 +69,18 @@
       "title": "Moat",
       "value": "Pod data + service proof",
       "body": "Standardized wall modules, Plant Pod records, Xponge replacement cycles and DR FOREST diagnosis history."
+    },
+    {
+      "title": "AI layer",
+      "value": "Predict, act, prove",
+      "body": "AI turns service history, sensors, proof records and renewal signals into human-reviewed recommendations."
     }
   ],
   "platformThesis": [
     {
       "title": "Investor thesis",
-      "value": "From rental service to asset OS",
-      "body": "The app turns each living product into a managed asset with contract value, service history, health risk, ESG evidence and renewal proof."
+      "value": "From rental service to AI-native asset OS",
+      "body": "The app turns each living product into a managed asset with contract value, service history, health risk, ESG evidence, AI predictions and renewal proof."
     },
     {
       "title": "Wedge",
@@ -84,6 +96,11 @@
       "title": "Moat",
       "value": "Living asset data network",
       "body": "Health scores, replacement cycles, route cost, survival rates and proof packs compound into data that a pure rental operator does not own."
+    },
+    {
+      "title": "AI leverage",
+      "value": "Human-reviewed automation",
+      "body": "AI recommends care timing, proof gaps, stock demand and renewal actions while keeping FM leads accountable for approval."
     }
   ],
   "assetClasses": [
@@ -177,7 +194,7 @@
       "phase": "04",
       "label": "Living Asset Intelligence",
       "status": "phase-2",
-      "proof": "Use accumulated health, replacement and route data for risk scoring, demand planning and predictive care.",
+      "proof": "Use accumulated health, replacement, sensor, proof and route data for AI risk scoring, demand planning, ESG evidence drafting and predictive care.",
       "investorQuestion": "Does DR FOREST own proprietary operating data?"
     }
   ],
@@ -224,15 +241,19 @@
     },
     {
       "name": "Health Layer",
-      "items": ["Health score", "DR FOREST finding", "Risk queue", "Follow-up standard"]
+      "items": ["Health score formula", "Mobile photo AI", "Sensor stability", "Service compliance", "Recovery trend", "DR FOREST finding"]
     },
     {
       "name": "ESG Layer",
       "items": ["Green area", "Water estimate", "Service miles", "Wellness reach", "Evidence status"]
     },
     {
+      "name": "AI Layer",
+      "items": ["Care prediction", "Proof gap detection", "Renewal risk", "Inventory demand", "FM Copilot", "Human approval"]
+    },
+    {
       "name": "Client Proof Layer",
-      "items": ["Monthly report", "Renewal pack", "Audit trail", "Export API"]
+      "items": ["Monthly report", "ESG proof pack", "Renewal pack", "Audit trail", "Export API"]
     }
   ]
 }

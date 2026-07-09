@@ -9,16 +9,20 @@
   ],
   "methods": [
     {
-      "label": "Proven",
-      "body": "Wall count, Plant Pod count, visit records, photos, replacement records."
+      "label": "Proven / 已证明",
+      "body": "Wall count, Plant Pod count, visit records, timestamps, photos, replacement records and audit events."
     },
     {
-      "label": "Estimated",
-      "body": "Water saving, service miles avoided, wellness reach, CO2e proxy."
+      "label": "Estimated / 估算",
+      "body": "Water saving, service miles avoided, wellness reach and CO2e proxy are marked as estimates with method notes."
     },
     {
-      "label": "Not claimed",
-      "body": "Carbon credits, formal air purification guarantees, certified WELL/LEED points."
+      "label": "Not claimed / 不主张",
+      "body": "Carbon credits, carbon neutrality, formal air purification guarantees and certified WELL/LEED points are not claimed unless independently certified."
+    },
+    {
+      "label": "Assurance boundary / 鉴证边界",
+      "body": "DR FOREST provides supplier evidence for client reporting; independent assurance remains with the client, auditor or qualified assurance provider."
     }
   ],
   "ledger": [
@@ -33,6 +37,92 @@
     {
       "label": "Governance",
       "template": "Each visit links work orders, photos, DR FOREST findings, manual actions and report method notes."
+    }
+  ],
+  "proofPack": [
+    {
+      "id": "ESG-PROOF-01",
+      "label": "Source evidence chain",
+      "status": "ready",
+      "owner": "Evidence desk",
+      "standard": "Photo, timestamp, site, asset ID, technician and linked work order",
+      "acceptedBy": "Client ESG team, FM team and report preparer",
+      "body": "Every metric must point back to raw operational evidence rather than a standalone marketing statement."
+    },
+    {
+      "id": "ESG-PROOF-02",
+      "label": "Metric method note",
+      "status": "ready",
+      "owner": "ESG desk",
+      "standard": "Measured vs estimated classification, formula, assumptions and reporting period",
+      "acceptedBy": "Client sustainability or finance reviewer",
+      "body": "The pack separates measured facts from estimates, so the client can decide what enters formal disclosure."
+    },
+    {
+      "id": "ESG-PROOF-03",
+      "label": "Claims boundary",
+      "status": "ready",
+      "owner": "Compliance desk",
+      "standard": "No carbon credit, carbon neutral, certified WELL/LEED or medical air-quality claim without external evidence",
+      "acceptedBy": "Legal, procurement and ESG reviewers",
+      "body": "This protects DR FOREST and clients from overstated ESG claims."
+    },
+    {
+      "id": "ESG-PROOF-04",
+      "label": "Assurance handoff",
+      "status": "phase-2",
+      "owner": "Client / auditor",
+      "standard": "Optional third-party assurance package export with evidence index",
+      "acceptedBy": "Independent assurance provider",
+      "body": "DR FOREST can provide an audit-ready file, but third-party assurance is a separate engagement."
+    }
+  ],
+  "frameworkMapping": [
+    {
+      "framework": "HKEX ESG Reporting Code",
+      "label": "Supplier evidence for listed-company ESG disclosure",
+      "status": "supporting evidence",
+      "proof": "Site-level green asset records, service proof, climate-related method notes and governance trace."
+    },
+    {
+      "framework": "IFRS S1 / S2",
+      "label": "Governance, metrics and risk-management inputs",
+      "status": "supporting evidence",
+      "proof": "Risk queue, method notes, measured-vs-estimated labels and climate-adjacent operational indicators."
+    },
+    {
+      "framework": "GRI",
+      "label": "Impact and stakeholder-facing narrative support",
+      "status": "supporting evidence",
+      "proof": "Environmental, social and governance ledger entries with source records."
+    },
+    {
+      "framework": "GHG Protocol / ISO 14064-ready",
+      "label": "Carbon-adjacent inputs only",
+      "status": "not a carbon inventory",
+      "proof": "CO2e proxy remains a narrative estimate until the client or qualified advisor validates inventory boundaries."
+    }
+  ],
+  "claimControls": [
+    {
+      "label": "Allowed: measured asset facts",
+      "tone": "ready",
+      "body": "Wall area, asset count, Plant Pod count, visit records, replacement records and approved photos can be stated as supplier evidence."
+    },
+    {
+      "label": "Allowed with method note: estimates",
+      "tone": "review",
+      "body": "Water saving, service miles avoided, wellness reach and CO2e proxy can be shown when formula, assumptions and period are visible."
+    },
+    {
+      "label": "Blocked without certification",
+      "tone": "alert",
+      "body": "Do not claim official ESG certification, carbon credits, carbon neutrality, verified Scope 3 reduction or WELL/LEED points without external certification."
+    },
+    {
+      "label": "Investor demo language",
+      "tone": "ready",
+      "body": "Use: audit-ready ESG evidence package that supports client reporting. Avoid: official ESG certificate."
     }
   ]
 }

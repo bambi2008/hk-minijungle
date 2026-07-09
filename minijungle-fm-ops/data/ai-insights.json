@@ -1,0 +1,116 @@
+{
+  "summary": [
+    {
+      "label": "Prediction coverage",
+      "labelZh": "预测覆盖率",
+      "value": "4/4",
+      "detail": "All current Wall assets have AI care, renewal or proof-risk signals."
+    },
+    {
+      "label": "Human review mode",
+      "labelZh": "人工复核模式",
+      "value": "On",
+      "detail": "AI can recommend, but FM leads approve client-impacting actions."
+    },
+    {
+      "label": "Investor narrative",
+      "labelZh": "投资人叙事",
+      "value": "AI-native OS",
+      "detail": "Operations data compounds into prediction, proof automation and renewal intelligence."
+    }
+  ],
+  "recommendations": [
+    {
+      "id": "AI-CARE-021",
+      "type": "Predictive care",
+      "priority": "high",
+      "confidence": 92,
+      "clientId": "show-suite",
+      "wallId": "MJ-HK-021",
+      "trigger": "Low-light sensor alert, leggy growth finding and high renewal risk overlap.",
+      "recommendation": "Move the next recovery visit 48 hours earlier and add an LED schedule proof screenshot.",
+      "action": "Queue recovery visit",
+      "evidence": ["Sensor SNS-021-LIGHT", "Work order WO-1047", "Proof PRF-1047"],
+      "guardrail": "Requires FM lead approval before dispatch or client-facing report use."
+    },
+    {
+      "id": "AI-ESG-001",
+      "type": "ESG evidence",
+      "priority": "medium",
+      "confidence": 88,
+      "clientId": "central-office",
+      "wallId": "MJ-HK-001",
+      "trigger": "Monthly ESG pack is due and the current proof gap is the full-wall report capture.",
+      "recommendation": "Prompt technician to capture before/after wall photos, timestamp, site trace and method note in one visit.",
+      "action": "Prepare ESG proof checklist",
+      "evidence": ["Proof requirement REQ-WALL-PHOTO", "Proof requirement REQ-ESG-METHOD"],
+      "guardrail": "AI may prefill the checklist; ESG desk approves all claims."
+    },
+    {
+      "id": "AI-RENEW-021",
+      "type": "Renewal risk",
+      "priority": "high",
+      "confidence": 84,
+      "clientId": "show-suite",
+      "wallId": "MJ-HK-021",
+      "trigger": "Renewal date is near, wall health is the lowest in portfolio and AR was recently overdue.",
+      "recommendation": "Generate a Renewal Proof Pack after risk recovery proof is approved.",
+      "action": "Prepare renewal pack",
+      "evidence": ["Commercial renewal desk", "Incident INC-2026-021", "Billing INV-2026-071"],
+      "guardrail": "Account lead reviews tone before sending to landlord or procurement."
+    },
+    {
+      "id": "AI-SUPPLY-014",
+      "type": "Demand planning",
+      "priority": "medium",
+      "confidence": 79,
+      "clientId": "wellness-clinic",
+      "wallId": "MJ-HK-014",
+      "trigger": "Replacement suggestion, water swing and nutrient stock alert indicate service kit risk.",
+      "recommendation": "Reserve replacement pods and nutrient stock before the next clinic care route.",
+      "action": "Reserve service kit",
+      "evidence": ["Supply NUT-A", "Work order WO-1042", "Wall MJ-HK-014"],
+      "guardrail": "Inventory desk confirms physical stock before purchase or route promise."
+    }
+  ],
+  "governance": [
+    {
+      "label": "Human-in-the-loop",
+      "rule": "AI recommendations create reviewable actions; they do not directly close work orders, approve proof or send reports."
+    },
+    {
+      "label": "Evidence boundary",
+      "rule": "Every AI output must cite source records such as sensors, photos, work orders, invoices, incidents or method notes."
+    },
+    {
+      "label": "ESG claims safety",
+      "rule": "AI cannot label a metric as certified, carbon neutral, WELL/LEED compliant or independently assured unless that evidence exists."
+    },
+    {
+      "label": "Model audit trail",
+      "rule": "Queued AI actions are written into the audit ledger with actor, timestamp, entity and client scope."
+    }
+  ],
+  "flywheel": [
+    {
+      "stage": "01 Observe",
+      "body": "Sensors, mobile photos, work orders, route plans and client feedback create the raw living-asset record."
+    },
+    {
+      "stage": "02 Predict",
+      "body": "The system scores plant health risk, proof gaps, stock demand and renewal risk before they become visible client problems."
+    },
+    {
+      "stage": "03 Act",
+      "body": "FM teams approve suggested visits, proof checklists, replacement kits and account actions."
+    },
+    {
+      "stage": "04 Prove",
+      "body": "Completed actions become audit-ready service proof, ESG method notes and renewal evidence."
+    },
+    {
+      "stage": "05 Learn",
+      "body": "Outcome data improves future risk scoring, care protocols and DR FOREST portfolio expansion decisions."
+    }
+  ]
+}

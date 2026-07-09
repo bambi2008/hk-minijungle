@@ -1,0 +1,146 @@
+{
+  "formula": [
+    {
+      "id": "visual-ai",
+      "label": "Visual AI condition",
+      "labelZh": "视觉 AI 状态",
+      "weight": 45,
+      "body": "Technician mobile photos are checked for yellowing, wilting, bare patches, uneven growth, pest/disease marks and overall fullness.",
+      "proof": "Standard-angle photo set, asset ID, timestamp and AI finding record."
+    },
+    {
+      "id": "sensor-stability",
+      "label": "Sensor stability",
+      "labelZh": "环境稳定度",
+      "weight": 25,
+      "body": "Water level, moisture, light, temperature, humidity, nutrient signal and gateway heartbeat reduce or support the score.",
+      "proof": "Telemetry reading, target band, last-seen time and alert status."
+    },
+    {
+      "id": "service-compliance",
+      "label": "Service compliance",
+      "labelZh": "服务履约",
+      "weight": 20,
+      "body": "On-time visits, completed care tasks, replacement closure and unresolved work orders affect operational health.",
+      "proof": "Work order status, technician note, photo proof and audit event."
+    },
+    {
+      "id": "recovery-trend",
+      "label": "Recovery trend",
+      "labelZh": "恢复趋势",
+      "weight": 10,
+      "body": "Survival rate, repeated issue history, replacement cycle and recovery speed show whether a wall is improving or degrading.",
+      "proof": "Historical health score, survival rate, issue recurrence and replacement log."
+    }
+  ],
+  "sources": [
+    {
+      "label": "Mobile photo capture",
+      "status": "MVP",
+      "body": "Technicians capture fixed-angle photos during visits. AI reads plant condition, while humans approve exceptions before client reporting."
+    },
+    {
+      "label": "Environmental telemetry",
+      "status": "Smart Wall",
+      "body": "Water, light, temperature, humidity and gateway data explain why visual health changes and trigger early intervention."
+    },
+    {
+      "label": "Work order ledger",
+      "status": "Core",
+      "body": "Inspection cadence, open issues, completion proof and replacement records anchor the score in actual FM delivery."
+    },
+    {
+      "label": "Manual review",
+      "status": "Control",
+      "body": "FM leads can confirm, override or request retake when lighting, angle or client context makes AI confidence weak."
+    }
+  ],
+  "captureWorkflow": [
+    {
+      "step": "01 Asset scan",
+      "body": "Technician scans QR or selects the asset ID, so every photo is tied to a client, site, wall and zone."
+    },
+    {
+      "step": "02 Standard photo set",
+      "body": "The app asks for full-wall, zone close-up and issue photos using fixed prompts for angle, distance and lighting."
+    },
+    {
+      "step": "03 AI pre-check",
+      "body": "AI checks image quality and plant condition, then highlights yellowing, sparse zones, wilt, low-light symptoms and likely causes."
+    },
+    {
+      "step": "04 Human approval",
+      "body": "FM lead approves the health score, asks for a retake or converts findings into work orders before the client sees the report."
+    }
+  ],
+  "cameraRoadmap": [
+    {
+      "phase": "MVP",
+      "label": "Mobile phone camera",
+      "position": "Default",
+      "body": "Lowest-cost and privacy-safe path. No built-in wall camera is required for launch."
+    },
+    {
+      "phase": "Smart Wall Pro",
+      "label": "Optional fixed plant camera",
+      "position": "Premium add-on",
+      "body": "A hidden camera can capture only the plant zone at fixed times for high-value clients that approve it."
+    },
+    {
+      "phase": "Privacy control",
+      "label": "Plant-only capture",
+      "position": "Required guardrail",
+      "body": "Crop to the wall area, avoid people, blur accidental faces and keep photos scoped to maintenance evidence."
+    },
+    {
+      "phase": "Predictive layer",
+      "label": "Trend over time",
+      "position": "Phase 2",
+      "body": "Daily or weekly visual trend data can improve early warnings, but it should not be needed for MVP."
+    }
+  ],
+  "qualityControls": [
+    {
+      "label": "Photo quality gate",
+      "rule": "Reject blurry, overexposed, too-dark or wrong-angle photos before AI scoring."
+    },
+    {
+      "label": "Confidence threshold",
+      "rule": "Low-confidence AI findings become review tasks instead of direct score changes."
+    },
+    {
+      "label": "Explainable score",
+      "rule": "Every score must show top drivers such as low light, water swing, yellowing, open work order or recovery trend."
+    },
+    {
+      "label": "Client-safe reporting",
+      "rule": "Reports show evidence-backed health status, not medical, air-purification or certification claims."
+    }
+  ],
+  "bands": [
+    {
+      "range": "90-100",
+      "label": "Healthy",
+      "tone": "ready",
+      "action": "Keep planned cadence and include in client proof."
+    },
+    {
+      "range": "80-89",
+      "label": "Watch",
+      "tone": "review",
+      "action": "Check photos, sensor trend and next visit timing."
+    },
+    {
+      "range": "70-79",
+      "label": "Recovery",
+      "tone": "alert",
+      "action": "Create recovery work order, approve replacement plan and capture proof."
+    },
+    {
+      "range": "<70",
+      "label": "Critical",
+      "tone": "alert",
+      "action": "Escalate same-day FM response and account communication."
+    }
+  ]
+}

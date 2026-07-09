@@ -19,6 +19,8 @@
 
       <nav>
         <a href="#overview" class="active"><span>Overview</span><small>总览</small></a>
+        <a href="#ai"><span>AI Command</span><small>AI 指挥</small></a>
+        <a href="#health"><span>Health Score</span><small>健康分</small></a>
         <a href="#guide"><span>Guide</span><small>导读</small></a>
         <a href="#mvp"><span>MVP</span><small>最小可演示版</small></a>
         <a href="#platform"><span>Platform</span><small>平台故事</small></a>
@@ -53,13 +55,14 @@
         <div>
           <p class="eyebrow">Hong Kong FM rental operations / 香港 FM 租摆运营</p>
           <h1>DR FOREST Living Asset OS</h1>
-          <p class="topbar-copy">Use DR FOREST Wall as the first high-value wedge, then extend the same operating ledger to pots, plant clusters, green partitions, seasonal displays and ESG-ready client proof.</p>
-          <p class="topbar-copy zh-copy">中文理解：先用高客单价、服务复杂度高的绿墙证明系统价值，再把同一套资产台账、养护工单、凭证和 ESG 报告复制到其他绿植租摆产品。</p>
+          <p class="topbar-copy">An AI-native operating system for living assets: use DR FOREST Wall as the first high-value wedge, then extend the same ledger to pots, plant clusters, green partitions, seasonal displays and ESG-ready client proof.</p>
+          <p class="topbar-copy zh-copy">中文理解：这套系统的核心不是“后台”，而是 AI 原生的活体资产运营系统。先用高客单价、服务复杂度高的绿墙证明价值，再把资产台账、养护工单、AI 预测、凭证和 ESG 报告复制到其他绿植租摆产品。</p>
         </div>
         <div class="topbar-actions">
           <div class="hero-logo" aria-label="DR FOREST logo">
             <img src="assets/dr-forest-logo.png" alt="DR FOREST">
           </div>
+          <button type="button" id="review-ai-btn" class="ghost-btn">Review AI queue / 查看 AI 队列</button>
           <button type="button" id="simulate-visit-btn" class="ghost-btn">Complete visit / 完成巡检</button>
           <button type="button" id="generate-report-btn" class="primary-btn">Generate ESG pack / 生成 ESG 包</button>
         </div>
@@ -89,6 +92,99 @@
               <span>Upcoming visits and proof capture / 未来巡检和服务凭证</span>
             </div>
             <div id="service-timeline" class="stack-list"></div>
+          </article>
+        </div>
+      </section>
+
+      <section id="ai" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">AI-native operations / AI 原生运营</p>
+            <h2>AI Command Center <span class="zh-inline">AI 指挥中心</span></h2>
+          </div>
+          <span id="ai-status" class="status-pill">Human-reviewed recommendations / 人工复核建议</span>
+        </div>
+        <div id="ai-grid" class="summary-grid"></div>
+        <div class="two-col ai-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>AI Recommendations <span class="zh-inline">AI 建议队列</span></h3>
+              <span>Predictive care, renewal risk and ESG proof gaps / 预测养护、续约风险与 ESG 凭证缺口</span>
+            </div>
+            <div id="ai-recommendation-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>AI Governance <span class="zh-inline">AI 治理</span></h3>
+              <span>What AI can suggest vs what humans must approve / AI 可建议，人工必须批准</span>
+            </div>
+            <div id="ai-governance-list" class="method-list"></div>
+          </article>
+        </div>
+        <article class="panel ai-flywheel-panel">
+          <div class="panel-title">
+            <h3>Living Asset Intelligence Layer <span class="zh-inline">活体资产智能层</span></h3>
+            <span>How every service action improves the next prediction / 每次服务如何反哺下一次预测</span>
+          </div>
+          <div id="ai-flywheel-list" class="method-list flywheel-grid"></div>
+        </article>
+      </section>
+
+      <section id="health" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Living asset health / 活体资产健康</p>
+            <h2>Health Score Method <span class="zh-inline">健康分方法论</span></h2>
+          </div>
+          <span id="health-status" class="status-pill">Mobile photo first, optional fixed camera later / 先手机拍照，后续可选固定摄像头</span>
+        </div>
+        <div id="health-grid" class="summary-grid"></div>
+        <div class="two-col health-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Weighted Formula <span class="zh-inline">加权公式</span></h3>
+              <span>Visual AI + sensors + service + trend / 视觉 AI、传感器、服务、趋势</span>
+            </div>
+            <div id="health-formula-list" class="method-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Selected Asset Breakdown <span class="zh-inline">当前资产拆分</span></h3>
+              <span>How the selected wall score is explained / 当前绿墙分数如何解释</span>
+            </div>
+            <div id="health-breakdown-list" class="stack-list"></div>
+          </article>
+        </div>
+        <div class="two-col health-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Data Sources <span class="zh-inline">数据来源</span></h3>
+              <span>What the score relies on / 健康分依靠什么</span>
+            </div>
+            <div id="health-source-list" class="method-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Capture Workflow <span class="zh-inline">采集流程</span></h3>
+              <span>How field photos become AI findings / 现场照片如何变成 AI 判断</span>
+            </div>
+            <div id="health-workflow-list" class="method-list"></div>
+          </article>
+        </div>
+        <div class="two-col health-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Camera Strategy <span class="zh-inline">摄像头策略</span></h3>
+              <span>Built-in camera is optional, not required for MVP / 模块自带摄像头不是 MVP 必需</span>
+            </div>
+            <div id="health-camera-list" class="method-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Quality Controls <span class="zh-inline">质量控制</span></h3>
+              <span>How to avoid black-box scoring / 如何避免黑箱打分</span>
+            </div>
+            <div id="health-quality-list" class="method-list"></div>
           </article>
         </div>
       </section>
@@ -590,6 +686,22 @@
           <span class="status-pill good">Evidence first, claims second / 先凭证，后主张</span>
         </div>
         <div id="esg-grid" class="esg-grid"></div>
+        <div class="two-col esg-proof-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Recognized Proof Pack <span class="zh-inline">被认可的证明包</span></h3>
+              <span>Audit-ready evidence, not informal marketing claims / 可审计证据，不是营销口号</span>
+            </div>
+            <div id="esg-proof-pack-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Framework Mapping <span class="zh-inline">披露框架映射</span></h3>
+              <span>HKEX, ISSB, GRI and GHG-ready language / 面向 HKEX、ISSB、GRI、GHG 的表达</span>
+            </div>
+            <div id="esg-framework-list" class="method-list"></div>
+          </article>
+        </div>
         <div class="two-col">
           <article class="panel">
             <div class="panel-title">
@@ -612,6 +724,13 @@
             <span>Client-facing proof language / 面向客户的凭证表达</span>
           </div>
           <div id="esg-ledger" class="ledger-grid"></div>
+        </article>
+        <article class="panel esg-claims-panel">
+          <div class="panel-title">
+            <h3>Claims Control <span class="zh-inline">主张边界控制</span></h3>
+            <span>Separate proven, estimated and not-claimed items / 区分已证明、估算和不主张</span>
+          </div>
+          <div id="esg-claim-control-list" class="method-list claim-grid"></div>
         </article>
       </section>
 

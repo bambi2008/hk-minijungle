@@ -15,7 +15,9 @@ const dataFiles = {
   audit: "data/audit.json",
   mvpControl: "data/mvp-control.json",
   esgMetrics: "data/esg-metrics.json",
-  productModel: "data/product-model.json"
+  productModel: "data/product-model.json",
+  aiInsights: "data/ai-insights.json",
+  healthScore: "data/health-score.json"
 };
 
 let clients = [];
@@ -33,6 +35,9 @@ let complianceRules = [];
 let esgTrend = [];
 let esgMethods = [];
 let esgLedger = [];
+let esgProofPack = [];
+let esgFrameworkMapping = [];
+let esgClaimControls = [];
 let reportModes = [];
 let reportMonths = [];
 let strategyCards = [];
@@ -61,6 +66,16 @@ let mvpRoles = [];
 let mvpReadiness = [];
 let mvpQuickTemplates = [];
 let mvpHandoffCriteria = [];
+let aiSummary = [];
+let aiRecommendations = [];
+let aiGovernance = [];
+let aiFlywheel = [];
+let healthFormula = [];
+let healthSources = [];
+let healthCaptureWorkflow = [];
+let healthCameraRoadmap = [];
+let healthQualityControls = [];
+let healthBands = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
@@ -73,6 +88,7 @@ let complianceClearances = {};
 let activeRoleId = null;
 let quickOpsTasks = [];
 let auditEvents = [];
+let aiQueuedActions = {};
 
 const workorderCompletionStorageKey = "dr-forest-fm-ops.workorder-completions.v1";
 const dispatchStagingStorageKey = "dr-forest-fm-ops.dispatch-staging.v1";
@@ -86,6 +102,7 @@ const complianceClearanceStorageKey = "dr-forest-fm-ops.compliance-clearances.v1
 const activeRoleStorageKey = "dr-forest-fm-ops.active-role.v1";
 const quickOpsTaskStorageKey = "dr-forest-fm-ops.quick-ops-tasks.v1";
 const auditEventStorageKey = "dr-forest-fm-ops.audit-events.v1";
+const aiQueuedActionStorageKey = "dr-forest-fm-ops.ai-queued-actions.v1";
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -111,7 +128,9 @@ async function loadAppData() {
     auditData,
     mvpControlData,
     esgMetrics,
-    productModel
+    productModel,
+    aiInsights,
+    healthScoreData
   ] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
@@ -129,7 +148,9 @@ async function loadAppData() {
     loadJson(dataFiles.audit),
     loadJson(dataFiles.mvpControl),
     loadJson(dataFiles.esgMetrics),
-    loadJson(dataFiles.productModel)
+    loadJson(dataFiles.productModel),
+    loadJson(dataFiles.aiInsights),
+    loadJson(dataFiles.healthScore)
   ]);
 
   clients = loadedClients;
@@ -164,9 +185,22 @@ async function loadAppData() {
   mvpReadiness = mvpControlData.readiness || [];
   mvpQuickTemplates = mvpControlData.quickTemplates || [];
   mvpHandoffCriteria = mvpControlData.handoffCriteria || [];
+  aiSummary = aiInsights.summary || [];
+  aiRecommendations = aiInsights.recommendations || [];
+  aiGovernance = aiInsights.governance || [];
+  aiFlywheel = aiInsights.flywheel || [];
+  healthFormula = healthScoreData.formula || [];
+  healthSources = healthScoreData.sources || [];
+  healthCaptureWorkflow = healthScoreData.captureWorkflow || [];
+  healthCameraRoadmap = healthScoreData.cameraRoadmap || [];
+  healthQualityControls = healthScoreData.qualityControls || [];
+  healthBands = healthScoreData.bands || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
+  esgProofPack = esgMetrics.proofPack || [];
+  esgFrameworkMapping = esgMetrics.frameworkMapping || [];
+  esgClaimControls = esgMetrics.claimControls || [];
   reportModes = productModel.reportModes || [];
   reportMonths = productModel.reportMonths || [];
   strategyCards = productModel.strategyCards || [];
@@ -323,6 +357,18 @@ function loadAuditEvents() {
 
 function saveAuditEvents() {
   localStorage.setItem(auditEventStorageKey, JSON.stringify(auditEvents));
+}
+
+function loadAiQueuedActions() {
+  try {
+    aiQueuedActions = JSON.parse(localStorage.getItem(aiQueuedActionStorageKey) || "{}");
+  } catch {
+    aiQueuedActions = {};
+  }
+}
+
+function saveAiQueuedActions() {
+  localStorage.setItem(aiQueuedActionStorageKey, JSON.stringify(aiQueuedActions));
 }
 
 function isWorkorderCompleted(id) {
@@ -753,6 +799,19 @@ const els = {
   proofStrip: document.querySelector("#proof-strip"),
   riskList: document.querySelector("#risk-list"),
   serviceTimeline: document.querySelector("#service-timeline"),
+  aiStatus: document.querySelector("#ai-status"),
+  aiGrid: document.querySelector("#ai-grid"),
+  aiRecommendationList: document.querySelector("#ai-recommendation-list"),
+  aiGovernanceList: document.querySelector("#ai-governance-list"),
+  aiFlywheelList: document.querySelector("#ai-flywheel-list"),
+  healthStatus: document.querySelector("#health-status"),
+  healthGrid: document.querySelector("#health-grid"),
+  healthFormulaList: document.querySelector("#health-formula-list"),
+  healthBreakdownList: document.querySelector("#health-breakdown-list"),
+  healthSourceList: document.querySelector("#health-source-list"),
+  healthWorkflowList: document.querySelector("#health-workflow-list"),
+  healthCameraList: document.querySelector("#health-camera-list"),
+  healthQualityList: document.querySelector("#health-quality-list"),
   mvpStatus: document.querySelector("#mvp-status"),
   mvpGrid: document.querySelector("#mvp-grid"),
   activeRoleSelect: document.querySelector("#active-role-select"),
@@ -833,6 +892,9 @@ const els = {
   esgBars: document.querySelector("#esg-bars"),
   esgMethods: document.querySelector("#esg-methods"),
   esgLedger: document.querySelector("#esg-ledger"),
+  esgProofPackList: document.querySelector("#esg-proof-pack-list"),
+  esgFrameworkList: document.querySelector("#esg-framework-list"),
+  esgClaimControlList: document.querySelector("#esg-claim-control-list"),
   reportTabs: document.querySelector("#report-tabs"),
   reportClientSelect: document.querySelector("#report-client-select"),
   reportMonthSelect: document.querySelector("#report-month-select"),
@@ -847,6 +909,7 @@ const els = {
   reportMethods: document.querySelector("#report-methods"),
   architectureLayers: document.querySelector("#architecture-layers"),
   syncStatus: document.querySelector("#sync-status"),
+  reviewAiBtn: document.querySelector("#review-ai-btn"),
   simulateVisitBtn: document.querySelector("#simulate-visit-btn"),
   generateReportBtn: document.querySelector("#generate-report-btn"),
   filterButtons: Array.from(document.querySelectorAll("[data-filter]")),
@@ -863,6 +926,10 @@ function sum(items, selector) {
 
 function avg(items, selector) {
   return Math.round(sum(items, selector) / items.length);
+}
+
+function clamp(value, min = 0, max = 100) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function clientFor(wall) {
@@ -932,7 +999,7 @@ function statusClass(value) {
   if (value === "cleared") return "good";
   if (value === "complete" || value === "closed") return "good";
   if (value === "confirmed") return "good";
-  if (value === "ok" || value === "acknowledged" || value === "requested") return "good";
+  if (value === "ok" || value === "acknowledged" || value === "requested" || value === "queued") return "good";
   return "";
 }
 
@@ -1150,6 +1217,112 @@ function quickTaskView(task) {
   };
 }
 
+function isAiActionQueued(id) {
+  return Boolean(aiQueuedActions[id]);
+}
+
+function aiRecommendationView(recommendation) {
+  const client = recommendation.clientId ? clients.find((item) => item.id === recommendation.clientId) : null;
+  const wall = recommendation.wallId ? wallById(recommendation.wallId) : null;
+  const queued = isAiActionQueued(recommendation.id);
+  return {
+    ...recommendation,
+    client,
+    wall,
+    queued,
+    displayTone: queued ? "queued" : recommendation.priority,
+    displayStatus: queued ? "Queued for review" : `${recommendation.confidence}% confidence`
+  };
+}
+
+function queueAiAction(id) {
+  const recommendation = aiRecommendations.find((item) => item.id === id);
+  if (!recommendation || aiQueuedActions[id]) return;
+  const role = selectedRole();
+  aiQueuedActions[id] = {
+    queuedAt: new Date().toISOString(),
+    queuedBy: role?.person || "FM Ops",
+    action: recommendation.action
+  };
+  saveAiQueuedActions();
+  recordAuditEvent({
+    actor: role?.person || "FM Ops",
+    action: "AI recommendation queued",
+    entityType: "ai-recommendation",
+    entityId: id,
+    clientId: recommendation.clientId || null,
+    tone: "ready",
+    detail: `${recommendation.action}: ${recommendation.recommendation}`
+  });
+  state.reportGenerated = false;
+  renderAll();
+}
+
+function healthBandFor(score) {
+  if (score >= 90) return healthBands.find((band) => band.range === "90-100") || null;
+  if (score >= 80) return healthBands.find((band) => band.range === "80-89") || null;
+  if (score >= 70) return healthBands.find((band) => band.range === "70-79") || null;
+  return healthBands.find((band) => band.range === "<70") || null;
+}
+
+function healthScoreBreakdown(wall) {
+  const wallOrders = workorders.filter((order) => order.wallId === wall.id);
+  const openOrders = wallOrders.filter((order) => !isWorkorderCompleted(order.id));
+  const hasSmartSensors = wall.sensors.some((sensor) => sensor !== "manual photo check");
+  const visualAi = clamp(Math.round(wall.health - wall.issues * 0.45 + (wall.status === "stable" ? 3 : wall.status === "watch" ? 0 : -4)));
+  const sensorStability = clamp(Math.round((hasSmartSensors ? 96 : 88) - wall.issues * 1.7 - (wall.tags.includes("low light") ? 10 : 0)));
+  const serviceCompliance = clamp(100 - openOrders.length * 8 - (wall.status === "risk" ? 8 : 0));
+  const recoveryTrend = clamp(Math.round(wall.survival - wall.issues * 0.3 + (wall.status === "stable" ? 2 : -2)));
+  const weightedScore = Math.round(
+    visualAi * 0.45 +
+    sensorStability * 0.25 +
+    serviceCompliance * 0.2 +
+    recoveryTrend * 0.1
+  );
+  const band = healthBandFor(wall.health);
+
+  return {
+    weightedScore,
+    band,
+    rows: [
+      {
+        label: "Visual AI condition",
+        labelZh: "视觉 AI 状态",
+        value: visualAi,
+        weight: 45,
+        driver: wall.status === "risk"
+          ? "Low-light symptoms, uneven growth and follow-up photo due"
+          : wall.status === "watch"
+            ? "Yellowing or water-swing symptoms need review"
+            : "Fullness and zone photos support stable status"
+      },
+      {
+        label: "Sensor stability",
+        labelZh: "环境稳定度",
+        value: sensorStability,
+        weight: 25,
+        driver: hasSmartSensors
+          ? wall.sensors.join(", ")
+          : "Manual photo check until smart telemetry is added"
+      },
+      {
+        label: "Service compliance",
+        labelZh: "服务履约",
+        value: serviceCompliance,
+        weight: 20,
+        driver: `${openOrders.length} open work order(s), ${wall.cadence} cadence`
+      },
+      {
+        label: "Recovery trend",
+        labelZh: "恢复趋势",
+        value: recoveryTrend,
+        weight: 10,
+        driver: `${wall.survival}% survival rate, ${wall.issues} active issue(s)`
+      }
+    ]
+  };
+}
+
 function portfolioMetrics() {
   const activeWalls = walls.length;
   const activeClients = clients.length;
@@ -1196,6 +1369,10 @@ function portfolioMetrics() {
   const nextAssetClasses = assetClasses.filter((item) => item.status === "next");
   const phaseTwoAssetClasses = assetClasses.filter((item) => item.status === "phase-2");
   const adjacentAssetClasses = assetClasses.filter((item) => item.status === "adjacent");
+  const aiRecommendationRows = aiRecommendations.map(aiRecommendationView);
+  const highConfidenceAiRecommendations = aiRecommendationRows.filter((item) => item.confidence >= 85);
+  const queuedAiRecommendations = aiRecommendationRows.filter((item) => item.queued);
+  const openAiRecommendations = aiRecommendationRows.filter((item) => !item.queued);
   const reportReadiness = Math.min(99, Math.round((health * 0.45) + (survival * 0.35) + ((100 - issues) * 0.2)));
 
   return {
@@ -1243,6 +1420,10 @@ function portfolioMetrics() {
     nextAssetClasses,
     phaseTwoAssetClasses,
     adjacentAssetClasses,
+    aiRecommendations: aiRecommendationRows,
+    highConfidenceAiRecommendations,
+    queuedAiRecommendations,
+    openAiRecommendations,
     reportReadiness
   };
 }
@@ -1290,6 +1471,11 @@ function metricsForClient(clientId) {
     .filter((task) => task.clientId === clientId);
   const openQuickTasks = clientQuickTasks.filter((task) => task.status !== "closed");
   const closedQuickTasks = clientQuickTasks.filter((task) => task.status === "closed");
+  const clientAiRecommendations = aiRecommendations
+    .map(aiRecommendationView)
+    .filter((item) => item.clientId === clientId);
+  const openAiRecommendations = clientAiRecommendations.filter((item) => !item.queued);
+  const queuedAiRecommendations = clientAiRecommendations.filter((item) => item.queued);
   const greenArea = sum(clientWalls, (wall) => wall.greenArea);
   const waterSaved = sum(clientWalls, (wall) => wall.waterSaved);
   const serviceMilesSaved = sum(clientWalls, (wall) => wall.serviceMilesSaved);
@@ -1333,6 +1519,9 @@ function metricsForClient(clientId) {
     quickTasks: clientQuickTasks,
     openQuickTasks,
     closedQuickTasks,
+    aiRecommendations: clientAiRecommendations,
+    openAiRecommendations,
+    queuedAiRecommendations,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1360,15 +1549,15 @@ function renderOverview() {
   renderStatCards(els.summaryGrid, [
     { label: "Active clients", labelZh: "活跃客户", value: data.activeClients, detail: `${data.activeWalls} Wall assets under FM care`, detailZh: "已纳入运营管理的绿墙资产" },
     { label: "Portfolio health", labelZh: "资产健康度", value: data.health, detail: `${data.survival}% plant survival rate`, detailZh: "植物存活率和整体健康表现" },
-    { label: "SLA incidents", labelZh: "服务事件", value: data.openIncidents.length, detail: `${data.criticalIncidents.length} critical incident(s), ${data.sensorAlerts} sensor alert(s)`, detailZh: "需要响应的服务和传感器异常" },
+    { label: "AI action queue", labelZh: "AI 行动队列", value: data.openAiRecommendations.length, detail: `${data.highConfidenceAiRecommendations.length} high-confidence recommendation(s)`, detailZh: "需要人工复核的 AI 建议" },
     { label: "Managed value", labelZh: "管理合同价值", value: formatCurrency(data.revenue), detail: `${formatCurrency(data.outstandingAmount)} open AR`, detailZh: "合同收入和未收账款视图" }
   ]);
 
   els.proofStrip.innerHTML = [
     ["Living asset classes", "活体资产类别", `${assetClasses.length} mapped`],
+    ["SLA incidents", "服务事件", `${data.openIncidents.length} open`],
     ["Wall green area", "绿墙面积", `${data.greenArea.toFixed(1)} m2`],
-    ["Water-saving estimate", "节水估算", `${data.waterSaved} L/mo`],
-    ["Wellness reach", "健康办公触达", `${data.staffReach} people/mo`]
+    ["ESG proof mode", "ESG 证明模式", "Evidence first"]
   ].map(([label, zh, value]) => `
     <div>
       <span>${label}<small class="zh">${zh}</small></span>
@@ -1406,6 +1595,137 @@ function renderOverview() {
       </button>
     `;
   }).join("");
+}
+
+function renderAiCommandCenter() {
+  const data = portfolioMetrics();
+  const queuedCount = data.queuedAiRecommendations.length;
+  const openCount = data.openAiRecommendations.length;
+  const highestConfidence = data.aiRecommendations.length
+    ? Math.max(...data.aiRecommendations.map((item) => item.confidence))
+    : 0;
+
+  els.aiStatus.textContent = `${openCount} open AI recommendation(s), ${queuedCount} queued for human review / ${openCount} 条待复核 AI 建议，${queuedCount} 条已入队`;
+  els.aiStatus.classList.toggle("good", openCount === 0 && queuedCount > 0);
+
+  const summaryCards = aiSummary.map((card) => ({
+    label: card.label,
+    labelZh: card.labelZh,
+    value: card.value,
+    detail: card.detail
+  }));
+  renderStatCards(els.aiGrid, [
+    { label: "Open AI recommendations", labelZh: "待复核 AI 建议", value: openCount, detail: "Human-reviewed before client impact", detailZh: "进入客户动作前必须人工复核" },
+    { label: "High confidence", labelZh: "高置信建议", value: data.highConfidenceAiRecommendations.length, detail: `${highestConfidence}% top confidence score`, detailZh: "最高置信度建议分数" },
+    { label: "Queued actions", labelZh: "已入队动作", value: queuedCount, detail: "Written into audit ledger", detailZh: "已写入审计台账" },
+    ...(summaryCards.length ? [summaryCards[2] || summaryCards[0]] : [])
+  ].slice(0, 4));
+
+  els.aiRecommendationList.innerHTML = data.aiRecommendations.map((item) => `
+    <article class="list-item ai-card ${item.displayTone}" data-ai-card="${item.id}">
+      <div class="item-row">
+        <strong>${item.id} - ${item.type}</strong>
+        <span class="tag ${statusClass(item.displayTone)}">${item.displayStatus}</span>
+      </div>
+      <span>${item.client?.name || "Portfolio"}${item.wall ? ` - ${item.wall.name}` : ""}</span>
+      <small>${item.trigger}</small>
+      <strong>${item.recommendation}</strong>
+      <div class="kit-list">
+        ${item.evidence.map((record) => `<em>${record}</em>`).join("")}
+      </div>
+      <small>${item.guardrail}</small>
+      <small class="zh-copy">中文理解：AI 负责提前发现风险和建议动作，但客户影响、报告主张和工单关闭仍由人批准。</small>
+      <div class="workorder-actions">
+        ${item.wall ? `<button type="button" class="mini-action" data-wall-select="${item.wall.id}">View asset</button>` : ""}
+        <button type="button" class="mini-action primary" data-queue-ai-action="${item.id}" ${item.queued ? "disabled" : ""}>${item.queued ? "Queued" : item.action}</button>
+      </div>
+    </article>
+  `).join("");
+
+  els.aiGovernanceList.innerHTML = aiGovernance.map((item) => `
+    <div class="method-row">
+      <span>${item.label}</span>
+      <strong>${item.rule}</strong>
+    </div>
+  `).join("");
+
+  els.aiFlywheelList.innerHTML = aiFlywheel.map((item) => `
+    <div class="method-row flywheel-row">
+      <span>${item.stage}</span>
+      <strong>${item.body}</strong>
+    </div>
+  `).join("");
+}
+
+function renderHealthScoreMethod() {
+  const wall = selectedWall() || walls[0];
+  if (!wall) return;
+
+  const breakdown = healthScoreBreakdown(wall);
+  const band = breakdown.band;
+  const formulaText = healthFormula
+    .map((item) => `${item.label} ${item.weight}%`)
+    .join(" + ");
+  const mvpSourceCount = healthSources.filter((source) => source.status === "MVP" || source.status === "Core").length;
+
+  els.healthStatus.textContent = `Current ledger score ${wall.health}, model explanation ${breakdown.weightedScore} / 当前台账分 ${wall.health}，公式解释分 ${breakdown.weightedScore}`;
+  els.healthStatus.classList.toggle("good", wall.health >= 85);
+
+  renderStatCards(els.healthGrid, [
+    { label: "Selected health score", labelZh: "当前健康分", value: wall.health, detail: `${band?.label || "Review"} - ${band?.action || "Review current evidence"}`, detailZh: "当前选中绿墙的台账健康分" },
+    { label: "Formula", labelZh: "评分公式", value: "4-part", detail: formulaText, detailZh: "四类数据加权，不是单张照片拍脑袋" },
+    { label: "MVP data sources", labelZh: "MVP 数据源", value: mvpSourceCount, detail: "Mobile photo, work order and manual review are enough to launch", detailZh: "先手机拍照、工单和人工复核即可上线" },
+    { label: "Built-in camera", labelZh: "内置摄像头", value: "Optional", detail: "Premium Smart Wall add-on, not an MVP dependency", detailZh: "高端智能墙可选，不是 MVP 前置条件" }
+  ]);
+
+  els.healthFormulaList.innerHTML = healthFormula.map((item) => `
+    <div class="method-row health-formula-row">
+      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.weight}% - ${item.body}</strong>
+      <em>${item.proof}</em>
+    </div>
+  `).join("");
+
+  els.healthBreakdownList.innerHTML = breakdown.rows.map((item) => `
+    <article class="list-item health-score-card ${item.value >= 90 ? "ready" : item.value >= 80 ? "review" : "alert"}">
+      <div class="item-row">
+        <strong>${item.label}</strong>
+        <span class="tag ${statusClass(item.value >= 90 ? "ready" : item.value >= 80 ? "review" : "alert")}">${item.value}</span>
+      </div>
+      <span>${item.labelZh} - weight ${item.weight}%</span>
+      <div class="bar-track"><div class="bar-fill" style="width: ${item.value}%"></div></div>
+      <small>${item.driver}</small>
+    </article>
+  `).join("");
+
+  els.healthSourceList.innerHTML = healthSources.map((source) => `
+    <div class="method-row health-source-row">
+      <span>${source.label} - ${source.status}</span>
+      <strong>${source.body}</strong>
+    </div>
+  `).join("");
+
+  els.healthWorkflowList.innerHTML = healthCaptureWorkflow.map((step) => `
+    <div class="method-row health-workflow-row">
+      <span>${step.step}</span>
+      <strong>${step.body}</strong>
+    </div>
+  `).join("");
+
+  els.healthCameraList.innerHTML = healthCameraRoadmap.map((item) => `
+    <div class="method-row health-camera-row">
+      <span>${item.phase} - ${item.position}</span>
+      <strong>${item.label}</strong>
+      <em>${item.body}</em>
+    </div>
+  `).join("");
+
+  els.healthQualityList.innerHTML = healthQualityControls.map((control) => `
+    <div class="method-row health-quality-row">
+      <span>${control.label}</span>
+      <strong>${control.rule}</strong>
+    </div>
+  `).join("");
 }
 
 function renderPlatform() {
@@ -2295,6 +2615,20 @@ function fillEsgTemplate(template, data) {
     .replaceAll("{{staffReach}}", String(data.staffReach));
 }
 
+function reportMethodRows() {
+  return [
+    ...esgMethods,
+    {
+      label: "AI use / AI 使用",
+      body: "AI recommendations are operational decision support. Human users approve work orders, proof release, client reports and ESG claims."
+    },
+    ...esgClaimControls.map((control) => ({
+      label: control.label,
+      body: control.body
+    }))
+  ];
+}
+
 function renderEsg() {
   const data = portfolioMetrics();
   renderStatCards(els.esgGrid, [
@@ -2320,10 +2654,38 @@ function renderEsg() {
     </div>
   `).join("");
 
+  els.esgProofPackList.innerHTML = esgProofPack.map((item) => `
+    <article class="list-item proof-pack-card ${item.status}" data-esg-proof="${item.id}">
+      <div class="item-row">
+        <strong>${item.label}</strong>
+        <span class="tag ${statusClass(item.status)}">${item.status === "phase-2" ? "Phase 2" : "Ready"}</span>
+      </div>
+      <span>${item.standard}</span>
+      <small>${item.owner} - accepted by: ${item.acceptedBy}</small>
+      <small>${item.body}</small>
+      <small class="zh-copy">中文理解：被认可的关键不是“漂亮分数”，而是来源、方法、边界和责任人都说得清。</small>
+    </article>
+  `).join("");
+
+  els.esgFrameworkList.innerHTML = esgFrameworkMapping.map((item) => `
+    <div class="method-row framework-row">
+      <span>${item.framework} - ${item.status}</span>
+      <strong>${item.label}</strong>
+      <em>${item.proof}</em>
+    </div>
+  `).join("");
+
   els.esgLedger.innerHTML = esgLedger.map((entry) => `
     <div class="ledger-card">
       <span>${entry.label}</span>
       <p>${fillEsgTemplate(entry.template, data)}</p>
+    </div>
+  `).join("");
+
+  els.esgClaimControlList.innerHTML = esgClaimControls.map((item) => `
+    <div class="method-row claim-row ${item.tone}">
+      <span>${item.label}</span>
+      <strong>${item.body}</strong>
     </div>
   `).join("");
 }
@@ -2386,6 +2748,8 @@ function renderReports() {
     "Cleared compliance": "已清理合规项",
     "Open quick tasks": "未关闭快速任务",
     "Closed quick tasks": "已关闭快速任务",
+    "Open AI recommendations": "待复核 AI 建议",
+    "Queued AI actions": "已入队 AI 动作",
     "Confirmed visits": "已确认到访",
     "Open visit slots": "待确认到访",
     "Outstanding AR": "未收应收",
@@ -2409,6 +2773,8 @@ function renderReports() {
     ["Cleared compliance", data.clearedComplianceItems.length],
     ["Open quick tasks", data.openQuickTasks.length],
     ["Closed quick tasks", data.closedQuickTasks.length],
+    ["Open AI recommendations", data.openAiRecommendations.length],
+    ["Queued AI actions", data.queuedAiRecommendations.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -2436,6 +2802,8 @@ function renderReports() {
     `${data.clearedComplianceItems.length} cleared compliance item(s)`,
     `${data.openQuickTasks.length} open quick task(s)`,
     `${data.closedQuickTasks.length} closed quick task(s)`,
+    `${data.openAiRecommendations.length} open AI recommendation(s)`,
+    `${data.queuedAiRecommendations.length} queued AI action(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -2448,7 +2816,7 @@ function renderReports() {
       <strong>${item}</strong>
     </div>
   `).join("");
-  els.reportMethods.innerHTML = esgMethods.map((method) => `
+  els.reportMethods.innerHTML = reportMethodRows().map((method) => `
     <div class="method-row">
       <span>${method.label}</span>
       <strong>${method.body}</strong>
@@ -2476,6 +2844,8 @@ function buildReportHtml() {
     `${data.clearedComplianceItems.length} cleared compliance item(s)`,
     `${data.openQuickTasks.length} open quick task(s)`,
     `${data.closedQuickTasks.length} closed quick task(s)`,
+    `${data.openAiRecommendations.length} open AI recommendation(s)`,
+    `${data.queuedAiRecommendations.length} queued AI action(s)`,
     `${data.confirmedScheduleSlots.length} confirmed service visit(s)`,
     `${data.openScheduleSlots.length} open service slot(s)`,
     `${formatCurrency(data.outstandingAmount)} outstanding AR`,
@@ -2501,6 +2871,8 @@ function buildReportHtml() {
     ["Cleared compliance", data.clearedComplianceItems.length],
     ["Open quick tasks", data.openQuickTasks.length],
     ["Closed quick tasks", data.closedQuickTasks.length],
+    ["Open AI recommendations", data.openAiRecommendations.length],
+    ["Queued AI actions", data.queuedAiRecommendations.length],
     ["Confirmed visits", data.confirmedScheduleSlots.length],
     ["Open visit slots", data.openScheduleSlots.length],
     ["Outstanding AR", formatCurrency(data.outstandingAmount)],
@@ -2542,7 +2914,7 @@ function buildReportHtml() {
   <h2>Evidence Included</h2>
   <ul>${evidence.map((item) => `<li>${item}</li>`).join("")}</ul>
   <h2>Method Notes</h2>
-  <ul>${esgMethods.map((method) => `<li><strong>${method.label}:</strong> ${method.body}</li>`).join("")}</ul>
+  <ul>${reportMethodRows().map((method) => `<li><strong>${method.label}:</strong> ${method.body}</li>`).join("")}</ul>
 </body>
 </html>`;
 }
@@ -2677,10 +3049,18 @@ function bindDynamicActions() {
       closeQuickOpsTask(button.dataset.closeQuickTask);
     });
   });
+
+  document.querySelectorAll("[data-queue-ai-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      queueAiAction(button.dataset.queueAiAction);
+    });
+  });
 }
 
 function renderAll() {
   renderOverview();
+  renderAiCommandCenter();
+  renderHealthScoreMethod();
   renderMvpControl();
   renderPlatform();
   renderPositioning();
@@ -2718,6 +3098,10 @@ els.simulateVisitBtn.addEventListener("click", () => {
   renderAll();
 });
 
+els.reviewAiBtn.addEventListener("click", () => {
+  document.querySelector("#ai").scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
 els.activeRoleSelect.addEventListener("change", () => {
   setActiveRole(els.activeRoleSelect.value);
 });
@@ -2745,7 +3129,7 @@ els.downloadReportBtn.addEventListener("click", downloadReportHtml);
 
 els.generateReportBtn.addEventListener("click", () => {
   state.reportGenerated = true;
-  state.reportMode = "monthly";
+  state.reportMode = "esg-proof";
   state.selectedReportClientId = state.selectedClientId || state.selectedReportClientId;
   recordAuditEvent({
     actor: "ESG desk",
@@ -2790,6 +3174,7 @@ async function bootstrap() {
     loadActiveRole();
     loadQuickOpsTasks();
     loadAuditEvents();
+    loadAiQueuedActions();
     initializeSelection();
     renderAll();
   } catch (error) {

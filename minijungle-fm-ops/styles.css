@@ -102,6 +102,8 @@ button {
 .side-nav nav {
   display: grid;
   gap: 6px;
+  overflow-y: auto;
+  padding-right: 4px;
 }
 
 .side-nav nav a {
@@ -994,6 +996,9 @@ small {
 
 .mvp-readiness,
 .quick-task-card,
+.ai-card,
+.proof-pack-card,
+.health-score-card,
 .asset-scope-card,
 .roadmap-row,
 .benchmark-row {
@@ -1001,9 +1006,12 @@ small {
 }
 
 .mvp-readiness.phase-2,
+.proof-pack-card.phase-2,
 .asset-scope-card.phase-2,
 .asset-scope-card.adjacent,
 .roadmap-row.phase-2,
+.ai-card.high,
+.ai-card.medium,
 .quick-task-card.high,
 .quick-task-card.medium,
 .quick-task-card.open {
@@ -1012,6 +1020,9 @@ small {
 }
 
 .mvp-readiness.complete,
+.proof-pack-card.ready,
+.health-score-card.ready,
+.ai-card.queued,
 .asset-scope-card.ready,
 .roadmap-row.ready,
 .quick-task-card.closed,
@@ -1038,12 +1049,57 @@ small {
   margin-top: 14px;
 }
 
+.ai-flywheel-panel,
+.esg-claims-panel,
+.esg-proof-layout,
+.health-layout {
+  margin-top: 14px;
+}
+
+.flywheel-grid,
+.claim-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .roadmap-row,
-.benchmark-row {
+.benchmark-row,
+.framework-row,
+.claim-row,
+.flywheel-row,
+.health-formula-row,
+.health-source-row,
+.health-workflow-row,
+.health-camera-row,
+.health-quality-row {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
   background: var(--surface-soft);
+}
+
+.health-score-card.review {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.health-score-card.alert {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.claim-row.alert {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.claim-row.review {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.claim-row.ready {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
 }
 
 .method-row em {
@@ -1163,6 +1219,8 @@ small {
     .sensor-meter,
     .proof-strip,
     .quick-task-form,
+    .flywheel-grid,
+    .claim-grid,
     .two-col,
   .workbench,
   .client-layout,
