@@ -359,7 +359,7 @@ const uiCopy = {
     expertMode: "內部",
     viewModeAria: "視圖模式",
     waiting: "等待輸入",
-    basilGuidanceHeader: "羅勒主動種植指導",
+    basilGuidanceHeader: "主動種植指導",
     startTypeSeed: "種子培育",
     startTypeTransplant: "移栽/換盆",
     startTypeStore: "成品不移植"
@@ -396,7 +396,7 @@ const uiCopy = {
     expertMode: "Expert",
     viewModeAria: "View mode",
     waiting: "Waiting",
-    basilGuidanceHeader: "Proactive basil growing guide",
+    basilGuidanceHeader: "Proactive care guide",
     startTypeSeed: "Seed",
     startTypeTransplant: "Transplant",
     startTypeStore: "Store plant"
@@ -1116,6 +1116,525 @@ const cropCareGuidancePlans = {
   }
 };
 
+const detailedCropCareGuidancePlans = {
+  tomato: {
+    seed: {
+      label: "种子/小苗",
+      summary: "矮生番茄从小苗开始，核心不是催长，而是强光、少株数、稳水分，并提前准备花序复查基线。",
+      currentAction: "今天把小苗移到最亮的位置或补植物灯，单盆只保留 1 株强苗；如果还没开花，不要急着授粉或上高氮肥。",
+      pollination: "番茄只有花完全打开后才需要辅助授粉；开花前的重点是光照、根区稳定和株型紧凑。",
+      followup: "7 天后回来拍整株侧面照，比较节间、株高和顶部新叶；看到第一串花后改拍花序复查照。",
+      evidence: ["先稳株型再催花", "单盆 1 株更容易坐果", "开花后才授粉"],
+      reminders: [{
+        key: "day7",
+        task: "复查节间长度、顶部新叶和是否出现第一串花序",
+        photo: "整株侧面和顶部新叶",
+        success: "节间不再拉长，新叶厚实，植株没有只长叶不开花。",
+        reason: "番茄小苗的光照和株数调整通常 7 天能看出方向"
+      }],
+      stageActions: {
+        seedling: {
+          currentAction: "如果只有小苗，今天先补强光并间苗，每盆留下最壮 1 株；不要让多株挤在一起抢光。",
+          followup: "7 天后拍整株侧面照，确认是否仍然徒长。",
+          evidence: ["小苗先防徒长", "每盆保留 1 株", "不要用高氮催长"]
+        },
+        vegetative: {
+          currentAction: "营养生长期今天先检查灯距和支撑；如果株高继续冲高，增加光照并轻绑支撑，不要重剪主干。",
+          followup: "7 天后拍同角度整株侧面照，比较节间是否变短。",
+          evidence: ["灯距优先", "轻支撑", "不重剪主干"]
+        },
+        flowering: {
+          currentAction: "如果花已经完全打开，今天中午轻弹花序 5 秒，或用小风扇低速吹 10 分钟；不要在花还没开时反复碰花苞。",
+          followup: "3-5 天后拍同一花序，确认落花是否减少、小果是否开始保留。",
+          evidence: ["开放花才授粉", "中午操作更稳", "3-5 天看坐果"]
+        },
+        fruiting: {
+          currentAction: "结果后今天先稳水分和灯下温度，保留强壮果串；不要频繁换液、忽干忽湿或一次摘太多叶。",
+          followup: "5-7 天后拍同一果串和顶部新叶，确认小果是否继续膨大。",
+          evidence: ["结果期怕水分波动", "保留强壮果串", "不要大幅改参数"]
+        }
+      },
+      steps: [
+        ["总原则", "矮生番茄要强光、少株数、稳水分。先把株型养紧凑，再进入开花授粉，不要小苗期急着催花。"],
+        ["小苗期", "出真叶后每盆只留 1 株，补强光到每天 12-16 小时；如果茎细节间长，先补光而不是加肥。"],
+        ["移栽/定植", "2-4 片真叶后可移到 12-18cm 以上排水盆，带土团移，缓苗 2-3 天内不重肥。"],
+        ["修剪/支撑", "矮生番茄通常不需要重度打顶；只清理贴土老叶和明显病叶，开花前先做好支撑。"],
+        ["授粉时机", "第一串花完全打开后，中午轻弹花序或用软刷/低速风辅助授粉；未开花时不需要授粉。"],
+        ["控水控温", "表层略干再浇透，结果期避免忽干忽湿；灯下过热或夜间偏冷都会增加落花。"],
+        ["复查", "小苗 7 天看节间；开花后 3-5 天拍同一花序；结果后 5-7 天拍同一果串。"],
+        ["不要做", "不要多株挤一盆、不要小苗期高氮猛催、不要花苞没开就授粉、不要结果期频繁大改水肥。"]
+      ]
+    },
+    transplant: {
+      label: "移栽/换盆",
+      summary: "番茄移栽后先稳根和水分，缓苗恢复后再加光、支撑和授粉；不要把所有变量同时改变。",
+      currentAction: "今天只做缓苗：浇透一次后保持明亮散射光，确认排水正常；不要马上重肥、重剪或强行授粉。",
+      pollination: "移栽恢复前不做授粉。看到新叶恢复挺立、花完全打开后，再轻弹花序或用软刷辅助。",
+      followup: "3 天后拍同角度整株照和茎基部近照，确认是否恢复挺立、茎基部是否健康。",
+      evidence: ["先缓苗", "不同时重肥重剪", "恢复后再授粉"],
+      reminders: [{
+        key: "day3",
+        task: "确认缓苗是否恢复、茎基部是否稳定",
+        photo: "同角度整株和茎基部",
+        success: "新叶恢复挺立，茎基部不发黑，盆底排水正常。",
+        reason: "番茄移栽压力通常 3 天能看出是否进入恢复"
+      }],
+      steps: [
+        ["移栽时机", "2-4 片真叶或根系能包住土团后再移栽，避免裸根硬拔。"],
+        ["盆和介质", "单株 12-18cm 起步，结果型建议更大盆或更稳定储液；必须有排水孔。"],
+        ["当天动作", "带土团移栽，浇透一次，放明亮散射光；先拍整株基线。"],
+        ["缓苗 3 天", "保持水分稳定，不重肥、不重剪、不暴晒；看到新梢挺立再逐步加光。"],
+        ["后续支撑", "恢复后轻绑主干和花序，避免结果后枝条压弯。"],
+        ["授粉", "只有开放花需要轻弹/软刷授粉，花苞阶段不处理。"],
+        ["复查", "3 天看缓苗；开花后 3-5 天看同一花序是否坐果。"],
+        ["不要做", "不要移栽后马上大肥、不要把茎埋太深、不要根没恢复就暴晒或催花。"]
+      ]
+    },
+    store: {
+      label: "成品不移植",
+      summary: "买回来的矮生番茄先确认品种、株高和花序状态；如果已经开花，优先做授粉和稳环境。",
+      currentAction: "今天检查标签、株高、花序和灯下温度；若有开放花，中午轻弹花序 5 秒，并拍同一花序作为基线。",
+      pollination: "开放花可以每天轻弹或软刷 1 次，连续 3-5 天观察同一花序；没有开放花时不要硬碰花苞。",
+      followup: "3-5 天后拍同一花序/小果，确认落花是否减少、小果是否保留。",
+      evidence: ["先确认矮生品种", "开放花才授粉", "同一花序复查"],
+      reminders: [{
+        key: "day3",
+        task: "复查同一花序的落花和坐果",
+        photo: "同一花序或小果特写",
+        success: "落花减少，花托膨大或小果开始保留。",
+        reason: "番茄授粉后 3-5 天通常能看到第一轮坐果信号"
+      }],
+      steps: [
+        ["第 0 天", "检查标签是否为矮生/紧凑品种，拍整株和花序基线；普通高大型番茄不适合小设备长期养。"],
+        ["适应期", "先稳定光照和水分，不急着换盆；叶片恢复挺立后再逐步加光。"],
+        ["开花后", "中午轻弹花序 5 秒，或低速风吹 10 分钟；连续几天观察同一花序。"],
+        ["修剪", "只去除贴土老叶、遮挡通风的病弱叶；不要大幅打顶或一次摘掉很多叶。"],
+        ["控水", "表层略干后浇透，结果期避免忽干忽湿；水分波动会放大卷叶和落花。"],
+        ["复查", "3-5 天拍同一花序，7 天拍整株和果串。"],
+        ["不要做", "不要花苞没开就授粉、不要频繁换盆、不要用高氮催叶、不要让灯太近烤花。"]
+      ]
+    }
+  },
+  rosemary: {
+    seed: {
+      label: "小苗/扦插苗",
+      summary: "迷迭香的主动养护重点是强光、通风、偏干根区。它生长慢，不应该用频繁浇水和重肥催快。",
+      currentAction: "今天把迷迭香放到最亮且有空气流动的位置；等表层明显变干再浇水，不要因为长得慢就加肥。",
+      pollination: "迷迭香作为香草日常不需要人工授粉；现阶段也不以开花为目标，先让根区和新梢稳定。",
+      followup: "7 天后拍整株侧面和土表照片，确认叶尖是否继续发黑、土表是否能正常干湿循环。",
+      evidence: ["强光优先", "空气流动", "表层干再浇"],
+      reminders: [{
+        key: "day7",
+        task: "复查新梢、叶尖和盆土干湿循环",
+        photo: "整株侧面和土表",
+        success: "叶尖不继续发黑，新梢稳定，土表能从湿变干。",
+        reason: "迷迭香环境调整需要 7 天观察枝梢方向"
+      }],
+      stageActions: {
+        seedling: {
+          currentAction: "小苗阶段今天只稳光和风，不打顶、不重剪；盆土没干前不要补水。",
+          followup: "7 天后拍整株侧面和土表，确认有没有继续软塌。",
+          evidence: ["小苗不重剪", "先通风", "不要湿上加湿"]
+        },
+        vegetative: {
+          currentAction: "营养生长期今天轻轻转盆到均匀受光，并检查枝条内侧是否闷湿；只可轻剪过密嫩梢。",
+          followup: "7 天后拍整株侧面，比较新梢是否更直立。",
+          evidence: ["均匀受光", "轻剪过密嫩梢", "不剪老木头"]
+        },
+        wet: {
+          currentAction: "如果土表湿亮、叶尖发黑或整株灰绿，今天先停水 48 小时并加强通风；不要继续浇水救萎蔫。",
+          followup: "48 小时后拍土表、茎基部和枝梢，确认黑尖是否停止扩大。",
+          evidence: ["过湿先停水", "通风比补肥重要", "萎蔫不一定缺水"]
+        }
+      },
+      steps: [
+        ["总原则", "迷迭香喜欢强光、通风、排水好和偏干根区；长得慢是正常，不要用水和肥催快。"],
+        ["小苗期", "放最亮处，保持空气流动；盆土没干不要补水。"],
+        ["修剪", "新梢长稳后只轻剪嫩枝促进分枝，不要一刀剪到老木质枝，也不要一次剪掉超过 1/3。"],
+        ["控水", "表层明显干、盆变轻再浇透；长期湿亮比短暂偏干更危险。"],
+        ["换盆", "根系稳定后再换到排水盆和疏松介质；保水介质要混珍珠岩/颗粒改善透气。"],
+        ["复查", "过湿 48 小时看土表和叶尖；日常调整 7 天看新梢是否直立。"],
+        ["不要做", "不要天天浇水、不要喷叶保湿、不要放在冷窗湿角、不要因为萎蔫就连续补水。"]
+      ]
+    },
+    transplant: {
+      label: "移栽/换盆",
+      summary: "迷迭香移栽的第一目标是保住根系透气，缓苗期少水、少剪、强通风。",
+      currentAction: "今天只做缓苗：放明亮散射光和通风处，盆土湿就不浇水；不要重剪，也不要马上施肥。",
+      pollination: "移栽期不考虑开花或授粉；如果有花，也先保证根区恢复，不让花消耗缓苗能量。",
+      followup: "48-72 小时后拍土表、盆口和茎基部，确认没有持续湿亮、发黑或软腐。",
+      evidence: ["移栽先保透气", "湿土不补水", "缓苗不重剪"],
+      reminders: [{
+        key: "48h",
+        task: "复查移栽后根区是否闷湿、茎基部是否发黑",
+        photo: "土表、盆口和茎基部",
+        success: "茎基部不发黑，叶尖不继续恶化，土表开始变干。",
+        reason: "迷迭香移栽后的闷根风险最先在 48-72 小时出现"
+      }],
+      steps: [
+        ["移栽时机", "根系能固定土团后再换盆；新买回家当天如果状态稳定，可以先不换。"],
+        ["盆和介质", "选排水孔明显的盆，介质要疏松，可加入珍珠岩、浮石或颗粒提高透气。"],
+        ["当天动作", "带土团移，浇透一次后让多余水流出；放明亮散射光和通风处。"],
+        ["缓苗 3 天", "不追肥、不重剪、不连续补水；观察叶尖、茎基部和盆土变化。"],
+        ["修剪", "恢复后只轻剪嫩梢，避免剪到光秃老木头。"],
+        ["复查", "48-72 小时看根区，7 天看新梢是否稳定。"],
+        ["不要做", "不要无孔盆、不要保水泥炭过多、不要移栽后马上暴晒和重肥。"]
+      ]
+    },
+    store: {
+      label: "成品不移植",
+      summary: "买来的迷迭香先观察原盆湿度、叶尖和通风；稳定前不要急着换大盆或做造型重剪。",
+      currentAction: "今天检查土表是否一直湿亮、叶尖是否发黑；把它放到强光通风处，先不要换盆。",
+      pollination: "成品迷迭香日常不需要授粉。它的重点是枝梢健康和根区干湿循环，不是开花结果。",
+      followup: "3 天后拍同角度整株和土表，确认叶尖不再恶化、盆土开始有干湿变化。",
+      evidence: ["先查湿土", "强光适应", "不要过水"],
+      reminders: [{
+        key: "day3",
+        task: "复查盆土干湿、叶尖发黑和环境适应",
+        photo: "同角度整株和土表",
+        success: "叶尖没有继续发黑，盆土开始变干，植株不继续萎蔫。",
+        reason: "买回后控水和强光适应 3 天内能看出是否稳定"
+      }],
+      steps: [
+        ["第 0 天", "隔离观察，检查叶尖、枝条内侧和土表；原盆稳定时不要急换大盆。"],
+        ["第 1-3 天", "逐步增强光照和通风；土表湿亮时不要补水。"],
+        ["修剪", "只轻剪顶端嫩梢或枯枝，不要把整株剪秃。"],
+        ["控水", "浇水前确认表层已干、盆变轻；浇透后倒掉托盘积水。"],
+        ["复查", "3 天看叶尖和土表，7 天看新梢是否更直立。"],
+        ["不要做", "不要喷叶保湿、不要连续浇水、不要冷窗低温高湿、不要用大肥催长。"]
+      ]
+    }
+  },
+  strawberry: {
+    seed: {
+      label: "小苗/匍匐茎",
+      summary: "草莓早期先保冠部干爽和根系稳定。未开花前不需要授粉，重点是光照、新叶和冠部位置。",
+      currentAction: "今天确认冠部露在介质表面且没有积水；如果还没开花，只稳光照和水分，不做授粉。",
+      pollination: "草莓只有花完全打开、能看到花心时才需要软刷授粉；花苞和未开花阶段不处理。",
+      followup: "7 天后拍冠部特写和整株照，确认冠部干爽、新叶稳定、是否进入花期。",
+      evidence: ["冠部不能埋湿", "开花后才授粉", "先看新叶质量"],
+      reminders: [{
+        key: "day7",
+        task: "复查冠部、新叶和是否出现花苞",
+        photo: "冠部特写和整株",
+        success: "冠部不潮湿腐软，新叶稳定，未开花前没有误做授粉动作。",
+        reason: "草莓早期先看冠部和根系稳定，7 天后再判断是否进入花期"
+      }],
+      stageActions: {
+        seedling: {
+          currentAction: "如果还是小苗，今天只确认冠部不被埋、不积水，并给足光照；不要为了快结果而催肥。",
+          followup: "7 天后拍冠部和新叶，确认是否稳定抽新叶。",
+          evidence: ["冠部露出", "小苗不催肥", "新叶稳定"]
+        },
+        flowering: {
+          currentAction: "如果花已完全打开，今天中午用软刷轻刷花心 3-5 秒；同时保持冠部干爽，不要把水喷进花心和叶心。",
+          followup: "3 天后拍同一朵花，确认花托是否开始膨大。",
+          evidence: ["开放花授粉", "冠部保持干", "同一朵花复查"]
+        },
+        fruiting: {
+          currentAction: "如果已有小果，今天先摘掉贴土烂叶并保持果实离开湿介质；不要让冠部和果实长期带水。",
+          followup: "5-7 天后拍同一批果实，确认果形和膨大速度。",
+          evidence: ["小果离湿土", "清理病叶", "不要湿果"]
+        },
+        wet: {
+          currentAction: "如果冠部潮湿、发黑或有白毛，今天让冠部露出来并暂停往叶心浇水；加强通风。",
+          followup: "48 小时后拍冠部同角度近照，确认白毛或软腐是否停止扩大。",
+          evidence: ["冠部先干爽", "停止叶心浇水", "48 小时复查"]
+        }
+      },
+      steps: [
+        ["总原则", "草莓最怕冠部长期湿和授粉不足。先保冠部干爽，开花后才进入授粉管理。"],
+        ["小苗期", "冠部露在介质表面，不要埋住；保持强光和稳定水分。"],
+        ["移栽", "带土团移栽，冠部不要埋深；缓苗期不把水喷进叶心。"],
+        ["授粉时机", "花完全打开后，用软刷轻刷花心 3-5 秒，连续几天观察同一花序。"],
+        ["修剪", "剪掉病叶、老叶和消耗匍匐茎；想结果时不要让匍匐茎一直消耗能量。"],
+        ["控水", "浇根区，不浇冠部；果实和冠部不要长期贴湿介质。"],
+        ["复查", "授粉后 3 天拍同一朵花；冠部潮湿 48 小时复查；结果期 5-7 天看果形。"],
+        ["不要做", "不要埋冠、不要叶心积水、不要花没开就授粉、不要保留太多匍匐茎。"]
+      ]
+    },
+    transplant: {
+      label: "移栽/换盆",
+      summary: "草莓移栽后先防冠部潮湿和缓苗萎蔫，再进入授粉、果形和匍匐茎管理。",
+      currentAction: "今天把冠部露出来并擦干周围积水，缓苗期只浇根区，不要把水喷进叶心。",
+      pollination: "移栽恢复前不做授粉；如果已有开放花，等植株恢复挺立后再软刷花心。",
+      followup: "48 小时后拍同角度冠部近照，确认冠部是否干爽、缓苗是否恢复。",
+      evidence: ["冠部不能埋", "只浇根区", "恢复后再授粉"],
+      reminders: [{
+        key: "48h",
+        task: "确认冠部是否保持干爽、缓苗萎蔫是否恢复",
+        photo: "同角度冠部特写",
+        success: "冠部不积水、不发黑，新叶和叶柄不继续塌软。",
+        reason: "草莓移栽后冠部潮湿风险 48 小时内最需要复查"
+      }],
+      steps: [
+        ["移栽时机", "根系能带住土团时移栽；冠部必须露出介质表面。"],
+        ["当天动作", "带土团移，浇根区，擦干冠部附近积水；拍冠部基线。"],
+        ["缓苗 48 小时", "明亮散射光、通风，避免叶心和花心长期带水。"],
+        ["授粉", "恢复后如有开放花，再用软刷轻刷花心。"],
+        ["修剪", "剪病叶和过多匍匐茎，保留健康新叶。"],
+        ["复查", "48 小时看冠部，3-5 天看花后坐果。"],
+        ["不要做", "不要把冠部埋深、不要喷湿叶心、不要缓苗期大肥。"]
+      ]
+    },
+    store: {
+      label: "成品不移植",
+      summary: "买来的草莓如果已经开花，最重要的是人工授粉、冠部干爽和同一花序复查。",
+      currentAction: "如果花已完全打开，今天中午用小刷子轻刷花心 3-5 秒；没开花就只保持冠部干爽和强光。",
+      pollination: "开放花可以每天轻刷 1 次，连续 3 天；花后看花托是否膨大，而不是只看花瓣掉没掉。",
+      followup: "3 天后拍同一朵花或刚坐果的小果，确认是否开始坐果、果形是否正常。",
+      evidence: ["开放花授粉", "冠部干爽", "3 天看坐果"],
+      reminders: [{
+        key: "day3",
+        task: "复查同一朵花是否开始坐果，果形是否正常",
+        photo: "同一朵花或刚坐果的小果",
+        success: "花心开始膨大，小果保留，下一批果形不明显畸形。",
+        reason: "草莓软刷授粉后 3 天左右能看到早期坐果信号"
+      }],
+      steps: [
+        ["第 0 天", "检查冠部、叶背、花心和小果；先不急着换盆。"],
+        ["开花后", "完全开放花用软刷轻刷花心 3-5 秒，连续 3 天观察。"],
+        ["控水", "浇根区，保持冠部和果实干爽；不要频繁叶面喷水。"],
+        ["修剪", "剪病叶、烂叶和过多匍匐茎；想结果时优先保花果。"],
+        ["复查", "3 天看同一花是否膨大，5-7 天看果形和畸形比例。"],
+        ["不要做", "不要把开花当作已经坐果、不要冠部积水、不要保留太多匍匐茎抢营养。"]
+      ]
+    }
+  },
+  pepper: {
+    seed: {
+      label: "种子/小苗",
+      summary: "矮生辣椒前期先建立紧凑株形、稳定根区和足够光照。未开花前不需要授粉，先避免只长叶不开花。",
+      currentAction: "如果还没开花，今天把补光稳定到 14 小时左右，并暂停继续加高氮肥；不要为了催花频繁换环境。",
+      pollination: "辣椒在开放花阶段才需要轻摇或软刷授粉；花苞期不需要人工碰花。",
+      followup: "7 天后拍整株侧面和顶部新叶，比较株型是否紧凑、是否出现花苞。",
+      evidence: ["先紧凑株型", "避免高氮", "开花后才授粉"],
+      reminders: [{
+        key: "day7",
+        task: "复查株型紧凑度、顶部新叶和是否出现花苞",
+        photo: "整株侧面和顶部新叶",
+        success: "节间稳定，没有继续只长叶；若出现花苞，再进入授粉/控温复查。",
+        reason: "辣椒补光和控氮调整需要 7 天观察株型方向"
+      }],
+      stageActions: {
+        seedling: {
+          currentAction: "小苗阶段今天先补强光、稳温度，等表层微干再浇；不要低温湿土催苗。",
+          followup: "7 天后拍整株侧面，确认节间是否稳定。",
+          evidence: ["小苗怕冷湿", "先补光", "不高氮催长"]
+        },
+        flowering: {
+          currentAction: "如果有开放花，今天中午轻摇植株或软刷花心 5 秒，并确认灯下温度不过热。",
+          followup: "3-5 天后拍同一花/幼果节点，确认落花是否减少。",
+          evidence: ["开放花授粉", "控温防落花", "3-5 天复查"]
+        },
+        fruiting: {
+          currentAction: "如果已有小果，今天先稳水分、支撑枝条，不要突然加浓肥或让盆土忽干忽湿。",
+          followup: "5-7 天后拍同一幼果和顶部新叶，确认小果是否保留。",
+          evidence: ["结果期稳水", "支撑枝条", "不大改肥"]
+        }
+      },
+      steps: [
+        ["总原则", "矮生辣椒需要强光、温暖和稳定水分。先养紧凑株型，再在开花期做授粉和控温。"],
+        ["小苗期", "补光 12-14 小时，避免低温湿土；每盆保留健康强苗。"],
+        ["移栽", "根系稳定后换到排水盆，缓苗 2-3 天内不重肥。"],
+        ["修剪/支撑", "小型辣椒通常不重剪；只去掉病弱叶，结果后轻支撑枝条。"],
+        ["授粉时机", "花完全打开后，中午轻摇植株或用软刷碰花心 5 秒。"],
+        ["控水控温", "表层微干再浇透，避免忽干忽湿；灯下过热和夜间偏冷都会增加落花。"],
+        ["复查", "花期 3-5 天看落花和幼果；结果期 5-7 天看小果保留。"],
+        ["不要做", "不要高氮催叶、不要花苞期硬碰、不要忽冷忽热、不要结果期突然浓肥。"]
+      ]
+    },
+    transplant: {
+      label: "移栽/换盆",
+      summary: "辣椒移栽后先稳根区和温度；缓苗恢复前不要急着催花、催果或重肥。",
+      currentAction: "今天保持根区微湿但不积水，避开灯下过热；只拍整株基线，不要重肥或强行授粉。",
+      pollination: "移栽恢复后如有开放花，再轻摇或软刷授粉；缓苗萎蔫时先恢复根系。",
+      followup: "3 天后拍整株侧面和新梢，确认缓苗是否恢复、顶部新叶是否继续生长。",
+      evidence: ["先稳根区", "避开过热", "恢复后再授粉"],
+      reminders: [{
+        key: "day3",
+        task: "确认缓苗是否恢复、顶部新叶是否继续生长",
+        photo: "整株侧面和新梢",
+        success: "新梢恢复挺立，叶片不继续下垂，灯下温度没有造成萎蔫。",
+        reason: "辣椒移栽后第 3 天适合判断是否恢复正常光照和营养"
+      }],
+      steps: [
+        ["移栽时机", "根系能带土团后再移栽；不要小苗根弱时频繁换盆。"],
+        ["当天动作", "带土团移，浇透一次，让多余水排走；拍整株基线。"],
+        ["缓苗 3 天", "明亮散射光，根区微湿但不湿闷；不要重肥、暴晒或催花。"],
+        ["授粉", "恢复后有开放花，再中午轻摇或软刷。"],
+        ["复查", "3 天看缓苗，3-5 天看花后是否落花。"],
+        ["不要做", "不要缓苗期浓肥、不要忽干忽湿、不要根没恢复就高温强灯。"]
+      ]
+    },
+    store: {
+      label: "成品不移植",
+      summary: "买来的小型辣椒若已带花苞，重点是控温、稳水和辅助授粉，而不是盲目加肥。",
+      currentAction: "如果已有开放花，今天中午轻摇植株或软刷花心 5 秒，并确认灯下温度不过热；落花时先稳温水，不急着加肥。",
+      pollination: "开放花每天轻摇或软刷 1 次即可；重点复查同一花节点是否保留幼果。",
+      followup: "3-5 天后拍同一花/幼果节点，确认落花是否减少、小果是否保留。",
+      evidence: ["开放花授粉", "控温", "看落花和幼果"],
+      reminders: [{
+        key: "day3",
+        task: "记录开放花、落花和小果保留情况",
+        photo: "同一花/幼果节点特写",
+        success: "落花减少，小果保留，灯下高温或忽干忽湿没有继续触发落花。",
+        reason: "辣椒辅助授粉和稳温水后 3-5 天能看出落花方向"
+      }],
+      steps: [
+        ["第 0 天", "检查株高、花苞、开放花、叶背和土表；先不急换盆。"],
+        ["开花后", "中午轻摇植株或软刷花心 5 秒；同一花节点做复查。"],
+        ["控温", "灯太近会烤花，夜间偏冷也会落花；先稳环境再考虑肥。"],
+        ["控水", "表层微干后浇透，避免忽干忽湿。"],
+        ["修剪", "小型辣椒不重剪，只摘病弱叶和过密下部叶，结果枝轻支撑。"],
+        ["复查", "3-5 天看落花和幼果，5-7 天看小果是否继续膨大。"],
+        ["不要做", "不要把落花都归因于缺肥、不要花苞未开就授粉、不要灯太近、不要突然浓肥。"]
+      ]
+    }
+  }
+};
+
+Object.assign(cropCareGuidancePlans, detailedCropCareGuidancePlans);
+
+const englishCropCareGuidancePlans = {
+  basil: englishBasilGuidancePlans,
+  tomato: {
+    seed: {
+      label: "Seedling",
+      summary: "For dwarf tomatoes, start with compact growth, one strong plant per pot, steady moisture, and a flower-cluster baseline before fruiting.",
+      currentAction: "Today, move the seedling into stronger light and keep only one strong plant per pot. Do not hand-pollinate or push high-nitrogen feed before flowers open.",
+      pollination: "Tomato only needs help after flowers are fully open. Before that, prioritize light, root stability, and compact growth.",
+      followup: "Come back in 7 days. Take a whole-plant side photo; once flowers appear, switch to a flower-cluster follow-up.",
+      evidence: ["Compact growth first", "One plant per pot", "Pollinate open flowers only"],
+      reminders: [{ key: "day7", task: "Review internodes, new leaves, and first flower-cluster signs.", photo: "Whole-plant side view and top leaves", success: "Internodes are not stretching and new leaves look sturdy.", reason: "Light and spacing changes usually show within 7 days." }],
+      stageActions: {
+        flowering: { currentAction: "If flowers are fully open, tap the flower cluster for 5 seconds at midday or use low fan airflow for 10 minutes.", followup: "Come back in 3-5 days. Photograph the same flower cluster for fruit-set signs.", evidence: ["Open flowers only", "Midday is steadier", "Review fruit set in 3-5 days"] },
+        fruiting: { currentAction: "If fruit has set, keep moisture and lamp heat stable today. Do not make large fertilizer or watering changes.", followup: "Come back in 5-7 days. Photograph the same fruit cluster.", evidence: ["Avoid water swings", "Keep strong fruit clusters", "Do not over-change inputs"] }
+      },
+      steps: [["Principle", "Strong light, one plant per pot, stable moisture. Build compact growth before pollination."], ["Seedling", "Thin to one strong plant and give 12-16 hours of strong light."], ["Transplant", "Move with the root ball into a draining pot after 2-4 true leaves."], ["Pruning", "Do not hard-top dwarf tomato; remove only low old or diseased leaves."], ["Pollination", "Tap or brush fully open flowers at midday."], ["Water", "Water through after the surface starts drying; avoid water swings during fruiting."], ["Follow-up", "7 days for plant shape; 3-5 days for flower clusters."], ["Do not", "Do not crowd plants, overfeed nitrogen, touch unopened buds, or keep changing water and fertilizer."]]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "After transplanting tomato, stabilize roots first, then return to light, support, and pollination.",
+      currentAction: "Today, keep recovery simple: water through once, use bright indirect light, and avoid heavy feeding, hard pruning, or pollination.",
+      pollination: "Wait until new growth stands up and flowers are fully open before tapping or brushing flowers.",
+      followup: "Come back in 3 days. Take the same whole-plant angle and a stem-base close-up.",
+      evidence: ["Recover first", "No heavy feed", "Pollinate after recovery"],
+      reminders: [{ key: "day3", task: "Confirm recovery and stem-base health.", photo: "Whole plant and stem base", success: "New leaves stand up and the stem base stays healthy.", reason: "Tomato transplant stress usually declares itself within 3 days." }],
+      steps: [["Timing", "Transplant with 2-4 true leaves and a root ball."], ["Day 0", "Move with soil, water through once, and record a baseline photo."], ["Recovery", "No heavy feed, hard pruning, or harsh sun for about 3 days."], ["Support", "Add light support after recovery."], ["Pollination", "Only pollinate open flowers."], ["Do not", "Do not bury the stem too deep or change all conditions at once."]]
+    },
+    store: {
+      label: "Store plant",
+      summary: "For a store-bought dwarf tomato, confirm the variety and flower status first. If it is flowering, focus on pollination and stable conditions.",
+      currentAction: "Today, check the label, height, flowers, and lamp heat. If flowers are open, tap the flower cluster for 5 seconds at midday and record a baseline photo.",
+      pollination: "Tap or brush open flowers once a day for 3-5 days. Do not force unopened buds.",
+      followup: "Come back in 3-5 days. Photograph the same flower cluster or young fruit.",
+      evidence: ["Confirm compact variety", "Pollinate open flowers", "Same-cluster review"],
+      reminders: [{ key: "day3", task: "Review flower drop and young-fruit retention.", photo: "Same flower cluster or young fruit", success: "Flower drop slows and the flower base or young fruit begins to hold.", reason: "Fruit-set signals usually show in 3-5 days." }],
+      steps: [["Day 0", "Confirm dwarf variety and record whole-plant plus flower-cluster photos."], ["Flowers", "Tap fully open flowers at midday."], ["Pruning", "Remove only low old or diseased leaves."], ["Water", "Avoid water swings during flowering."], ["Do not", "Do not repot, hard prune, overfeed nitrogen, or bake flowers under a close lamp."]]
+    }
+  },
+  rosemary: {
+    seed: {
+      label: "Young plant",
+      summary: "Rosemary needs strong light, airflow, and a root zone that dries down. Slow growth is normal.",
+      currentAction: "Today, put it in the brightest airy spot and wait for the surface to dry before watering. Do not fertilize just because growth is slow.",
+      pollination: "Rosemary grown as an herb does not need hand pollination; stabilize roots and shoots first.",
+      followup: "Come back in 7 days. Take one whole-plant side photo and one soil-surface photo.",
+      evidence: ["Strong light", "Airflow", "Let it dry down"],
+      reminders: [{ key: "day7", task: "Review new tips, blackening tips, and dry-down cycle.", photo: "Whole plant and soil surface", success: "Tips stop blackening and the soil surface dries normally.", reason: "Rosemary takes about a week to show response to light and watering changes." }],
+      stageActions: { wet: { currentAction: "If the soil is shiny-wet or tips are blackening, pause watering for 48 hours and increase airflow. Do not keep watering wilted rosemary.", followup: "Come back in 48 hours. Photograph the soil surface, stem base, and tips.", evidence: ["Pause watering", "Airflow first", "Wilting is not always thirst"] } },
+      steps: [["Principle", "Bright light, airflow, drainage, and a drier root zone."], ["Young plant", "Do not hard prune. Water only after the surface dries."], ["Pruning", "Lightly trim soft tips after growth is stable; do not cut into bare old wood."], ["Water", "Wet all the way through, then let it dry down."], ["Follow-up", "48 hours for wet-root risk; 7 days for growth response."], ["Do not", "Do not water daily, mist leaves, keep it in a cold wet window, or fertilize heavily."]]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "Rosemary transplant care is about root oxygen: less water, less cutting, more airflow.",
+      currentAction: "Today, use bright indirect light and airflow. If the mix is wet, do not water. Do not hard-prune or fertilize.",
+      pollination: "Ignore flowers during recovery; root recovery comes first.",
+      followup: "Come back in 48-72 hours. Take a soil-surface and stem-base photo.",
+      evidence: ["Root oxygen", "No wet-on-wet watering", "No hard pruning"],
+      reminders: [{ key: "48h", task: "Check for wet mix and darkening stem base.", photo: "Soil surface, pot rim, and stem base", success: "The stem base is not dark and the surface starts drying.", reason: "Wet-root stress shows early after transplant." }],
+      steps: [["Timing", "Transplant only when roots can hold a soil ball."], ["Mix", "Use drainage and airy media."], ["Recovery", "No heavy feed, hard pruning, or repeated watering."], ["Follow-up", "48-72 hours for wet-root risk."], ["Do not", "Do not use a no-hole pot or heavy water-retentive mix."]]
+    },
+    store: {
+      label: "Store plant",
+      summary: "For store-bought rosemary, inspect wet soil and black tips before repotting or shaping.",
+      currentAction: "Today, check whether the soil stays shiny-wet and whether tips are black. Put it in strong light and airflow; do not repot yet.",
+      pollination: "No pollination is needed. Focus on root dry-down and shoot health.",
+      followup: "Come back in 3 days. Take the same whole-plant angle and soil-surface photo.",
+      evidence: ["Check wet soil", "Strong-light acclimation", "Do not overwater"],
+      reminders: [{ key: "day3", task: "Review dry-down, black tips, and acclimation.", photo: "Same whole-plant angle and soil surface", success: "Tips stop worsening and the pot starts drying normally.", reason: "Three days is enough to see whether water control is stabilizing the plant." }],
+      steps: [["Day 0", "Inspect tips, inner stems, and soil surface."], ["Light", "Increase light and airflow gradually."], ["Pruning", "Trim only dead or soft tips; do not cut it bare."], ["Water", "Water only after the surface dries and the pot feels lighter."], ["Do not", "Do not mist, overwater, repot immediately, or fertilize heavily."]]
+    }
+  },
+  strawberry: {
+    seed: {
+      label: "Runner/seedling",
+      summary: "Strawberry care starts with a dry exposed crown and stable roots. Pollination begins only after flowers open.",
+      currentAction: "Today, make sure the crown sits above the medium and is not wet. If there are no open flowers, focus only on light and moisture stability.",
+      pollination: "Brush only fully open flowers. Buds and closed flowers do not need pollination.",
+      followup: "Come back in 7 days. Take one crown close-up and one whole-plant photo.",
+      evidence: ["Keep crown dry", "Pollinate open flowers only", "Watch new leaves"],
+      reminders: [{ key: "day7", task: "Review crown dryness, new leaves, and flower signs.", photo: "Crown close-up and whole plant", success: "The crown is dry and firm, with stable new growth.", reason: "Early strawberry care is mostly crown and root stability." }],
+      stageActions: { flowering: { currentAction: "If a flower is fully open, brush the center for 3-5 seconds at midday and keep water out of the crown.", followup: "Come back in 3 days. Photograph the same flower.", evidence: ["Open flower", "Dry crown", "Same-flower review"] }, wet: { currentAction: "If the crown is wet, dark, or fuzzy, expose and dry it today and stop watering into the crown.", followup: "Come back in 48 hours. Photograph the crown from the same angle.", evidence: ["Dry crown first", "Stop crown watering", "48-hour check"] } },
+      steps: [["Principle", "Dry crown first, pollination after open flowers."], ["Early plant", "Keep the crown above the medium and give strong light."], ["Transplant", "Move with soil and never bury the crown."], ["Pollination", "Brush fully open flowers for 3-5 seconds."], ["Pruning", "Remove diseased leaves and excess runners if fruiting is the goal."], ["Water", "Water roots, not the crown."], ["Follow-up", "3 days after pollination; 48 hours for wet crown."], ["Do not", "Do not bury the crown, keep the leaf center wet, pollinate buds, or keep too many runners."]]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "After transplanting strawberry, prevent crown wetness first; pollination comes after recovery.",
+      currentAction: "Today, expose the crown and dry any standing moisture. Water the root zone only, not the leaf center.",
+      pollination: "Wait until the plant stands back up before brushing open flowers.",
+      followup: "Come back in 48 hours. Take a same-angle crown close-up.",
+      evidence: ["Crown above medium", "Water roots only", "Pollinate after recovery"],
+      reminders: [{ key: "48h", task: "Confirm crown dryness and transplant recovery.", photo: "Same-angle crown close-up", success: "The crown is not wet or black and new leaves are not collapsing.", reason: "Wet-crown risk is most important in the first 48 hours." }],
+      steps: [["Timing", "Move with a root ball and keep the crown exposed."], ["Day 0", "Water the root zone and dry the crown area."], ["Recovery", "Bright indirect light and airflow."], ["Pollination", "Brush open flowers after recovery."], ["Do not", "Do not bury or soak the crown."]]
+    },
+    store: {
+      label: "Store plant",
+      summary: "For store-bought strawberry, open flowers mean pollination; wet crowns mean drying first.",
+      currentAction: "If flowers are fully open, brush the flower center for 3-5 seconds at midday. If not, keep the crown dry and give strong light.",
+      pollination: "Brush open flowers once daily for 3 days and review whether the flower base swells.",
+      followup: "Come back in 3 days. Photograph the same flower or young fruit.",
+      evidence: ["Open-flower pollination", "Dry crown", "3-day fruit-set check"],
+      reminders: [{ key: "day3", task: "Review whether the same flower is setting fruit.", photo: "Same flower or young fruit", success: "The flower center swells and young fruit holds.", reason: "Early strawberry fruit-set signals show in about 3 days." }],
+      steps: [["Day 0", "Inspect crown, leaf underside, flowers, and young fruit."], ["Flowers", "Brush fully open flowers for 3-5 seconds."], ["Water", "Keep crown and fruit dry."], ["Pruning", "Remove diseased leaves and excess runners."], ["Do not", "Do not assume flowering equals fruit set or let the crown stay wet."]]
+    }
+  },
+  pepper: {
+    seed: {
+      label: "Seedling",
+      summary: "Compact pepper starts with warm roots, strong light, and moderate nutrition. Pollination starts only after flowers open.",
+      currentAction: "If it is not flowering yet, stabilize grow light around 14 hours and pause high-nitrogen feeding. Do not keep changing conditions to force flowers.",
+      pollination: "Shake or brush only open flowers. Buds do not need handling.",
+      followup: "Come back in 7 days. Take a whole-plant side photo and top-new-growth photo.",
+      evidence: ["Compact growth first", "Avoid excess nitrogen", "Pollinate open flowers"],
+      reminders: [{ key: "day7", task: "Review compactness, top growth, and flower-bud signs.", photo: "Whole-plant side view and top growth", success: "Internodes stay stable and the plant is not only making leaves.", reason: "Pepper light and nitrogen changes need about a week to show direction." }],
+      stageActions: { flowering: { currentAction: "If flowers are open, gently shake the plant or brush the flower center for 5 seconds at midday. Check that lamp heat is not excessive.", followup: "Come back in 3-5 days. Photograph the same flower or young-fruit node.", evidence: ["Open flowers", "Control heat", "Review flower drop"] }, fruiting: { currentAction: "If young fruit is present, keep moisture steady and support branches. Do not suddenly increase fertilizer strength.", followup: "Come back in 5-7 days. Photograph the same young fruit and top leaves.", evidence: ["Stable moisture", "Support fruiting branches", "No sudden strong feed"] } },
+      steps: [["Principle", "Strong light, warmth, and steady water first; pollinate after open flowers."], ["Seedling", "Use 12-14 hours of light and avoid cold wet soil."], ["Transplant", "Move after roots stabilize; no heavy feed during recovery."], ["Pruning", "Compact pepper usually does not need hard pruning."], ["Pollination", "Shake or brush open flowers at midday."], ["Water/temperature", "Avoid water swings and lamp heat."], ["Follow-up", "3-5 days for flowers, 5-7 days for young fruit."], ["Do not", "Do not overfeed nitrogen, touch unopened buds, swing temperatures, or suddenly use strong fertilizer."]]
+    },
+    transplant: {
+      label: "Transplant",
+      summary: "After transplanting pepper, stabilize roots and temperature before pushing flowers or fruit.",
+      currentAction: "Today, keep the root zone lightly moist but not wet, avoid lamp heat, and skip heavy fertilizer or pollination.",
+      pollination: "Pollinate only after recovery and open flowers.",
+      followup: "Come back in 3 days. Take one side photo and one new-tip photo.",
+      evidence: ["Root stability", "Avoid heat", "Pollinate after recovery"],
+      reminders: [{ key: "day3", task: "Confirm recovery and new growth.", photo: "Whole-plant side view and new tip", success: "New tips stand up and leaves do not keep drooping.", reason: "Pepper transplant recovery is usually readable after 3 days." }],
+      steps: [["Timing", "Transplant with a root ball."], ["Day 0", "Water through and record a baseline."], ["Recovery", "No heavy feed, harsh lamp heat, or pollination."], ["Follow-up", "3 days for recovery; 3-5 days after flowering."], ["Do not", "Do not keep the root zone swinging wet-dry."]]
+    },
+    store: {
+      label: "Store plant",
+      summary: "For a store-bought compact pepper with buds or flowers, stabilize heat and water, then help open flowers pollinate.",
+      currentAction: "If flowers are open, gently shake the plant or brush the center for 5 seconds at midday and check lamp heat. If flowers are dropping, stabilize water and temperature before adding fertilizer.",
+      pollination: "Shake or brush open flowers once daily; review the same node for young-fruit retention.",
+      followup: "Come back in 3-5 days. Photograph the same flower or young-fruit node.",
+      evidence: ["Pollinate open flowers", "Control heat", "Track drop and fruit set"],
+      reminders: [{ key: "day3", task: "Record open flowers, dropped flowers, and young-fruit retention.", photo: "Same flower or young-fruit node", success: "Flower drop slows and young fruit holds.", reason: "Pepper pollination and stable conditions show direction in 3-5 days." }],
+      steps: [["Day 0", "Inspect height, buds, open flowers, leaf undersides, and soil surface."], ["Flowers", "Shake or brush open flowers at midday."], ["Temperature", "Avoid lamp heat and cold nights."], ["Water", "Water after the surface slightly dries."], ["Pruning", "Do not hard prune; remove only weak or diseased leaves."], ["Do not", "Do not blame every flower drop on fertilizer deficiency, touch unopened buds, or suddenly increase fertilizer."]]
+    }
+  }
+};
+
 let basilGuideMode = (() => {
   try {
     const saved = localStorage.getItem(basilGuideStorageKey);
@@ -1551,6 +2070,87 @@ function resolveBasilGuidancePlan(state, plan) {
   };
 }
 
+function careGuidanceStageOverrideKey(cropKey, state, plan) {
+  if (!plan?.stageActions) return null;
+  if (cropKey === "basil") return basilGuidanceStageOverrideKey(state, plan);
+  const wetRootSignal = state.moisture === "wet" ||
+    state.sensorMoisture !== null && state.sensorMoisture > 75 ||
+    has(state, "algae") ||
+    sees(state, "green-surface") ||
+    sees(state, "white-fuzz");
+  const floweringSignal = state.stage === "flowering" ||
+    has(state, "no-fruit") ||
+    sees(state, "flower-drop") ||
+    sees(state, "flower-buds") ||
+    smartConcern.value === "fruit";
+  if ((cropKey === "rosemary" || cropKey === "strawberry") && wetRootSignal && plan.stageActions.wet) return "wet";
+  if (floweringSignal && plan.stageActions.flowering) return "flowering";
+  if (state.stage === "fruiting" && plan.stageActions.fruiting) return "fruiting";
+  if (state.stage === "seedling" && plan.stageActions.seedling) return "seedling";
+  if (state.stage === "vegetative" && plan.stageActions.vegetative) return "vegetative";
+  return null;
+}
+
+function resolveCropCareGuidancePlan(cropKey, state, plan) {
+  if (cropKey === "basil") return resolveBasilGuidancePlan(state, plan);
+  const key = careGuidanceStageOverrideKey(cropKey, state, plan);
+  const override = key ? plan.stageActions?.[key] : null;
+  if (!override) return plan;
+  return {
+    ...plan,
+    currentAction: override.currentAction || plan.currentAction,
+    followup: override.followup || plan.followup,
+    evidence: override.evidence || plan.evidence,
+    reminders: override.reminders || plan.reminders
+  };
+}
+
+function careGuidanceStageHint(cropKey, state) {
+  if (cropKey === "basil") return basilGuidanceStageHint(state);
+  if (activeLocale === "en") {
+    if (cropKey === "tomato") {
+      if (state.stage === "flowering") return "At flowering, pollination, heat, and moisture stability become the first checks.";
+      if (state.stage === "fruiting") return "At fruiting, avoid water swings and large fertilizer changes.";
+      return "Before flowers, keep the plant compact and well lit.";
+    }
+    if (cropKey === "rosemary") {
+      if (state.moisture === "wet" || has(state, "algae")) return "For rosemary, wet roots come before every other diagnosis.";
+      return "Rosemary should feel bright, airy, and slightly dry between waterings.";
+    }
+    if (cropKey === "strawberry") {
+      if (state.stage === "flowering") return "Once flowers open, pollinate and keep the crown dry.";
+      if (state.stage === "fruiting") return "During fruiting, keep fruit and crown away from wet surfaces.";
+      return "Before flowers, crown position and new leaves matter most.";
+    }
+    if (cropKey === "pepper") {
+      if (state.stage === "flowering") return "At flowering, stabilize heat and water before blaming fertilizer.";
+      if (state.stage === "fruiting") return "During fruiting, steady moisture and light support fruit retention.";
+      return "Before flowers, build compact growth and avoid excess nitrogen.";
+    }
+    return "";
+  }
+  if (cropKey === "tomato") {
+    if (state.stage === "flowering") return "花期優先看授粉、燈下溫度和水分穩定。";
+    if (state.stage === "fruiting") return "結果期不要大幅改水肥，先穩住同一果串。";
+    return "開花前先養緊湊株型和強光，不急著授粉。";
+  }
+  if (cropKey === "rosemary") {
+    if (state.moisture === "wet" || has(state, "algae")) return "迷迭香遇到過濕時，停水通風優先於補肥。";
+    return "迷迭香日常重點是強光、通風和根區偏乾。";
+  }
+  if (cropKey === "strawberry") {
+    if (state.stage === "flowering") return "開花後才進入授粉，冠部仍要保持乾爽。";
+    if (state.stage === "fruiting") return "結果期要讓果實和冠部離開濕介質。";
+    return "開花前先看冠部位置、新葉和根系穩定。";
+  }
+  if (cropKey === "pepper") {
+    if (state.stage === "flowering") return "花期先穩溫水再授粉，不要急著加肥。";
+    if (state.stage === "fruiting") return "結果期重點是穩水、支撐和避免突然濃肥。";
+    return "開花前先建立緊湊株型，避免高氮只長葉。";
+  }
+  return "";
+}
+
 function mapReminderText(item, mapper) {
   return {
     ...item,
@@ -1596,23 +2196,38 @@ function localizedBasilGuidancePlan(mode, state = getFormState()) {
 
 function localizedCarePlan(cropKey, mode, basePlan, state = getFormState()) {
   if (cropKey === "basil") return localizedBasilGuidancePlan(mode, state);
-  return activeLocale === "zh-Hant" ? mapPlanText(basePlan, toTraditional) : basePlan;
+  const localePlan = activeLocale === "en"
+    ? englishCropCareGuidancePlans[cropKey]?.[mode] || basePlan
+    : basePlan;
+  const resolved = resolveCropCareGuidancePlan(cropKey, state, localePlan);
+  return activeLocale === "zh-Hant" ? mapPlanText(resolved, toTraditional) : resolved;
 }
 
 function renderBasilGuidance(state = getFormState()) {
   if (!basilGuidanceCard || !basilGuidanceSteps || !basilGuidanceCurrent) return;
-  const isBasil = state.crop === "basil";
-  basilGuidanceCard.hidden = !isBasil;
-  if (!isBasil) return;
+  const plans = carePlansForCrop(state.crop);
+  basilGuidanceCard.hidden = !plans;
+  if (!plans) return;
 
-  const plan = localizedBasilGuidancePlan(basilGuideMode, state);
+  const mode = careModeForCrop(state.crop);
+  const plan = localizedCarePlan(state.crop, mode, plans[mode], state);
+  const title = basilGuidanceCard.querySelector("h3");
+  if (title) {
+    title.textContent = activeLocale === "en"
+      ? `${cropName(state.crop)} proactive care guide`
+      : `${cropName(state.crop)}主動種植指導`;
+  }
   if (basilGuidanceModeLabel) basilGuidanceModeLabel.textContent = plan.label;
   if (basilGuidanceSummary) {
-    basilGuidanceSummary.textContent = `${plan.summary} ${basilGuidanceStageHint(state)}`;
+    basilGuidanceSummary.textContent = `${plan.summary} ${careGuidanceStageHint(state.crop, state)}`.trim();
   }
 
   basilGuideModeButtons.forEach((button) => {
-    const active = button.dataset.basilGuideMode === basilGuideMode;
+    const buttonMode = button.dataset.basilGuideMode;
+    const buttonPlan = plans[buttonMode] ? localizedCarePlan(state.crop, buttonMode, plans[buttonMode], state) : null;
+    button.hidden = !buttonPlan;
+    button.textContent = buttonPlan?.label || buttonMode;
+    const active = buttonMode === mode;
     button.classList.toggle("active", active);
     button.setAttribute("aria-pressed", String(active));
   });
@@ -1621,11 +2236,11 @@ function renderBasilGuidance(state = getFormState()) {
   const action = document.createElement("strong");
   action.textContent = plan.currentAction;
   const note = document.createElement("span");
-  note.textContent = plan.pollination;
+  note.textContent = plan.pollination || plan.followup || "";
   basilGuidanceCurrent.append(action, note);
 
   basilGuidanceSteps.innerHTML = "";
-  plan.steps.forEach(([time, text]) => {
+  (plan.steps || []).forEach(([time, text]) => {
     const item = document.createElement("div");
     item.className = "basil-guidance-step";
     const label = document.createElement("span");
@@ -1696,7 +2311,7 @@ function customerCareModel(state = getFormState()) {
     mode,
     modeLabel: plan.label,
     title: activeLocale === "en" ? `${crop} care today` : `${crop}今日養護`,
-    message: state.crop === "basil" ? `${plan.summary} ${basilGuidanceStageHint(state)}` : plan.summary,
+    message: `${plan.summary} ${careGuidanceStageHint(state.crop, state)}`.trim(),
     action: plan.currentAction,
     followup: plan.followup,
     evidence: plan.evidence || [plan.label],
@@ -9067,7 +9682,7 @@ customerCareModeButtons.forEach((button) => {
 basilGuideModeButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const nextMode = button.dataset.basilGuideMode;
-    if (!basilGuidancePlans[nextMode]) return;
+    if (!carePlansForCrop(getFormState().crop)[nextMode]) return;
     basilGuideMode = nextMode;
     try {
       localStorage.setItem(basilGuideStorageKey, nextMode);
@@ -9075,6 +9690,7 @@ basilGuideModeButtons.forEach((button) => {
       // Local storage may be blocked in private browsing; the in-memory mode still works.
     }
     renderBasilGuidance();
+    renderCustomerMobileExperience(latestState || getFormState());
   });
 });
 smartDiagnoseBtn.addEventListener("click", smartDiagnose);
