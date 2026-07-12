@@ -476,6 +476,16 @@ const traditionalPhraseMap = [
   ["异味", "異味"],
   ["气味", "氣味"],
   ["备份", "備份"],
+  ["从种子", "從種子"],
+  ["均匀", "均勻"],
+  ["绿色", "綠色"],
+  ["顺手", "順手"],
+  ["残叶", "殘葉"],
+  ["紧凑", "緊湊"],
+  ["没有", "沒有"],
+  ["每周", "每週"],
+  ["浅播", "淺播"],
+  ["驯化", "馴化"],
   ["施肥", "施肥"],
   ["通风", "通風"],
   ["排水孔", "排水孔"],
@@ -515,7 +525,10 @@ const traditionalCharMap = {
   "对": "對", "带": "帶", "确": "確", "缓": "緩", "来": "來", "请": "請", "读": "讀",
   "录": "錄", "软": "軟", "刚": "剛", "闭": "閉", "担": "擔", "还": "還", "离": "離",
   "观": "觀", "颈": "頸", "条": "條", "气": "氣", "备": "備", "紧": "緊",
-  "点": "點", "细": "細", "区": "區", "环": "環", "喷": "噴", "侧": "側"
+  "点": "點", "细": "細", "区": "區", "环": "環", "喷": "噴", "侧": "側",
+  "从": "從", "转": "轉", "匀": "勻", "绿": "綠", "顺": "順", "残": "殘",
+  "凑": "湊", "没": "沒", "周": "週", "浅": "淺", "驯": "馴", "几": "幾",
+  "无": "無", "剂": "劑", "频": "頻", "盘": "盤"
 };
 
 function t(key) {
@@ -1262,14 +1275,14 @@ const detailedCropCareGuidancePlans = {
       }],
       stageActions: {
         seedling: {
-          currentAction: "小苗/扦插苗阶段今天只稳光和风，不打顶、不重剪；盆土没干前不要补水，也不要用大肥催嫩叶。",
-          followup: "7 天后拍整株侧面、根颈和土表，确认有没有继续软塌或根颈发黑。",
-          evidence: ["小苗不重剪", "根颈不能发黑", "不要湿上加湿"]
+          currentAction: "幼苗/刚生根插穗阶段今天先稳微湿和强光通风：出苗后不要长期盖透明盖，补光 14-16 小时；每天看茎基部有没有变细、水渍状或发黑。",
+          followup: "7 天后拍整株侧面、茎基部和土表，确认没有猝倒、根颈发黑或继续软塌。",
+          evidence: ["出苗后要通风", "14-16 小时补光", "每天查茎基部"]
         },
         vegetative: {
-          currentAction: "营养生长期今天轻轻转盆到均匀受光，检查枝条内侧是否闷湿；只轻剪嫩梢促分枝，不要剪到老木质枝。",
-          followup: "7 天后拍整株侧面，比较新梢是否更直立。",
-          evidence: ["均匀受光", "轻剪嫩梢", "不重剪老木质枝"]
+          currentAction: "营养生长期今天转盆到均匀受光，轻掐有叶绿色顶梢促分枝；顺手翻看叶背和枝条内侧，清掉枯枝残叶。",
+          followup: "7 天后拍整株侧面和新梢，比较新枝是否更紧凑、叶背是否没有虫点。",
+          evidence: ["均匀受光", "轻剪绿色新梢", "每周查叶背"]
         },
         wet: {
           currentAction: "如果整株萎蔫但土是湿的，今天立刻停水并检查排水、根颈和气味；根黑软或有臭味时，剪健康枝条扦插备份。",
@@ -1291,6 +1304,21 @@ const detailedCropCareGuidancePlans = {
           followup: "24-48 小时后拍同一枝条内侧，确认小虫、细网或黏液是否减少。",
           evidence: ["细网/黄点看叶螨", "发黏看吸汁虫", "先隔离再处理"]
         },
+        flowering: {
+          currentAction: "如果迷迭香开花，先不要当成病害。想要叶量和香味时，花后只轻剪有叶新梢；想观赏或留给昆虫，可以保留一部分花。",
+          followup: "7 天后拍同一开花枝和整株侧面，确认花后新梢是否恢复、株型没有继续拉长。",
+          evidence: ["开花是正常生命周期", "花后轻剪", "不要剪进裸老木"]
+        },
+        humid: {
+          currentAction: "湿热或连续阴雨时，今天把盆移到见光但避长雨的位置，倒掉托盘水，清理内膛枯枝；浇水前先确认表层约 3cm 已干。",
+          followup: "3-5 天后拍土表、盆底和枝条内侧，确认没有持续湿亮、灰霉或小虫增加。",
+          evidence: ["湿热重在避长雨", "强通风快排水", "表层 3cm 干再浇"]
+        },
+        leggy: {
+          currentAction: "如果新枝拉长、叶片稀、基部光秃，今天先补光并轻剪有叶新梢；不要为了补救一刀剪到无叶老木。",
+          followup: "7 天后拍整株侧面，确认新节间是否缩短、底部没有继续光秃。",
+          evidence: ["先补光", "只剪有叶新梢", "老木不可靠重萌"]
+        },
         cold: {
           currentAction: "冬季或冷窗旁时，今天把盆移离冷玻璃和冷风，先少浇水、保光照；冷而湿比单纯低温更危险。",
           followup: "7 天后拍整株侧面和土表，确认枝条没有继续发黑或干枯。",
@@ -1298,22 +1326,29 @@ const detailedCropCareGuidancePlans = {
         }
       },
       steps: [
-        ["总原则", "迷迭香喜欢强光、通风、排水好和偏干根区；长得慢是正常，不要用水和肥催快。"],
-        ["路线选择", "不建议新手优先从种子开始，发芽慢、长到可采收很久；买小苗或扦插苗更适合家庭验证。"],
+        ["总原则", "迷迭香喜欢强光、通风、快排水和按土浇水；耐旱不等于要反复旱到萎蔫，也不能用水和肥催快。"],
+        ["路线选择", "播种适合体验完整生命周期但发芽慢、不整齐；扦插和买小苗更快、更稳定，适合大多数家庭用户。"],
+        ["播种", "用洁净轻质介质浅播，多播几粒并记录日期；出苗前保持表面微湿，不要深埋、长期泡水或一两周没发芽就丢弃。"],
+        ["扦插", "选 10-15cm 无花、无虫、不过度木质化的新梢，去掉下部叶片，插入珍珠岩等透气介质；保湿但每天通风，别让基部泡烂。"],
+        ["生根驯化", "轻拉有阻力、基部不黑不臭并有稳定新梢后，再逐步开盖和加光；看到新梢不等于根已足够，别过早移栽。"],
         ["选苗", "选枝叶紧凑、叶色灰绿、根颈不黑的小苗；不要买盆土长期湿、枝条大面积发褐的苗。"],
-        ["配土/选盆", "用有排水孔的盆和高排水介质，可加珍珠岩、粗砂、火山石；不要用黏重保水土或无孔套盆积水。"],
-        ["浇水", "盆明显变轻、表层干透后再浇透；不要按固定日期天天浇，也不要看到萎蔫就连续补水。"],
-        ["修剪/采收", "轻剪新梢促分枝，采收剪嫩枝顺便维持株型；不要重剪到老木质枝，也不要一次剪太多。"],
-        ["病虫观察", "白粉看通风和湿度；黄点、发灰、细网看红蜘蛛/叶螨；嫩梢发黏看蚜虫、白粉虱或蓟马。"],
-        ["冬季", "少浇水、保光照、防冷湿；冷而湿的盆土比单纯低温更容易让根系腐烂死亡。"],
-        ["复查", "过湿/根颈风险 48 小时看土表和茎基部；日常光照、修剪、香味调整 7 天看新梢。"],
+        ["配土/选盆", "成熟盆栽逐步用 25-30cm 以上带孔盆；介质可按 3 份稳定基质 + 1 份珍珠岩/粗砂/火山石起步，湿热地区再按干燥速度加颗粒。"],
+        ["浇水", "先摸土再浇，表层约 3cm 干、盆明显变轻后一次浇透并倒掉托盘水；不要按固定日期天天浇，也不要湿土萎蔫还补水。"],
+        ["施肥", "新鲜盆土和幼苗先不急施肥；看到持续新根新梢后从低端剂量或半浓度低频开始，湿土有异味时绝不能靠加肥解决。"],
+        ["修剪/采收", "剪有叶绿色新梢并保留节点，一次采收保守不超过约 20% 生长量；不要只摘底部叶，也不要剪进裸露老木。"],
+        ["花期", "开花本身不是病害；想要嫩叶时花后轻剪，想观赏或留给昆虫时可保留部分花，不要把开花当成马上死亡。"],
+        ["病虫观察", "正常叶背可呈均匀灰白；白粉是不规则扩大粉斑。黄点、发灰、细网看叶螨；发黏看蚜虫/白粉虱；银白擦伤和黑点看蓟马。"],
+        ["每周/月检查", "每周查盆重、叶背、托盘积水、徒长和枯叶；每月查排水速度、土面板结、根颈是否被埋、是否盘根和施肥记录。"],
+        ["湿热/雨季", "放在日照最长且避连续淋雨的位置，盆与盆留空，不每天喷雾，不让套盆和托盘长期存水。"],
+        ["冬季", "入室前查叶背虫害并清枯枝；室内放最亮偏凉处，少浇水、少施肥、保通风，每周看叶螨。"],
+        ["复查", "过湿/根颈风险 48 小时看土表和茎基部；虫害 24-48 小时看叶背；日常光照、修剪、香味调整 7 天看新梢。"],
         ["不要做", "不要喷叶保湿、不要大肥催嫩叶、不要长期放北窗暗厨房或阴湿阳台、不要移栽后立刻暴晒。"]
       ]
     },
     transplant: {
       label: "移栽/换盆",
-      summary: "迷迭香移栽的第一目标是保住根系透气和根颈健康；不要埋太深，容器必须有足够排水孔。",
-      currentAction: "今天只做缓苗：带土团移到高排水介质，根颈不要埋深；放明亮散射光和通风处，盆土湿就不浇水。",
+      summary: "迷迭香移栽的第一目标是保住根系透气和根颈健康；移栽前后要炼苗、保根团、别用远大于根团的湿重花盆。",
+      currentAction: "今天只做缓苗：带土团移到高排水介质，种植深度接近原根颈；放明亮散射光和通风处，盆土湿就不浇水。",
       pollination: "移栽期不考虑开花或授粉；如果有花，也先保证根区恢复，不让花消耗缓苗能量。",
       followup: "48-72 小时后拍土表、盆口和根颈/茎基部，确认没有持续湿亮、发黑或软腐。",
       evidence: ["根颈不要埋深", "排水孔必须顺畅", "缓苗不重剪重肥"],
@@ -1326,19 +1361,20 @@ const detailedCropCareGuidancePlans = {
       }],
       steps: [
         ["移栽时机", "根系能固定土团后再换盆；新买回家当天如果状态稳定，可以先观察，不急着换。"],
-        ["盆和介质", "选排水孔明显的陶盆或塑料盆，介质要疏松，可加入珍珠岩、粗砂、火山石或颗粒提高透气。"],
-        ["当天动作", "带土团移，根颈不要埋太深；浇透一次后让多余水完全流出，倒掉托盘积水。"],
+        ["炼苗", "从育苗盒、高湿环境或室内转到强光前，先逐步增加开盖时间、通风和直射光。"],
+        ["盆和介质", "选排水孔明显的陶盆或塑料盆，别直接种进远大于根团的湿重花盆；介质要疏松，可加入珍珠岩、粗砂、火山石或颗粒提高透气。"],
+        ["当天动作", "带土团移，根颈不要埋太深；需要浇水时浇透一次后让多余水完全流出，倒掉托盘积水。"],
         ["缓苗 3 天", "放明亮散射光和通风处，不追肥、不重剪、不连续补水；观察叶尖、根颈和盆土变化。"],
-        ["暴晒处理", "不要换盆后立刻暴晒；看到新梢恢复挺立后，再逐步加直射光或补光强度。"],
-        ["修剪", "恢复后只轻剪嫩梢，避免剪到光秃老木质枝，老枝恢复能力差。"],
+        ["暴晒处理", "不要换盆后立刻全天强烈西晒；看到新梢恢复挺立后，再逐步加直射光或补光强度。"],
+        ["修剪", "恢复后只轻剪有叶嫩梢，避免剪到光秃老木质枝，老枝恢复能力差。"],
         ["复查", "48-72 小时看根区和根颈，7 天看新梢是否稳定。"],
         ["不要做", "不要无孔盆、不要保水泥炭过多、不要埋深根颈、不要移栽后马上暴晒和重肥。"]
       ]
     },
     store: {
       label: "成品不移植",
-      summary: "买来的迷迭香先观察原盆湿度、根颈、叶尖和通风；稳定前不要急着换大盆或做造型重剪。",
-      currentAction: "今天检查土表是否长期湿亮、根颈是否发黑、叶尖是否发褐；把它放到强光通风处，先不要换盆。",
+      summary: "买来的迷迭香先观察原盆湿度、根颈、叶尖、叶背虫害和是否盘根；稳定前不要急着换大盆或做造型重剪。",
+      currentAction: "今天检查土表是否长期湿亮、根颈是否发黑、叶背是否有虫/蜜露/细网、叶尖是否发褐；把它放到强光通风处，先不要换盆。",
       pollination: "成品迷迭香日常不需要授粉。它的重点是枝梢健康、香味和根区干湿循环，不是开花结果。",
       followup: "3 天后拍同角度整株、根颈和土表，确认叶尖不再恶化、盆土开始有干湿变化。",
       evidence: ["先查湿土和根颈", "强光通风适应", "不要过水或大肥"],
@@ -1353,8 +1389,10 @@ const detailedCropCareGuidancePlans = {
         ["第 0 天", "隔离观察，检查叶尖、枝条内侧、根颈和土表；原盆稳定时不要急换大盆。"],
         ["第 1-3 天", "逐步增强光照和通风；土表湿亮时不要补水，避免闷在套盆积水里。"],
         ["黄叶判断", "老叶先黄且土湿，优先怀疑过湿和根系缺氧；土干、盆轻、叶片灰黄时，再考虑缺水或空气过干。"],
-        ["修剪/采收", "只轻剪顶端嫩梢或枯枝，采收剪嫩枝；不要把整株剪秃，也不要只摘单片叶。"],
+        ["修剪/采收", "只轻剪顶端有叶新梢或枯枝，采收剪带节点嫩枝；一次不要去掉太多叶面积，也不要只摘单片叶。"],
         ["控水", "浇水前确认表层干透、盆变轻；浇透后倒掉托盘积水，不按固定日期天天浇。"],
+        ["花期处理", "开花不是病害；要叶量时花后轻剪，要观赏或吸引授粉昆虫时可保留部分花。"],
+        ["每周检查", "每周看叶背虫害、托盘积水、徒长新梢和枯叶；发现叶背细网或蜜露先隔离。"],
         ["冬季", "冬季少浇水、保光照、远离冷湿窗边；低温下长期湿土最危险。"],
         ["复查", "3 天看叶尖和土表，7 天看新梢是否更直立、香味是否更浓。"],
         ["不要做", "不要喷叶保湿、不要连续浇水、不要冷窗低温高湿、不要用大肥催嫩叶。"]
@@ -1600,35 +1638,38 @@ const englishCropCareGuidancePlans = {
       evidence: ["Young plants beat seeds", "Strong light and airflow", "Water by pot weight"],
       reminders: [{ key: "day7", task: "Review new tips, brown tips or die-back, and the dry-down cycle.", photo: "Whole plant, pot rim, and soil surface", success: "Tips stop browning or blackening, new growth is steady, and the surface can dry between waterings.", reason: "Rosemary usually needs about a week to show response to light, airflow, and watering rhythm." }],
       stageActions: {
-        seedling: { currentAction: "At the young plant or cutting stage, stabilize light and airflow today. Do not top, hard-prune, water wet soil, or push heavy fertilizer.", followup: "Come back in 7 days with a whole-plant, stem-base, and soil-surface photo.", evidence: ["No hard pruning", "Watch the stem base", "Do not water wet soil"] },
-        vegetative: { currentAction: "In active growth, rotate the pot for even light and inspect the inner stems for humidity. Lightly trim soft tips only; do not cut into bare old wood.", followup: "Come back in 7 days with a whole-plant side photo.", evidence: ["Even light", "Soft-tip trim only", "Avoid old wood"] },
+        seedling: { currentAction: "At seedling or newly rooted cutting stage, keep the medium evenly moist but not saturated, remove long-term covers after emergence, use 14-16 hours of light, and check the stem base daily.", followup: "Come back in 7 days with whole-plant, stem-base, and soil-surface photos.", evidence: ["Vent after emergence", "14-16 hours of light", "Check for damping-off"] },
+        vegetative: { currentAction: "In active growth, rotate the pot for even light, lightly pinch leafy green tips, check undersides and inner stems, and remove dead debris.", followup: "Come back in 7 days with whole-plant and new-tip photos.", evidence: ["Even light", "Trim green tips only", "Weekly underside check"] },
         wet: { currentAction: "If the plant wilts while the soil is wet, stop watering today and check drainage, stem base, and smell. If roots are black, soft, or smelly, take healthy cuttings as backup.", followup: "Come back in 48 hours. Photograph the soil surface, stem base, and shoot tips.", evidence: ["Wet wilt suggests roots", "Back up with cuttings", "Wilt does not always mean thirst"] },
         dry: { currentAction: "If tips are brown and inner stems are drying while the pot is very light, water through once along the pot edge and let excess drain. Do not switch to daily watering.", followup: "Come back in 24-48 hours. Photograph the same shoots and pot rim.", evidence: ["Brown tips", "Light pot", "Water through, not daily"] },
         aroma: { currentAction: "If aroma is weak, increase direct or strong supplemental light today and reduce overwatering or heavy fertilizer. Do not force watery soft growth.", followup: "Come back in 7 days. Note aroma from new tips and photograph plant shape.", evidence: ["Light builds oils", "Slightly dry is aromatic", "Too much nitrogen weakens flavor"] },
         pest: { currentAction: "If you see yellow speckling, gray leaves, fine webbing, or sticky tips, isolate the pot and photograph inner stems and undersides. Do not mist leaves as the first response.", followup: "Come back in 24-48 hours with the same inner-stem close-up.", evidence: ["Webbing points to mites", "Sticky tips point to sap feeders", "Isolate first"] },
+        flowering: { currentAction: "If rosemary is flowering, do not treat that as disease. Keep some flowers for display or pollinators, or lightly trim leafy green tips after bloom if leaf yield is the goal.", followup: "Come back in 7 days with the same flowering shoot and a whole-plant side photo.", evidence: ["Flowering is normal", "Light prune after bloom", "Avoid bare old wood"] },
+        humid: { currentAction: "In humid or rainy weather, move the pot to the sunniest rain-sheltered airy spot, empty saucers, clear inner dead twigs, and water only after the top 3 cm dries.", followup: "Come back in 3-5 days with soil-surface, pot-bottom, and inner-stem photos.", evidence: ["Rain shelter", "Airflow and drainage", "Top 3 cm dry"] },
+        leggy: { currentAction: "If shoots are stretching, leaves are sparse, or the base is bare, increase light and lightly trim leafy green shoots. Do not cut into bare old wood.", followup: "Come back in 7 days with a side photo to compare internodes.", evidence: ["Light first", "Green shoots only", "Old wood may not resprout"] },
         cold: { currentAction: "In winter or near a cold window, move the pot away from cold glass and drafts today. Keep light strong and water less; cold plus wet soil is the risk.", followup: "Come back in 7 days with whole-plant and soil-surface photos.", evidence: ["Cold plus wet is risky", "Move from cold glass", "Water less in winter"] }
       },
-      steps: [["Principle", "Rosemary wants strong light, airflow, drainage, and a slightly dry root zone. Slow growth is normal; do not force it with water or fertilizer."], ["Route", "Seeds are slow and less practical for beginners. A small plant or cutting is better for home validation."], ["Choose", "Pick compact gray-green growth with a healthy stem base. Avoid plants with constantly wet soil or large brown patches."], ["Pot and mix", "Use drainage holes and an airy mix with perlite, coarse sand, pumice, or similar grit. Avoid heavy water-retentive soil and no-hole cover pots."], ["Water", "Water through after the pot feels lighter and the surface is dry. Do not water by a fixed calendar or keep watering wilted rosemary."], ["Prune/harvest", "Lightly trim soft new tips and harvest young stems. Do not cut hard into bare old wood or remove too much at once."], ["Pests/disease", "White powder points to humidity and airflow; yellow specks, gray leaves, and webbing point to mites; sticky new tips point to sap-feeding insects."], ["Winter", "Water less, keep light high, and avoid cold-wet roots. Cold wet soil is more dangerous than cold alone."], ["Follow-up", "Use 48 hours for wet-root risk and 7 days for light, pruning, or aroma changes."], ["Do not", "Do not mist leaves, overfeed, keep it in a dark or damp corner, or put it in harsh sun right after transplanting."]]
+      steps: [["Principle", "Rosemary wants strong light, airflow, fast drainage, and watering by soil condition. Drought-tolerant does not mean repeatedly wilting the plant."], ["Route", "Seeds are slow and uneven; cuttings or small plants are faster and more stable for most home growers."], ["Seed", "Sow shallowly in clean light mix, keep the surface lightly moist, sow extra seeds, record dates, and do not discard the tray after only one or two weeks."], ["Cuttings", "Use a clean 10-15 cm non-flowering healthy tip, remove lower leaves, root in an airy medium, keep humidity stable but ventilate daily."], ["Rooting", "Resistance to a gentle tug, healthy pale roots, no black base or odor, and stable new growth mean it can start hardening off. New tips alone are not enough."], ["Pot and mix", "Move mature plants toward 25-30 cm+ draining pots. Start around three parts stable potting mix to one part perlite, coarse sand, pumice, or grit; adjust for drying speed."], ["Water", "Check before watering. Use the top 3 cm dryness and pot weight, water through, then empty saucers."], ["Fertilizer", "Do not rush fertilizer in fresh mix or seedlings. After steady new roots and shoots, start low-dose or half-strength, low-frequency feeding. Never feed wet smelly roots."], ["Prune/harvest", "Cut leafy green shoots with nodes and keep each harvest conservative, about 20% growth or less. Never cut hard into bare old wood."], ["Flowering", "Flowering is normal. Keep some flowers for display or pollinators, or lightly trim after bloom when leaf production is the goal."], ["Pests/disease", "Normal undersides can be gray-white; powdery mildew is irregular expanding powder. Speckling/webbing suggests mites; sticky tips suggest aphids or whiteflies; silvery scratches and black dots suggest thrips."], ["Weekly/monthly", "Weekly: pot weight, undersides, saucers, stretching, dead debris. Monthly: drainage speed, crusted mix, buried stem base, pot-bound roots, fertilizer date."], ["Humid/rainy", "Use sun, spacing, airflow, rain shelter, and fast drainage. Do not mist daily or let cover pots and saucers hold water."], ["Winter", "Before moving indoors, check pests and remove dead material. Indoors, use the brightest cool spot, water less, feed little, ventilate, and check mites weekly."], ["Follow-up", "48 hours for wet-root risk; 24-48 hours for pests; 7 days for light, pruning, aroma, or winter changes."], ["Do not", "Do not mist leaves, overfeed, keep it in a dark or damp corner, put it in harsh sun right after transplanting, or hard-prune old bare wood."]]
     },
     transplant: {
       label: "Transplant",
-      summary: "Rosemary transplant care is about root oxygen and stem-base health: use drainage, do not bury the crown, and avoid wet-on-wet watering.",
-      currentAction: "Today, move the root ball into an airy fast-draining mix without burying the stem base. Use bright indirect light and airflow; if the mix is wet, do not water.",
+      summary: "Rosemary transplant care is about root oxygen and stem-base health: harden off first, keep the root ball, avoid oversized wet pots, and do not bury the stem base.",
+      currentAction: "Today, move the root ball into an airy fast-draining mix at roughly the original stem-base depth. Use bright indirect light and airflow; if the mix is wet, do not water.",
       pollination: "Ignore flowers during recovery; root recovery comes first.",
       followup: "Come back in 48-72 hours. Take soil-surface, pot-rim, and stem-base photos.",
       evidence: ["Do not bury the stem base", "Drainage holes must work", "Recover before pruning"],
       reminders: [{ key: "48h", task: "Check for wet mix and stem-base darkening after transplant.", photo: "Soil surface, pot rim, and stem base", success: "The stem base is not dark, tips are not worsening, and the surface starts drying.", reason: "Wet-root or crown stress usually declares itself within 48-72 hours after transplant." }],
-      steps: [["Timing", "Transplant only when roots can hold a soil ball. If a store plant is stable, observe first instead of rushing."], ["Pot and mix", "Use clear drainage holes and an airy gritty mix."], ["Day 0", "Move with the root ball, keep the stem base shallow, water through once only if needed, and empty the saucer."], ["Recovery", "Bright indirect light, airflow, no heavy feed, no hard pruning, and no repeated watering for about 3 days."], ["Sun", "Do not put it into harsh sun immediately after transplanting; increase direct light after new tips stand up."], ["Pruning", "After recovery, trim soft tips only. Bare old wood recovers poorly."], ["Do not", "Do not use a no-hole pot, heavy peat mix, a buried stem base, immediate harsh sun, or heavy fertilizer."]]
+      steps: [["Timing", "Transplant only when roots can hold a soil ball. If a store plant is stable, observe first instead of rushing."], ["Harden off", "When moving from a humidity box, indoor window, or nursery shelf to strong light, increase venting and direct light gradually."], ["Pot and mix", "Use clear drainage holes and an airy gritty mix. Do not put a tiny root ball straight into a very large wet pot."], ["Day 0", "Move with the root ball, keep the stem base shallow, water through once only if needed, and empty the saucer."], ["Recovery", "Bright indirect light, airflow, no heavy feed, no hard pruning, and no repeated watering for about 3 days."], ["Sun", "Do not put it into harsh afternoon sun immediately after transplanting; increase direct light after new tips stand up."], ["Pruning", "After recovery, trim leafy soft tips only. Bare old wood recovers poorly."], ["Do not", "Do not use a no-hole pot, heavy peat mix, a buried stem base, immediate harsh sun, or heavy fertilizer."]]
     },
     store: {
       label: "Store plant",
-      summary: "For store-bought rosemary, inspect the original pot moisture, stem base, brown tips, and airflow before repotting or shaping.",
-      currentAction: "Today, check whether the soil stays shiny-wet, the stem base is dark, or tips are browning. Put it in strong light and airflow; do not repot yet.",
+      summary: "For store-bought rosemary, inspect original pot moisture, stem base, brown tips, underside pests, and pot-bound roots before repotting or shaping.",
+      currentAction: "Today, check whether the soil stays shiny-wet, the stem base is dark, undersides have pests/honeydew/webbing, or tips are browning. Put it in strong light and airflow; do not repot yet.",
       pollination: "No pollination is needed. Focus on shoot health, aroma, and root dry-down.",
       followup: "Come back in 3 days. Take the same whole-plant angle plus stem-base and soil-surface photos.",
       evidence: ["Check wet soil and stem base", "Strong-light acclimation", "Avoid overwatering and heavy feed"],
       reminders: [{ key: "day3", task: "Review dry-down, brown or black tips, and acclimation.", photo: "Same whole-plant angle, stem base, and soil surface", success: "Tips stop worsening, the pot starts drying normally, and the plant is not continuing to wilt.", reason: "Three days is enough to see whether water control, light, and airflow are stabilizing the plant." }],
-      steps: [["Day 0", "Isolate and inspect tips, inner stems, stem base, and soil surface. Do not rush into a larger pot if the plant is stable."], ["Days 1-3", "Increase light and airflow gradually. If the surface is wet or shiny, do not add water or leave it sitting in a cover pot."], ["Yellow leaves", "Wet soil plus older yellowing points first to root oxygen issues. Dry soil, a very light pot, and gray-yellow leaves suggest dryness or very dry air."], ["Pruning/harvest", "Trim soft tips or dead tips only. Harvest young stems, not single leaves, and do not cut the plant bare."], ["Water", "Water after the surface is dry and the pot feels lighter; empty saucers after watering."], ["Winter", "Water less, keep light high, and move away from cold wet windows."], ["Follow-up", "Use 3 days for tips and soil surface; use 7 days for new tips and aroma."], ["Do not", "Do not mist leaves, water repeatedly, keep it cold and wet, or use heavy fertilizer to force tender growth."]]
+      steps: [["Day 0", "Isolate and inspect tips, inner stems, undersides, stem base, and soil surface. Do not rush into a larger pot if the plant is stable."], ["Days 1-3", "Increase light and airflow gradually. If the surface is wet or shiny, do not add water or leave it sitting in a cover pot."], ["Yellow leaves", "Wet soil plus older yellowing points first to root oxygen issues. Dry soil, a very light pot, and gray-yellow leaves suggest dryness or very dry air."], ["Pruning/harvest", "Trim leafy soft tips or dead tips only. Harvest young stems with nodes, not single leaves, and do not cut the plant bare."], ["Water", "Water after the top layer is dry and the pot feels lighter; empty saucers after watering."], ["Flowering", "Flowering is normal. Keep some flowers for display or pollinators, or lightly trim after bloom when leaf yield is the goal."], ["Weekly check", "Check undersides for pests, saucers for water, stretching shoots, and dead debris. Isolate if you see webbing or honeydew."], ["Winter", "Water less, keep light high, and move away from cold wet windows."], ["Follow-up", "Use 3 days for tips and soil surface; use 7 days for new tips and aroma."], ["Do not", "Do not mist leaves, water repeatedly, keep it cold and wet, or use heavy fertilizer to force tender growth."]]
     }
   },
   strawberry: {
@@ -2155,6 +2196,7 @@ function careGuidanceStageOverrideKey(cropKey, state, plan) {
     smartConcern.value === "aroma";
   const coldSignal = state.climate === "cold" ||
     state.temperature !== null && state.temperature < 16;
+  const humidSignal = state.climate === "humid";
   const leggySignal = has(state, "leggy") ||
     sees(state, "long-internodes") ||
     smartConcern.value === "leggy";
@@ -2170,6 +2212,7 @@ function careGuidanceStageOverrideKey(cropKey, state, plan) {
   if (aromaSignal && plan.stageActions.aroma) return "aroma";
   if (leggySignal && plan.stageActions.leggy) return "leggy";
   if (floweringSignal && plan.stageActions.flowering) return "flowering";
+  if (cropKey === "rosemary" && humidSignal && plan.stageActions.humid) return "humid";
   if (state.stage === "fruiting" && plan.stageActions.fruiting) return "fruiting";
   if (state.stage === "seedling" && plan.stageActions.seedling) return "seedling";
   if (state.stage === "vegetative" && plan.stageActions.vegetative) return "vegetative";
@@ -2211,6 +2254,8 @@ function careGuidanceStageHint(cropKey, state) {
       if (has(state, "pests") || sees(state, "webbing") || sees(state, "sticky-residue") || smartConcern.value === "pest") return "Speckling, webbing, or sticky tips need an underside and inner-stem check.";
       if (smartConcern.value === "aroma" || has(state, "weak-aroma")) return "Weak aroma usually points to low light, too much water, or too much fertilizer.";
       if (state.climate === "cold" || state.temperature !== null && state.temperature < 16) return "Cold plus wet soil is the dangerous rosemary combination.";
+      if (state.stage === "flowering") return "Rosemary flowering is normal; manage it based on leaf harvest, display, or pollinator value.";
+      if (state.climate === "humid") return "In humid or rainy weather, prioritize sun, airflow, rain shelter, and fast drainage.";
       if (state.moisture === "dry" || sees(state, "edge-dry")) return "Brown tips can be dryness, but check pot weight before changing to daily watering.";
       return "Rosemary should feel bright, airy, and slightly dry between waterings.";
     }
@@ -2236,6 +2281,8 @@ function careGuidanceStageHint(cropKey, state) {
     if (has(state, "pests") || sees(state, "webbing") || sees(state, "sticky-residue") || smartConcern.value === "pest") return "出現黃點、細網或嫩梢發黏時，先補拍葉背和枝條內側。";
     if (smartConcern.value === "aroma" || has(state, "weak-aroma")) return "香味弱通常先看光照、過水和施肥過多，不靠大肥催香。";
     if (state.climate === "cold" || state.temperature !== null && state.temperature < 16) return "迷迭香冬季最怕冷濕疊加，低溫時更要讓根區偏乾。";
+    if (state.stage === "flowering") return "迷迭香開花是正常生命週期，可依葉量、觀賞或昆蟲需求決定是否保留。";
+    if (state.climate === "humid") return "濕熱或雨季先顧日照、通風、避長雨和快排水。";
     if (state.moisture === "dry" || sees(state, "edge-dry")) return "葉尖 brown 不等於天天澆，先看盆重和下層濕度再補水。";
     return "迷迭香日常重點是強光、通風和根區偏乾。";
   }

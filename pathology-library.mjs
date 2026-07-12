@@ -30,6 +30,10 @@ const sourceIndex = {
     title: "NC State Extension Gardener Plant Toolbox: Salvia rosmarinus",
     url: "https://plants.ces.ncsu.edu/plants/salvia-rosmarinus/"
   },
+  "rosemary-lifecycle-research": {
+    title: "FiveCrop rosemary lifecycle and common problems research",
+    url: "local://fivecrop/rosemary-lifecycle-research"
+  },
   "fivecrop-field": {
     title: "FiveCrop MVP field rules",
     url: "local://fivecrop/pathology-field-rules"
@@ -72,7 +76,7 @@ function condition({
 }
 
 export const pathologyLibrary = {
-  version: "2026-06-25",
+  version: "2026-07-13",
   scope: "FiveCrop indoor edible crop pathology matrix for tomato, basil, rosemary, strawberry, and pepper.",
   sourceIndex,
   crops: {
@@ -544,12 +548,12 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "root",
           title: "迷迭香过湿衰弱",
-          summary: "迷迭香长期潮湿时会灰黄、叶尖发黑或整株萎蔫；如果土是湿的却蔫，优先怀疑根系缺氧、根腐或根颈腐。",
-          action: "立即停水 48 小时，检查排水孔、根颈颜色和气味；根黑软或有臭味时换透气介质，并剪健康枝条扦插备份。",
+          summary: "迷迭香长期潮湿时会灰黄、叶尖发黑或整株萎蔫；如果土是湿的却蔫，优先怀疑根系缺氧、根腐或根颈腐，而不是继续浇水。",
+          action: "立即停水 48 小时，检查排水孔、托盘积水、根颈颜色和气味；根黑软或有臭味时换透气介质，并剪健康枝条扦插备份。",
           followup: { when: "48 小时", photo: "土表、根颈/茎基部和枝梢", success: "土表开始变干，根颈不继续发黑，异味或软腐没有扩大" },
-          evidence: ["湿土萎蔫", "老叶发黄或叶尖发黑", "根颈发暗或有异味"],
-          differentials: ["真实缺水", "室内干空气叶尖焦枯", "弱光徒长", "冷湿越冬压力"],
-          missingInfo: ["盆是否变轻", "根颈近照", "容器排水孔", "是否有套盆积水"],
+          evidence: ["湿土萎蔫", "老叶发黄或叶尖发黑", "根颈发暗或有异味", "托盘或套盆积水"],
+          differentials: ["真实缺水", "室内干空气叶尖焦枯", "弱光徒长", "冷湿越冬压力", "刚移栽短期缓苗"],
+          missingInfo: ["盆是否变轻", "表层约 3cm 是否已干", "根颈近照", "容器排水孔", "是否有套盆积水"],
           photoTypes: ["root", "plant"],
           match: {
             concern: ["root"],
@@ -558,7 +562,7 @@ export const pathologyLibrary = {
             environment: { moisture: ["wet"], climate: ["humid"], sensorMoistureHigh: 75 },
             visionLabels: ["root-risk", "white-fuzz"]
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-low-light-indoors",
@@ -566,12 +570,12 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "light",
           title: "迷迭香室内弱光",
-          summary: "迷迭香弱光下会新枝拉长、叶子稀、底部光秃、香味变淡；长期不修剪会进一步木质化和株型散。",
-          action: "把光照提高到最亮位置或稳定强补光，增加空气流动；恢复后只轻剪嫩梢促分枝，不要重剪老木质枝。",
+          summary: "迷迭香弱光下会新枝拉长、叶子稀、底部光秃、香味变淡；光照不足通常比轻度缺水更影响生物量和单株香气表现。",
+          action: "把光照提高到最亮位置或稳定强补光，室内成株可从约 12 小时强补光、小苗 14-16 小时补光开始；恢复后只轻剪有叶新梢。",
           followup: { when: "7 天", photo: "整株侧面和枝梢", success: "新梢更直立紧凑，新增枝条不继续拉长，香味评分回升" },
-          evidence: ["新梢细长稀疏", "底部光秃或向窗倾斜", "香味变淡"],
-          differentials: ["过湿根损伤", "施肥过多导致嫩水枝", "温度过低", "老枝自然木质化"],
-          missingInfo: ["直射光/补光小时", "灯距", "风扇情况", "最近是否修剪或采收"],
+          evidence: ["新梢细长稀疏", "底部光秃或向窗倾斜", "香味变淡", "长期未轻剪"],
+          differentials: ["过湿根损伤", "施肥过多导致嫩水枝", "温度过低", "老枝自然木质化", "开花后正常枝条成熟"],
+          missingInfo: ["直射光/补光小时", "灯距", "风扇情况", "最近是否修剪或采收", "是否刚从室内转到户外"],
           photoTypes: ["plant"],
           match: {
             concern: ["leggy", "aroma"],
@@ -579,7 +583,7 @@ export const pathologyLibrary = {
             visuals: ["long-internodes"],
             environment: { light: ["low"], lightHoursMax: 12 }
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-pot-drainage-mismatch",
@@ -587,18 +591,18 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "fit",
           title: "迷迭香介质/容器不适配",
-          summary: "黏重保水介质、无排水孔或套盆积水会让迷迭香长期缺氧，是黄叶、黑尖和根腐的常见底层原因。",
-          action: "改用有排水孔的独立容器和高排水介质，加入珍珠岩、粗砂、火山石等颗粒；换盆时不要把根颈埋深。",
+          summary: "黏重保水介质、无排水孔、过大湿盆或套盆积水会让迷迭香长期缺氧，是黄叶、黑尖和根腐的常见底层原因。",
+          action: "改用有排水孔的独立容器和高排水介质，可从约 3 份稳定基质加 1 份珍珠岩/粗砂/火山石起步；换盆时不要把根颈埋深。",
           followup: { when: "7 天", photo: "盆口、排水孔和整株", success: "表层能按周期变干，新梢不继续萎软，根颈保持干爽不发黑" },
-          evidence: ["无排水孔或套盆积水", "黏重保水介质", "表层一直湿亮"],
-          differentials: ["刚移栽缓苗", "低温慢生长"],
-          missingInfo: ["是否有排水孔", "介质类型", "是否混种", "根颈是否埋深", "托盘是否积水"],
+          evidence: ["无排水孔或套盆积水", "黏重保水介质", "表层一直湿亮", "小根团种进过大湿盆"],
+          differentials: ["刚移栽缓苗", "低温慢生长", "真实干旱后介质拒水"],
+          missingInfo: ["是否有排水孔", "介质类型和颗粒比例", "是否混种", "根颈是否埋深", "托盘是否积水", "盆是否远大于根团"],
           photoTypes: ["root", "plant"],
           match: {
             symptoms: ["wilting", "yellow-leaves"],
             environment: { medium: ["water", "xponge"], moisture: ["wet"], growDevice: ["letpot", "idoo", "aerogarden"] }
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-powdery-mildew-humidity",
@@ -606,12 +610,12 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "disease",
           title: "迷迭香高湿白粉/霉斑风险",
-          summary: "叶片白粉、灰白霉层或枝条内侧霉斑，多与高湿、通风差、叶片长期带水和光照不足有关。",
-          action: "停止叶面喷水，拉开枝条并加强空气流动；剪掉严重霉斑叶/枝，补拍白粉位置近照确认是否扩散。",
+          summary: "迷迭香叶背本来可呈均匀灰白绒毛；真正白粉多是不规则、会扩大的粉斑，灰霉则常见于褐色水渍软烂后出现灰色绒毛。",
+          action: "先区分正常叶背、白粉和灰霉；停止叶面喷水，剪除重病或软烂组织，清理落叶并加强日照、间距和空气流动。",
           followup: { when: "48 小时", photo: "白斑叶片", success: "白斑不扩散，新叶保持干爽" },
-          evidence: ["叶面或叶背白粉", "枝条过密闷湿", "叶片长期带水"],
-          differentials: ["水垢", "灰尘", "药斑", "叶螨造成的灰白失绿"],
-          missingInfo: ["白斑是否可擦掉", "湿度", "是否喷雾", "枝条内侧是否通风"],
+          evidence: ["不规则白粉或灰色绒毛", "枝条过密闷湿", "叶片长期带水", "组织先软烂或褐色水渍"],
+          differentials: ["正常灰白叶背", "水垢", "灰尘", "药斑", "叶螨造成的灰白失绿"],
+          missingInfo: ["白斑是否扩大", "是否只是均匀叶背白", "湿度", "是否喷雾", "枝条内侧是否通风"],
           photoTypes: ["leaf"],
           match: {
             symptoms: ["spots"],
@@ -619,7 +623,7 @@ export const pathologyLibrary = {
             environment: { climate: ["humid"], moisture: ["wet"] },
             visionLabels: ["spots", "white-fuzz"]
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-dry-edge-underwatering",
@@ -627,12 +631,12 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "water",
           title: "迷迭香过干/根团脱水",
-          summary: "室内干空气、冬季弱光和浇水节奏错误都可能造成叶尖发褐、枝条内膛干枯；但叶尖 brown 不等于应该天天浇。",
-          action: "先确认盆重和下层湿度；盆很轻且介质干透时沿盆边浇透一次并让多余水排出，不要改成固定天天浇。",
+          summary: "迷迭香耐旱不等于应反复严重干旱；室内干空气、根团干透或介质拒水都可能造成叶尖发褐、枝梢回枯。",
+          action: "先确认盆重、表层约 3cm 和下层湿度；盆很轻且介质干透时浇透根团，严重干缩介质可分两次浇，避免水直接沿盆边流走。",
           followup: { when: "24-48 小时", photo: "枝梢和盆口", success: "枝梢不再继续干枯" },
-          evidence: ["叶尖 brown 或干脆", "盆明显变轻", "基质离盆边或水难渗入"],
-          differentials: ["过湿后根损伤", "盐分过高", "低湿热风", "冷窗弱光造成的 die-back"],
-          missingInfo: ["盆重", "表层和下层湿度", "最近浇透时间", "是否靠近暖风或冷窗"],
+          evidence: ["叶尖 brown 或干脆", "盆明显变轻", "基质离盆边或水难渗入", "浇透后数小时内挺度改善"],
+          differentials: ["过湿后根损伤", "盐分过高", "低湿热风", "冷窗弱光造成的 die-back", "叶螨失绿误判为干尖"],
+          missingInfo: ["盆重", "表层 3cm 和下层湿度", "最近浇透时间", "浇水是否直接漏走", "是否靠近暖风或冷窗"],
           photoTypes: ["plant", "root"],
           match: {
             concern: ["dry"],
@@ -640,7 +644,7 @@ export const pathologyLibrary = {
             visuals: ["edge-dry"],
             environment: { moisture: ["dry"], climate: ["dry"], sensorMoistureLow: 35 }
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-transplant-shock",
@@ -648,19 +652,19 @@ export const pathologyLibrary = {
           stage: "seedling",
           category: "establishment",
           title: "迷迭香移栽缓苗",
-          summary: "移栽后萎蔫常来自根系受损、换盆后立刻暴晒、介质太湿或根颈埋太深；迷迭香换盆后不宜马上重剪重肥。",
-          action: "固定位置和浇水节奏，放明亮散射光与通风处；检查根颈不要埋深，7 天内不要连续换盆、换灯、重肥或重剪。",
+          summary: "移栽后萎蔫常来自根系受损、未炼苗、换盆后立刻暴晒、介质太湿或根颈埋太深；很小的苗不宜直接进远大湿盆。",
+          action: "固定位置和浇水节奏，放明亮散射光与通风处；检查根颈不要埋深，先缓苗 48-72 小时，7 天内不要连续换盆、换灯、重肥或重剪。",
           followup: { when: "48-72 小时", photo: "整株、土表和根颈", success: "根颈不发黑，土表开始变干，新梢不再扩大萎蔫" },
-          evidence: ["刚购买/刚移栽", "整株轻微萎蔫", "根颈可能埋深或根系受扰动"],
-          differentials: ["根腐", "严重缺水", "低温伤害", "换盆后暴晒"],
-          missingInfo: ["购买/移栽日期", "根团状态", "是否修根", "根颈深度", "换盆后是否暴晒"],
+          evidence: ["刚购买/刚移栽", "整株轻微萎蔫", "根颈可能埋深或根系受扰动", "移栽前后光照突变"],
+          differentials: ["根腐", "严重缺水", "低温伤害", "换盆后暴晒", "猝倒病"],
+          missingInfo: ["购买/移栽日期", "根团状态", "是否修根", "是否炼苗", "根颈深度", "换盆后是否暴晒"],
           photoTypes: ["plant", "root"],
           match: {
             symptoms: ["wilting"],
             stage: ["seedling", "vegetative"],
             environment: { moisture: ["swing"] }
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-pest-needle-speckling",
@@ -668,12 +672,12 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "pest",
           title: "迷迭香针叶斑点/害虫",
-          summary: "叶片细小黄点、发灰和细网常见于叶螨；嫩梢或叶背小虫、发黏则更像蚜虫、白粉虱、蓟马等吸汁害虫。",
-          action: "先隔离，补拍枝条内侧、叶背和嫩梢；可先冲洗/擦除可见害虫，不要把喷叶保湿当作主要处理。",
+          summary: "叶片细小黄白点、发灰和细网常见于叶螨；嫩梢发黏多见吸汁害虫；银白擦伤、褐斑和黑点要怀疑蓟马，白色泡沫多为沫蝉。",
+          action: "先隔离，补拍枝条内侧、叶背、嫩梢和白纸拍打检查；可先冲洗/擦除可见害虫，剪除重灾嫩梢，不要把喷叶保湿当作主要处理。",
           followup: { when: "24-48 小时", photo: "同一枝条内侧和叶背", success: "移动小点、细网或黏性分泌物减少" },
-          evidence: ["针叶黄点或发灰", "细网", "嫩梢发黏或小虫聚集"],
-          differentials: ["白粉", "水垢", "老叶自然脱落", "干空气叶尖焦枯"],
-          missingInfo: ["放大近照", "是否有细网", "是否靠近其他盆", "叶背或嫩梢是否发黏"],
+          evidence: ["针叶黄白点或发灰", "细网", "嫩梢发黏或小虫聚集", "银白擦伤和黑色小点"],
+          differentials: ["白粉", "正常灰白叶背", "水垢", "老叶自然脱落", "干空气叶尖焦枯"],
+          missingInfo: ["放大近照", "是否有细网", "是否靠近其他盆", "叶背或嫩梢是否发黏", "白纸拍打是否有细长小虫"],
           photoTypes: ["pest", "leaf"],
           match: {
             concern: ["pest"],
@@ -681,7 +685,7 @@ export const pathologyLibrary = {
             visuals: ["webbing", "tiny-flies", "sticky-residue"],
             visionLabels: ["possible-pest", "spots"]
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         }),
         condition({
           id: "rosemary-cold-window-stress",
@@ -689,18 +693,18 @@ export const pathologyLibrary = {
           stage: "vegetative",
           category: "climate",
           title: "迷迭香冷窗/温差压力",
-          summary: "冬季突然衰弱、枝条发黑或干枯，常与冷窗、冷风和湿土叠加有关；冷湿比单纯低温更危险。",
-          action: "把盆移离冷玻璃和冷风，保持强光但减少浇水；低温时不要让根区长期湿着过夜。",
+          summary: "冬季突然衰弱、枝条发黑或干枯，常与冷窗、冷风和湿土叠加有关；入室后低光、暖气干燥和叶螨也会放大问题。",
+          action: "把盆移离冷玻璃和冷风，保持最亮偏凉位置但减少浇水；入室前后检查叶背虫害，清枯枝，不要在入室前大幅重剪或换超大盆。",
           followup: { when: "7 天", photo: "整株侧面和土表", success: "枝条不继续发黑或干枯，土表能正常变干" },
-          evidence: ["靠冷窗或冷风口", "夜间低温", "湿土叠加枝条发黑/干枯"],
-          differentials: ["弱光", "根区过湿", "移栽缓苗", "室内干空气 die-back"],
-          missingInfo: ["夜间温度", "离窗距离", "是否有冷风", "低温时土是否长期湿"],
+          evidence: ["靠冷窗或冷风口", "夜间低温", "湿土叠加枝条发黑/干枯", "入室后叶背虫害或细网"],
+          differentials: ["弱光", "根区过湿", "移栽缓苗", "室内干空气 die-back", "叶螨加重"],
+          missingInfo: ["夜间温度", "离窗距离", "是否有冷风", "低温时土是否长期湿", "入室前是否检查叶背和清枯枝"],
           photoTypes: ["plant"],
           match: {
             symptoms: ["wilting"],
             environment: { climate: ["cold"], temperatureLow: 16, light: ["low"] }
           },
-          sourceIds: ["ncsu-rosemary", "fivecrop-field"]
+          sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
         })
       ]
     },
