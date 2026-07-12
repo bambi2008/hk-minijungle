@@ -448,6 +448,34 @@ const traditionalPhraseMap = [
   ["打顶", "打頂"],
   ["补光", "補光"],
   ["浇水", "澆水"],
+  ["观察", "觀察"],
+  ["根颈", "根頸"],
+  ["叶尖", "葉尖"],
+  ["枝条", "枝條"],
+  ["急着", "急著"],
+  ["稳定", "穩定"],
+  ["变干", "變乾"],
+  ["偏干", "偏乾"],
+  ["干湿", "乾濕"],
+  ["干透", "乾透"],
+  ["干爽", "乾爽"],
+  ["干枯", "乾枯"],
+  ["干脆", "乾脆"],
+  ["发褐", "發褐"],
+  ["发黑", "發黑"],
+  ["发黏", "發黏"],
+  ["黄点", "黃點"],
+  ["细网", "細網"],
+  ["内侧", "內側"],
+  ["喷叶", "噴葉"],
+  ["重点", "重點"],
+  ["根区", "根區"],
+  ["循环", "循環"],
+  ["结果", "結果"],
+  ["湿亮", "濕亮"],
+  ["异味", "異味"],
+  ["气味", "氣味"],
+  ["备份", "備份"],
   ["施肥", "施肥"],
   ["通风", "通風"],
   ["排水孔", "排水孔"],
@@ -485,7 +513,9 @@ const traditionalCharMap = {
   "蔫": "蔫", "黄": "黃", "园": "園", "亚": "亞", "质": "質", "测": "測", "帮": "幫",
   "结": "結", "钟": "鐘", "够": "夠", "内": "內", "优": "優", "将": "將", "启": "啟",
   "对": "對", "带": "帶", "确": "確", "缓": "緩", "来": "來", "请": "請", "读": "讀",
-  "录": "錄", "软": "軟", "刚": "剛", "闭": "閉", "担": "擔", "还": "還", "离": "離"
+  "录": "錄", "软": "軟", "刚": "剛", "闭": "閉", "担": "擔", "还": "還", "离": "離",
+  "观": "觀", "颈": "頸", "条": "條", "气": "氣", "备": "備", "紧": "緊",
+  "点": "點", "细": "細", "区": "區", "环": "環", "喷": "噴", "侧": "側"
 };
 
 function t(key) {
@@ -1218,90 +1248,116 @@ const detailedCropCareGuidancePlans = {
   rosemary: {
     seed: {
       label: "小苗/扦插苗",
-      summary: "迷迭香的主动养护重点是强光、通风、偏干根区。它生长慢，不应该用频繁浇水和重肥催快。",
-      currentAction: "今天把迷迭香放到最亮且有空气流动的位置；等表层明显变干再浇水，不要因为长得慢就加肥。",
-      pollination: "迷迭香作为香草日常不需要人工授粉；现阶段也不以开花为目标，先让根区和新梢稳定。",
-      followup: "7 天后拍整株侧面和土表照片，确认叶尖是否继续发黑、土表是否能正常干湿循环。",
-      evidence: ["强光优先", "空气流动", "表层干再浇"],
+      summary: "迷迭香可以播种，但家庭新手不建议优先从种子开始；更稳的是小苗或扦插苗。核心是强光、通风、高排水介质和偏干根区。",
+      currentAction: "今天先确认路线：如果是小苗/扦插苗，放到最亮且有空气流动的位置；等盆明显变轻、表层干透再浇透，不要按固定日期天天浇。",
+      pollination: "迷迭香作为香草日常不需要人工授粉；现阶段也不以开花为目标，先让根区、新梢和香味稳定。",
+      followup: "7 天后拍整株侧面、盆口和土表照片，确认叶尖是否继续发褐、土表是否能正常干湿循环。",
+      evidence: ["小苗/扦插优先于种子", "强光和空气流动", "盆轻且表层干透再浇"],
       reminders: [{
         key: "day7",
-        task: "复查新梢、叶尖和盆土干湿循环",
-        photo: "整株侧面和土表",
-        success: "叶尖不继续发黑，新梢稳定，土表能从湿变干。",
-        reason: "迷迭香环境调整需要 7 天观察枝梢方向"
+        task: "复查新梢、叶尖 brown/die-back 和盆土干湿循环",
+        photo: "整株侧面、盆口和土表",
+        success: "叶尖不继续发褐或发黑，新梢稳定，土表能从湿变干。",
+        reason: "迷迭香对光、风和浇水节奏的变化通常需要 7 天观察枝梢方向"
       }],
       stageActions: {
         seedling: {
-          currentAction: "小苗阶段今天只稳光和风，不打顶、不重剪；盆土没干前不要补水。",
-          followup: "7 天后拍整株侧面和土表，确认有没有继续软塌。",
-          evidence: ["小苗不重剪", "先通风", "不要湿上加湿"]
+          currentAction: "小苗/扦插苗阶段今天只稳光和风，不打顶、不重剪；盆土没干前不要补水，也不要用大肥催嫩叶。",
+          followup: "7 天后拍整株侧面、根颈和土表，确认有没有继续软塌或根颈发黑。",
+          evidence: ["小苗不重剪", "根颈不能发黑", "不要湿上加湿"]
         },
         vegetative: {
-          currentAction: "营养生长期今天轻轻转盆到均匀受光，并检查枝条内侧是否闷湿；只可轻剪过密嫩梢。",
+          currentAction: "营养生长期今天轻轻转盆到均匀受光，检查枝条内侧是否闷湿；只轻剪嫩梢促分枝，不要剪到老木质枝。",
           followup: "7 天后拍整株侧面，比较新梢是否更直立。",
-          evidence: ["均匀受光", "轻剪过密嫩梢", "不剪老木头"]
+          evidence: ["均匀受光", "轻剪嫩梢", "不重剪老木质枝"]
         },
         wet: {
-          currentAction: "如果土表湿亮、叶尖发黑或整株灰绿，今天先停水 48 小时并加强通风；不要继续浇水救萎蔫。",
-          followup: "48 小时后拍土表、茎基部和枝梢，确认黑尖是否停止扩大。",
-          evidence: ["过湿先停水", "通风比补肥重要", "萎蔫不一定缺水"]
+          currentAction: "如果整株萎蔫但土是湿的，今天立刻停水并检查排水、根颈和气味；根黑软或有臭味时，剪健康枝条扦插备份。",
+          followup: "48 小时后拍土表、根颈/茎基部和枝梢，确认黑尖、软腐或异味是否停止扩大。",
+          evidence: ["湿土萎蔫先疑根", "根黑软要备份扦插", "萎蔫不等于缺水"]
+        },
+        dry: {
+          currentAction: "如果叶尖 brown、枝条内膛干枯但盆很轻，今天沿盆边浇透一次并让多余水排出；不要改成天天浇。",
+          followup: "24-48 小时后拍枝梢和盆口，确认干枯范围没有继续扩大。",
+          evidence: ["叶尖 brown", "盆明显变轻", "浇透但不天天浇"]
+        },
+        aroma: {
+          currentAction: "香味弱时，今天先增加直射光/强补光，减少大肥和过水；不要为了长得快一直催嫩叶。",
+          followup: "7 天后记录新梢香味，并拍整株侧面看枝条是否更紧凑。",
+          evidence: ["强光积累精油", "偏干不过肥更香", "嫩水枝香味弱"]
+        },
+        pest: {
+          currentAction: "如果叶面密集黄点、发灰、细网或嫩梢发黏，今天先隔离，补拍枝条内侧和叶背；不要先喷叶保湿。",
+          followup: "24-48 小时后拍同一枝条内侧，确认小虫、细网或黏液是否减少。",
+          evidence: ["细网/黄点看叶螨", "发黏看吸汁虫", "先隔离再处理"]
+        },
+        cold: {
+          currentAction: "冬季或冷窗旁时，今天把盆移离冷玻璃和冷风，先少浇水、保光照；冷而湿比单纯低温更危险。",
+          followup: "7 天后拍整株侧面和土表，确认枝条没有继续发黑或干枯。",
+          evidence: ["低温叠加湿土危险", "移离冷窗", "冬季少浇水"]
         }
       },
       steps: [
         ["总原则", "迷迭香喜欢强光、通风、排水好和偏干根区；长得慢是正常，不要用水和肥催快。"],
-        ["小苗期", "放最亮处，保持空气流动；盆土没干不要补水。"],
-        ["修剪", "新梢长稳后只轻剪嫩枝促进分枝，不要一刀剪到老木质枝，也不要一次剪掉超过 1/3。"],
-        ["控水", "表层明显干、盆变轻再浇透；长期湿亮比短暂偏干更危险。"],
-        ["换盆", "根系稳定后再换到排水盆和疏松介质；保水介质要混珍珠岩/颗粒改善透气。"],
-        ["复查", "过湿 48 小时看土表和叶尖；日常调整 7 天看新梢是否直立。"],
-        ["不要做", "不要天天浇水、不要喷叶保湿、不要放在冷窗湿角、不要因为萎蔫就连续补水。"]
+        ["路线选择", "不建议新手优先从种子开始，发芽慢、长到可采收很久；买小苗或扦插苗更适合家庭验证。"],
+        ["选苗", "选枝叶紧凑、叶色灰绿、根颈不黑的小苗；不要买盆土长期湿、枝条大面积发褐的苗。"],
+        ["配土/选盆", "用有排水孔的盆和高排水介质，可加珍珠岩、粗砂、火山石；不要用黏重保水土或无孔套盆积水。"],
+        ["浇水", "盆明显变轻、表层干透后再浇透；不要按固定日期天天浇，也不要看到萎蔫就连续补水。"],
+        ["修剪/采收", "轻剪新梢促分枝，采收剪嫩枝顺便维持株型；不要重剪到老木质枝，也不要一次剪太多。"],
+        ["病虫观察", "白粉看通风和湿度；黄点、发灰、细网看红蜘蛛/叶螨；嫩梢发黏看蚜虫、白粉虱或蓟马。"],
+        ["冬季", "少浇水、保光照、防冷湿；冷而湿的盆土比单纯低温更容易让根系腐烂死亡。"],
+        ["复查", "过湿/根颈风险 48 小时看土表和茎基部；日常光照、修剪、香味调整 7 天看新梢。"],
+        ["不要做", "不要喷叶保湿、不要大肥催嫩叶、不要长期放北窗暗厨房或阴湿阳台、不要移栽后立刻暴晒。"]
       ]
     },
     transplant: {
       label: "移栽/换盆",
-      summary: "迷迭香移栽的第一目标是保住根系透气，缓苗期少水、少剪、强通风。",
-      currentAction: "今天只做缓苗：放明亮散射光和通风处，盆土湿就不浇水；不要重剪，也不要马上施肥。",
+      summary: "迷迭香移栽的第一目标是保住根系透气和根颈健康；不要埋太深，容器必须有足够排水孔。",
+      currentAction: "今天只做缓苗：带土团移到高排水介质，根颈不要埋深；放明亮散射光和通风处，盆土湿就不浇水。",
       pollination: "移栽期不考虑开花或授粉；如果有花，也先保证根区恢复，不让花消耗缓苗能量。",
-      followup: "48-72 小时后拍土表、盆口和茎基部，确认没有持续湿亮、发黑或软腐。",
-      evidence: ["移栽先保透气", "湿土不补水", "缓苗不重剪"],
+      followup: "48-72 小时后拍土表、盆口和根颈/茎基部，确认没有持续湿亮、发黑或软腐。",
+      evidence: ["根颈不要埋深", "排水孔必须顺畅", "缓苗不重剪重肥"],
       reminders: [{
         key: "48h",
-        task: "复查移栽后根区是否闷湿、茎基部是否发黑",
-        photo: "土表、盆口和茎基部",
-        success: "茎基部不发黑，叶尖不继续恶化，土表开始变干。",
-        reason: "迷迭香移栽后的闷根风险最先在 48-72 小时出现"
+        task: "复查移栽后根区是否闷湿、根颈是否发黑",
+        photo: "土表、盆口和根颈/茎基部",
+        success: "根颈不发黑，叶尖不继续恶化，土表开始变干。",
+        reason: "迷迭香移栽后的闷根和根颈腐风险最先在 48-72 小时出现"
       }],
       steps: [
-        ["移栽时机", "根系能固定土团后再换盆；新买回家当天如果状态稳定，可以先不换。"],
-        ["盆和介质", "选排水孔明显的盆，介质要疏松，可加入珍珠岩、浮石或颗粒提高透气。"],
-        ["当天动作", "带土团移，浇透一次后让多余水流出；放明亮散射光和通风处。"],
-        ["缓苗 3 天", "不追肥、不重剪、不连续补水；观察叶尖、茎基部和盆土变化。"],
-        ["修剪", "恢复后只轻剪嫩梢，避免剪到光秃老木头。"],
-        ["复查", "48-72 小时看根区，7 天看新梢是否稳定。"],
-        ["不要做", "不要无孔盆、不要保水泥炭过多、不要移栽后马上暴晒和重肥。"]
+        ["移栽时机", "根系能固定土团后再换盆；新买回家当天如果状态稳定，可以先观察，不急着换。"],
+        ["盆和介质", "选排水孔明显的陶盆或塑料盆，介质要疏松，可加入珍珠岩、粗砂、火山石或颗粒提高透气。"],
+        ["当天动作", "带土团移，根颈不要埋太深；浇透一次后让多余水完全流出，倒掉托盘积水。"],
+        ["缓苗 3 天", "放明亮散射光和通风处，不追肥、不重剪、不连续补水；观察叶尖、根颈和盆土变化。"],
+        ["暴晒处理", "不要换盆后立刻暴晒；看到新梢恢复挺立后，再逐步加直射光或补光强度。"],
+        ["修剪", "恢复后只轻剪嫩梢，避免剪到光秃老木质枝，老枝恢复能力差。"],
+        ["复查", "48-72 小时看根区和根颈，7 天看新梢是否稳定。"],
+        ["不要做", "不要无孔盆、不要保水泥炭过多、不要埋深根颈、不要移栽后马上暴晒和重肥。"]
       ]
     },
     store: {
       label: "成品不移植",
-      summary: "买来的迷迭香先观察原盆湿度、叶尖和通风；稳定前不要急着换大盆或做造型重剪。",
-      currentAction: "今天检查土表是否一直湿亮、叶尖是否发黑；把它放到强光通风处，先不要换盆。",
-      pollination: "成品迷迭香日常不需要授粉。它的重点是枝梢健康和根区干湿循环，不是开花结果。",
-      followup: "3 天后拍同角度整株和土表，确认叶尖不再恶化、盆土开始有干湿变化。",
-      evidence: ["先查湿土", "强光适应", "不要过水"],
+      summary: "买来的迷迭香先观察原盆湿度、根颈、叶尖和通风；稳定前不要急着换大盆或做造型重剪。",
+      currentAction: "今天检查土表是否长期湿亮、根颈是否发黑、叶尖是否发褐；把它放到强光通风处，先不要换盆。",
+      pollination: "成品迷迭香日常不需要授粉。它的重点是枝梢健康、香味和根区干湿循环，不是开花结果。",
+      followup: "3 天后拍同角度整株、根颈和土表，确认叶尖不再恶化、盆土开始有干湿变化。",
+      evidence: ["先查湿土和根颈", "强光通风适应", "不要过水或大肥"],
       reminders: [{
         key: "day3",
-        task: "复查盆土干湿、叶尖发黑和环境适应",
-        photo: "同角度整株和土表",
-        success: "叶尖没有继续发黑，盆土开始变干，植株不继续萎蔫。",
-        reason: "买回后控水和强光适应 3 天内能看出是否稳定"
+        task: "复查盆土干湿、叶尖发褐/发黑和环境适应",
+        photo: "同角度整株、根颈和土表",
+        success: "叶尖没有继续发褐或发黑，盆土开始变干，植株不继续萎蔫。",
+        reason: "买回后控水、强光和通风适应 3 天内能看出是否稳定"
       }],
       steps: [
-        ["第 0 天", "隔离观察，检查叶尖、枝条内侧和土表；原盆稳定时不要急换大盆。"],
-        ["第 1-3 天", "逐步增强光照和通风；土表湿亮时不要补水。"],
-        ["修剪", "只轻剪顶端嫩梢或枯枝，不要把整株剪秃。"],
-        ["控水", "浇水前确认表层已干、盆变轻；浇透后倒掉托盘积水。"],
-        ["复查", "3 天看叶尖和土表，7 天看新梢是否更直立。"],
-        ["不要做", "不要喷叶保湿、不要连续浇水、不要冷窗低温高湿、不要用大肥催长。"]
+        ["第 0 天", "隔离观察，检查叶尖、枝条内侧、根颈和土表；原盆稳定时不要急换大盆。"],
+        ["第 1-3 天", "逐步增强光照和通风；土表湿亮时不要补水，避免闷在套盆积水里。"],
+        ["黄叶判断", "老叶先黄且土湿，优先怀疑过湿和根系缺氧；土干、盆轻、叶片灰黄时，再考虑缺水或空气过干。"],
+        ["修剪/采收", "只轻剪顶端嫩梢或枯枝，采收剪嫩枝；不要把整株剪秃，也不要只摘单片叶。"],
+        ["控水", "浇水前确认表层干透、盆变轻；浇透后倒掉托盘积水，不按固定日期天天浇。"],
+        ["冬季", "冬季少浇水、保光照、远离冷湿窗边；低温下长期湿土最危险。"],
+        ["复查", "3 天看叶尖和土表，7 天看新梢是否更直立、香味是否更浓。"],
+        ["不要做", "不要喷叶保湿、不要连续浇水、不要冷窗低温高湿、不要用大肥催嫩叶。"]
       ]
     }
   },
@@ -1537,34 +1593,42 @@ const englishCropCareGuidancePlans = {
   rosemary: {
     seed: {
       label: "Young plant",
-      summary: "Rosemary needs strong light, airflow, and a root zone that dries down. Slow growth is normal.",
-      currentAction: "Today, put it in the brightest airy spot and wait for the surface to dry before watering. Do not fertilize just because growth is slow.",
-      pollination: "Rosemary grown as an herb does not need hand pollination; stabilize roots and shoots first.",
-      followup: "Come back in 7 days. Take one whole-plant side photo and one soil-surface photo.",
-      evidence: ["Strong light", "Airflow", "Let it dry down"],
-      reminders: [{ key: "day7", task: "Review new tips, blackening tips, and dry-down cycle.", photo: "Whole plant and soil surface", success: "Tips stop blackening and the soil surface dries normally.", reason: "Rosemary takes about a week to show response to light and watering changes." }],
-      stageActions: { wet: { currentAction: "If the soil is shiny-wet or tips are blackening, pause watering for 48 hours and increase airflow. Do not keep watering wilted rosemary.", followup: "Come back in 48 hours. Photograph the soil surface, stem base, and tips.", evidence: ["Pause watering", "Airflow first", "Wilting is not always thirst"] } },
-      steps: [["Principle", "Bright light, airflow, drainage, and a drier root zone."], ["Young plant", "Do not hard prune. Water only after the surface dries."], ["Pruning", "Lightly trim soft tips after growth is stable; do not cut into bare old wood."], ["Water", "Wet all the way through, then let it dry down."], ["Follow-up", "48 hours for wet-root risk; 7 days for growth response."], ["Do not", "Do not water daily, mist leaves, keep it in a cold wet window, or fertilize heavily."]]
+      summary: "Rosemary can be started from seed, but for home growers a small plant or cutting is more reliable. The core is strong light, airflow, fast drainage, and a slightly dry root zone.",
+      currentAction: "Today, confirm the route. If it is a young plant or cutting, place it in the brightest airy spot and water only after the pot feels lighter and the surface has dried.",
+      pollination: "Rosemary grown as an herb does not need hand pollination. Focus on roots, new tips, and aroma before flowers.",
+      followup: "Come back in 7 days. Take a whole-plant side photo, pot-rim photo, and soil-surface photo.",
+      evidence: ["Young plants beat seeds", "Strong light and airflow", "Water by pot weight"],
+      reminders: [{ key: "day7", task: "Review new tips, brown tips or die-back, and the dry-down cycle.", photo: "Whole plant, pot rim, and soil surface", success: "Tips stop browning or blackening, new growth is steady, and the surface can dry between waterings.", reason: "Rosemary usually needs about a week to show response to light, airflow, and watering rhythm." }],
+      stageActions: {
+        seedling: { currentAction: "At the young plant or cutting stage, stabilize light and airflow today. Do not top, hard-prune, water wet soil, or push heavy fertilizer.", followup: "Come back in 7 days with a whole-plant, stem-base, and soil-surface photo.", evidence: ["No hard pruning", "Watch the stem base", "Do not water wet soil"] },
+        vegetative: { currentAction: "In active growth, rotate the pot for even light and inspect the inner stems for humidity. Lightly trim soft tips only; do not cut into bare old wood.", followup: "Come back in 7 days with a whole-plant side photo.", evidence: ["Even light", "Soft-tip trim only", "Avoid old wood"] },
+        wet: { currentAction: "If the plant wilts while the soil is wet, stop watering today and check drainage, stem base, and smell. If roots are black, soft, or smelly, take healthy cuttings as backup.", followup: "Come back in 48 hours. Photograph the soil surface, stem base, and shoot tips.", evidence: ["Wet wilt suggests roots", "Back up with cuttings", "Wilt does not always mean thirst"] },
+        dry: { currentAction: "If tips are brown and inner stems are drying while the pot is very light, water through once along the pot edge and let excess drain. Do not switch to daily watering.", followup: "Come back in 24-48 hours. Photograph the same shoots and pot rim.", evidence: ["Brown tips", "Light pot", "Water through, not daily"] },
+        aroma: { currentAction: "If aroma is weak, increase direct or strong supplemental light today and reduce overwatering or heavy fertilizer. Do not force watery soft growth.", followup: "Come back in 7 days. Note aroma from new tips and photograph plant shape.", evidence: ["Light builds oils", "Slightly dry is aromatic", "Too much nitrogen weakens flavor"] },
+        pest: { currentAction: "If you see yellow speckling, gray leaves, fine webbing, or sticky tips, isolate the pot and photograph inner stems and undersides. Do not mist leaves as the first response.", followup: "Come back in 24-48 hours with the same inner-stem close-up.", evidence: ["Webbing points to mites", "Sticky tips point to sap feeders", "Isolate first"] },
+        cold: { currentAction: "In winter or near a cold window, move the pot away from cold glass and drafts today. Keep light strong and water less; cold plus wet soil is the risk.", followup: "Come back in 7 days with whole-plant and soil-surface photos.", evidence: ["Cold plus wet is risky", "Move from cold glass", "Water less in winter"] }
+      },
+      steps: [["Principle", "Rosemary wants strong light, airflow, drainage, and a slightly dry root zone. Slow growth is normal; do not force it with water or fertilizer."], ["Route", "Seeds are slow and less practical for beginners. A small plant or cutting is better for home validation."], ["Choose", "Pick compact gray-green growth with a healthy stem base. Avoid plants with constantly wet soil or large brown patches."], ["Pot and mix", "Use drainage holes and an airy mix with perlite, coarse sand, pumice, or similar grit. Avoid heavy water-retentive soil and no-hole cover pots."], ["Water", "Water through after the pot feels lighter and the surface is dry. Do not water by a fixed calendar or keep watering wilted rosemary."], ["Prune/harvest", "Lightly trim soft new tips and harvest young stems. Do not cut hard into bare old wood or remove too much at once."], ["Pests/disease", "White powder points to humidity and airflow; yellow specks, gray leaves, and webbing point to mites; sticky new tips point to sap-feeding insects."], ["Winter", "Water less, keep light high, and avoid cold-wet roots. Cold wet soil is more dangerous than cold alone."], ["Follow-up", "Use 48 hours for wet-root risk and 7 days for light, pruning, or aroma changes."], ["Do not", "Do not mist leaves, overfeed, keep it in a dark or damp corner, or put it in harsh sun right after transplanting."]]
     },
     transplant: {
       label: "Transplant",
-      summary: "Rosemary transplant care is about root oxygen: less water, less cutting, more airflow.",
-      currentAction: "Today, use bright indirect light and airflow. If the mix is wet, do not water. Do not hard-prune or fertilize.",
+      summary: "Rosemary transplant care is about root oxygen and stem-base health: use drainage, do not bury the crown, and avoid wet-on-wet watering.",
+      currentAction: "Today, move the root ball into an airy fast-draining mix without burying the stem base. Use bright indirect light and airflow; if the mix is wet, do not water.",
       pollination: "Ignore flowers during recovery; root recovery comes first.",
-      followup: "Come back in 48-72 hours. Take a soil-surface and stem-base photo.",
-      evidence: ["Root oxygen", "No wet-on-wet watering", "No hard pruning"],
-      reminders: [{ key: "48h", task: "Check for wet mix and darkening stem base.", photo: "Soil surface, pot rim, and stem base", success: "The stem base is not dark and the surface starts drying.", reason: "Wet-root stress shows early after transplant." }],
-      steps: [["Timing", "Transplant only when roots can hold a soil ball."], ["Mix", "Use drainage and airy media."], ["Recovery", "No heavy feed, hard pruning, or repeated watering."], ["Follow-up", "48-72 hours for wet-root risk."], ["Do not", "Do not use a no-hole pot or heavy water-retentive mix."]]
+      followup: "Come back in 48-72 hours. Take soil-surface, pot-rim, and stem-base photos.",
+      evidence: ["Do not bury the stem base", "Drainage holes must work", "Recover before pruning"],
+      reminders: [{ key: "48h", task: "Check for wet mix and stem-base darkening after transplant.", photo: "Soil surface, pot rim, and stem base", success: "The stem base is not dark, tips are not worsening, and the surface starts drying.", reason: "Wet-root or crown stress usually declares itself within 48-72 hours after transplant." }],
+      steps: [["Timing", "Transplant only when roots can hold a soil ball. If a store plant is stable, observe first instead of rushing."], ["Pot and mix", "Use clear drainage holes and an airy gritty mix."], ["Day 0", "Move with the root ball, keep the stem base shallow, water through once only if needed, and empty the saucer."], ["Recovery", "Bright indirect light, airflow, no heavy feed, no hard pruning, and no repeated watering for about 3 days."], ["Sun", "Do not put it into harsh sun immediately after transplanting; increase direct light after new tips stand up."], ["Pruning", "After recovery, trim soft tips only. Bare old wood recovers poorly."], ["Do not", "Do not use a no-hole pot, heavy peat mix, a buried stem base, immediate harsh sun, or heavy fertilizer."]]
     },
     store: {
       label: "Store plant",
-      summary: "For store-bought rosemary, inspect wet soil and black tips before repotting or shaping.",
-      currentAction: "Today, check whether the soil stays shiny-wet and whether tips are black. Put it in strong light and airflow; do not repot yet.",
-      pollination: "No pollination is needed. Focus on root dry-down and shoot health.",
-      followup: "Come back in 3 days. Take the same whole-plant angle and soil-surface photo.",
-      evidence: ["Check wet soil", "Strong-light acclimation", "Do not overwater"],
-      reminders: [{ key: "day3", task: "Review dry-down, black tips, and acclimation.", photo: "Same whole-plant angle and soil surface", success: "Tips stop worsening and the pot starts drying normally.", reason: "Three days is enough to see whether water control is stabilizing the plant." }],
-      steps: [["Day 0", "Inspect tips, inner stems, and soil surface."], ["Light", "Increase light and airflow gradually."], ["Pruning", "Trim only dead or soft tips; do not cut it bare."], ["Water", "Water only after the surface dries and the pot feels lighter."], ["Do not", "Do not mist, overwater, repot immediately, or fertilize heavily."]]
+      summary: "For store-bought rosemary, inspect the original pot moisture, stem base, brown tips, and airflow before repotting or shaping.",
+      currentAction: "Today, check whether the soil stays shiny-wet, the stem base is dark, or tips are browning. Put it in strong light and airflow; do not repot yet.",
+      pollination: "No pollination is needed. Focus on shoot health, aroma, and root dry-down.",
+      followup: "Come back in 3 days. Take the same whole-plant angle plus stem-base and soil-surface photos.",
+      evidence: ["Check wet soil and stem base", "Strong-light acclimation", "Avoid overwatering and heavy feed"],
+      reminders: [{ key: "day3", task: "Review dry-down, brown or black tips, and acclimation.", photo: "Same whole-plant angle, stem base, and soil surface", success: "Tips stop worsening, the pot starts drying normally, and the plant is not continuing to wilt.", reason: "Three days is enough to see whether water control, light, and airflow are stabilizing the plant." }],
+      steps: [["Day 0", "Isolate and inspect tips, inner stems, stem base, and soil surface. Do not rush into a larger pot if the plant is stable."], ["Days 1-3", "Increase light and airflow gradually. If the surface is wet or shiny, do not add water or leave it sitting in a cover pot."], ["Yellow leaves", "Wet soil plus older yellowing points first to root oxygen issues. Dry soil, a very light pot, and gray-yellow leaves suggest dryness or very dry air."], ["Pruning/harvest", "Trim soft tips or dead tips only. Harvest young stems, not single leaves, and do not cut the plant bare."], ["Water", "Water after the surface is dry and the pot feels lighter; empty saucers after watering."], ["Winter", "Water less, keep light high, and move away from cold wet windows."], ["Follow-up", "Use 3 days for tips and soil surface; use 7 days for new tips and aroma."], ["Do not", "Do not mist leaves, water repeatedly, keep it cold and wet, or use heavy fertilizer to force tender growth."]]
     }
   },
   strawberry: {
@@ -2073,17 +2137,38 @@ function resolveBasilGuidancePlan(state, plan) {
 function careGuidanceStageOverrideKey(cropKey, state, plan) {
   if (!plan?.stageActions) return null;
   if (cropKey === "basil") return basilGuidanceStageOverrideKey(state, plan);
+  const pestSignal = has(state, "pests") ||
+    sees(state, "webbing") ||
+    sees(state, "tiny-flies") ||
+    sees(state, "sticky-residue") ||
+    smartConcern.value === "pest";
   const wetRootSignal = state.moisture === "wet" ||
     state.sensorMoisture !== null && state.sensorMoisture > 75 ||
     has(state, "algae") ||
     sees(state, "green-surface") ||
     sees(state, "white-fuzz");
+  const drySignal = state.moisture === "dry" ||
+    state.sensorMoisture !== null && state.sensorMoisture < 35 ||
+    sees(state, "edge-dry") ||
+    smartConcern.value === "dry";
+  const aromaSignal = has(state, "weak-aroma") ||
+    smartConcern.value === "aroma";
+  const coldSignal = state.climate === "cold" ||
+    state.temperature !== null && state.temperature < 16;
+  const leggySignal = has(state, "leggy") ||
+    sees(state, "long-internodes") ||
+    smartConcern.value === "leggy";
   const floweringSignal = state.stage === "flowering" ||
     has(state, "no-fruit") ||
     sees(state, "flower-drop") ||
     sees(state, "flower-buds") ||
     smartConcern.value === "fruit";
+  if (pestSignal && plan.stageActions.pest) return "pest";
   if ((cropKey === "rosemary" || cropKey === "strawberry") && wetRootSignal && plan.stageActions.wet) return "wet";
+  if (cropKey === "rosemary" && coldSignal && plan.stageActions.cold) return "cold";
+  if (drySignal && plan.stageActions.dry) return "dry";
+  if (aromaSignal && plan.stageActions.aroma) return "aroma";
+  if (leggySignal && plan.stageActions.leggy) return "leggy";
   if (floweringSignal && plan.stageActions.flowering) return "flowering";
   if (state.stage === "fruiting" && plan.stageActions.fruiting) return "fruiting";
   if (state.stage === "seedling" && plan.stageActions.seedling) return "seedling";
@@ -2093,8 +2178,16 @@ function careGuidanceStageOverrideKey(cropKey, state, plan) {
 
 function resolveCropCareGuidancePlan(cropKey, state, plan) {
   if (cropKey === "basil") return resolveBasilGuidancePlan(state, plan);
-  const key = careGuidanceStageOverrideKey(cropKey, state, plan);
-  const override = key ? plan.stageActions?.[key] : null;
+  const fallbackStageActions = cropKey === "rosemary" && !plan?.stageActions
+    ? (activeLocale === "en"
+      ? englishCropCareGuidancePlans.rosemary?.seed?.stageActions
+      : cropCareGuidancePlans.rosemary?.seed?.stageActions)
+    : null;
+  const stagePlan = fallbackStageActions
+    ? { ...plan, stageActions: fallbackStageActions }
+    : plan;
+  const key = careGuidanceStageOverrideKey(cropKey, state, stagePlan);
+  const override = key ? stagePlan.stageActions?.[key] : null;
   if (!override) return plan;
   return {
     ...plan,
@@ -2115,6 +2208,10 @@ function careGuidanceStageHint(cropKey, state) {
     }
     if (cropKey === "rosemary") {
       if (state.moisture === "wet" || has(state, "algae")) return "For rosemary, wet roots come before every other diagnosis.";
+      if (has(state, "pests") || sees(state, "webbing") || sees(state, "sticky-residue") || smartConcern.value === "pest") return "Speckling, webbing, or sticky tips need an underside and inner-stem check.";
+      if (smartConcern.value === "aroma" || has(state, "weak-aroma")) return "Weak aroma usually points to low light, too much water, or too much fertilizer.";
+      if (state.climate === "cold" || state.temperature !== null && state.temperature < 16) return "Cold plus wet soil is the dangerous rosemary combination.";
+      if (state.moisture === "dry" || sees(state, "edge-dry")) return "Brown tips can be dryness, but check pot weight before changing to daily watering.";
       return "Rosemary should feel bright, airy, and slightly dry between waterings.";
     }
     if (cropKey === "strawberry") {
@@ -2136,6 +2233,10 @@ function careGuidanceStageHint(cropKey, state) {
   }
   if (cropKey === "rosemary") {
     if (state.moisture === "wet" || has(state, "algae")) return "迷迭香遇到過濕時，停水通風優先於補肥。";
+    if (has(state, "pests") || sees(state, "webbing") || sees(state, "sticky-residue") || smartConcern.value === "pest") return "出現黃點、細網或嫩梢發黏時，先補拍葉背和枝條內側。";
+    if (smartConcern.value === "aroma" || has(state, "weak-aroma")) return "香味弱通常先看光照、過水和施肥過多，不靠大肥催香。";
+    if (state.climate === "cold" || state.temperature !== null && state.temperature < 16) return "迷迭香冬季最怕冷濕疊加，低溫時更要讓根區偏乾。";
+    if (state.moisture === "dry" || sees(state, "edge-dry")) return "葉尖 brown 不等於天天澆，先看盆重和下層濕度再補水。";
     return "迷迭香日常重點是強光、通風和根區偏乾。";
   }
   if (cropKey === "strawberry") {
@@ -3094,15 +3195,17 @@ function diagnose(state) {
     );
   }
 
-  if (has(state, "pests") || sees(state, "webbing") || sees(state, "tiny-flies")) {
+  if (has(state, "pests") || sees(state, "webbing") || sees(state, "tiny-flies") || sees(state, "sticky-residue")) {
     addFinding(
       findings,
-      sees(state, "webbing") ? "疑似红蜘蛛或叶背害虫" : "虫害正在建立种群",
-      72 + (sees(state, "webbing") ? 18 : 0) + (sees(state, "tiny-flies") ? 10 : 0),
+      sees(state, "webbing") ? "疑似红蜘蛛或叶背害虫" : sees(state, "sticky-residue") ? "疑似吸汁害虫分泌蜜露" : "虫害正在建立种群",
+      72 + (sees(state, "webbing") ? 18 : 0) + (sees(state, "tiny-flies") ? 10 : 0) + (sees(state, "sticky-residue") ? 12 : 0),
       "high",
-      "小飞虫常见于菌蚊；细网、斑点和卷叶更像红蜘蛛或叶背害虫，需要尽早隔离。",
+      "小飞虫常见于菌蚊；细网、斑点和卷叶更像红蜘蛛或叶背害虫；叶/嫩梢发黏常见于蚜虫、白粉虱、蓟马等吸汁害虫，需要尽早隔离。",
       sees(state, "webbing")
         ? "立刻拍叶背特写，隔离植株，用水冲洗叶背；24 小时后复查是否仍有细网或移动小点。"
+        : sees(state, "sticky-residue")
+          ? "先隔离病株，补拍嫩梢和叶背；擦除可见黏液和虫体，24-48 小时后复查同一枝条。"
         : "先隔离病株，挂黄粘板确认虫量；菌蚊用 BTI 控幼虫，叶背虫害用水洗和安全药剂分阶段处理。"
     );
   }
@@ -4464,6 +4567,9 @@ function customerEvidenceLabel(value) {
     "pests": "虫害痕迹",
     "leaf-white-powder": "叶面白粉",
     "gray-mold": "灰霉绒毛",
+    "webbing": "细网/蛛丝",
+    "tiny-flies": "小飞虫",
+    "sticky-residue": "叶/嫩梢发黏",
     "powdery-mildew": "白粉病信号",
     "leaf-holes": "叶片孔洞",
     "chewed-edge": "叶缘被啃",
@@ -7792,7 +7898,7 @@ function inferFromConcern() {
     yellow: ["pale-new-growth", "lower-yellowing"],
     leggy: ["long-internodes"],
     fruit: ["flower-drop"],
-    pest: ["tiny-flies", "leaf-holes", "chewed-edge"],
+    pest: ["tiny-flies", "sticky-residue", "leaf-holes", "chewed-edge"],
     root: ["green-surface", "white-fuzz"],
     dry: ["edge-dry"]
   };
@@ -7960,7 +8066,8 @@ function detectUploadedPhotoType(file, signals = photoSignals, state = getFormSt
     root: ["root", 20, "用户主诉是根区或藻霉"],
     fruit: ["flower", 20, "用户主诉是开花不结果"],
     pest: ["pest", 22, "用户主诉是虫害"],
-    leggy: ["plant", 18, "用户主诉是徒长或不开花"]
+    leggy: ["plant", 18, "用户主诉是徒长或不开花"],
+    aroma: ["plant", 14, "香味问题需要整株和光照背景"]
   };
   const concern = concernScores[smartConcern.value];
   if (concern) addPhotoTypeScore(scores, reasons, concern[0], concern[1], concern[2]);
@@ -8150,6 +8257,11 @@ function applyVisionHints(result) {
     }
     if (label === "possible-pest") {
       symptoms.push("pests");
+      visuals.push("tiny-flies");
+    }
+    if (label === "sticky-residue") {
+      symptoms.push("pests");
+      visuals.push("sticky-residue");
     }
   });
   addChecked("symptoms", symptoms);
