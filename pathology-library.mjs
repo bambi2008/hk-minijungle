@@ -404,7 +404,7 @@ export const pathologyLibrary = {
           match: {
             concern: ["root"],
             symptoms: ["wilting", "algae", "yellow-leaves"],
-            visuals: ["green-surface", "white-fuzz", "lower-yellowing"],
+            visuals: ["green-surface", "white-fuzz", "lower-yellowing", "root-browning", "black-stem"],
             environment: { moisture: ["wet"], climate: ["humid", "cold"], sensorMoistureHigh: 78, temperatureLow: 18 },
             visionLabels: ["black-stem", "stem-necrosis", "root-rot", "root-risk", "surface-algae"]
           },
@@ -425,8 +425,8 @@ export const pathologyLibrary = {
           photoTypes: ["plant", "leaf"],
           match: {
             concern: ["dry"],
-            symptoms: ["wilting"],
-            visuals: ["edge-dry"],
+            symptoms: ["wilting", "leaf-curl"],
+            visuals: ["edge-dry", "leaf-curl"],
             environment: { moisture: ["dry"], climate: ["dry", "hot"], sensorMoistureLow: 35 }
           },
           sourceIds: ["ncsu-basil", "fivecrop-field"]
@@ -469,7 +469,7 @@ export const pathologyLibrary = {
           match: {
             concern: ["pest"],
             symptoms: ["pests", "leaf-curl", "spots"],
-            visuals: ["tiny-flies", "webbing"],
+            visuals: ["tiny-flies", "webbing", "sticky-residue"],
             visionLabels: ["possible-pest", "spots"]
           },
           sourceIds: ["ncsu-basil", "fivecrop-field"]

@@ -7969,6 +7969,7 @@ function inferFromFileName(file) {
   const selectedCrop = cropSelect?.value || "";
   const isBasilBoltingName = selectedCrop === "basil" || name.includes("basil") || name.includes("luole") || name.includes("罗勒");
   const isBasilTransplantName = selectedCrop === "basil" || name.includes("basil") || name.includes("luole") || name.includes("罗勒");
+  const hasAny = (keywords) => keywords.some((keyword) => name.includes(keyword));
   const symptoms = [];
   const visuals = [];
   if (name.includes("yellow") || name.includes("huang") || name.includes("leaf")) {
@@ -7976,21 +7977,30 @@ function inferFromFileName(file) {
     visuals.push("pale-new-growth");
     setPhotoType("leaf");
   }
+  if (hasAny(["leggy", "徒长", "稀疏", "叶子稀疏", "节间长", "追光"])) {
+    symptoms.push("leggy");
+    visuals.push("long-internodes", "sparse-leaves");
+    setPhotoType("plant");
+  }
   if (
     isBasilBoltingName &&
     (
-      name.includes("flower") ||
-      name.includes("bloom") ||
-      name.includes("bud") ||
-      name.includes("bolting") ||
-      name.includes("bitter") ||
-      name.includes("sparse") ||
-      name.includes("开花") ||
-      name.includes("花苞") ||
-      name.includes("花穗") ||
-      name.includes("抽薹") ||
-      name.includes("叶少") ||
-      name.includes("变苦")
+      hasAny([
+        "flower",
+        "bloom",
+        "bud",
+        "bolting",
+        "bitter",
+        "sparse",
+        "开花",
+        "花苞",
+        "花穗",
+        "抽薹",
+        "叶少",
+        "叶子变少",
+        "味道变差",
+        "变苦"
+      ])
     )
   ) {
     symptoms.push("bolting");
@@ -8006,17 +8016,29 @@ function inferFromFileName(file) {
     visuals.push("green-surface");
     setPhotoType("root");
   }
+  if (hasAny(["根烂", "烂根", "根腐", "黑脚", "发黑", "茎黑", "茎基部黑", "black-leg", "blackleg", "root-rot"])) {
+    symptoms.push("wilting", "algae");
+    visuals.push("root-browning", "black-stem", "green-surface");
+    setPhotoType("root");
+  }
+  if (hasAny(["卷曲", "卷叶", "边缘焦枯", "焦枯", "焦边", "叶缘干", "edge-dry", "curl"])) {
+    symptoms.push("leaf-curl", "wilting");
+    visuals.push("edge-dry", "leaf-curl");
+    setPhotoType("leaf");
+  }
   if (
     isBasilTransplantName &&
     (
-      name.includes("transplant") ||
-      name.includes("repot") ||
-      name.includes("potted-up") ||
-      name.includes("seedling-move") ||
-      name.includes("移栽") ||
-      name.includes("换盆") ||
-      name.includes("分株") ||
-      name.includes("缓苗")
+      hasAny([
+        "transplant",
+        "repot",
+        "potted-up",
+        "seedling-move",
+        "移栽",
+        "换盆",
+        "分株",
+        "缓苗"
+      ])
     )
   ) {
     symptoms.push("transplant-shock", "wilting");
@@ -8025,44 +8047,49 @@ function inferFromFileName(file) {
   if (
     isBasilBoltingName &&
     (
-      name.includes("aroma") ||
-      name.includes("fragrance") ||
-      name.includes("scent") ||
-      name.includes("flavor") ||
-      name.includes("flavour") ||
-      name.includes("weak-scent") ||
-      name.includes("香味") ||
-      name.includes("香气") ||
-      name.includes("不香") ||
-      name.includes("味淡")
+      hasAny([
+        "aroma",
+        "fragrance",
+        "scent",
+        "flavor",
+        "flavour",
+        "weak-scent",
+        "香味",
+        "香气",
+        "不香",
+        "味淡"
+      ])
     )
   ) {
     symptoms.push("weak-aroma");
     setPhotoType("plant");
   }
-  if (name.includes("pest") || name.includes("bug") || name.includes("fly")) {
+  if (hasAny(["pest", "bug", "fly", "虫", "小虫", "叶背有虫", "发黏", "粘", "sticky"])) {
     symptoms.push("pests");
-    visuals.push("tiny-flies");
+    visuals.push("tiny-flies", "sticky-residue");
     setPhotoType("pest");
   }
-  if (name.includes("hole") || name.includes("chew") || name.includes("eaten") || name.includes("bite")) {
+  if (hasAny(["hole", "chew", "eaten", "bite", "洞", "孔洞", "啃食", "被啃", "咬痕"])) {
     symptoms.push("pests");
     visuals.push("leaf-holes", "chewed-edge");
     setPhotoType("pest");
   }
   if (
-    name.includes("powder") ||
-    name.includes("mildew") ||
-    name.includes("botrytis") ||
-    name.includes("gray-mold") ||
-    name.includes("grey-mold") ||
-    name.includes("white-powder") ||
-    name.includes("白粉") ||
-    name.includes("灰霉") ||
-    name.includes("霉斑")
+    hasAny([
+      "powder",
+      "mildew",
+      "botrytis",
+      "gray-mold",
+      "grey-mold",
+      "white-powder",
+      "白粉",
+      "灰霉",
+      "霉斑",
+      "霜霉"
+    ])
   ) {
-    symptoms.push("spots");
-    visuals.push("leaf-white-powder", "gray-mold");
+    symptoms.push("spots", "yellow-leaves");
+    visuals.push("leaf-white-powder", "gray-mold", "white-fuzz", "lower-yellowing");
     setPhotoType("leaf");
   }
   addChecked("symptoms", symptoms);
@@ -8077,11 +8104,11 @@ function addPhotoTypeScore(scores, reasons, type, points, reason) {
 function scorePhotoTypeKeywords(file, scores, reasons) {
   const name = file?.name?.toLowerCase() || "";
   const keywordGroups = {
-    plant: ["plant", "whole", "full", "overall", "side", "overview", "aroma", "fragrance", "scent", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "香味", "香气", "不香", "味淡", "苗"],
-    leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "powder", "mildew", "botrytis", "gray-mold", "grey-mold", "sparse", "叶", "叶片", "黄叶", "斑点", "卷叶", "焦边", "白粉", "灰霉", "霉斑", "叶少"],
-    root: ["root", "xponge", "coco", "rockwool", "soil", "medium", "algae", "mold", "fungus", "gen", "根", "根区", "基质", "介质", "岩棉", "椰糠", "藻", "霉", "白毛"],
-    flower: ["flower", "bloom", "bud", "bolting", "fruit", "tomato", "pepper", "strawberry", "berry", "hua", "guo", "花", "花苞", "花穗", "花序", "抽薹", "果", "果实", "番茄", "辣椒", "草莓"],
-    pest: ["pest", "bug", "fly", "gnat", "mite", "aphid", "insect", "worm", "虫", "飞虫", "小飞虫", "蚜", "螨", "粘板"]
+    plant: ["plant", "whole", "full", "overall", "side", "overview", "aroma", "fragrance", "scent", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "香味", "香气", "不香", "味淡", "苗", "徒长", "稀疏", "节间长"],
+    leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "powder", "mildew", "botrytis", "gray-mold", "grey-mold", "sparse", "叶", "叶片", "黄叶", "斑点", "卷曲", "卷叶", "焦枯", "焦边", "白粉", "灰霉", "霜霉", "霉斑", "叶少"],
+    root: ["root", "xponge", "coco", "rockwool", "soil", "medium", "algae", "mold", "fungus", "gen", "根", "根区", "根烂", "烂根", "根腐", "黑脚", "发黑", "基质", "介质", "岩棉", "椰糠", "藻", "白毛"],
+    flower: ["flower", "bloom", "bud", "bolting", "fruit", "tomato", "pepper", "strawberry", "berry", "hua", "guo", "花", "花苞", "花穗", "花序", "抽薹", "开花", "果", "果实", "番茄", "辣椒", "草莓"],
+    pest: ["pest", "bug", "fly", "gnat", "mite", "aphid", "insect", "worm", "虫", "飞虫", "小飞虫", "蚜", "螨", "粘板", "发黏", "孔洞", "啃食", "被啃"]
   };
 
   Object.entries(keywordGroups).forEach(([type, keywords]) => {
