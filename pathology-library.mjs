@@ -558,7 +558,7 @@ export const pathologyLibrary = {
           match: {
             concern: ["root"],
             symptoms: ["wilting", "yellow-leaves", "algae"],
-            visuals: ["white-fuzz", "green-surface"],
+            visuals: ["white-fuzz", "green-surface", "lower-yellowing", "root-browning", "black-stem"],
             environment: { moisture: ["wet"], climate: ["humid"], sensorMoistureHigh: 75 },
             visionLabels: ["root-risk", "white-fuzz"]
           },
@@ -580,7 +580,7 @@ export const pathologyLibrary = {
           match: {
             concern: ["leggy", "aroma"],
             symptoms: ["leggy", "weak-aroma"],
-            visuals: ["long-internodes"],
+            visuals: ["long-internodes", "sparse-leaves"],
             environment: { light: ["low"], lightHoursMax: 12 }
           },
           sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
@@ -600,6 +600,7 @@ export const pathologyLibrary = {
           photoTypes: ["root", "plant"],
           match: {
             symptoms: ["wilting", "yellow-leaves"],
+            visuals: ["green-surface", "root-browning", "black-stem", "lower-yellowing"],
             environment: { medium: ["water", "xponge"], moisture: ["wet"], growDevice: ["letpot", "idoo", "aerogarden"] }
           },
           sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]
@@ -640,7 +641,7 @@ export const pathologyLibrary = {
           photoTypes: ["plant", "root"],
           match: {
             concern: ["dry"],
-            symptoms: ["wilting"],
+            symptoms: ["wilting", "spots", "yellow-leaves"],
             visuals: ["edge-dry"],
             environment: { moisture: ["dry"], climate: ["dry"], sensorMoistureLow: 35 }
           },
@@ -660,7 +661,8 @@ export const pathologyLibrary = {
           missingInfo: ["购买/移栽日期", "根团状态", "是否修根", "是否炼苗", "根颈深度", "换盆后是否暴晒"],
           photoTypes: ["plant", "root"],
           match: {
-            symptoms: ["wilting"],
+            symptoms: ["wilting", "transplant-shock"],
+            visuals: ["lower-yellowing", "edge-dry"],
             stage: ["seedling", "vegetative"],
             environment: { moisture: ["swing"] }
           },
@@ -701,7 +703,8 @@ export const pathologyLibrary = {
           missingInfo: ["夜间温度", "离窗距离", "是否有冷风", "低温时土是否长期湿", "入室前是否检查叶背和清枯枝"],
           photoTypes: ["plant"],
           match: {
-            symptoms: ["wilting"],
+            symptoms: ["wilting", "yellow-leaves"],
+            visuals: ["edge-dry", "black-stem", "root-browning", "lower-yellowing"],
             environment: { climate: ["cold"], temperatureLow: 16, light: ["low"] }
           },
           sourceIds: ["ncsu-rosemary", "rosemary-lifecycle-research", "fivecrop-field"]

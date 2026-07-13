@@ -4626,6 +4626,7 @@ function customerEvidenceLabel(value) {
     "leggy": "徒长",
     "algae": "根区藻绿",
     "root-browning": "根区褐变",
+    "black-stem": "茎基部/枝条发黑",
     "crown-wet": "冠部偏湿"
   };
   if (!value) return "";
@@ -7969,15 +7970,17 @@ function inferFromFileName(file) {
   const selectedCrop = cropSelect?.value || "";
   const isBasilBoltingName = selectedCrop === "basil" || name.includes("basil") || name.includes("luole") || name.includes("罗勒");
   const isBasilTransplantName = selectedCrop === "basil" || name.includes("basil") || name.includes("luole") || name.includes("罗勒");
+  const isRosemaryName = selectedCrop === "rosemary" || name.includes("rosemary") || name.includes("迷迭香");
+  const isHerbTransplantName = isBasilTransplantName || isRosemaryName;
   const hasAny = (keywords) => keywords.some((keyword) => name.includes(keyword));
   const symptoms = [];
   const visuals = [];
-  if (name.includes("yellow") || name.includes("huang") || name.includes("leaf")) {
+  if (hasAny(["yellow", "huang", "leaf-yellow", "黄叶", "发黄", "叶子发黄", "叶片发黄"])) {
     symptoms.push("yellow-leaves");
-    visuals.push("pale-new-growth");
+    visuals.push("pale-new-growth", "lower-yellowing");
     setPhotoType("leaf");
   }
-  if (hasAny(["leggy", "徒长", "稀疏", "叶子稀疏", "节间长", "追光"])) {
+  if (hasAny(["leggy", "徒长", "稀疏", "叶子稀疏", "新枝很长", "节间长", "底部木质化", "光秃", "追光"])) {
     symptoms.push("leggy");
     visuals.push("long-internodes", "sparse-leaves");
     setPhotoType("plant");
@@ -8016,18 +8019,23 @@ function inferFromFileName(file) {
     visuals.push("green-surface");
     setPhotoType("root");
   }
-  if (hasAny(["根烂", "烂根", "根腐", "黑脚", "发黑", "茎黑", "茎基部黑", "black-leg", "blackleg", "root-rot"])) {
+  if (hasAny(["土是湿", "湿土", "整株萎蔫", "根烂", "烂根", "根腐", "根颈", "闷根", "黑脚", "发黑", "茎黑", "茎基部黑", "black-leg", "blackleg", "root-rot"])) {
     symptoms.push("wilting", "algae");
-    visuals.push("root-browning", "black-stem", "green-surface");
+    visuals.push("root-browning", "black-stem", "green-surface", "lower-yellowing");
     setPhotoType("root");
   }
-  if (hasAny(["卷曲", "卷叶", "边缘焦枯", "焦枯", "焦边", "叶缘干", "edge-dry", "curl"])) {
-    symptoms.push("leaf-curl", "wilting");
+  if (hasAny(["卷曲", "卷叶", "边缘焦枯", "焦枯", "焦边", "叶缘干", "叶尖发褐", "发褐", "枝条干枯", "干枯", "edge-dry", "curl"])) {
+    symptoms.push("leaf-curl", "wilting", "spots");
     visuals.push("edge-dry", "leaf-curl");
     setPhotoType("leaf");
   }
+  if (isRosemaryName && hasAny(["冬季", "冷害", "冻害", "突然死亡", "冷窗", "低温", "cold", "freeze", "frost"])) {
+    symptoms.push("wilting", "yellow-leaves");
+    visuals.push("edge-dry", "black-stem", "root-browning", "lower-yellowing");
+    setPhotoType("plant");
+  }
   if (
-    isBasilTransplantName &&
+    isHerbTransplantName &&
     (
       hasAny([
         "transplant",
@@ -8037,11 +8045,13 @@ function inferFromFileName(file) {
         "移栽",
         "换盆",
         "分株",
-        "缓苗"
+        "缓苗",
+        "掉叶"
       ])
     )
   ) {
     symptoms.push("transplant-shock", "wilting");
+    visuals.push("lower-yellowing", "edge-dry");
     setPhotoType("plant");
   }
   if (
@@ -8064,9 +8074,14 @@ function inferFromFileName(file) {
     symptoms.push("weak-aroma");
     setPhotoType("plant");
   }
-  if (hasAny(["pest", "bug", "fly", "虫", "小虫", "叶背有虫", "发黏", "粘", "sticky"])) {
+  if (hasAny(["pest", "bug", "fly", "虫", "小虫", "叶背有虫", "嫩梢有虫", "发黏", "粘", "sticky"])) {
     symptoms.push("pests");
     visuals.push("tiny-flies", "sticky-residue");
+    setPhotoType("pest");
+  }
+  if (hasAny(["蜘蛛网", "细网", "蛛丝", "叶色发灰", "发灰", "细小黄点", "黄点", "叶螨", "红蜘蛛", "webbing", "mite"])) {
+    symptoms.push("pests", "spots");
+    visuals.push("webbing", "sticky-residue", "pale-new-growth");
     setPhotoType("pest");
   }
   if (hasAny(["hole", "chew", "eaten", "bite", "洞", "孔洞", "啃食", "被啃", "咬痕"])) {
@@ -8104,11 +8119,11 @@ function addPhotoTypeScore(scores, reasons, type, points, reason) {
 function scorePhotoTypeKeywords(file, scores, reasons) {
   const name = file?.name?.toLowerCase() || "";
   const keywordGroups = {
-    plant: ["plant", "whole", "full", "overall", "side", "overview", "aroma", "fragrance", "scent", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "香味", "香气", "不香", "味淡", "苗", "徒长", "稀疏", "节间长"],
-    leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "powder", "mildew", "botrytis", "gray-mold", "grey-mold", "sparse", "叶", "叶片", "黄叶", "斑点", "卷曲", "卷叶", "焦枯", "焦边", "白粉", "灰霉", "霜霉", "霉斑", "叶少"],
-    root: ["root", "xponge", "coco", "rockwool", "soil", "medium", "algae", "mold", "fungus", "gen", "根", "根区", "根烂", "烂根", "根腐", "黑脚", "发黑", "基质", "介质", "岩棉", "椰糠", "藻", "白毛"],
+    plant: ["plant", "whole", "full", "overall", "side", "overview", "aroma", "fragrance", "scent", "zhengzhu", "整株", "全株", "全景", "侧面", "植株", "香味", "香气", "不香", "味淡", "苗", "徒长", "稀疏", "新枝很长", "底部木质化", "光秃", "节间长", "冬季", "冷害", "冻害", "移栽", "掉叶"],
+    leaf: ["leaf", "yellow", "huang", "foliage", "spot", "curl", "powder", "mildew", "botrytis", "gray-mold", "grey-mold", "sparse", "叶", "叶片", "黄叶", "发黄", "发褐", "黄点", "发灰", "斑点", "卷曲", "卷叶", "焦枯", "焦边", "叶尖", "枝条干枯", "白粉", "灰霉", "霜霉", "霉斑", "叶少"],
+    root: ["root", "xponge", "coco", "rockwool", "soil", "medium", "algae", "mold", "fungus", "gen", "根", "根区", "根烂", "烂根", "根腐", "根颈", "闷根", "湿土", "土是湿", "黑脚", "发黑", "基质", "介质", "岩棉", "椰糠", "藻", "白毛"],
     flower: ["flower", "bloom", "bud", "bolting", "fruit", "tomato", "pepper", "strawberry", "berry", "hua", "guo", "花", "花苞", "花穗", "花序", "抽薹", "开花", "果", "果实", "番茄", "辣椒", "草莓"],
-    pest: ["pest", "bug", "fly", "gnat", "mite", "aphid", "insect", "worm", "虫", "飞虫", "小飞虫", "蚜", "螨", "粘板", "发黏", "孔洞", "啃食", "被啃"]
+    pest: ["pest", "bug", "fly", "gnat", "mite", "aphid", "insect", "worm", "虫", "飞虫", "小飞虫", "蚜", "螨", "蜘蛛网", "细网", "蛛丝", "叶螨", "红蜘蛛", "粘板", "发黏", "孔洞", "啃食", "被啃"]
   };
 
   Object.entries(keywordGroups).forEach(([type, keywords]) => {
