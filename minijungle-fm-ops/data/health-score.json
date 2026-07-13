@@ -55,6 +55,11 @@
       "body": "Substrate sleeve, pest/disease observation and chemical intervention records explain whether a problem is plant stress, root-zone risk or FM exception."
     },
     {
+      "label": "Robot patrol photo",
+      "status": "Phase 3",
+      "body": "Future care robots can capture repeatable plant-only photos between human visits to improve health trend detection."
+    },
+    {
       "label": "Manual review",
       "status": "Control",
       "body": "FM leads can confirm, override or request retake when lighting, angle or client context makes AI confidence weak."
@@ -102,6 +107,12 @@
       "label": "Trend over time",
       "position": "Phase 2",
       "body": "Daily or weekly visual trend data can improve early warnings, but it should not be needed for MVP."
+    },
+    {
+      "phase": "Robotic care layer",
+      "label": "Autonomous plant-only patrol",
+      "position": "Phase 3",
+      "body": "A service robot can capture standard-angle plant photos, check refill state and create exception work orders after privacy and route approval."
     }
   ],
   "qualityControls": [

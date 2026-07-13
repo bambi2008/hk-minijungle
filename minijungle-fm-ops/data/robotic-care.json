@@ -1,0 +1,284 @@
+{
+  "summary": [
+    {
+      "label": "Autonomous care layer",
+      "labelZh": "自主看护层",
+      "value": "Phase 3",
+      "detail": "Designed for future robots that can patrol, refill, dose nutrients and capture proof.",
+      "detailZh": "面向未来机器人巡检、补水、加营养液和采集凭证。"
+    },
+    {
+      "label": "24h watch",
+      "labelZh": "24 小时看护",
+      "value": "Exception first",
+      "detail": "Robots do not replace expert technicians first; they detect issues and handle repeatable routines.",
+      "detailZh": "机器人先做异常发现和重复动作，不一开始替代专家技师。"
+    },
+    {
+      "label": "Hardware moat",
+      "labelZh": "硬件壁垒",
+      "value": "Standard ports",
+      "detail": "Wall modules need robot-readable IDs, refill ports, dosing ports, leak sensing and safe access lanes.",
+      "detailZh": "绿墙模块需要机器人可读 ID、补水口、加液口、漏水检测和安全通道。"
+    },
+    {
+      "label": "Proof upgrade",
+      "labelZh": "凭证升级",
+      "value": "Auto log",
+      "detail": "Every robotic patrol can create photos, timestamps, module readings and operation logs.",
+      "detailZh": "每次机器人巡航都能生成照片、时间戳、模块读数和操作日志。"
+    }
+  ],
+  "capabilities": [
+    {
+      "id": "robot-patrol",
+      "label": "Autonomous patrol",
+      "labelZh": "自主巡检",
+      "value": "24h exception sensing",
+      "status": "phase-3",
+      "body": "A service robot follows approved indoor routes and checks wall appearance, leak risk, light status and access blockers.",
+      "opsLink": "Creates sensor, proof and incident records in the OPS ledger.",
+      "inputs": ["Route map", "Asset QR / NFC", "Plant-zone camera", "Obstacle detection", "Access window"]
+    },
+    {
+      "id": "robot-photo-proof",
+      "label": "Photo proof capture",
+      "labelZh": "自动拍照凭证",
+      "value": "Standard angle",
+      "status": "pilot",
+      "body": "The robot captures repeatable full-wall and zone photos for AI health scoring and client reporting.",
+      "opsLink": "Feeds Health Score, Proof Vault, ESG and renewal packs.",
+      "inputs": ["Fixed viewpoint", "Plant-only crop", "Face blur", "Timestamp", "Asset ID"]
+    },
+    {
+      "id": "robot-water-refill",
+      "label": "Water refill",
+      "labelZh": "自动补水",
+      "value": "Docked refill",
+      "status": "phase-3",
+      "body": "The robot connects to standardized refill ports and logs flow volume, refill duration and leak checks.",
+      "opsLink": "Updates water ledger, health drivers and exception audit trail.",
+      "inputs": ["Refill port", "Flow meter", "Backflow protection", "Leak sensor", "Tank level"]
+    },
+    {
+      "id": "robot-nutrient-dosing",
+      "label": "Nutrient dosing",
+      "labelZh": "自动加营养液",
+      "value": "Cartridge based",
+      "status": "phase-3",
+      "body": "Nutrient cartridges let the robot dose by recipe while preserving batch traceability and safety limits.",
+      "opsLink": "Connects supply inventory, dosing log and plant recovery trend.",
+      "inputs": ["Nutrient cartridge", "Dose recipe", "Batch ID", "Safety cap", "Usage log"]
+    },
+    {
+      "id": "robot-exception-handoff",
+      "label": "Human escalation",
+      "labelZh": "人工升级处理",
+      "value": "Human in the loop",
+      "status": "ready",
+      "body": "The robot escalates pruning, replacement, pest confirmation and customer-sensitive issues to human technicians.",
+      "opsLink": "Creates work orders with photos, likely cause and recommended next action.",
+      "inputs": ["AI finding", "Confidence score", "Issue photo", "Service SLA", "Technician approval"]
+    }
+  ],
+  "moduleInterfaces": [
+    {
+      "label": "Robot-readable module ID",
+      "labelZh": "机器人可读模块 ID",
+      "status": "robot-ready",
+      "requirement": "QR, NFC or visual marker on each wall/module lets the robot bind actions to the correct asset.",
+      "reason": "Without a stable ID, refill, dosing and proof records cannot be trusted."
+    },
+    {
+      "label": "Refill and dosing port",
+      "labelZh": "补水与加液接口",
+      "status": "phase-3",
+      "requirement": "Standardized physical ports with mechanical alignment and permission control.",
+      "reason": "Autonomous water and nutrient actions need a safe, repeatable docking interface."
+    },
+    {
+      "label": "Leak and overflow guard",
+      "labelZh": "漏水与溢出保护",
+      "status": "phase-3",
+      "requirement": "Flow meter, leak sensor, backflow protection and auto-stop threshold.",
+      "reason": "Hong Kong FM clients will care deeply about water risk in offices, clinics and show suites."
+    },
+    {
+      "label": "Plant-only camera zone",
+      "labelZh": "仅拍植物区域",
+      "status": "ready",
+      "requirement": "Camera framing, cropping and privacy controls keep people out of routine proof capture.",
+      "reason": "Privacy and client approval are prerequisites for robotic photo proof."
+    },
+    {
+      "label": "Indoor robot route map",
+      "labelZh": "室内机器人路线图",
+      "status": "pilot",
+      "requirement": "FM-approved routes, elevator rules, docking point, charging point and no-go zones.",
+      "reason": "A robot can only become a care layer if it fits building operations."
+    }
+  ],
+  "fleetScenarios": [
+    {
+      "clientId": "central-office",
+      "status": "pilot",
+      "readinessScore": 82,
+      "robotMode": "Night patrol + photo proof",
+      "patrolCadence": "Daily",
+      "tasks": ["Reception route scan", "Full-wall photo", "Water-level check", "Exception work order"],
+      "body": "Good first pilot because the reception route is controlled, the wall is visible and the client values report proof."
+    },
+    {
+      "clientId": "wellness-clinic",
+      "status": "phase-3",
+      "readinessScore": 74,
+      "robotMode": "After-hours hygiene-safe proof",
+      "patrolCadence": "3x weekly",
+      "tasks": ["Plant-only photo", "Leak check", "No-soil hygiene proof", "Human escalation"],
+      "body": "Strong health-safety value, but patient privacy and clinic access rules require strict approval."
+    },
+    {
+      "clientId": "show-suite",
+      "status": "phase-3",
+      "readinessScore": 78,
+      "robotMode": "Sales-route proof patrol",
+      "patrolCadence": "Daily during launch",
+      "tasks": ["Buyer route scan", "Feature wall photo", "Light anomaly check", "Brand-ready proof"],
+      "body": "High brand value during sales campaigns; robot proof can protect presentation quality before VIP visits."
+    },
+    {
+      "clientId": "members-club",
+      "status": "next",
+      "readinessScore": 69,
+      "robotMode": "Lounge route patrol",
+      "patrolCadence": "Weekly",
+      "tasks": ["Lounge photo", "Obstacle check", "Water status", "Member-sensitive escalation"],
+      "body": "Useful later, but member experience and moving obstacles make it a less obvious first pilot."
+    }
+  ],
+  "workflow": [
+    {
+      "step": "01 Route and asset scan",
+      "stepZh": "路线与资产识别",
+      "body": "Robot follows FM-approved route, scans asset ID and confirms it is facing the correct wall module."
+    },
+    {
+      "step": "02 Observe and capture",
+      "stepZh": "观察与拍照",
+      "body": "Robot captures plant-only photos, checks leak/light/tank status and uploads evidence to Proof Vault."
+    },
+    {
+      "step": "03 Refill or dose",
+      "stepZh": "补水或加营养液",
+      "body": "If permitted, robot connects to the port, applies volume or nutrient recipe and records the operation."
+    },
+    {
+      "step": "04 AI triage",
+      "stepZh": "AI 分诊",
+      "body": "OPS compares photos, sensor state and service rules to decide whether to keep watching or create a work order."
+    },
+    {
+      "step": "05 Human handoff",
+      "stepZh": "人工交接",
+      "body": "Technicians handle trimming, replacement, pest confirmation, client-sensitive actions and physical exceptions."
+    }
+  ],
+  "roadmap": [
+    {
+      "phase": "Phase 1",
+      "label": "Robot-ready data model",
+      "status": "ready",
+      "body": "Asset ledger, health score, proof vault, work orders and ESG claim boundaries are already structured for future automation.",
+      "investorSignal": "The current MVP creates the operating data that robots will later use."
+    },
+    {
+      "phase": "Phase 2",
+      "label": "Standard wall interfaces",
+      "status": "phase-2",
+      "body": "Define module ID, refill port, dosing cartridge, leak guard, camera framing and privacy rules.",
+      "investorSignal": "This turns DR FOREST Wall into hardware that a robot can service repeatably."
+    },
+    {
+      "phase": "Phase 3",
+      "label": "Robot pilot",
+      "status": "pilot",
+      "body": "Pilot night patrol and photo proof in one controlled client site before enabling refill and dosing.",
+      "investorSignal": "A pilot proves 24h care without claiming full autonomy too early."
+    },
+    {
+      "phase": "Phase 4",
+      "label": "Autonomous living asset network",
+      "status": "phase-3",
+      "body": "Scale robots across routes, modules and clients with human exception teams and evidence-led reporting.",
+      "investorSignal": "The long-term story becomes recurring FM revenue plus robotics-enabled operating leverage."
+    }
+  ],
+  "evidencePack": [
+    {
+      "label": "Robot patrol log",
+      "labelZh": "机器人巡检日志",
+      "category": "Operations",
+      "status": "phase-3",
+      "body": "Stores route, time, asset ID, battery state, photos and detected exceptions.",
+      "proof": "Route log + photo proof + asset scan"
+    },
+    {
+      "label": "Water refill record",
+      "labelZh": "自动补水记录",
+      "category": "Health / ESG",
+      "status": "phase-3",
+      "body": "Records water volume, refill duration, target module and leak-check result.",
+      "proof": "Flow meter + module ID + leak sensor"
+    },
+    {
+      "label": "Nutrient dosing record",
+      "labelZh": "营养液加注记录",
+      "category": "Health / Supply",
+      "status": "phase-3",
+      "body": "Links recipe, cartridge batch, dose amount and plant recovery trend.",
+      "proof": "Cartridge ID + dose log + health score trend"
+    },
+    {
+      "label": "Robot photo proof",
+      "labelZh": "机器人照片凭证",
+      "category": "Proof / AI",
+      "status": "pilot",
+      "body": "Repeatable photos improve health score consistency and client report credibility.",
+      "proof": "Plant-only image + timestamp + AI finding"
+    },
+    {
+      "label": "Human exception handoff",
+      "labelZh": "人工异常交接",
+      "category": "Governance",
+      "status": "ready",
+      "body": "Shows where robot monitoring ends and human technician responsibility begins.",
+      "proof": "Work order + technician approval + closure photo"
+    }
+  ],
+  "claimControls": [
+    {
+      "label": "Allowed: robotics-ready architecture",
+      "labelZh": "可主张：机器人就绪架构",
+      "tone": "ready",
+      "body": "Use this now: DR FOREST OPS is designed to support future robotic patrol, proof capture, refill and nutrient dosing."
+    },
+    {
+      "label": "Allowed after pilot: robotic patrol proof",
+      "labelZh": "试点后可主张：机器人巡检凭证",
+      "tone": "review",
+      "body": "Use robot patrol, photo and exception logs only after a controlled site pilot proves reliable operation."
+    },
+    {
+      "label": "Blocked: full autonomy today",
+      "labelZh": "禁止：今日完全自主",
+      "tone": "alert",
+      "body": "Do not claim fully autonomous plant care, 24h guaranteed remediation, or human replacement before hardware pilots and safety validation."
+    },
+    {
+      "label": "Required: human and safety fallback",
+      "labelZh": "必须：人工与安全兜底",
+      "tone": "ready",
+      "body": "Every robot action needs permission rules, leak safety, privacy controls and a human escalation path."
+    }
+  ]
+}

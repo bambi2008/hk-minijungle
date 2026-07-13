@@ -19,7 +19,8 @@ const dataFiles = {
   aiInsights: "data/ai-insights.json",
   healthScore: "data/health-score.json",
   spatialDesign: "data/spatial-design.json",
-  impactValue: "data/impact-value.json"
+  impactValue: "data/impact-value.json",
+  roboticCare: "data/robotic-care.json"
 };
 
 let clients = [];
@@ -91,6 +92,14 @@ let impactAssessments = [];
 let impactWorkflow = [];
 let impactEvidencePack = [];
 let impactClaimControls = [];
+let roboticSummary = [];
+let roboticCapabilities = [];
+let roboticInterfaces = [];
+let roboticFleet = [];
+let roboticWorkflow = [];
+let roboticRoadmap = [];
+let roboticEvidencePack = [];
+let roboticClaimControls = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
@@ -118,6 +127,1573 @@ const activeRoleStorageKey = "dr-forest-fm-ops.active-role.v1";
 const quickOpsTaskStorageKey = "dr-forest-fm-ops.quick-ops-tasks.v1";
 const auditEventStorageKey = "dr-forest-fm-ops.audit-events.v1";
 const aiQueuedActionStorageKey = "dr-forest-fm-ops.ai-queued-actions.v1";
+const languageStorageKey = "dr-forest-fm-ops.language.v1";
+
+let currentLanguage = "en";
+
+const simplifiedToTraditionalMap = {
+  "与": "與",
+  "专": "專",
+  "业": "業",
+  "东": "東",
+  "个": "個",
+  "临": "臨",
+  "为": "為",
+  "举": "舉",
+  "义": "義",
+  "乌": "烏",
+  "乐": "樂",
+  "习": "習",
+  "书": "書",
+  "买": "買",
+  "乱": "亂",
+  "争": "爭",
+  "于": "於",
+  "亏": "虧",
+  "云": "雲",
+  "亚": "亞",
+  "产": "產",
+  "亩": "畝",
+  "亲": "親",
+  "亿": "億",
+  "仅": "僅",
+  "从": "從",
+  "仓": "倉",
+  "仪": "儀",
+  "们": "們",
+  "价": "價",
+  "众": "眾",
+  "优": "優",
+  "会": "會",
+  "传": "傳",
+  "伤": "傷",
+  "伦": "倫",
+  "体": "體",
+  "余": "餘",
+  "佣": "傭",
+  "侠": "俠",
+  "侣": "侶",
+  "侦": "偵",
+  "侧": "側",
+  "侨": "僑",
+  "侩": "儈",
+  "侪": "儕",
+  "侬": "儂",
+  "侠": "俠",
+  "俭": "儉",
+  "债": "債",
+  "倾": "傾",
+  "偻": "僂",
+  "储": "儲",
+  "儿": "兒",
+  "兑": "兌",
+  "党": "黨",
+  "兰": "蘭",
+  "关": "關",
+  "兴": "興",
+  "养": "養",
+  "兽": "獸",
+  "内": "內",
+  "冈": "岡",
+  "册": "冊",
+  "写": "寫",
+  "军": "軍",
+  "农": "農",
+  "决": "決",
+  "况": "況",
+  "冻": "凍",
+  "净": "淨",
+  "准": "準",
+  "减": "減",
+  "几": "幾",
+  "凤": "鳳",
+  "凭": "憑",
+  "凯": "凱",
+  "击": "擊",
+  "凿": "鑿",
+  "删": "刪",
+  "则": "則",
+  "刚": "剛",
+  "创": "創",
+  "删": "刪",
+  "别": "別",
+  "剂": "劑",
+  "剑": "劍",
+  "剧": "劇",
+  "剩": "剩",
+  "办": "辦",
+  "务": "務",
+  "动": "動",
+  "励": "勵",
+  "劲": "勁",
+  "劳": "勞",
+  "势": "勢",
+  "勋": "勳",
+  "区": "區",
+  "医": "醫",
+  "华": "華",
+  "协": "協",
+  "单": "單",
+  "卖": "賣",
+  "卫": "衛",
+  "却": "卻",
+  "厂": "廠",
+  "厅": "廳",
+  "历": "歷",
+  "压": "壓",
+  "厌": "厭",
+  "县": "縣",
+  "叁": "參",
+  "参": "參",
+  "双": "雙",
+  "发": "發",
+  "变": "變",
+  "叙": "敘",
+  "叶": "葉",
+  "号": "號",
+  "叹": "嘆",
+  "后": "後",
+  "听": "聽",
+  "启": "啟",
+  "吴": "吳",
+  "员": "員",
+  "呗": "唄",
+  "呕": "嘔",
+  "呗": "唄",
+  "员": "員",
+  "响": "響",
+  "问": "問",
+  "启": "啟",
+  "园": "園",
+  "围": "圍",
+  "国": "國",
+  "图": "圖",
+  "圆": "圓",
+  "圣": "聖",
+  "场": "場",
+  "坏": "壞",
+  "块": "塊",
+  "坚": "堅",
+  "坛": "壇",
+  "坝": "壩",
+  "坞": "塢",
+  "垄": "壟",
+  "垒": "壘",
+  "垦": "墾",
+  "垫": "墊",
+  "垮": "垮",
+  "埘": "塒",
+  "堑": "塹",
+  "墙": "牆",
+  "壮": "壯",
+  "声": "聲",
+  "壳": "殼",
+  "处": "處",
+  "备": "備",
+  "复": "複",
+  "够": "夠",
+  "头": "頭",
+  "夹": "夾",
+  "夺": "奪",
+  "奖": "獎",
+  "妇": "婦",
+  "妈": "媽",
+  "妆": "妝",
+  "姗": "姍",
+  "娱": "娛",
+  "娄": "婁",
+  "婴": "嬰",
+  "孙": "孫",
+  "学": "學",
+  "宁": "寧",
+  "宝": "寶",
+  "实": "實",
+  "审": "審",
+  "宪": "憲",
+  "宫": "宮",
+  "宽": "寬",
+  "宾": "賓",
+  "对": "對",
+  "寻": "尋",
+  "导": "導",
+  "寿": "壽",
+  "将": "將",
+  "尔": "爾",
+  "尘": "塵",
+  "尝": "嘗",
+  "层": "層",
+  "属": "屬",
+  "岁": "歲",
+  "岂": "豈",
+  "岛": "島",
+  "峡": "峽",
+  "崭": "嶄",
+  "巩": "鞏",
+  "币": "幣",
+  "师": "師",
+  "帐": "帳",
+  "带": "帶",
+  "帮": "幫",
+  "帧": "幀",
+  "库": "庫",
+  "应": "應",
+  "庙": "廟",
+  "废": "廢",
+  "广": "廣",
+  "庄": "莊",
+  "庆": "慶",
+  "庐": "廬",
+  "庞": "龐",
+  "廪": "廩",
+  "开": "開",
+  "异": "異",
+  "弃": "棄",
+  "张": "張",
+  "弥": "彌",
+  "弯": "彎",
+  "弹": "彈",
+  "强": "強",
+  "归": "歸",
+  "录": "錄",
+  "径": "徑",
+  "彻": "徹",
+  "征": "徵",
+  "径": "徑",
+  "忆": "憶",
+  "忧": "憂",
+  "怀": "懷",
+  "态": "態",
+  "总": "總",
+  "恋": "戀",
+  "恒": "恆",
+  "恳": "懇",
+  "恶": "惡",
+  "恼": "惱",
+  "悦": "悅",
+  "悬": "懸",
+  "惊": "驚",
+  "惧": "懼",
+  "惨": "慘",
+  "惩": "懲",
+  "惯": "慣",
+  "愈": "癒",
+  "愿": "願",
+  "戏": "戲",
+  "战": "戰",
+  "户": "戶",
+  "扎": "紮",
+  "扑": "撲",
+  "执": "執",
+  "扩": "擴",
+  "扫": "掃",
+  "扬": "揚",
+  "扰": "擾",
+  "抚": "撫",
+  "抛": "拋",
+  "抢": "搶",
+  "护": "護",
+  "报": "報",
+  "担": "擔",
+  "拟": "擬",
+  "拢": "攏",
+  "拣": "揀",
+  "拥": "擁",
+  "拨": "撥",
+  "择": "擇",
+  "挂": "掛",
+  "挚": "摯",
+  "挛": "攣",
+  "挝": "撾",
+  "挞": "撻",
+  "挟": "挾",
+  "挠": "撓",
+  "挡": "擋",
+  "挤": "擠",
+  "挥": "揮",
+  "挦": "撏",
+  "捞": "撈",
+  "损": "損",
+  "换": "換",
+  "据": "據",
+  "掳": "擄",
+  "掴": "摑",
+  "掷": "擲",
+  "掸": "撣",
+  "掺": "摻",
+  "揽": "攬",
+  "搀": "攙",
+  "摄": "攝",
+  "摆": "擺",
+  "摇": "搖",
+  "摊": "攤",
+  "撵": "攆",
+  "撑": "撐",
+  "撒": "撒",
+  "撷": "擷",
+  "撸": "擼",
+  "擞": "擻",
+  "攒": "攢",
+  "敌": "敵",
+  "数": "數",
+  "斋": "齋",
+  "斩": "斬",
+  "断": "斷",
+  "无": "無",
+  "旧": "舊",
+  "时": "時",
+  "旷": "曠",
+  "昙": "曇",
+  "昼": "晝",
+  "显": "顯",
+  "晋": "晉",
+  "晒": "曬",
+  "晓": "曉",
+  "暂": "暫",
+  "术": "術",
+  "朴": "樸",
+  "机": "機",
+  "杀": "殺",
+  "杂": "雜",
+  "权": "權",
+  "条": "條",
+  "来": "來",
+  "杨": "楊",
+  "杰": "傑",
+  "极": "極",
+  "构": "構",
+  "枢": "樞",
+  "枪": "槍",
+  "枫": "楓",
+  "柜": "櫃",
+  "标": "標",
+  "栈": "棧",
+  "栋": "棟",
+  "栏": "欄",
+  "树": "樹",
+  "样": "樣",
+  "核": "核",
+  "根": "根",
+  "格": "格",
+  "档": "檔",
+  "桥": "橋",
+  "桦": "樺",
+  "检": "檢",
+  "楼": "樓",
+  "榄": "欖",
+  "槛": "檻",
+  "横": "橫",
+  "樯": "檣",
+  "欢": "歡",
+  "欧": "歐",
+  "歼": "殲",
+  "残": "殘",
+  "殴": "毆",
+  "殻": "殼",
+  "毁": "毀",
+  "毕": "畢",
+  "毙": "斃",
+  "毡": "氈",
+  "气": "氣",
+  "氢": "氫",
+  "氩": "氬",
+  "氲": "氳",
+  "汇": "匯",
+  "汉": "漢",
+  "汤": "湯",
+  "沟": "溝",
+  "没": "沒",
+  "沣": "灃",
+  "沤": "漚",
+  "沥": "瀝",
+  "沦": "淪",
+  "沧": "滄",
+  "沪": "滬",
+  "泞": "濘",
+  "泪": "淚",
+  "泶": "澩",
+  "泻": "瀉",
+  "泼": "潑",
+  "泽": "澤",
+  "洁": "潔",
+  "洒": "灑",
+  "浅": "淺",
+  "浆": "漿",
+  "浇": "澆",
+  "测": "測",
+  "济": "濟",
+  "浓": "濃",
+  "浊": "濁",
+  "涂": "塗",
+  "涛": "濤",
+  "涝": "澇",
+  "涞": "淶",
+  "涟": "漣",
+  "涡": "渦",
+  "涣": "渙",
+  "涤": "滌",
+  "润": "潤",
+  "涧": "澗",
+  "涨": "漲",
+  "涩": "澀",
+  "渊": "淵",
+  "渍": "漬",
+  "渎": "瀆",
+  "渐": "漸",
+  "渔": "漁",
+  "渗": "滲",
+  "温": "溫",
+  "湾": "灣",
+  "湿": "濕",
+  "溃": "潰",
+  "溅": "濺",
+  "滞": "滯",
+  "滚": "滾",
+  "滟": "灧",
+  "滠": "灄",
+  "满": "滿",
+  "滢": "瀅",
+  "滤": "濾",
+  "滥": "濫",
+  "滦": "灤",
+  "滨": "濱",
+  "滩": "灘",
+  "滪": "澦",
+  "漤": "灠",
+  "潆": "瀠",
+  "潇": "瀟",
+  "潜": "潛",
+  "潴": "瀦",
+  "澜": "瀾",
+  "灭": "滅",
+  "灯": "燈",
+  "灵": "靈",
+  "灾": "災",
+  "灿": "燦",
+  "炉": "爐",
+  "点": "點",
+  "炼": "煉",
+  "炽": "熾",
+  "烁": "爍",
+  "烂": "爛",
+  "烃": "烴",
+  "烛": "燭",
+  "烟": "煙",
+  "烦": "煩",
+  "烧": "燒",
+  "烨": "燁",
+  "烩": "燴",
+  "烫": "燙",
+  "热": "熱",
+  "焕": "煥",
+  "爱": "愛",
+  "爷": "爺",
+  "牵": "牽",
+  "牍": "牘",
+  "犊": "犢",
+  "状": "狀",
+  "犷": "獷",
+  "犸": "獁",
+  "犹": "猶",
+  "狈": "狽",
+  "狞": "獰",
+  "独": "獨",
+  "狭": "狹",
+  "狮": "獅",
+  "狯": "獪",
+  "狰": "猙",
+  "狱": "獄",
+  "猎": "獵",
+  "猪": "豬",
+  "猫": "貓",
+  "献": "獻",
+  "环": "環",
+  "现": "現",
+  "玺": "璽",
+  "珐": "琺",
+  "珑": "瓏",
+  "珰": "璫",
+  "珲": "琿",
+  "琏": "璉",
+  "瑶": "瑤",
+  "瑷": "璦",
+  "璎": "瓔",
+  "瓒": "瓚",
+  "电": "電",
+  "画": "畫",
+  "畅": "暢",
+  "畴": "疇",
+  "疖": "癤",
+  "疗": "療",
+  "疟": "瘧",
+  "疠": "癘",
+  "疡": "瘍",
+  "疬": "癧",
+  "疮": "瘡",
+  "疯": "瘋",
+  "痈": "癰",
+  "痉": "痙",
+  "痒": "癢",
+  "痨": "癆",
+  "瘅": "癉",
+  "瘗": "瘞",
+  "瘘": "瘺",
+  "瘪": "癟",
+  "瘫": "癱",
+  "瘾": "癮",
+  "瘿": "癭",
+  "癞": "癩",
+  "癣": "癬",
+  "皱": "皺",
+  "盏": "盞",
+  "盐": "鹽",
+  "监": "監",
+  "盖": "蓋",
+  "盗": "盜",
+  "盘": "盤",
+  "着": "著",
+  "睁": "睜",
+  "睐": "睞",
+  "瞒": "瞞",
+  "瞩": "矚",
+  "矫": "矯",
+  "矶": "磯",
+  "矿": "礦",
+  "码": "碼",
+  "砖": "磚",
+  "砗": "硨",
+  "砚": "硯",
+  "砜": "碸",
+  "砺": "礪",
+  "砻": "礱",
+  "础": "礎",
+  "确": "確",
+  "碍": "礙",
+  "碛": "磧",
+  "礼": "禮",
+  "祯": "禎",
+  "祷": "禱",
+  "祸": "禍",
+  "禀": "稟",
+  "种": "種",
+  "积": "積",
+  "称": "稱",
+  "秽": "穢",
+  "稳": "穩",
+  "穷": "窮",
+  "窃": "竊",
+  "窍": "竅",
+  "窑": "窯",
+  "窜": "竄",
+  "窝": "窩",
+  "窥": "窺",
+  "窦": "竇",
+  "竞": "競",
+  "笃": "篤",
+  "笋": "筍",
+  "笔": "筆",
+  "笕": "筧",
+  "笺": "箋",
+  "笼": "籠",
+  "筑": "築",
+  "筛": "篩",
+  "筚": "篳",
+  "筹": "籌",
+  "签": "簽",
+  "简": "簡",
+  "箓": "籙",
+  "箦": "簀",
+  "箧": "篋",
+  "箨": "籜",
+  "箩": "籮",
+  "箪": "簞",
+  "箫": "簫",
+  "篑": "簣",
+  "篮": "籃",
+  "篱": "籬",
+  "簖": "籪",
+  "籁": "籟",
+  "籴": "糴",
+  "类": "類",
+  "籼": "秈",
+  "粜": "糶",
+  "粝": "糲",
+  "粤": "粵",
+  "粪": "糞",
+  "粮": "糧",
+  "紧": "緊",
+  "纠": "糾",
+  "纡": "紆",
+  "红": "紅",
+  "纣": "紂",
+  "纤": "纖",
+  "约": "約",
+  "级": "級",
+  "纪": "紀",
+  "纬": "緯",
+  "纯": "純",
+  "纱": "紗",
+  "纲": "綱",
+  "纳": "納",
+  "纵": "縱",
+  "纶": "綸",
+  "纷": "紛",
+  "纸": "紙",
+  "纹": "紋",
+  "纺": "紡",
+  "纽": "紐",
+  "线": "線",
+  "练": "練",
+  "组": "組",
+  "绅": "紳",
+  "细": "細",
+  "织": "織",
+  "终": "終",
+  "绊": "絆",
+  "绍": "紹",
+  "经": "經",
+  "绑": "綁",
+  "绒": "絨",
+  "结": "結",
+  "绕": "繞",
+  "绘": "繪",
+  "给": "給",
+  "绚": "絢",
+  "络": "絡",
+  "绝": "絕",
+  "统": "統",
+  "绢": "絹",
+  "绣": "繡",
+  "继": "繼",
+  "绩": "績",
+  "绪": "緒",
+  "续": "續",
+  "绰": "綽",
+  "绳": "繩",
+  "维": "維",
+  "绵": "綿",
+  "绶": "綬",
+  "绷": "繃",
+  "绸": "綢",
+  "综": "綜",
+  "绽": "綻",
+  "绿": "綠",
+  "缀": "綴",
+  "缄": "緘",
+  "缅": "緬",
+  "缆": "纜",
+  "缇": "緹",
+  "缈": "緲",
+  "缉": "緝",
+  "缎": "緞",
+  "缓": "緩",
+  "缔": "締",
+  "缕": "縷",
+  "编": "編",
+  "缘": "緣",
+  "缚": "縛",
+  "缛": "縟",
+  "缜": "縝",
+  "缝": "縫",
+  "缟": "縞",
+  "缠": "纏",
+  "缡": "縭",
+  "缢": "縊",
+  "缣": "縑",
+  "缤": "繽",
+  "缥": "縹",
+  "缦": "縵",
+  "缧": "縲",
+  "缨": "纓",
+  "缩": "縮",
+  "缪": "繆",
+  "缫": "繅",
+  "缬": "纈",
+  "缭": "繚",
+  "缮": "繕",
+  "缯": "繒",
+  "缴": "繳",
+  "缵": "纘",
+  "罂": "罌",
+  "网": "網",
+  "罗": "羅",
+  "罚": "罰",
+  "罢": "罷",
+  "羁": "羈",
+  "羟": "羥",
+  "翘": "翹",
+  "耸": "聳",
+  "耻": "恥",
+  "聂": "聶",
+  "职": "職",
+  "联": "聯",
+  "聪": "聰",
+  "肃": "肅",
+  "肠": "腸",
+  "肤": "膚",
+  "肾": "腎",
+  "肿": "腫",
+  "胀": "脹",
+  "胜": "勝",
+  "胆": "膽",
+  "胧": "朧",
+  "胨": "腖",
+  "胪": "臚",
+  "胫": "脛",
+  "胶": "膠",
+  "脉": "脈",
+  "脏": "臟",
+  "脐": "臍",
+  "脑": "腦",
+  "脚": "腳",
+  "脱": "脫",
+  "脸": "臉",
+  "腊": "臘",
+  "腌": "醃",
+  "腘": "膕",
+  "腻": "膩",
+  "腾": "騰",
+  "舆": "輿",
+  "舰": "艦",
+  "舱": "艙",
+  "艰": "艱",
+  "艺": "藝",
+  "节": "節",
+  "芈": "羋",
+  "芜": "蕪",
+  "芦": "蘆",
+  "苁": "蓯",
+  "苇": "葦",
+  "苈": "藶",
+  "苋": "莧",
+  "苌": "萇",
+  "苍": "蒼",
+  "苎": "苧",
+  "苏": "蘇",
+  "苹": "蘋",
+  "茎": "莖",
+  "茏": "蘢",
+  "茑": "蔦",
+  "茔": "塋",
+  "茕": "煢",
+  "茧": "繭",
+  "荆": "荊",
+  "荐": "薦",
+  "荙": "薘",
+  "荚": "莢",
+  "荛": "蕘",
+  "荜": "蓽",
+  "荞": "蕎",
+  "荟": "薈",
+  "荠": "薺",
+  "荡": "蕩",
+  "荣": "榮",
+  "荤": "葷",
+  "荥": "滎",
+  "荦": "犖",
+  "荧": "熒",
+  "荨": "蕁",
+  "荩": "藎",
+  "荪": "蓀",
+  "荫": "蔭",
+  "荬": "蕒",
+  "荭": "葒",
+  "荮": "葤",
+  "药": "藥",
+  "莅": "蒞",
+  "莱": "萊",
+  "莲": "蓮",
+  "获": "獲",
+  "莹": "瑩",
+  "莺": "鶯",
+  "莼": "蓴",
+  "萚": "蘀",
+  "萝": "蘿",
+  "萤": "螢",
+  "营": "營",
+  "萦": "縈",
+  "萧": "蕭",
+  "萨": "薩",
+  "葱": "蔥",
+  "蒋": "蔣",
+  "蓝": "藍",
+  "蓟": "薊",
+  "蓠": "蘺",
+  "蓣": "蕷",
+  "蓥": "鎣",
+  "蓦": "驀",
+  "蔂": "虆",
+  "蔷": "薔",
+  "蔹": "蘞",
+  "蔺": "藺",
+  "蔼": "藹",
+  "蕰": "薀",
+  "蕲": "蘄",
+  "蕴": "蘊",
+  "薮": "藪",
+  "藓": "蘚",
+  "虑": "慮",
+  "虚": "虛",
+  "虫": "蟲",
+  "虽": "雖",
+  "虾": "蝦",
+  "蚀": "蝕",
+  "蚁": "蟻",
+  "蚂": "螞",
+  "蚕": "蠶",
+  "蚬": "蜆",
+  "蛊": "蠱",
+  "蛎": "蠣",
+  "蛮": "蠻",
+  "蛰": "蟄",
+  "蛱": "蛺",
+  "蛲": "蟯",
+  "蛳": "螄",
+  "蛴": "蠐",
+  "蝈": "蟈",
+  "蝉": "蟬",
+  "蝼": "螻",
+  "蝾": "蠑",
+  "螀": "螿",
+  "螨": "蟎",
+  "衅": "釁",
+  "衔": "銜",
+  "补": "補",
+  "衬": "襯",
+  "袭": "襲",
+  "袯": "襏",
+  "装": "裝",
+  "裆": "襠",
+  "裢": "褳",
+  "裣": "襝",
+  "裤": "褲",
+  "褛": "褸",
+  "见": "見",
+  "观": "觀",
+  "规": "規",
+  "觅": "覓",
+  "视": "視",
+  "览": "覽",
+  "觉": "覺",
+  "觊": "覬",
+  "觋": "覡",
+  "觌": "覿",
+  "觎": "覦",
+  "觏": "覯",
+  "觐": "覲",
+  "觑": "覷",
+  "觞": "觴",
+  "触": "觸",
+  "订": "訂",
+  "讣": "訃",
+  "计": "計",
+  "讯": "訊",
+  "讨": "討",
+  "训": "訓",
+  "议": "議",
+  "讯": "訊",
+  "记": "記",
+  "讲": "講",
+  "讳": "諱",
+  "讴": "謳",
+  "讶": "訝",
+  "许": "許",
+  "讹": "訛",
+  "论": "論",
+  "讼": "訟",
+  "讽": "諷",
+  "设": "設",
+  "访": "訪",
+  "诀": "訣",
+  "证": "證",
+  "评": "評",
+  "识": "識",
+  "诈": "詐",
+  "诉": "訴",
+  "诊": "診",
+  "词": "詞",
+  "译": "譯",
+  "试": "試",
+  "诗": "詩",
+  "诚": "誠",
+  "诛": "誅",
+  "话": "話",
+  "诞": "誕",
+  "诠": "詮",
+  "询": "詢",
+  "诣": "詣",
+  "该": "該",
+  "详": "詳",
+  "诧": "詫",
+  "诫": "誡",
+  "诬": "誣",
+  "语": "語",
+  "误": "誤",
+  "诱": "誘",
+  "诲": "誨",
+  "说": "說",
+  "诵": "誦",
+  "请": "請",
+  "诸": "諸",
+  "诺": "諾",
+  "读": "讀",
+  "诽": "誹",
+  "课": "課",
+  "谁": "誰",
+  "调": "調",
+  "谅": "諒",
+  "谈": "談",
+  "谊": "誼",
+  "谋": "謀",
+  "谍": "諜",
+  "谎": "謊",
+  "谏": "諫",
+  "谐": "諧",
+  "谑": "謔",
+  "谒": "謁",
+  "谓": "謂",
+  "谕": "諭",
+  "谗": "讒",
+  "谘": "諮",
+  "谙": "諳",
+  "谚": "諺",
+  "谜": "謎",
+  "谟": "謨",
+  "谠": "讜",
+  "谡": "謖",
+  "谢": "謝",
+  "谣": "謠",
+  "谤": "謗",
+  "谥": "諡",
+  "谦": "謙",
+  "谨": "謹",
+  "谩": "謾",
+  "谪": "謫",
+  "谬": "謬",
+  "谭": "譚",
+  "谱": "譜",
+  "谴": "譴",
+  "谷": "穀",
+  "贝": "貝",
+  "贞": "貞",
+  "负": "負",
+  "贡": "貢",
+  "财": "財",
+  "责": "責",
+  "贤": "賢",
+  "败": "敗",
+  "账": "賬",
+  "货": "貨",
+  "质": "質",
+  "贩": "販",
+  "贪": "貪",
+  "贫": "貧",
+  "贬": "貶",
+  "购": "購",
+  "贮": "貯",
+  "贯": "貫",
+  "贰": "貳",
+  "贱": "賤",
+  "贵": "貴",
+  "贷": "貸",
+  "贸": "貿",
+  "费": "費",
+  "贺": "賀",
+  "贻": "貽",
+  "贼": "賊",
+  "贾": "賈",
+  "贿": "賄",
+  "赁": "賃",
+  "赂": "賂",
+  "资": "資",
+  "赈": "賑",
+  "赉": "賚",
+  "赋": "賦",
+  "赌": "賭",
+  "赎": "贖",
+  "赏": "賞",
+  "赐": "賜",
+  "赔": "賠",
+  "赖": "賴",
+  "赚": "賺",
+  "赛": "賽",
+  "赞": "讚",
+  "赠": "贈",
+  "赡": "贍",
+  "赢": "贏",
+  "赵": "趙",
+  "赶": "趕",
+  "趋": "趨",
+  "趱": "趲",
+  "跃": "躍",
+  "跄": "蹌",
+  "跖": "蹠",
+  "踪": "蹤",
+  "车": "車",
+  "轧": "軋",
+  "轨": "軌",
+  "轩": "軒",
+  "转": "轉",
+  "轮": "輪",
+  "软": "軟",
+  "轰": "轟",
+  "轴": "軸",
+  "轻": "輕",
+  "载": "載",
+  "较": "較",
+  "辅": "輔",
+  "辆": "輛",
+  "辈": "輩",
+  "辉": "輝",
+  "辊": "輥",
+  "辋": "輞",
+  "辍": "輟",
+  "辐": "輻",
+  "辑": "輯",
+  "输": "輸",
+  "辕": "轅",
+  "辖": "轄",
+  "辗": "輾",
+  "辘": "轆",
+  "辙": "轍",
+  "辽": "遼",
+  "达": "達",
+  "迁": "遷",
+  "过": "過",
+  "迈": "邁",
+  "运": "運",
+  "还": "還",
+  "这": "這",
+  "进": "進",
+  "远": "遠",
+  "违": "違",
+  "连": "連",
+  "迟": "遲",
+  "适": "適",
+  "选": "選",
+  "逊": "遜",
+  "递": "遞",
+  "逻": "邏",
+  "遗": "遺",
+  "遥": "遙",
+  "邓": "鄧",
+  "邮": "郵",
+  "邻": "鄰",
+  "郁": "鬱",
+  "郏": "郟",
+  "郑": "鄭",
+  "酝": "醞",
+  "酦": "醱",
+  "酱": "醬",
+  "酽": "釅",
+  "释": "釋",
+  "里": "裏",
+  "鉴": "鑒",
+  "针": "針",
+  "钉": "釘",
+  "钓": "釣",
+  "钙": "鈣",
+  "钝": "鈍",
+  "钞": "鈔",
+  "钟": "鐘",
+  "钢": "鋼",
+  "钥": "鑰",
+  "钦": "欽",
+  "钧": "鈞",
+  "钮": "鈕",
+  "钱": "錢",
+  "钲": "鉦",
+  "钳": "鉗",
+  "钵": "缽",
+  "钻": "鑽",
+  "钾": "鉀",
+  "铁": "鐵",
+  "铃": "鈴",
+  "铅": "鉛",
+  "铆": "鉚",
+  "铉": "鉉",
+  "铊": "鉈",
+  "铎": "鐸",
+  "铜": "銅",
+  "铝": "鋁",
+  "铡": "鍘",
+  "铭": "銘",
+  "铲": "鏟",
+  "银": "銀",
+  "铸": "鑄",
+  "铺": "鋪",
+  "链": "鏈",
+  "销": "銷",
+  "锁": "鎖",
+  "锄": "鋤",
+  "锅": "鍋",
+  "锈": "鏽",
+  "锋": "鋒",
+  "锌": "鋅",
+  "锐": "銳",
+  "错": "錯",
+  "锚": "錨",
+  "锡": "錫",
+  "锣": "鑼",
+  "锤": "錘",
+  "锥": "錐",
+  "锦": "錦",
+  "键": "鍵",
+  "锯": "鋸",
+  "锰": "錳",
+  "锹": "鍬",
+  "锻": "鍛",
+  "镀": "鍍",
+  "镁": "鎂",
+  "镂": "鏤",
+  "镇": "鎮",
+  "镉": "鎘",
+  "镊": "鑷",
+  "镌": "鐫",
+  "镍": "鎳",
+  "镎": "鎿",
+  "镜": "鏡",
+  "镭": "鐳",
+  "镶": "鑲",
+  "长": "長",
+  "门": "門",
+  "闭": "閉",
+  "问": "問",
+  "闯": "闖",
+  "闲": "閒",
+  "间": "間",
+  "闷": "悶",
+  "闸": "閘",
+  "闹": "鬧",
+  "闻": "聞",
+  "阀": "閥",
+  "阁": "閣",
+  "阅": "閱",
+  "队": "隊",
+  "阳": "陽",
+  "阴": "陰",
+  "阵": "陣",
+  "阶": "階",
+  "际": "際",
+  "陆": "陸",
+  "陈": "陳",
+  "陕": "陝",
+  "陨": "隕",
+  "险": "險",
+  "随": "隨",
+  "隐": "隱",
+  "隶": "隸",
+  "难": "難",
+  "雏": "雛",
+  "雾": "霧",
+  "霁": "霽",
+  "霉": "黴",
+  "静": "靜",
+  "面": "面",
+  "韦": "韋",
+  "韧": "韌",
+  "韩": "韓",
+  "页": "頁",
+  "顶": "頂",
+  "顷": "頃",
+  "项": "項",
+  "顺": "順",
+  "须": "須",
+  "顽": "頑",
+  "顾": "顧",
+  "顿": "頓",
+  "颁": "頒",
+  "预": "預",
+  "领": "領",
+  "颇": "頗",
+  "频": "頻",
+  "颓": "頹",
+  "颜": "顏",
+  "额": "額",
+  "风": "風",
+  "飒": "颯",
+  "飘": "飄",
+  "飞": "飛",
+  "饥": "飢",
+  "饭": "飯",
+  "饮": "飲",
+  "饰": "飾",
+  "饱": "飽",
+  "饲": "飼",
+  "饵": "餌",
+  "饶": "饒",
+  "饿": "餓",
+  "馁": "餒",
+  "馆": "館",
+  "馈": "饋",
+  "馋": "饞",
+  "马": "馬",
+  "驭": "馭",
+  "驰": "馳",
+  "驱": "驅",
+  "驳": "駁",
+  "驻": "駐",
+  "驼": "駝",
+  "驾": "駕",
+  "骂": "罵",
+  "骄": "驕",
+  "验": "驗",
+  "骏": "駿",
+  "骑": "騎",
+  "骗": "騙",
+  "骚": "騷",
+  "骡": "騾",
+  "骤": "驟",
+  "鱼": "魚",
+  "鲁": "魯",
+  "鲜": "鮮",
+  "鸟": "鳥",
+  "鸡": "雞",
+  "鸣": "鳴",
+  "鸭": "鴨",
+  "鸥": "鷗",
+  "鸦": "鴉",
+  "鸯": "鴦",
+  "鸽": "鴿",
+  "鸿": "鴻",
+  "鹃": "鵑",
+  "鹅": "鵝",
+  "鹊": "鵲",
+  "鹏": "鵬",
+  "鹤": "鶴",
+  "鹰": "鷹",
+  "麦": "麥",
+  "黄": "黃",
+  "齐": "齊",
+  "齿": "齒",
+  "龙": "龍",
+  "龟": "龜"
+};
+
+const traditionalRegex = new RegExp(`[${Object.keys(simplifiedToTraditionalMap).join("")}]`, "g");
+
+function toTraditionalText(value) {
+  return String(value ?? "")
+    .replace(traditionalRegex, (char) => simplifiedToTraditionalMap[char] || char)
+    .replaceAll("中文理解：", "繁體中文：")
+    .replaceAll("中文：", "繁體：");
+}
+
+function isTraditionalLanguage() {
+  return currentLanguage === "zh-Hant";
+}
+
+function localizedText(enText, zhText = enText) {
+  return isTraditionalLanguage() ? toTraditionalText(zhText || enText) : String(enText ?? "");
+}
+
+const contentTranslations = {
+  "All current Wall assets have AI care, renewal or proof-risk signals.": "目前所有 Wall 資產都有 AI 養護、續約或憑證風險信號。",
+  "AI can recommend, but FM leads approve client-impacting actions.": "AI 可以提出建議，但影響客戶的動作必須由 FM 負責人批准。",
+  "Operations data compounds into prediction, proof automation and renewal intelligence.": "營運數據會累積成預測能力、憑證自動化與續約智能。",
+  "Predictive care": "預測式養護",
+  "ESG evidence": "ESG 證據",
+  "Renewal risk": "續約風險",
+  "Demand planning": "需求規劃",
+  "Low-light sensor alert, leggy growth finding and high renewal risk overlap.": "低光照感測器預警、徒長發現與高續約風險同時出現。",
+  "Monthly ESG pack is due and the current proof gap is the full-wall report capture.": "月度 ESG 包即將到期，目前缺口是全牆報告照片採集。",
+  "Renewal date is near, wall health is the lowest in portfolio and AR was recently overdue.": "續約日期臨近，該牆健康分為組合最低，且近期有逾期應收。",
+  "Replacement suggestion, water swing and nutrient stock alert indicate service kit risk.": "更換建議、水分波動與營養液庫存預警顯示服務工具包存在風險。",
+  "Move the next recovery visit 48 hours earlier and add an LED schedule proof screenshot.": "將下一次恢復到訪提前 48 小時，並加入 LED 排程憑證截圖。",
+  "Prompt technician to capture before/after wall photos, timestamp, site trace and method note in one visit.": "提示技師在一次到訪中採集前後對比牆面照片、時間戳、場地追蹤與方法說明。",
+  "Generate a Renewal Proof Pack after risk recovery proof is approved.": "在風險恢復憑證獲批後生成續約證明包。",
+  "Reserve replacement pods and nutrient stock before the next clinic care route.": "在下一次診所養護路線前預留替換植物艙與營養液庫存。",
+  "Queue recovery visit": "加入恢復到訪隊列",
+  "Prepare ESG proof checklist": "準備 ESG 憑證清單",
+  "Prepare renewal pack": "準備續約包",
+  "Reserve service kit": "預留服務工具包",
+  "Requires FM lead approval before dispatch or client-facing report use.": "派工或用於客戶報告前，需要 FM 負責人批准。",
+  "AI may prefill the checklist; ESG desk approves all claims.": "AI 可以預填清單；所有主張由 ESG 工作台批准。",
+  "Account lead reviews tone before sending to landlord or procurement.": "發送給業主或採購前，客戶負責人需審核措辭。",
+  "Inventory desk confirms physical stock before purchase or route promise.": "庫存工作台需在採購或路線承諾前確認實物庫存。",
+  "Human-in-the-loop": "人工在環",
+  "Evidence boundary": "證據邊界",
+  "ESG claims safety": "ESG 主張安全",
+  "Model audit trail": "模型審計軌跡",
+  "AI recommendations create reviewable actions; they do not directly close work orders, approve proof or send reports.": "AI 建議只生成可複核動作，不直接關閉工單、批准憑證或發送報告。",
+  "Every AI output must cite source records such as sensors, photos, work orders, invoices, incidents or method notes.": "每個 AI 輸出都必須引用來源記錄，例如感測器、照片、工單、發票、事件或方法說明。",
+  "AI cannot label a metric as certified, carbon neutral, WELL/LEED compliant or independently assured unless that evidence exists.": "除非證據存在，AI 不得把指標標記為已認證、碳中和、符合 WELL/LEED 或已獨立鑑證。",
+  "Queued AI actions are written into the audit ledger with actor, timestamp, entity and client scope.": "已入隊的 AI 動作會寫入審計台賬，包含操作人、時間戳、實體與客戶範圍。",
+  "01 Observe": "01 觀察",
+  "02 Predict": "02 預測",
+  "03 Act": "03 行動",
+  "04 Prove": "04 證明",
+  "05 Learn": "05 學習",
+  "Sensors, mobile photos, work orders, route plans and client feedback create the raw living-asset record.": "感測器、手機照片、工單、路線計劃與客戶反饋形成原始活體資產記錄。",
+  "The system scores plant health risk, proof gaps, stock demand and renewal risk before they become visible client problems.": "系統在問題變成客戶可見前，先評分植物健康風險、憑證缺口、庫存需求與續約風險。",
+  "FM teams approve suggested visits, proof checklists, replacement kits and account actions.": "FM 團隊批准建議到訪、憑證清單、替換工具包與客戶動作。",
+  "Completed actions become audit-ready service proof, ESG method notes and renewal evidence.": "完成的動作會沉澱為可審計服務憑證、ESG 方法說明與續約證據。",
+  "Outcome data improves future risk scoring, care protocols and DR FOREST portfolio expansion decisions.": "結果數據會改善未來風險評分、養護規程與 DR FOREST 資產組合擴展決策。",
+  "Visual AI condition": "視覺 AI 狀態",
+  "Sensor stability": "感測器穩定度",
+  "Service compliance": "服務履約",
+  "Recovery trend": "恢復趨勢",
+  "Technician mobile photos are checked for yellowing, wilting, bare patches, uneven growth, pest/disease marks and overall fullness.": "技師手機照片會檢查黃葉、萎蔫、裸露區、不均勻生長、病蟲害痕跡與整體飽滿度。",
+  "Water level, moisture, light, temperature, humidity, nutrient signal and gateway heartbeat reduce or support the score.": "水位、濕度、光照、溫度、空氣濕度、營養信號與網關心跳會拉低或支撐分數。",
+  "On-time visits, completed care tasks, replacement closure and unresolved work orders affect operational health.": "準時到訪、完成養護任務、更換閉環與未解決工單會影響營運健康。",
+  "Survival rate, repeated issue history, replacement cycle and recovery speed show whether a wall is improving or degrading.": "存活率、重複問題歷史、更換週期與恢復速度顯示綠牆正在改善還是惡化。",
+  "Standard-angle photo set, asset ID, timestamp and AI finding record.": "標準角度照片組、資產 ID、時間戳與 AI 發現記錄。",
+  "Telemetry reading, target band, last-seen time and alert status.": "遙測讀數、目標區間、最後上線時間與預警狀態。",
+  "Work order status, technician note, photo proof and audit event.": "工單狀態、技師備註、照片憑證與審計事件。",
+  "Historical health score, survival rate, issue recurrence and replacement log.": "歷史健康分、存活率、問題復發與更換記錄。",
+  "Mobile photo capture": "手機照片採集",
+  "Environmental telemetry": "環境遙測",
+  "Work order ledger": "工單台賬",
+  "Xponge root-zone log": "Xponge 根區記錄",
+  "Robot patrol photo": "機器人巡檢照片",
+  "Manual review": "人工複核",
+  "Technicians capture fixed-angle photos during visits. AI reads plant condition, while humans approve exceptions before client reporting.": "技師在到訪時採集固定角度照片。AI 讀取植物狀態，例外情況在人員批准後才進入客戶報告。",
+  "Water, light, temperature, humidity and gateway data explain why visual health changes and trigger early intervention.": "水、光照、溫度、濕度與網關數據用來解釋視覺健康變化，並觸發早期干預。",
+  "Inspection cadence, open issues, completion proof and replacement records anchor the score in actual FM delivery.": "巡檢節奏、未關閉問題、完成憑證與更換記錄，讓分數落在真實 FM 交付上。",
+  "Substrate sleeve, pest/disease observation and chemical intervention records explain whether a problem is plant stress, root-zone risk or FM exception.": "基質套件、病蟲害觀察與化學干預記錄，用來判斷問題是植物壓力、根區風險還是 FM 例外。",
+  "Future care robots can capture repeatable plant-only photos between human visits to improve health trend detection.": "未來養護機器人可在人員到訪之間採集可重複的植物專區照片，提升健康趨勢識別。",
+  "FM leads can confirm, override or request retake when lighting, angle or client context makes AI confidence weak.": "當光線、角度或客戶情境降低 AI 置信度時，FM 負責人可確認、覆蓋或要求重拍。",
+  "01 Asset scan": "01 資產掃描",
+  "02 Standard photo set": "02 標準照片組",
+  "03 AI pre-check": "03 AI 預檢",
+  "04 Human approval": "04 人工批准",
+  "Technician scans QR or selects the asset ID, so every photo is tied to a client, site, wall and zone.": "技師掃描 QR 或選擇資產 ID，讓每張照片都綁定客戶、場地、綠牆與分區。",
+  "The app asks for full-wall, zone close-up and issue photos using fixed prompts for angle, distance and lighting.": "App 以固定提示要求全牆、分區近照與問題照片，控制角度、距離與光線。",
+  "AI checks image quality and plant condition, then highlights yellowing, sparse zones, wilt, low-light symptoms and likely causes.": "AI 先檢查影像品質與植物狀態，再標出黃葉、稀疏區、萎蔫、低光症狀與可能原因。",
+  "FM lead approves the health score, asks for a retake or converts findings into work orders before the client sees the report.": "客戶看到報告前，FM 負責人會批准健康分、要求重拍或把發現轉成工單。",
+  "Mobile phone camera": "手機攝像頭",
+  "Optional fixed plant camera": "可選固定植物攝像頭",
+  "Plant-only capture": "僅拍植物區域",
+  "Trend over time": "長期趨勢",
+  "Autonomous plant-only patrol": "自主植物區巡檢",
+  "Lowest-cost and privacy-safe path. No built-in wall camera is required for launch.": "成本最低且較保護私隱的路徑。上線不需要內置牆面攝像頭。",
+  "A hidden camera can capture only the plant zone at fixed times for high-value clients that approve it.": "對批准的高價值客戶，可用隱藏攝像頭在固定時間只拍植物區域。",
+  "Crop to the wall area, avoid people, blur accidental faces and keep photos scoped to maintenance evidence.": "裁切到牆面區域，避開人員，模糊意外入鏡的人臉，並讓照片只服務維護憑證。",
+  "Daily or weekly visual trend data can improve early warnings, but it should not be needed for MVP.": "每日或每週的視覺趨勢數據可改善早期預警，但不應成為 MVP 前置條件。",
+  "A service robot can capture standard-angle plant photos, check refill state and create exception work orders after privacy and route approval.": "服務機器人在私隱與路線獲批後，可採集標準角度植物照片、檢查補水狀態並建立例外工單。",
+  "Photo quality gate": "照片品質門檻",
+  "Confidence threshold": "置信度門檻",
+  "Explainable score": "可解釋分數",
+  "Client-safe reporting": "客戶安全報告",
+  "Reject blurry, overexposed, too-dark or wrong-angle photos before AI scoring.": "AI 評分前拒收模糊、過曝、過暗或角度錯誤的照片。",
+  "Low-confidence AI findings become review tasks instead of direct score changes.": "低置信度 AI 發現會變成複核任務，而不是直接改分。",
+  "Every score must show top drivers such as low light, water swing, yellowing, open work order or recovery trend.": "每個分數都必須展示主要驅動因素，例如低光照、水分波動、黃葉、未關閉工單或恢復趨勢。",
+  "Reports show evidence-backed health status, not medical, air-purification or certification claims.": "報告展示有證據支持的健康狀態，不做醫療、空氣淨化或認證主張。",
+  "Function first": "功能優先",
+  "Viewpoint control": "視角控制",
+  "Brand and material fit": "品牌與材質適配",
+  "Maintainability": "可維護性",
+  "Green assets must improve how the space is used, not only decorate it.": "綠色資產必須改善空間使用，而不只是裝飾。",
+  "The system records the most important visitor, staff and camera viewpoints for proof photos.": "系統記錄最重要的訪客、員工與相機視角，用於憑證照片。",
+  "Plant density, texture and rhythm should match the client's brand tone and interior palette.": "植物密度、質感與節奏應匹配客戶品牌語氣與室內色彩。",
+  "A beautiful installation is not accepted unless the FM team can maintain it repeatedly.": "如果 FM 團隊無法重複維護，即使安裝很美也不算合格。",
+  "Checks whether the green asset improves how people enter, wait, meet or circulate in the space.": "檢查綠色資產是否改善人們進入、等待、會面或流動的方式。",
+  "Maps what clients and visitors see first, then aligns the wall, pods and photo proof to those viewpoints.": "先映射客戶與訪客第一眼看到什麼，再把牆體、植物艙與照片憑證對齊到這些視角。",
+  "Reviews lighting, wall material, brand signage and surrounding finishes before recommending plant density.": "在建議植物密度前，先複核光照、牆面材料、品牌標識與周邊飾面。",
+  "Looks at texture, calmness, vertical rhythm and perceived comfort rather than only counting green area.": "不只計算綠化面積，也看質感、安定感、垂直節奏與感知舒適度。",
+  "Ensures the design can be maintained by FM teams without blocking access, signage, fire routes or cleaning.": "確保設計可由 FM 團隊維護，且不阻礙通道、標識、消防路線或清潔。",
+  "Capture site photos, floor-plan notes, user flow, key view lines and pain points.": "採集場地照片、平面圖備註、使用者動線、關鍵視線與痛點。",
+  "Define the role of the green asset: arrival, privacy, premium branding, wellness or sales support.": "定義綠色資產的角色：到達感、私密性、高端品牌、健康體驗或銷售支持。",
+  "Translate the design intent into visit checks, photo angles, lighting notes and maintenance constraints.": "把設計意圖轉化為到訪檢查、拍照角度、光照備註與維護限制。",
+  "Use before/after views, designer notes and health records in the renewal or upsell pack.": "在續約或加購包中使用前後對比視角、設計師備註與健康記錄。",
+  "Same-angle photos show visible spatial uplift rather than generic plant maintenance.": "同角度照片展示可見的空間提升，而不只是一般植物維護。",
+  "Each installation states what spatial job it performs for the client.": "每個安裝都說明它為客戶完成什麼空間任務。",
+  "Senior architectural or interior design comments explain why a recommendation is credible.": "資深建築或室內設計意見用來解釋建議為何可信。",
+  "FM teams receive the exact checks needed to keep the design value alive after installation.": "FM 團隊會收到安裝後維持設計價值所需的明確檢查項。",
+  "The monthly report can show space improvement, health score, service proof and ESG evidence together.": "月度報告可把空間改善、健康分、服務憑證與 ESG 證據放在一起展示。",
+  "The soil-free substrate story is operationalized as a hygiene and maintenance-risk layer for Hong Kong FM sites.": "無土基質故事被轉化為香港 FM 場地的衛生與維護風險層。",
+  "The system turns green space into a measurable workplace experience program for staff-facing environments.": "系統把綠色空間轉化為面向員工環境的可衡量職場體驗項目。",
+  "High-touch spaces become green brand media with service proof, design intent and client-safe ESG language.": "高觸點空間會變成綠色品牌媒體，並配有服務憑證、設計意圖與客戶安全的 ESG 語言。",
+  "Supports Environmental chemical-reduction evidence and Social indoor-health perception evidence.": "支持環境維度的化學減量證據，以及社會維度的室內健康感知證據。",
+  "Supports Social value evidence through occupant feedback, HR/FM notes and space-use context.": "透過使用者反饋、HR/FM 備註與空間使用情境，支持社會價值證據。",
+  "Supports governance and communication quality because every public claim links back to operational evidence.": "因為每個公開主張都能回鏈到營運證據，所以支持治理與傳播品質。",
+  "Xponge-specific performance should be backed by product datasheets, material tests or controlled service records before external claims.": "對外主張 Xponge 特定性能前，應有產品資料表、材料測試或受控服務記錄支持。",
+  "Use 'supports employee experience' until the client connects survey results with HR or productivity data.": "在客戶把調查結果與 HR 或生產力數據連接前，只使用「支持員工體驗」。",
+  "Use as brand and stakeholder communication evidence; do not present it as official ESG certification.": "可作為品牌與利益相關方傳播證據；不得表述為官方 ESG 認證。",
+  "Each wall can record whether pods use Xponge sleeves rather than loose soil.": "每面牆都可記錄植物艙是否使用 Xponge 套件，而非散土。",
+  "Routine chemical spray should be logged as an exception requiring approval, not a hidden maintenance habit.": "例行化學噴灑應被記為需批准的例外，而不是隱藏的維護習慣。",
+  "FM complaint logs can show whether soil-free assets reduce insects, odor and mess perception.": "FM 投訴記錄可展示無土資產是否降低昆蟲、氣味與髒亂感知。",
+  "Short monthly staff questions can capture mood, stress relief, focus and space satisfaction.": "簡短月度員工問題可捕捉心情、壓力舒緩、專注與空間滿意度。",
+  "Combines user feedback, spatial diagnosis and health score rather than relying on one survey answer.": "結合使用者反饋、空間診斷與健康分，而不是只依賴單一問卷答案。",
+  "Scores whether the asset is visible, healthy, on-brand and ready for client-facing communication.": "評估資產是否可見、健康、符合品牌，並可用於面向客戶的傳播。",
+  "Photos, captions and report excerpts need consent and evidence links before brand use.": "照片、文案與報告摘錄在品牌使用前需要同意與證據鏈接。",
+  "Record Xponge sleeve coverage, substrate batch, pest/disease history and whether chemical treatment was used.": "記錄 Xponge 套件覆蓋率、基質批次、病蟲害歷史與是否使用化學處理。",
+  "Collect short client-approved pulse questions on mood, stress, focus, comfort or visit impression.": "收集經客戶批准的簡短脈搏問題，覆蓋心情、壓力、專注、舒適或到訪印象。",
+  "Identify where clients, staff or visitors actually see the asset and whether the wall is photo/report ready.": "識別客戶、員工或訪客實際看到資產的位置，以及牆面是否可拍照/可入報告。",
+  "Mark each statement as measured, surveyed, estimated or not claimed before it enters reports.": "每句話進入報告前，都標記為已量測、已調查、估算或不主張。",
+  "Links asset, pod, sleeve batch, replacement date and no-soil installation proof.": "連接資產、植物艙、套件批次、更換日期與無土安裝憑證。",
+  "Tracks issue type, severity, root-zone notes, treatment decision and follow-up result.": "追蹤問題類型、嚴重度、根區備註、處理決策與跟進結果。",
+  "Makes any pesticide or chemical treatment visible, approved and reportable as an exception.": "讓任何農藥或化學處理都可見、經批准，並作為例外進入報告。",
+  "Client-approved lightweight survey captures perceived calmness, stress relief, focus and space satisfaction.": "經客戶批准的輕量問卷可捕捉安定感、壓力舒緩、專注與空間滿意度。",
+  "Connects a visible green asset to design intent, approved photos and client-safe ESG language.": "把可見綠色資產連接到設計意圖、已批准照片與客戶安全的 ESG 語言。",
+  "Separates measured evidence, survey findings, estimates and blocked claims before investor or client use.": "在投資人或客戶使用前，分開已量測證據、調查發現、估算與禁止主張。",
+  "Use pest/disease logs, no-soil coverage and chemical intervention records as supplier evidence.": "使用病蟲害記錄、無土覆蓋率與化學干預記錄作為供應商證據。",
+  "Use staff pulse results when question wording, response count, client scope and period are visible.": "當問題措辭、回覆數、客戶範圍與期間清晰時，可使用員工脈搏結果。",
+  "Use approved photos, design intent and touchpoint score to support brand and stakeholder communication.": "用已批准照片、設計意圖與觸點分，支持品牌與利益相關方傳播。",
+  "Do not claim productivity improvement, disease prevention, medical benefit or certified ESG impact without qualified evidence.": "沒有合資格證據時，不得主張效率提升、疾病預防、醫療效益或已認證 ESG 影響。",
+  "The robot captures repeatable full-wall and zone photos for AI health scoring and client reporting.": "機器人採集可重複的全牆與分區照片，用於 AI 健康評分和客戶報告。",
+  "The robot connects to standardized refill ports and logs flow volume, refill duration and leak checks.": "機器人連接標準化補水口，並記錄流量、補水時長與漏水檢查。",
+  "Nutrient cartridges let the robot dose by recipe while preserving batch traceability and safety limits.": "營養液卡匣讓機器人按配方加注，同時保留批次追溯與安全限制。",
+  "The robot escalates pruning, replacement, pest confirmation and customer-sensitive issues to human technicians.": "機器人會把修剪、更換、病蟲確認與客戶敏感問題升級給人工技師。",
+  "Asset ledger, health score, proof vault, work orders and ESG claim boundaries are already structured for future automation.": "資產台賬、健康分、憑證庫、工單與 ESG 主張邊界已為未來自動化做好結構準備。",
+  "The current MVP creates the operating data that robots will later use.": "當前 MVP 會創造未來機器人需要使用的營運數據。",
+  "This turns DR FOREST Wall into hardware that a robot can service repeatably.": "這會把 DR FOREST Wall 變成機器人可重複服務的硬件。",
+  "A pilot proves 24h care without claiming full autonomy too early.": "試點可證明 24 小時看護，而不過早主張完全自主。",
+  "The long-term story becomes recurring FM revenue plus robotics-enabled operating leverage.": "長期故事會變成持續 FM 收入加上機器人帶來的營運槓桿。",
+  "A service robot follows approved indoor routes and checks wall appearance, leak risk, light status and access blockers.": "服務機器人沿批准的室內路線行走，檢查牆面外觀、漏水風險、光照狀態與通行阻礙。",
+  "Creates sensor, proof and incident records in the OPS ledger.": "在 OPS 台賬中生成感測器、憑證與事件記錄。",
+  "Feeds Health Score, Proof Vault, ESG and renewal packs.": "輸入健康分、憑證庫、ESG 與續約包。",
+  "Updates water ledger, health drivers and exception audit trail.": "更新水分台賬、健康驅動因素與例外審計軌跡。",
+  "Connects supply inventory, dosing log and plant recovery trend.": "連接供應庫存、加注記錄與植物恢復趨勢。",
+  "Creates work orders with photos, likely cause and recommended next action.": "生成帶照片、可能原因與建議下一步動作的工單。",
+  "QR, NFC or visual marker on each wall/module lets the robot bind actions to the correct asset.": "每面牆/模組上的 QR、NFC 或視覺標記，讓機器人把動作綁定到正確資產。",
+  "Without a stable ID, refill, dosing and proof records cannot be trusted.": "沒有穩定 ID，補水、加液與憑證記錄就不可信。",
+  "Standardized physical ports with mechanical alignment and permission control.": "具備機械對位與權限控制的標準化實體接口。",
+  "Autonomous water and nutrient actions need a safe, repeatable docking interface.": "自主補水和營養液動作需要安全、可重複的對接接口。",
+  "Flow meter, leak sensor, backflow protection and auto-stop threshold.": "流量計、漏水感測器、防回流保護與自動停止閾值。",
+  "Hong Kong FM clients will care deeply about water risk in offices, clinics and show suites.": "香港 FM 客戶會非常重視辦公室、診所與示範單位的水患風險。",
+  "Camera framing, cropping and privacy controls keep people out of routine proof capture.": "透過取景、裁切與私隱控制，讓日常憑證採集避開人員。",
+  "Privacy and client approval are prerequisites for robotic photo proof.": "私隱與客戶批准是機器人照片憑證的前置條件。",
+  "FM-approved routes, elevator rules, docking point, charging point and no-go zones.": "FM 批准的路線、電梯規則、對接點、充電點與禁入區。",
+  "A robot can only become a care layer if it fits building operations.": "機器人只有融入樓宇營運，才能成為看護層。",
+  "Good first pilot because the reception route is controlled, the wall is visible and the client values report proof.": "適合作為首個試點，因為接待路線受控、牆面可見，且客戶重視報告憑證。",
+  "Strong health-safety value, but patient privacy and clinic access rules require strict approval.": "健康安全價值強，但病人私隱與診所准入規則需要嚴格批准。",
+  "High brand value during sales campaigns; robot proof can protect presentation quality before VIP visits.": "銷售活動期間品牌價值高；機器人憑證可在 VIP 到訪前保障展示品質。",
+  "Useful later, but member experience and moving obstacles make it a less obvious first pilot.": "未來有用，但會員體驗與移動障礙物讓它不適合作為第一個試點。",
+  "Robot follows FM-approved route, scans asset ID and confirms it is facing the correct wall module.": "機器人沿 FM 批准路線行走，掃描資產 ID，並確認正對正確牆面模組。",
+  "Robot captures plant-only photos, checks leak/light/tank status and uploads evidence to Proof Vault.": "機器人採集植物專區照片，檢查漏水/光照/水箱狀態，並上傳證據到憑證庫。",
+  "If permitted, robot connects to the port, applies volume or nutrient recipe and records the operation.": "獲准後，機器人連接接口，按容量或營養液配方執行並記錄操作。",
+  "OPS compares photos, sensor state and service rules to decide whether to keep watching or create a work order.": "OPS 比對照片、感測器狀態與服務規則，決定繼續觀察還是建立工單。",
+  "Technicians handle trimming, replacement, pest confirmation, client-sensitive actions and physical exceptions.": "技師處理修剪、更換、病蟲確認、客戶敏感動作與實體例外。",
+  "Define module ID, refill port, dosing cartridge, leak guard, camera framing and privacy rules.": "定義模組 ID、補水口、加液卡匣、漏水保護、相機取景與私隱規則。",
+  "Pilot night patrol and photo proof in one controlled client site before enabling refill and dosing.": "先在一個受控客戶場地試點夜間巡檢與照片憑證，再啟用補水與加液。",
+  "Scale robots across routes, modules and clients with human exception teams and evidence-led reporting.": "在人工例外團隊與證據導向報告支持下，把機器人擴展到更多路線、模組與客戶。",
+  "Stores route, time, asset ID, battery state, photos and detected exceptions.": "儲存路線、時間、資產 ID、電量狀態、照片與偵測到的例外。",
+  "Records water volume, refill duration, target module and leak-check result.": "記錄水量、補水時長、目標模組與漏水檢查結果。",
+  "Links recipe, cartridge batch, dose amount and plant recovery trend.": "連接配方、卡匣批次、加注量與植物恢復趨勢。",
+  "Repeatable photos improve health score consistency and client report credibility.": "可重複照片可提升健康分一致性與客戶報告可信度。",
+  "Shows where robot monitoring ends and human technician responsibility begins.": "展示機器人監控在哪裡結束，人工技師責任從哪裡開始。",
+  "Use this now: DR FOREST OPS is designed to support future robotic patrol, proof capture, refill and nutrient dosing.": "現在可使用：DR FOREST OPS 的設計支持未來機器人巡檢、憑證採集、補水與營養液加注。",
+  "Use robot patrol, photo and exception logs only after a controlled site pilot proves reliable operation.": "只有在受控場地試點證明可靠運行後，才使用機器人巡檢、照片與例外記錄。",
+  "Do not claim fully autonomous plant care, 24h guaranteed remediation, or human replacement before hardware pilots and safety validation.": "在硬件試點與安全驗證前，不得主張完全自主植物養護、24 小時保證修復或替代人工。",
+  "Every robot action needs permission rules, leak safety, privacy controls and a human escalation path.": "每個機器人動作都需要權限規則、漏水安全、私隱控制與人工升級路徑。"
+};
+
+function localizedPhrase(value) {
+  const text = String(value ?? "");
+  return localizedText(text, contentTranslations[text] || text);
+}
+
+function localizedField(record, key) {
+  const value = record?.[key];
+  const zhValue = record?.[`${key}Zh`] || contentTranslations[value];
+  return localizedText(value, zhValue || value);
+}
+
+function localizedList(values) {
+  return (values || []).map((value) => localizedPhrase(value));
+}
+
+function splitBilingualText(text) {
+  const value = String(text || "").trim();
+  const parts = value.split(/\s+\/\s+/);
+  if (parts.length < 2) return null;
+  return {
+    en: parts[0].trim(),
+    zh: parts.slice(1).join(" / ").trim()
+  };
+}
+
+function loadLanguagePreference() {
+  try {
+    const stored = localStorage.getItem(languageStorageKey);
+    currentLanguage = stored === "zh-Hant" ? "zh-Hant" : "en";
+  } catch {
+    currentLanguage = "en";
+  }
+}
+
+function saveLanguagePreference(language) {
+  currentLanguage = language === "zh-Hant" ? "zh-Hant" : "en";
+  try {
+    localStorage.setItem(languageStorageKey, currentLanguage);
+  } catch {
+    // Ignore storage errors in embedded previews.
+  }
+}
+
+function prepareInlineTranslation(element, zhSelector) {
+  const zhElement = element.querySelector(zhSelector);
+  if (!zhElement || element.dataset.i18nEn) return;
+  const zhText = zhElement.textContent.trim();
+  const enText = Array.from(element.childNodes)
+    .filter((node) => node !== zhElement)
+    .map((node) => node.textContent)
+    .join("")
+    .trim();
+  if (!enText || !zhText) return;
+  element.dataset.i18nEn = enText;
+  element.dataset.i18nZh = zhText;
+}
+
+function prepareSmallTranslation(small) {
+  const parent = small.parentElement;
+  if (!parent || parent.dataset.i18nEn) return;
+  const clone = parent.cloneNode(true);
+  clone.querySelectorAll(".zh").forEach((node) => node.remove());
+  const enText = clone.textContent.trim();
+  const zhText = small.textContent.trim();
+  if (!enText || !zhText) return;
+  parent.dataset.i18nEn = enText;
+  parent.dataset.i18nZh = zhText;
+}
+
+function prepareSlashTranslation(element) {
+  if (element.dataset.i18nEn || element.children.length > 0) return;
+  const pair = splitBilingualText(element.textContent);
+  if (!pair) return;
+  element.dataset.i18nEn = pair.en;
+  element.dataset.i18nZh = pair.zh;
+}
+
+function prepareNavTranslation(link) {
+  if (link.dataset.i18nEn) return;
+  const enText = link.querySelector("span")?.textContent.trim();
+  const zhText = link.querySelector("small")?.textContent.trim();
+  if (!enText || !zhText) return;
+  link.dataset.i18nEn = enText;
+  link.dataset.i18nZh = zhText;
+}
+
+function prepareLanguageTranslations() {
+  document.querySelectorAll("h2, h3").forEach((element) => prepareInlineTranslation(element, ":scope > .zh-inline"));
+  document.querySelectorAll(".side-nav nav a").forEach(prepareNavTranslation);
+  document.querySelectorAll(".zh").forEach(prepareSmallTranslation);
+  document
+    .querySelectorAll("button, .status-pill, .panel-title > span, .eyebrow, .brand small, .nav-note span, .nav-note strong, .nav-note small, .filter-btn")
+    .forEach(prepareSlashTranslation);
+}
+
+function applyLanguageContent() {
+  if (!document.body) return;
+  prepareLanguageTranslations();
+
+  document.documentElement.lang = isTraditionalLanguage() ? "zh-Hant-HK" : "en-HK";
+  document.body.classList.toggle("lang-zh", isTraditionalLanguage());
+  document.body.classList.toggle("lang-en", !isTraditionalLanguage());
+
+  document.querySelectorAll("[data-i18n-en]").forEach((element) => {
+    element.textContent = localizedText(element.dataset.i18nEn, element.dataset.i18nZh || element.dataset.i18nEn);
+  });
+
+  document.querySelectorAll(".zh-copy").forEach((element) => {
+    if (!element.dataset.i18nZhOnly) element.dataset.i18nZhOnly = element.textContent;
+    element.textContent = toTraditionalText(element.dataset.i18nZhOnly);
+  });
+
+  document.querySelectorAll("[data-language-switch]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.languageSwitch === currentLanguage);
+  });
+}
 
 async function loadJson(path) {
   const response = await fetch(path);
@@ -147,7 +1723,8 @@ async function loadAppData() {
     aiInsights,
     healthScoreData,
     spatialDesignData,
-    impactValueData
+    impactValueData,
+    roboticCareData
   ] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
@@ -169,7 +1746,8 @@ async function loadAppData() {
     loadJson(dataFiles.aiInsights),
     loadJson(dataFiles.healthScore),
     loadJson(dataFiles.spatialDesign),
-    loadJson(dataFiles.impactValue)
+    loadJson(dataFiles.impactValue),
+    loadJson(dataFiles.roboticCare)
   ]);
 
   clients = loadedClients;
@@ -227,6 +1805,14 @@ async function loadAppData() {
   impactWorkflow = impactValueData.workflow || [];
   impactEvidencePack = impactValueData.evidencePack || [];
   impactClaimControls = impactValueData.claimControls || [];
+  roboticSummary = roboticCareData.summary || [];
+  roboticCapabilities = roboticCareData.capabilities || [];
+  roboticInterfaces = roboticCareData.moduleInterfaces || [];
+  roboticFleet = roboticCareData.fleetScenarios || [];
+  roboticWorkflow = roboticCareData.workflow || [];
+  roboticRoadmap = roboticCareData.roadmap || [];
+  roboticEvidencePack = roboticCareData.evidencePack || [];
+  roboticClaimControls = roboticCareData.claimControls || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -859,6 +2445,15 @@ const els = {
   impactWorkflowList: document.querySelector("#impact-workflow-list"),
   impactEvidenceList: document.querySelector("#impact-evidence-list"),
   impactClaimList: document.querySelector("#impact-claim-list"),
+  roboticStatus: document.querySelector("#robotic-status"),
+  roboticGrid: document.querySelector("#robotic-grid"),
+  roboticCapabilityList: document.querySelector("#robotic-capability-list"),
+  roboticInterfaceList: document.querySelector("#robotic-interface-list"),
+  roboticFleetList: document.querySelector("#robotic-fleet-list"),
+  roboticWorkflowList: document.querySelector("#robotic-workflow-list"),
+  roboticRoadmapList: document.querySelector("#robotic-roadmap-list"),
+  roboticEvidenceList: document.querySelector("#robotic-evidence-list"),
+  roboticClaimList: document.querySelector("#robotic-claim-list"),
   mvpStatus: document.querySelector("#mvp-status"),
   mvpGrid: document.querySelector("#mvp-grid"),
   activeRoleSelect: document.querySelector("#active-role-select"),
@@ -959,6 +2554,7 @@ const els = {
   reviewAiBtn: document.querySelector("#review-ai-btn"),
   simulateVisitBtn: document.querySelector("#simulate-visit-btn"),
   generateReportBtn: document.querySelector("#generate-report-btn"),
+  languageButtons: Array.from(document.querySelectorAll("[data-language-switch]")),
   filterButtons: Array.from(document.querySelectorAll("[data-filter]")),
   navLinks: Array.from(document.querySelectorAll(".side-nav nav a"))
 };
@@ -1040,6 +2636,7 @@ function statusClass(value) {
   if (value === "missing" || value === "blocked") return "danger";
   if (value === "expiring") return "warn";
   if (value === "phase-2" || value === "open" || value === "adjacent") return "warn";
+  if (value === "phase-3" || value === "pilot" || value === "robotics-ready") return "warn";
   if (value === "next") return "warn";
   if (value === "completed" || value === "ready" || value === "approved" || value === "paid") return "good";
   if (value === "resolved") return "good";
@@ -1341,7 +2938,12 @@ function healthScoreBreakdown(wall) {
           ? "Low-light symptoms, uneven growth and follow-up photo due"
           : wall.status === "watch"
             ? "Yellowing or water-swing symptoms need review"
-            : "Fullness and zone photos support stable status"
+            : "Fullness and zone photos support stable status",
+        driverZh: wall.status === "risk"
+          ? "低光照症狀、生長不均與跟進照片待補"
+          : wall.status === "watch"
+            ? "黃葉或水分波動症狀需要複核"
+            : "飽滿度與分區照片支持穩定狀態"
       },
       {
         label: "Sensor stability",
@@ -1350,21 +2952,26 @@ function healthScoreBreakdown(wall) {
         weight: 25,
         driver: hasSmartSensors
           ? wall.sensors.join(", ")
-          : "Manual photo check until smart telemetry is added"
+          : "Manual photo check until smart telemetry is added",
+        driverZh: hasSmartSensors
+          ? wall.sensors.join(", ")
+          : "加入智能遙測前以人工照片檢查為主"
       },
       {
         label: "Service compliance",
         labelZh: "服务履约",
         value: serviceCompliance,
         weight: 20,
-        driver: `${openOrders.length} open work order(s), ${wall.cadence} cadence`
+        driver: `${openOrders.length} open work order(s), ${wall.cadence} cadence`,
+        driverZh: `${openOrders.length} 張未關閉工單，${wall.cadence} 到訪節奏`
       },
       {
         label: "Recovery trend",
         labelZh: "恢复趋势",
         value: recoveryTrend,
         weight: 10,
-        driver: `${wall.survival}% survival rate, ${wall.issues} active issue(s)`
+        driver: `${wall.survival}% survival rate, ${wall.issues} active issue(s)`,
+        driverZh: `${wall.survival}% 存活率，${wall.issues} 個活躍問題`
       }
     ]
   };
@@ -1478,6 +3085,7 @@ function portfolioMetrics() {
 function metricsForClient(clientId) {
   const clientWalls = walls.filter((wall) => wall.clientId === clientId);
   const impactAssessment = impactAssessments.find((item) => item.clientId === clientId) || null;
+  const roboticScenario = roboticFleet.find((item) => item.clientId === clientId) || null;
   const clientWorkorders = workorders.filter((order) => clientWalls.some((wall) => wall.id === order.wallId));
   const completedWorkorders = clientWorkorders.filter((order) => isWorkorderCompleted(order.id));
   const openWorkorders = clientWorkorders.filter((order) => !isWorkorderCompleted(order.id));
@@ -1571,6 +3179,7 @@ function metricsForClient(clientId) {
     openAiRecommendations,
     queuedAiRecommendations,
     impactAssessment,
+    roboticScenario,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1586,9 +3195,9 @@ function metricsForClient(clientId) {
 function renderStatCards(container, cards, className = "stat-card") {
   container.innerHTML = cards.map((card) => `
     <article class="${className}">
-      <span>${card.label}${card.labelZh ? `<small class="zh">${card.labelZh}</small>` : ""}</span>
+      <span>${localizedText(card.label, card.labelZh || card.label)}</span>
       <strong>${card.value}</strong>
-      <em>${card.detail}${card.detailZh ? `<small class="zh">${card.detailZh}</small>` : ""}</em>
+      <em>${localizedText(card.detail, card.detailZh || card.detail)}</em>
     </article>
   `).join("");
 }
@@ -1661,7 +3270,8 @@ function renderAiCommandCenter() {
     label: card.label,
     labelZh: card.labelZh,
     value: card.value,
-    detail: card.detail
+    detail: card.detail,
+    detailZh: contentTranslations[card.detail]
   }));
   renderStatCards(els.aiGrid, [
     { label: "Open AI recommendations", labelZh: "待复核 AI 建议", value: openCount, detail: "Human-reviewed before client impact", detailZh: "进入客户动作前必须人工复核" },
@@ -1673,35 +3283,35 @@ function renderAiCommandCenter() {
   els.aiRecommendationList.innerHTML = data.aiRecommendations.map((item) => `
     <article class="list-item ai-card ${item.displayTone}" data-ai-card="${item.id}">
       <div class="item-row">
-        <strong>${item.id} - ${item.type}</strong>
+        <strong>${item.id} - ${localizedField(item, "type")}</strong>
         <span class="tag ${statusClass(item.displayTone)}">${item.displayStatus}</span>
       </div>
       <span>${item.client?.name || "Portfolio"}${item.wall ? ` - ${item.wall.name}` : ""}</span>
-      <small>${item.trigger}</small>
-      <strong>${item.recommendation}</strong>
+      <small>${localizedField(item, "trigger")}</small>
+      <strong>${localizedField(item, "recommendation")}</strong>
       <div class="kit-list">
         ${item.evidence.map((record) => `<em>${record}</em>`).join("")}
       </div>
-      <small>${item.guardrail}</small>
+      <small>${localizedField(item, "guardrail")}</small>
       <small class="zh-copy">中文理解：AI 负责提前发现风险和建议动作，但客户影响、报告主张和工单关闭仍由人批准。</small>
       <div class="workorder-actions">
         ${item.wall ? `<button type="button" class="mini-action" data-wall-select="${item.wall.id}">View asset</button>` : ""}
-        <button type="button" class="mini-action primary" data-queue-ai-action="${item.id}" ${item.queued ? "disabled" : ""}>${item.queued ? "Queued" : item.action}</button>
+        <button type="button" class="mini-action primary" data-queue-ai-action="${item.id}" ${item.queued ? "disabled" : ""}>${item.queued ? localizedText("Queued", "已入隊") : localizedField(item, "action")}</button>
       </div>
     </article>
   `).join("");
 
   els.aiGovernanceList.innerHTML = aiGovernance.map((item) => `
     <div class="method-row">
-      <span>${item.label}</span>
-      <strong>${item.rule}</strong>
+      <span>${localizedField(item, "label")}</span>
+      <strong>${localizedField(item, "rule")}</strong>
     </div>
   `).join("");
 
   els.aiFlywheelList.innerHTML = aiFlywheel.map((item) => `
     <div class="method-row flywheel-row">
-      <span>${item.stage}</span>
-      <strong>${item.body}</strong>
+      <span>${localizedField(item, "stage")}</span>
+      <strong>${localizedField(item, "body")}</strong>
     </div>
   `).join("");
 }
@@ -1713,7 +3323,7 @@ function renderHealthScoreMethod() {
   const breakdown = healthScoreBreakdown(wall);
   const band = breakdown.band;
   const formulaText = healthFormula
-    .map((item) => `${item.label} ${item.weight}%`)
+    .map((item) => `${localizedField(item, "label")} ${item.weight}%`)
     .join(" + ");
   const mvpSourceCount = healthSources.filter((source) => source.status === "MVP" || source.status === "Core").length;
 
@@ -1729,50 +3339,50 @@ function renderHealthScoreMethod() {
 
   els.healthFormulaList.innerHTML = healthFormula.map((item) => `
     <div class="method-row health-formula-row">
-      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
-      <strong>${item.weight}% - ${item.body}</strong>
-      <em>${item.proof}</em>
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.weight}% - ${localizedField(item, "body")}</strong>
+      <em>${localizedField(item, "proof")}</em>
     </div>
   `).join("");
 
   els.healthBreakdownList.innerHTML = breakdown.rows.map((item) => `
-    <article class="list-item health-score-card ${item.value >= 90 ? "ready" : item.value >= 80 ? "review" : "alert"}">
-      <div class="item-row">
-        <strong>${item.label}</strong>
+      <article class="list-item health-score-card ${item.value >= 90 ? "ready" : item.value >= 80 ? "review" : "alert"}">
+        <div class="item-row">
+        <strong>${localizedField(item, "label")}</strong>
         <span class="tag ${statusClass(item.value >= 90 ? "ready" : item.value >= 80 ? "review" : "alert")}">${item.value}</span>
       </div>
-      <span>${item.labelZh} - weight ${item.weight}%</span>
+      <span>${localizedField(item, "label")} - ${localizedText("weight", "權重")} ${item.weight}%</span>
       <div class="bar-track"><div class="bar-fill" style="width: ${item.value}%"></div></div>
-      <small>${item.driver}</small>
+      <small>${localizedField(item, "driver")}</small>
     </article>
   `).join("");
 
   els.healthSourceList.innerHTML = healthSources.map((source) => `
     <div class="method-row health-source-row">
-      <span>${source.label} - ${source.status}</span>
-      <strong>${source.body}</strong>
+      <span>${localizedField(source, "label")} - ${source.status}</span>
+      <strong>${localizedField(source, "body")}</strong>
     </div>
   `).join("");
 
   els.healthWorkflowList.innerHTML = healthCaptureWorkflow.map((step) => `
     <div class="method-row health-workflow-row">
-      <span>${step.step}</span>
-      <strong>${step.body}</strong>
+      <span>${localizedField(step, "step")}</span>
+      <strong>${localizedField(step, "body")}</strong>
     </div>
   `).join("");
 
   els.healthCameraList.innerHTML = healthCameraRoadmap.map((item) => `
     <div class="method-row health-camera-row">
       <span>${item.phase} - ${item.position}</span>
-      <strong>${item.label}</strong>
-      <em>${item.body}</em>
+      <strong>${localizedField(item, "label")}</strong>
+      <em>${localizedField(item, "body")}</em>
     </div>
   `).join("");
 
   els.healthQualityList.innerHTML = healthQualityControls.map((control) => `
     <div class="method-row health-quality-row">
-      <span>${control.label}</span>
-      <strong>${control.rule}</strong>
+      <span>${localizedField(control, "label")}</span>
+      <strong>${localizedField(control, "rule")}</strong>
     </div>
   `).join("");
 }
@@ -1803,10 +3413,10 @@ function renderSpatialDesign() {
 
   els.spatialDiagnosticList.innerHTML = spatialDiagnostics.map((item) => `
     <div class="method-row spatial-diagnostic-row">
-      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
-      <strong>${item.score}/100 - ${item.body}</strong>
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.score}/100 - ${localizedField(item, "body")}</strong>
       <div class="bar-track"><div class="bar-fill" style="width: ${item.score}%"></div></div>
-      <em>${(item.evidence || []).join(" / ")}</em>
+      <em>${localizedList(item.evidence).join(" / ")}</em>
     </div>
   `).join("");
 
@@ -1821,11 +3431,11 @@ function renderSpatialDesign() {
           <span class="tag ${statusClass(item.status)}">${item.status}</span>
         </div>
         <span>${client?.name || "Client"}${wall ? ` - ${wall.name}` : ""}</span>
-        <small>${item.intent}</small>
-        <strong>${item.recommendation}</strong>
-        <small>Designer note: ${item.designerNote}</small>
+        <small>${localizedField(item, "intent")}</small>
+        <strong>${localizedField(item, "recommendation")}</strong>
+        <small>${localizedText("Designer note", "設計師備註")}: ${localizedField(item, "designerNote")}</small>
         <div class="kit-list">
-          ${handoff.map((task) => `<em>${task}</em>`).join("")}
+          ${localizedList(handoff).map((task) => `<em>${task}</em>`).join("")}
         </div>
         <div class="workorder-actions">
           ${client ? `<button type="button" class="mini-action" data-client-select="${client.id}">View client</button>` : ""}
@@ -1837,22 +3447,22 @@ function renderSpatialDesign() {
 
   els.spatialPrincipleList.innerHTML = spatialPrinciples.map((item) => `
     <div class="method-row spatial-principle-row">
-      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
-      <strong>${item.rule}</strong>
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${localizedField(item, "rule")}</strong>
     </div>
   `).join("");
 
   els.spatialWorkflowList.innerHTML = spatialWorkflow.map((item) => `
     <div class="method-row spatial-workflow-row">
-      <span>${item.step}<small class="zh">${item.stepZh}</small></span>
-      <strong>${item.body}</strong>
+      <span>${localizedField(item, "step")}<small class="zh">${item.stepZh}</small></span>
+      <strong>${localizedField(item, "body")}</strong>
     </div>
   `).join("");
 
   els.spatialProofList.innerHTML = spatialProofPack.map((item) => `
     <div class="method-row spatial-proof-row">
-      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
-      <strong>${item.body}</strong>
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${localizedField(item, "body")}</strong>
     </div>
   `).join("");
 }
@@ -1888,13 +3498,13 @@ function renderImpactValue() {
 
   els.impactPillarList.innerHTML = impactPillars.map((pillar) => `
     <div class="method-row impact-pillar-row ${pillar.status}">
-      <span>${pillar.label}<small class="zh">${pillar.labelZh}</small></span>
-      <strong>${pillar.value} - ${pillar.body}</strong>
-      <em>${pillar.esgLink}</em>
+      <span>${localizedField(pillar, "label")}<small class="zh">${pillar.labelZh}</small></span>
+      <strong>${pillar.value} - ${localizedField(pillar, "body")}</strong>
+      <em>${localizedField(pillar, "esgLink")}</em>
       <div class="kit-list">
-        ${(pillar.signals || []).map((signal) => `<em>${signal}</em>`).join("")}
+        ${localizedList(pillar.signals).map((signal) => `<em>${signal}</em>`).join("")}
       </div>
-      <small>${pillar.claimBoundary}</small>
+      <small>${localizedField(pillar, "claimBoundary")}</small>
     </div>
   `).join("");
 
@@ -1909,54 +3519,163 @@ function renderImpactValue() {
         </div>
         <div class="impact-score-row">
           <span>Xponge <strong>${assessment.xpongeScore}</strong></span>
-          <span>Workplace <strong>${assessment.workplaceScore}</strong></span>
-          <span>Brand <strong>${assessment.brandScore}</strong></span>
+          <span>${localizedText("Workplace", "職場")} <strong>${assessment.workplaceScore}</strong></span>
+          <span>${localizedText("Brand", "品牌")} <strong>${assessment.brandScore}</strong></span>
         </div>
-        <small>${assessment.note}</small>
+        <small>${localizedField(assessment, "note")}</small>
         <div class="kit-list">
-          ${(assessment.touchpoints || []).map((point) => `<em>${point}</em>`).join("")}
+          ${localizedList(assessment.touchpoints).map((point) => `<em>${point}</em>`).join("")}
         </div>
-        <button type="button" class="mini-action" data-client-select="${assessment.clientId}">View client</button>
+        <button type="button" class="mini-action" data-client-select="${assessment.clientId}">${localizedText("View client", "查看客戶")}</button>
       </article>
     `;
   }).join("");
 
   els.impactMetricList.innerHTML = impactMetrics.map((metric) => `
     <div class="method-row impact-metric-row ${metric.tone}">
-      <span>${metric.label}<small class="zh">${metric.labelZh}</small></span>
-      <strong>${metric.value} - ${metric.body}</strong>
+      <span>${localizedField(metric, "label")}<small class="zh">${metric.labelZh}</small></span>
+      <strong>${metric.value} - ${localizedField(metric, "body")}</strong>
       <em>${metric.group}</em>
     </div>
   `).join("");
 
   els.impactWorkflowList.innerHTML = impactWorkflow.map((item) => `
     <div class="method-row impact-workflow-row">
-      <span>${item.step}<small class="zh">${item.stepZh}</small></span>
-      <strong>${item.body}</strong>
+      <span>${localizedField(item, "step")}<small class="zh">${item.stepZh}</small></span>
+      <strong>${localizedField(item, "body")}</strong>
     </div>
   `).join("");
 
   els.impactEvidenceList.innerHTML = impactEvidencePack.map((item) => `
     <article class="list-item impact-evidence-card ${item.status}">
       <div class="item-row">
-        <strong>${item.label}</strong>
+        <strong>${localizedField(item, "label")}</strong>
         <span class="tag ${statusClass(item.status)}">${item.status}</span>
       </div>
-      <span>${item.category}<small class="zh">${item.labelZh}</small></span>
-      <small>${item.body}</small>
-      <em>${item.proof}</em>
+      <span>${localizedField(item, "category")}<small class="zh">${item.labelZh}</small></span>
+      <small>${localizedField(item, "body")}</small>
+      <em>${localizedField(item, "proof")}</em>
     </article>
   `).join("");
 
   els.impactClaimList.innerHTML = impactClaimControls.map((item) => `
     <div class="method-row impact-claim-row ${item.tone}">
-      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
-      <strong>${item.body}</strong>
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${localizedField(item, "body")}</strong>
     </div>
   `).join("");
 
   if (selectedAssessment) {
     els.impactStatus.textContent = `${selected.name}: Xponge ${selectedAssessment.xpongeScore}, workplace ${selectedAssessment.workplaceScore}, brand ${selectedAssessment.brandScore} / 当前客户影响快照`;
+  }
+}
+
+function renderRoboticCare() {
+  if (!els.roboticGrid) return;
+
+  const selected = selectedClient();
+  const selectedFleet = selected
+    ? roboticFleet.find((item) => item.clientId === selected.id) || roboticFleet[0]
+    : roboticFleet[0];
+  const averageReadiness = roboticFleet.length
+    ? avg(roboticFleet, (item) => item.readinessScore)
+    : 0;
+  const robotReadyInterfaces = roboticInterfaces.filter((item) => item.status === "robot-ready" || item.status === "ready");
+  const phaseThreeItems = roboticRoadmap.filter((item) => item.status === "phase-3" || item.status === "pilot");
+
+  els.roboticStatus.textContent = `${roboticCapabilities.length} robot care capabilities, ${robotReadyInterfaces.length} robot-ready interfaces / ${roboticCapabilities.length} 项机器人看护能力，${robotReadyInterfaces.length} 个机器人就绪接口`;
+  els.roboticStatus.classList.toggle("good", robotReadyInterfaces.length >= 3);
+
+  const fallbackCards = [
+    { label: "Autonomous care", labelZh: "自主看护", value: "Phase 3", detail: "Robots patrol, refill, dose and capture proof after the operating ledger is mature", detailZh: "运营台账成熟后，再让机器人巡检、补水、加营养液和采集凭证" },
+    { label: "Robot readiness", labelZh: "机器人就绪度", value: averageReadiness, detail: "Average readiness across current demo client scenarios", detailZh: "当前演示客户场景的平均机器人接入准备度" },
+    { label: "Module interfaces", labelZh: "模块接口", value: roboticInterfaces.length, detail: "Wall hardware interfaces required before autonomous care", detailZh: "自主看护前需要标准化的绿墙硬件接口" },
+    { label: "Human fallback", labelZh: "人工兜底", value: "Required", detail: "Robots handle repeated routines; technicians handle trimming, replacement and exceptions", detailZh: "机器人处理重复动作，人工处理修剪、更换和复杂异常" }
+  ];
+
+  renderStatCards(els.roboticGrid, roboticSummary.length ? roboticSummary : fallbackCards);
+
+  els.roboticCapabilityList.innerHTML = roboticCapabilities.map((item) => `
+    <div class="method-row robotic-capability-row ${item.status}">
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.value} - ${localizedField(item, "body")}</strong>
+      <em>${localizedField(item, "opsLink")}</em>
+      <div class="kit-list">
+        ${localizedList(item.inputs).map((input) => `<em>${input}</em>`).join("")}
+      </div>
+    </div>
+  `).join("");
+
+  els.roboticInterfaceList.innerHTML = roboticInterfaces.map((item) => `
+    <div class="method-row robotic-interface-row ${item.status}">
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${localizedField(item, "requirement")}</strong>
+      <em>${localizedField(item, "reason")}</em>
+    </div>
+  `).join("");
+
+  els.roboticFleetList.innerHTML = roboticFleet.map((scenario) => {
+    const client = clients.find((item) => item.id === scenario.clientId);
+    const isSelected = selected && scenario.clientId === selected.id;
+    return `
+      <article class="list-item robotic-fleet-card ${isSelected ? "selected" : ""}" data-robotic-client="${scenario.clientId}">
+        <div class="item-row">
+          <strong>${client?.name || scenario.clientId}</strong>
+          <span class="tag ${statusClass(scenario.status)}">${scenario.status}</span>
+        </div>
+        <div class="impact-score-row">
+          <span>${localizedText("Readiness", "就緒度")} <strong>${scenario.readinessScore}</strong></span>
+          <span>${localizedText("Patrol", "巡檢")} <strong>${localizedPhrase(scenario.patrolCadence)}</strong></span>
+          <span>${localizedText("Mode", "模式")} <strong>${localizedPhrase(scenario.robotMode)}</strong></span>
+        </div>
+        <small>${localizedField(scenario, "body")}</small>
+        <div class="kit-list">
+          ${localizedList(scenario.tasks).map((task) => `<em>${task}</em>`).join("")}
+        </div>
+        <button type="button" class="mini-action" data-client-select="${scenario.clientId}">${localizedText("View client", "查看客戶")}</button>
+      </article>
+    `;
+  }).join("");
+
+  els.roboticWorkflowList.innerHTML = roboticWorkflow.map((item) => `
+    <div class="method-row robotic-workflow-row">
+      <span>${localizedField(item, "step")}<small class="zh">${item.stepZh}</small></span>
+      <strong>${localizedField(item, "body")}</strong>
+    </div>
+  `).join("");
+
+  els.roboticRoadmapList.innerHTML = roboticRoadmap.map((item) => `
+    <article class="list-item robotic-roadmap-card ${item.status}">
+      <div class="item-row">
+        <strong>${localizedPhrase(item.phase)} - ${localizedField(item, "label")}</strong>
+        <span class="tag ${statusClass(item.status)}">${item.status}</span>
+      </div>
+      <span>${localizedField(item, "body")}</span>
+      <small>${localizedField(item, "investorSignal")}</small>
+    </article>
+  `).join("");
+
+  els.roboticEvidenceList.innerHTML = roboticEvidencePack.map((item) => `
+    <article class="list-item robotic-evidence-card ${item.status}">
+      <div class="item-row">
+        <strong>${localizedField(item, "label")}</strong>
+        <span class="tag ${statusClass(item.status)}">${item.status}</span>
+      </div>
+      <span>${localizedField(item, "category")}<small class="zh">${item.labelZh}</small></span>
+      <small>${localizedField(item, "body")}</small>
+      <em>${localizedField(item, "proof")}</em>
+    </article>
+  `).join("");
+
+  els.roboticClaimList.innerHTML = roboticClaimControls.map((item) => `
+    <div class="method-row robotic-claim-row ${item.tone}">
+      <span>${localizedField(item, "label")}<small class="zh">${item.labelZh}</small></span>
+      <strong>${localizedField(item, "body")}</strong>
+    </div>
+  `).join("");
+
+  if (selectedFleet) {
+    els.roboticStatus.textContent = `${selected?.name || "Selected site"}: readiness ${selectedFleet.readinessScore}, ${selectedFleet.robotMode}, ${selectedFleet.patrolCadence} / 机器人看护准备度`;
   }
 }
 
@@ -2861,6 +4580,10 @@ function reportMethodRows() {
     ...impactClaimControls.map((control) => ({
       label: control.label,
       body: control.body
+    })),
+    ...roboticClaimControls.map((control) => ({
+      label: control.label,
+      body: control.body
     }))
   ];
 }
@@ -2939,15 +4662,15 @@ function renderReports() {
   `).join("");
   els.reportTabs.innerHTML = reportModes.map((mode) => `
     <button type="button" class="${mode.id === state.reportMode ? "active" : ""}" data-report-tab="${mode.id}">
-      ${mode.label}
+      ${localizedText(mode.label, mode.labelZh || mode.label)}
     </button>
   `).join("");
 
-  els.reportStatus.textContent = state.reportGenerated ? "Generated / 已生成" : "Draft pack / 报告草稿包";
+  els.reportStatus.textContent = state.reportGenerated ? localizedText("Generated", "已生成") : localizedText("Draft pack", "報告草稿包");
   els.reportStatus.classList.toggle("good", state.reportGenerated);
   els.reportPeriod.textContent = `${period.label} - ${period.period}`;
-  els.reportTitle.textContent = `${client.name} - ${report.title}`;
-  els.reportSummary.textContent = report.summary;
+  els.reportTitle.textContent = `${client.name} - ${localizedText(report.title, report.titleZh || report.title)}`;
+  els.reportSummary.textContent = localizedText(report.summary, report.summaryZh || report.summary);
   const profileLabelZh = {
     Client: "客户",
     Segment: "业态与区域",
@@ -2973,6 +4696,7 @@ function renderReports() {
     "Xponge safety": "Xponge 安全",
     "Workplace wellbeing": "员工体验",
     "Green brand value": "绿色品牌价值",
+    "Robot readiness": "机器人就绪度",
     "Green area": "绿化面积",
     "Water estimate": "节水估算",
     "Open issues": "未关闭问题",
@@ -3001,6 +4725,7 @@ function renderReports() {
     ["Xponge safety", data.impactAssessment ? data.impactAssessment.xpongeScore : "-"],
     ["Workplace wellbeing", data.impactAssessment ? data.impactAssessment.workplaceScore : "-"],
     ["Green brand value", data.impactAssessment ? data.impactAssessment.brandScore : "-"],
+    ["Robot readiness", data.roboticScenario ? data.roboticScenario.readinessScore : "-"],
     ["Green area", `${data.greenArea.toFixed(1)} m2`],
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Open issues", data.issues],
@@ -3030,13 +4755,19 @@ function renderReports() {
   `).join("");
 
   const evidence = [
-    ...report.evidence,
+    ...(isTraditionalLanguage() && report.evidenceZh ? report.evidenceZh.map(toTraditionalText) : report.evidence),
     ...(data.impactAssessment ? [
       `Xponge safety score ${data.impactAssessment.xpongeScore}`,
       `Workplace wellbeing score ${data.impactAssessment.workplaceScore}`,
       `Green brand value score ${data.impactAssessment.brandScore}`
     ] : []),
+    ...(data.roboticScenario ? [
+      `Robotic care readiness ${data.roboticScenario.readinessScore}`,
+      `Robotic care mode ${data.roboticScenario.robotMode}`,
+      `Robotic patrol cadence ${data.roboticScenario.patrolCadence}`
+    ] : []),
     `${impactEvidencePack.length} impact evidence type(s)`,
+    `${roboticEvidencePack.length} robotic care evidence type(s)`,
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} DR FOREST finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
@@ -3078,13 +4809,19 @@ function buildReportHtml() {
   const report = selectedReport();
   const data = metricsForClient(client.id);
   const evidence = [
-    ...report.evidence,
+    ...(isTraditionalLanguage() && report.evidenceZh ? report.evidenceZh.map(toTraditionalText) : report.evidence),
     ...(data.impactAssessment ? [
       `Xponge safety score ${data.impactAssessment.xpongeScore}`,
       `Workplace wellbeing score ${data.impactAssessment.workplaceScore}`,
       `Green brand value score ${data.impactAssessment.brandScore}`
     ] : []),
+    ...(data.roboticScenario ? [
+      `Robotic care readiness ${data.roboticScenario.readinessScore}`,
+      `Robotic care mode ${data.roboticScenario.robotMode}`,
+      `Robotic patrol cadence ${data.roboticScenario.patrolCadence}`
+    ] : []),
     `${impactEvidencePack.length} impact evidence type(s)`,
+    `${roboticEvidencePack.length} robotic care evidence type(s)`,
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} DR FOREST finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
@@ -3112,6 +4849,7 @@ function buildReportHtml() {
     ["Xponge safety", data.impactAssessment ? data.impactAssessment.xpongeScore : "-"],
     ["Workplace wellbeing", data.impactAssessment ? data.impactAssessment.workplaceScore : "-"],
     ["Green brand value", data.impactAssessment ? data.impactAssessment.brandScore : "-"],
+    ["Robot readiness", data.roboticScenario ? data.roboticScenario.readinessScore : "-"],
     ["Green area", `${data.greenArea.toFixed(1)} m2`],
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Service miles avoided", `${data.serviceMilesSaved} km`],
@@ -3155,9 +4893,9 @@ function buildReportHtml() {
 </head>
 <body>
   <span>DR FOREST FM Ops</span>
-  <h1>${client.name} - ${report.title}</h1>
+  <h1>${client.name} - ${localizedText(report.title, report.titleZh || report.title)}</h1>
   <p>${period.label} (${period.period})</p>
-  <p>${report.summary}</p>
+  <p>${localizedText(report.summary, report.summaryZh || report.summary)}</p>
   <div class="meta">
     <div class="card"><span>Client</span><strong>${client.segment} - ${client.district}</strong></div>
     <div class="card"><span>Plan</span><strong>${client.plan}</strong></div>
@@ -3238,6 +4976,7 @@ function bindDynamicActions() {
     button.addEventListener("click", () => {
       state.reportMode = button.dataset.reportTab;
       renderReports();
+      applyLanguageContent();
     });
   });
 
@@ -3320,6 +5059,7 @@ function renderAll() {
   renderHealthScoreMethod();
   renderSpatialDesign();
   renderImpactValue();
+  renderRoboticCare();
   renderMvpControl();
   renderPlatform();
   renderPositioning();
@@ -3340,6 +5080,7 @@ function renderAll() {
   renderReports();
   renderArchitecture();
   bindDynamicActions();
+  applyLanguageContent();
 }
 
 els.simulateVisitBtn.addEventListener("click", () => {
@@ -3377,11 +5118,13 @@ els.createQuickTaskBtn.addEventListener("click", () => {
 els.reportClientSelect.addEventListener("change", () => {
   state.selectedReportClientId = els.reportClientSelect.value;
   renderReports();
+  applyLanguageContent();
 });
 
 els.reportMonthSelect.addEventListener("change", () => {
   state.selectedReportMonth = els.reportMonthSelect.value;
   renderReports();
+  applyLanguageContent();
 });
 
 els.downloadReportBtn.addEventListener("click", downloadReportHtml);
@@ -3403,12 +5146,20 @@ els.generateReportBtn.addEventListener("click", () => {
   document.querySelector("#reports").scrollIntoView({ behavior: "smooth", block: "start" });
 });
 
+els.languageButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    saveLanguagePreference(button.dataset.languageSwitch);
+    renderAll();
+  });
+});
+
 els.filterButtons.forEach((button) => {
   button.addEventListener("click", () => {
     state.filter = button.dataset.filter || "all";
     els.filterButtons.forEach((item) => item.classList.toggle("active", item === button));
     renderWalls();
     bindDynamicActions();
+    applyLanguageContent();
   });
 });
 
@@ -3420,6 +5171,7 @@ els.navLinks.forEach((link) => {
 
 async function bootstrap() {
   try {
+    loadLanguagePreference();
     await loadAppData();
     loadWorkorderCompletions();
     loadDispatchStaging();

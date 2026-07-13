@@ -7,7 +7,7 @@
   <link rel="icon" href="assets/dr-forest-logo.png">
   <link rel="stylesheet" href="styles.css">
 </head>
-<body class="bilingual-draft">
+<body class="language-shell lang-en">
   <div class="ops-shell">
     <aside class="side-nav" aria-label="DR FOREST FM Ops navigation">
       <a class="brand" href="#overview" aria-label="DR FOREST FM Ops home">
@@ -23,6 +23,7 @@
         <a href="#health"><span>Health Score</span><small>健康分</small></a>
         <a href="#space"><span>Space Design</span><small>空间设计</small></a>
         <a href="#impact"><span>Impact Value</span><small>影响价值</small></a>
+        <a href="#robotic"><span>Robotic Care</span><small>机器人看护</small></a>
         <a href="#guide"><span>Guide</span><small>导读</small></a>
         <a href="#mvp"><span>MVP</span><small>最小可演示版</small></a>
         <a href="#platform"><span>Platform</span><small>平台故事</small></a>
@@ -46,9 +47,9 @@
       </nav>
 
       <div class="nav-note">
-        <span>Working draft / 双语理解版</span>
-        <strong>English remains the release language. Chinese notes help internal explanation before launch.</strong>
-        <small>正式发布前可收回为全英文。</small>
+        <span data-i18n-en="Language mode" data-i18n-zh="語言模式">Language mode</span>
+        <strong data-i18n-en="Switch between full English and Traditional Chinese for investor walkthroughs." data-i18n-zh="可在全英文與繁體中文之間切換，方便投資人演示。">Switch between full English and Traditional Chinese for investor walkthroughs.</strong>
+        <small data-i18n-en="Release can stay English-only later." data-i18n-zh="正式發布時可再收回為全英文。">Release can stay English-only later.</small>
       </div>
     </aside>
 
@@ -63,6 +64,10 @@
         <div class="topbar-actions">
           <div class="hero-logo" aria-label="DR FOREST logo">
             <img src="assets/dr-forest-logo.png" alt="DR FOREST">
+          </div>
+          <div class="language-switch" role="group" aria-label="Language">
+            <button type="button" class="active" data-language-switch="en">EN</button>
+            <button type="button" data-language-switch="zh-Hant">繁中</button>
           </div>
           <button type="button" id="review-ai-btn" class="ghost-btn">Review AI queue / 查看 AI 队列</button>
           <button type="button" id="simulate-visit-btn" class="ghost-btn">Complete visit / 完成巡检</button>
@@ -300,34 +305,94 @@
         </div>
       </section>
 
+      <section id="robotic" class="section">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Autonomous living asset care / 自主活体资产看护</p>
+            <h2>Robotic Care Layer <span class="zh-inline">机器人看护层</span></h2>
+          </div>
+          <span id="robotic-status" class="status-pill">Robotics-ready, not MVP-dependent / 机器人就绪，不绑定 MVP</span>
+        </div>
+        <div id="robotic-grid" class="summary-grid"></div>
+        <div class="two-col robotic-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Robot Care Capabilities <span class="zh-inline">机器人看护能力</span></h3>
+              <span>Patrol, photo proof, water refill, nutrient dosing and escalation / 巡检、拍照凭证、补水、加营养液和异常上报</span>
+            </div>
+            <div id="robotic-capability-list" class="method-list robotic-capability-grid"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Wall Interface Readiness <span class="zh-inline">绿墙接口准备度</span></h3>
+              <span>What wall modules need before robots can operate safely / 机器人安全作业前绿墙模块需要什么</span>
+            </div>
+            <div id="robotic-interface-list" class="method-list"></div>
+          </article>
+        </div>
+        <div class="two-col robotic-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Client Pilot Scenarios <span class="zh-inline">客户试点场景</span></h3>
+              <span>Which sites are ready for patrol and proof first / 哪些点位适合先做巡检和凭证</span>
+            </div>
+            <div id="robotic-fleet-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Robot-to-Ops Workflow <span class="zh-inline">机器人到运营流程</span></h3>
+              <span>How robot actions become health, proof and work orders / 机器人动作如何进入健康分、凭证和工单</span>
+            </div>
+            <div id="robotic-workflow-list" class="method-list"></div>
+          </article>
+        </div>
+        <div class="two-col robotic-layout">
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Robotics Roadmap <span class="zh-inline">机器人路线图</span></h3>
+              <span>From robot-ready OPS to autonomous care network / 从机器人就绪 OPS 到自主看护网络</span>
+            </div>
+            <div id="robotic-roadmap-list" class="stack-list"></div>
+          </article>
+          <article class="panel">
+            <div class="panel-title">
+              <h3>Evidence and Claims <span class="zh-inline">证据与主张边界</span></h3>
+              <span>What can be claimed today vs after pilot / 今天能讲什么，试点后能讲什么</span>
+            </div>
+            <div id="robotic-evidence-list" class="stack-list"></div>
+            <div id="robotic-claim-list" class="method-list robotic-claim-list"></div>
+          </article>
+        </div>
+      </section>
+
       <section id="guide" class="section">
         <div class="section-heading">
           <div>
-            <p class="eyebrow">Bilingual reading guide / 中文导读</p>
-            <h2>How to Read This Demo <span class="zh-inline">如何理解这套演示</span></h2>
+            <p class="eyebrow">Language reading guide / 語言導覽</p>
+            <h2>How to Read This Demo <span class="zh-inline">如何理解這套演示</span></h2>
           </div>
-          <span class="status-pill good">Internal bilingual draft</span>
+          <span class="status-pill good">Language switch ready / 語言切換就緒</span>
         </div>
         <div class="strategy-grid guide-grid">
           <article class="strategy-card">
-            <span>Investor lens</span>
-            <strong>Not a dashboard. An operating system.</strong>
-            <p>中文：投资人看的不是后台页面，而是 DR FOREST 是否能把租摆服务变成可复制、可度量、可续约的平台能力。</p>
+            <span data-i18n-en="Investor lens" data-i18n-zh="投資人視角">Investor lens</span>
+            <strong data-i18n-en="Not a dashboard. An operating system." data-i18n-zh="不是儀表板，而是操作系統。">Not a dashboard. An operating system.</strong>
+            <p class="zh-copy">中文：投资人看的不是后台页面，而是 DR FOREST 是否能把租摆服务变成可复制、可度量、可续约的平台能力。</p>
           </article>
           <article class="strategy-card">
-            <span>Product wedge</span>
-            <strong>Wall first, portfolio later.</strong>
-            <p>中文：绿墙先做样板，因为它客单价高、服务链条长、ESG 价值更明显；以后再扩到盆栽、组合绿植、隔断和季节陈列。</p>
+            <span data-i18n-en="Product wedge" data-i18n-zh="產品切入點">Product wedge</span>
+            <strong data-i18n-en="Wall first, portfolio later." data-i18n-zh="先做綠牆，再擴展資產組合。">Wall first, portfolio later.</strong>
+            <p class="zh-copy">中文：绿墙先做样板，因为它客单价高、服务链条长、ESG 价值更明显；以后再扩到盆栽、组合绿植、隔断和季节陈列。</p>
           </article>
           <article class="strategy-card">
-            <span>Data moat</span>
-            <strong>Every living asset has a ledger.</strong>
-            <p>中文：每个资产都有健康分、养护记录、照片凭证、替换风险、合同价值和 ESG 证据，这些长期积累就是壁垒。</p>
+            <span data-i18n-en="Data moat" data-i18n-zh="數據壁壘">Data moat</span>
+            <strong data-i18n-en="Every living asset has a ledger." data-i18n-zh="每個活體資產都有台賬。">Every living asset has a ledger.</strong>
+            <p class="zh-copy">中文：每个资产都有健康分、养护记录、照片凭证、替换风险、合同价值和 ESG 证据，这些长期积累就是壁垒。</p>
           </article>
           <article class="strategy-card">
-            <span>Launch mode</span>
-            <strong>Bilingual now, English at release.</strong>
-            <p>中文：现在保留中文帮助理解和演示；正式发布时保留英文产品语言，中文辅助层可以删除。</p>
+            <span data-i18n-en="Launch mode" data-i18n-zh="發布模式">Launch mode</span>
+            <strong data-i18n-en="Switchable now, English at release." data-i18n-zh="現在可切換，發布時可保留英文。">Switchable now, English at release.</strong>
+            <p class="zh-copy">中文：现在保留繁体中文帮助理解和演示；正式发布时可保留英文产品语言。</p>
           </article>
         </div>
       </section>

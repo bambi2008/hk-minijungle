@@ -21,6 +21,10 @@
       "body": "Xponge health-safety, employee experience and green brand value are tracked as impact indicators with source evidence and claim boundaries."
     },
     {
+      "label": "Robotics-ready evidence / 机器人就绪证据",
+      "body": "Robot patrol, refill, dosing and photo-proof records are treated as future operational evidence and require pilot validation before external claims."
+    },
+    {
       "label": "Not claimed / 不主张",
       "body": "Carbon credits, carbon neutrality, formal air purification guarantees and certified WELL/LEED points are not claimed unless independently certified."
     },
@@ -41,6 +45,10 @@
     {
       "label": "Health and brand impact",
       "template": "Xponge substrate logs, pest/disease records, staff pulse and green brand touchpoint proof can support Social and brand-facing ESG narratives."
+    },
+    {
+      "label": "Robotic care readiness",
+      "template": "Robot-ready module interfaces, patrol logs and automated proof can increase evidence frequency and support lower-intervention FM operations after pilot validation."
     },
     {
       "label": "Governance",
@@ -101,6 +109,15 @@
       "standard": "Staff or visitor pulse method, touchpoint map, approved photos and claim boundary",
       "acceptedBy": "HR, brand, ESG or property marketing reviewer",
       "body": "Employee experience and green brand value can be recognized when the survey method, touchpoint logic and photo approval are visible."
+    },
+    {
+      "id": "ESG-PROOF-07",
+      "label": "Robotic care readiness evidence",
+      "status": "phase-2",
+      "owner": "Operations and hardware lead",
+      "standard": "Robot route, module interface, photo proof, refill log, dosing log, leak safety and human escalation boundary",
+      "acceptedBy": "FM, safety, ESG and procurement reviewer",
+      "body": "Robotic care evidence can support future ESG and FM efficiency narratives only after controlled site pilots validate safety and reliability."
     }
   ],
   "frameworkMapping": [
@@ -129,6 +146,12 @@
       "proof": "Staff or visitor pulse, space comfort notes and biophilic design evidence can support wellbeing narratives without claiming WELL points."
     },
     {
+      "framework": "Robotics-enabled FM evidence",
+      "label": "Operational efficiency support only",
+      "status": "future evidence",
+      "proof": "Robot patrol logs, refill records and exception handoffs can support service-frequency and route-efficiency analysis after pilot validation."
+    },
+    {
       "framework": "GHG Protocol / ISO 14064-ready",
       "label": "Carbon-adjacent inputs only",
       "status": "not a carbon inventory",
@@ -150,6 +173,11 @@
       "label": "Allowed with evidence: impact indicators",
       "tone": "review",
       "body": "Xponge low-intervention records, staff pulse results and green brand touchpoint scores can be shown when raw evidence, method and client approval are attached."
+    },
+    {
+      "label": "Allowed as roadmap: robotics-ready care",
+      "tone": "review",
+      "body": "Robotic patrol, refill and dosing should be presented as a roadmap and pilot-ready architecture until site validation exists."
     },
     {
       "label": "Blocked without certification",

@@ -23,44 +23,79 @@
     {
       "id": "monthly",
       "label": "Monthly ESG",
+      "labelZh": "月度 ESG",
       "title": "Central Portfolio ESG Health Report",
+      "titleZh": "核心資產組合 ESG 健康報告",
       "summary": "A client-facing monthly pack covering wall health, service response, green wall area, water-saving estimates and photo evidence.",
-      "evidence": ["Full-wall before/after photos", "Health score trend", "Work order closure log", "ESG metric method notes"]
+      "summaryZh": "面向客戶的月度報告包，覆蓋綠牆健康、服務響應、綠牆面積、節水估算與照片憑證。",
+      "evidence": ["Full-wall before/after photos", "Health score trend", "Work order closure log", "ESG metric method notes"],
+      "evidenceZh": ["全牆前後對比照片", "健康分趨勢", "工單關閉記錄", "ESG 指標方法說明"]
     },
     {
       "id": "esg-proof",
       "label": "ESG Proof Pack",
+      "labelZh": "ESG 證明包",
       "title": "Audit-ready ESG Evidence Pack",
+      "titleZh": "可審計 ESG 證據包",
       "summary": "A conservative ESG proof pack separating measured supplier evidence, estimated indicators and non-claimed items for client reporting review.",
-      "evidence": ["Measured-vs-estimated claim table", "Framework mapping", "Source evidence chain", "Claims boundary note"]
+      "summaryZh": "保守的 ESG 證明包，區分已量測供應商證據、估算指標與不主張項目，供客戶報告複核。",
+      "evidence": ["Measured-vs-estimated claim table", "Framework mapping", "Source evidence chain", "Claims boundary note"],
+      "evidenceZh": ["量測與估算主張表", "披露框架映射", "來源證據鏈", "主張邊界說明"]
     },
     {
       "id": "renewal",
       "label": "Renewal Proof",
+      "labelZh": "續約證明",
       "title": "Renewal Value and Service Proof Pack",
+      "titleZh": "續約價值與服務證明包",
       "summary": "A commercial pack for FM and procurement teams showing service reliability, visible improvement and risks handled before renewal.",
-      "evidence": ["Issue closure rate", "Replacement history", "Client risk notes", "Contract and attach-rate summary"]
+      "summaryZh": "面向 FM 與採購團隊的商務證明包，展示服務可靠性、可見改善，以及續約前已處理的風險。",
+      "evidence": ["Issue closure rate", "Replacement history", "Client risk notes", "Contract and attach-rate summary"],
+      "evidenceZh": ["問題關閉率", "更換歷史", "客戶風險備註", "合同與附加率摘要"]
     },
     {
       "id": "space-uplift",
       "label": "Space Uplift",
+      "labelZh": "空間提升",
       "title": "Spatial Value and Biophilic Design Proof Pack",
+      "titleZh": "空間價值與親生物設計證明包",
       "summary": "A client-facing pack showing how DR FOREST improves spatial use, visual focus, brand fit, maintainability and biophilic atmosphere.",
-      "evidence": ["Before/after viewpoint photos", "Designer note", "Spatial diagnosis score", "Design-to-ops handoff checklist"]
+      "summaryZh": "面向客戶的證明包，展示 DR FOREST 如何提升空間使用、視覺焦點、品牌適配、可維護性與親生物氛圍。",
+      "evidence": ["Before/after viewpoint photos", "Designer note", "Spatial diagnosis score", "Design-to-ops handoff checklist"],
+      "evidenceZh": ["前後對比視角照片", "設計師備註", "空間診斷分", "設計到運營交接清單"]
     },
     {
       "id": "impact-value",
       "label": "Impact Value",
+      "labelZh": "影響價值",
       "title": "Workplace, Health and Green Brand Impact Pack",
+      "titleZh": "職場、健康與綠色品牌影響包",
       "summary": "A proof-led pack covering Xponge health-safety evidence, employee experience indicators and green brand touchpoint value.",
-      "evidence": ["Xponge substrate and pest/disease ledger", "Chemical intervention control", "Staff or visitor pulse method", "Green brand touchpoint proof", "Impact claim boundary"]
+      "summaryZh": "以證據為先的影響價值包，覆蓋 Xponge 健康安全證據、員工體驗指標與綠色品牌觸點價值。",
+      "evidence": ["Xponge substrate and pest/disease ledger", "Chemical intervention control", "Staff or visitor pulse method", "Green brand touchpoint proof", "Impact claim boundary"],
+      "evidenceZh": ["Xponge 基質與病蟲害台賬", "化學干預控制", "員工或訪客脈搏方法", "綠色品牌觸點證明", "影響主張邊界"]
+    },
+    {
+      "id": "robotic-care",
+      "label": "Robotic Care",
+      "labelZh": "機器人看護",
+      "title": "Autonomous Living Asset Care Readiness Pack",
+      "titleZh": "自主活體資產看護準備度包",
+      "summary": "A forward-looking pack showing how DR FOREST OPS can support robot patrol, photo proof, water refill, nutrient dosing and human exception handoff.",
+      "summaryZh": "面向未來的準備度包，展示 DR FOREST OPS 如何支持機器人巡檢、照片憑證、補水、營養液加注與人工異常交接。",
+      "evidence": ["Robot-ready module interfaces", "Pilot site readiness score", "Patrol and photo proof workflow", "Refill and dosing safety controls", "Human escalation boundary"],
+      "evidenceZh": ["機器人就緒模組接口", "試點點位準備度分", "巡檢與照片憑證流程", "補水與加液安全控制", "人工升級邊界"]
     },
     {
       "id": "audit",
       "label": "Audit Trail",
+      "labelZh": "審計追蹤",
       "title": "Green Asset Service Audit Trail",
+      "titleZh": "綠色資產服務審計追蹤",
       "summary": "A governance pack that shows who visited, what was checked, which photos were captured and how each claim is supported.",
-      "evidence": ["Technician visit records", "Photo timestamps", "DR FOREST findings", "Manual override notes"]
+      "summaryZh": "治理證明包，展示誰到訪、檢查了什麼、採集了哪些照片，以及每一項主張如何被證據支持。",
+      "evidence": ["Technician visit records", "Photo timestamps", "DR FOREST findings", "Manual override notes"],
+      "evidenceZh": ["技師到訪記錄", "照片時間戳", "DR FOREST 發現", "人工覆核備註"]
     }
   ],
   "strategyCards": [
@@ -98,6 +133,11 @@
       "title": "Impact layer",
       "value": "Health, workplace and brand proof",
       "body": "Xponge, employee experience and green brand value are tracked as evidence-led impact indicators rather than loose marketing promises."
+    },
+    {
+      "title": "Robotics-ready",
+      "value": "Autonomous care later",
+      "body": "The OPS model is structured so future robots can patrol, photograph, refill, dose nutrients and escalate exceptions through the same ledger."
     }
   ],
   "platformThesis": [
@@ -135,6 +175,11 @@
       "title": "Impact moat",
       "value": "From greenery to workplace and brand value",
       "body": "The platform can show how low-disease living assets, staff-facing comfort and visible green brand touchpoints support retention and client ROI."
+    },
+    {
+      "title": "Automation moat",
+      "value": "Robot-ready living asset care",
+      "body": "Once module interfaces, proof capture and safety controls are standardized, DR FOREST can move from scheduled maintenance to 24h robotic watch."
     }
   ],
   "assetClasses": [
@@ -230,6 +275,13 @@
       "status": "phase-2",
       "proof": "Use accumulated health, replacement, sensor, proof and route data for AI risk scoring, demand planning, ESG evidence drafting and predictive care.",
       "investorQuestion": "Does DR FOREST own proprietary operating data?"
+    },
+    {
+      "phase": "05",
+      "label": "Autonomous Care Network",
+      "status": "phase-2",
+      "proof": "Use robot-ready modules, patrol logs, photo proof, refill records and nutrient dosing records to extend care frequency beyond human visit cadence.",
+      "investorQuestion": "Can DR FOREST turn recurring green FM into robotics-enabled operating leverage?"
     }
   ],
   "investorBenchmarks": [
@@ -267,11 +319,11 @@
   "architectureLayers": [
     {
       "name": "Asset Layer",
-      "items": ["Client", "Site", "Asset", "Asset Type", "Module", "Plant Pod", "Xponge Sleeve", "Sensor"]
+      "items": ["Client", "Site", "Asset", "Asset Type", "Module", "Plant Pod", "Xponge Sleeve", "Sensor", "Care Robot"]
     },
     {
       "name": "Service Layer",
-      "items": ["Visit schedule", "Work order", "Photo proof", "Replacement record", "Inventory"]
+      "items": ["Visit schedule", "Work order", "Photo proof", "Replacement record", "Inventory", "Robot patrol"]
     },
     {
       "name": "Health Layer",
@@ -292,6 +344,10 @@
     {
       "name": "AI Layer",
       "items": ["Care prediction", "Proof gap detection", "Renewal risk", "Inventory demand", "FM Copilot", "Human approval"]
+    },
+    {
+      "name": "Robotic Care Layer",
+      "items": ["Robot route", "Autonomous patrol", "Photo proof", "Water refill", "Nutrient dosing", "Leak safety", "Human exception handoff"]
     },
     {
       "name": "Client Proof Layer",

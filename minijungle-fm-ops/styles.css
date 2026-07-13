@@ -30,7 +30,7 @@ body {
   line-height: 1.45;
 }
 
-.bilingual-draft {
+.language-shell {
   --zh-size: 0.78rem;
 }
 
@@ -263,7 +263,41 @@ small {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
+  align-items: center;
   justify-content: flex-end;
+}
+
+.language-switch {
+  display: inline-grid;
+  grid-template-columns: repeat(2, minmax(52px, 1fr));
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.language-switch button {
+  min-height: 38px;
+  border: 0;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.language-switch button.active {
+  background: var(--green);
+  color: #fff;
+}
+
+.lang-en .zh-copy {
+  display: none;
+}
+
+.lang-zh .topbar-copy:not(.zh-copy) {
+  display: none;
 }
 
 .primary-btn,
@@ -1002,6 +1036,9 @@ small {
 .spatial-intervention-card,
 .impact-assessment-card,
 .impact-evidence-card,
+.robotic-fleet-card,
+.robotic-roadmap-card,
+.robotic-evidence-card,
 .asset-scope-card,
 .roadmap-row,
 .benchmark-row {
@@ -1011,6 +1048,10 @@ small {
 .mvp-readiness.phase-2,
 .proof-pack-card.phase-2,
 .impact-evidence-card.phase-2,
+.robotic-roadmap-card.phase-2,
+.robotic-evidence-card.phase-2,
+.robotic-evidence-card.phase-3,
+.robotic-evidence-card.pilot,
 .asset-scope-card.phase-2,
 .asset-scope-card.adjacent,
 .roadmap-row.phase-2,
@@ -1026,6 +1067,8 @@ small {
 .mvp-readiness.complete,
 .proof-pack-card.ready,
 .impact-evidence-card.ready,
+.robotic-roadmap-card.ready,
+.robotic-evidence-card.ready,
 .health-score-card.ready,
 .spatial-intervention-card.ready,
 .ai-card.queued,
@@ -1040,6 +1083,11 @@ small {
 .asset-scope-card.next,
 .spatial-intervention-card.review,
 .impact-evidence-card.review,
+.robotic-roadmap-card.pilot,
+.robotic-roadmap-card.phase-3,
+.robotic-fleet-card.pilot,
+.robotic-fleet-card.phase-3,
+.robotic-fleet-card.next,
 .roadmap-row.next {
   border-color: rgba(48, 97, 139, 0.25);
   background: #f1f7fb;
@@ -1063,6 +1111,7 @@ small {
 .health-layout,
 .spatial-layout,
 .impact-layout,
+.robotic-layout,
 .spatial-proof-panel {
   margin-top: 14px;
 }
@@ -1070,7 +1119,8 @@ small {
 .flywheel-grid,
 .claim-grid,
 .spatial-proof-grid,
-.impact-pillar-grid {
+.impact-pillar-grid,
+.robotic-capability-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -1091,7 +1141,11 @@ small {
 .impact-pillar-row,
 .impact-metric-row,
 .impact-workflow-row,
-.impact-claim-row {
+.impact-claim-row,
+.robotic-capability-row,
+.robotic-interface-row,
+.robotic-workflow-row,
+.robotic-claim-row {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
@@ -1160,6 +1214,32 @@ small {
 .impact-pillar-row.review {
   border-color: rgba(166, 121, 34, 0.28);
   background: #fffaf0;
+}
+
+.robotic-capability-row.ready,
+.robotic-interface-row.ready,
+.robotic-interface-row.robot-ready,
+.robotic-claim-row.ready {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
+}
+
+.robotic-capability-row.pilot,
+.robotic-interface-row.pilot,
+.robotic-capability-row.phase-3,
+.robotic-interface-row.phase-3,
+.robotic-claim-row.review {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
+}
+
+.robotic-claim-row.alert {
+  border-color: rgba(173, 75, 66, 0.28);
+  background: #fff8f6;
+}
+
+.robotic-claim-list {
+  margin-top: 14px;
 }
 
 .method-row em {
@@ -1283,6 +1363,7 @@ small {
     .claim-grid,
     .spatial-proof-grid,
     .impact-pillar-grid,
+    .robotic-capability-grid,
     .impact-score-row,
     .two-col,
   .workbench,
