@@ -17,7 +17,8 @@ const dataFiles = {
   esgMetrics: "data/esg-metrics.json",
   productModel: "data/product-model.json",
   aiInsights: "data/ai-insights.json",
-  healthScore: "data/health-score.json"
+  healthScore: "data/health-score.json",
+  spatialDesign: "data/spatial-design.json"
 };
 
 let clients = [];
@@ -76,6 +77,12 @@ let healthCaptureWorkflow = [];
 let healthCameraRoadmap = [];
 let healthQualityControls = [];
 let healthBands = [];
+let spatialSummary = [];
+let spatialDiagnostics = [];
+let spatialInterventions = [];
+let spatialPrinciples = [];
+let spatialWorkflow = [];
+let spatialProofPack = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
@@ -130,7 +137,8 @@ async function loadAppData() {
     esgMetrics,
     productModel,
     aiInsights,
-    healthScoreData
+    healthScoreData,
+    spatialDesignData
   ] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
@@ -150,7 +158,8 @@ async function loadAppData() {
     loadJson(dataFiles.esgMetrics),
     loadJson(dataFiles.productModel),
     loadJson(dataFiles.aiInsights),
-    loadJson(dataFiles.healthScore)
+    loadJson(dataFiles.healthScore),
+    loadJson(dataFiles.spatialDesign)
   ]);
 
   clients = loadedClients;
@@ -195,6 +204,12 @@ async function loadAppData() {
   healthCameraRoadmap = healthScoreData.cameraRoadmap || [];
   healthQualityControls = healthScoreData.qualityControls || [];
   healthBands = healthScoreData.bands || [];
+  spatialSummary = spatialDesignData.summary || [];
+  spatialDiagnostics = spatialDesignData.diagnostics || [];
+  spatialInterventions = spatialDesignData.interventions || [];
+  spatialPrinciples = spatialDesignData.designPrinciples || [];
+  spatialWorkflow = spatialDesignData.workflow || [];
+  spatialProofPack = spatialDesignData.proofPack || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -812,6 +827,13 @@ const els = {
   healthWorkflowList: document.querySelector("#health-workflow-list"),
   healthCameraList: document.querySelector("#health-camera-list"),
   healthQualityList: document.querySelector("#health-quality-list"),
+  spatialStatus: document.querySelector("#spatial-status"),
+  spatialGrid: document.querySelector("#spatial-grid"),
+  spatialDiagnosticList: document.querySelector("#spatial-diagnostic-list"),
+  spatialInterventionList: document.querySelector("#spatial-intervention-list"),
+  spatialPrincipleList: document.querySelector("#spatial-principle-list"),
+  spatialWorkflowList: document.querySelector("#spatial-workflow-list"),
+  spatialProofList: document.querySelector("#spatial-proof-list"),
   mvpStatus: document.querySelector("#mvp-status"),
   mvpGrid: document.querySelector("#mvp-grid"),
   activeRoleSelect: document.querySelector("#active-role-select"),
@@ -1724,6 +1746,86 @@ function renderHealthScoreMethod() {
     <div class="method-row health-quality-row">
       <span>${control.label}</span>
       <strong>${control.rule}</strong>
+    </div>
+  `).join("");
+}
+
+function renderSpatialDesign() {
+  if (!els.spatialGrid) return;
+
+  const selected = selectedClient();
+  const selectedInterventions = selected
+    ? spatialInterventions.filter((item) => item.clientId === selected.id)
+    : [];
+  const averageDiagnosis = spatialDiagnostics.length
+    ? avg(spatialDiagnostics, (item) => item.score)
+    : 0;
+  const opsHandoffCount = sum(spatialInterventions, (item) => (item.opsHandoff || []).length);
+
+  els.spatialStatus.textContent = `${spatialInterventions.length} design-reviewed intervention(s), ${selectedInterventions.length} linked to selected client / ${spatialInterventions.length} 个设计复核建议，${selectedInterventions.length} 个关联当前客户`;
+  els.spatialStatus.classList.toggle("good", spatialInterventions.length > 0 && spatialProofPack.length >= 4);
+
+  const fallbackCards = [
+    { label: "Design-reviewed sites", labelZh: "设计复核点位", value: spatialInterventions.length, detail: "Client assets with spatial intent and operations handoff", detailZh: "已有空间意图和运营交接的客户资产" },
+    { label: "Avg spatial score", labelZh: "平均空间分", value: averageDiagnosis, detail: "Across use, sightline, material, atmosphere and maintainability", detailZh: "覆盖使用、视线、材质、氛围和可维护性" },
+    { label: "Ops handoff items", labelZh: "运营交接项", value: opsHandoffCount, detail: "Design details translated into field checks", detailZh: "把设计要求转成现场检查动作" },
+    { label: "Spatial proof pack", labelZh: "空间证明包", value: spatialProofPack.length, detail: "Evidence types available for renewal and upsell", detailZh: "可用于续约和加购的证据类型" }
+  ];
+
+  renderStatCards(els.spatialGrid, spatialSummary.length ? spatialSummary : fallbackCards);
+
+  els.spatialDiagnosticList.innerHTML = spatialDiagnostics.map((item) => `
+    <div class="method-row spatial-diagnostic-row">
+      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.score}/100 - ${item.body}</strong>
+      <div class="bar-track"><div class="bar-fill" style="width: ${item.score}%"></div></div>
+      <em>${(item.evidence || []).join(" / ")}</em>
+    </div>
+  `).join("");
+
+  els.spatialInterventionList.innerHTML = spatialInterventions.map((item) => {
+    const client = clients.find((record) => record.id === item.clientId);
+    const wall = wallById(item.wallId);
+    const handoff = item.opsHandoff || [];
+    return `
+      <article class="list-item spatial-intervention-card ${item.status}">
+        <div class="item-row">
+          <strong>${item.id} - ${item.spaceType}</strong>
+          <span class="tag ${statusClass(item.status)}">${item.status}</span>
+        </div>
+        <span>${client?.name || "Client"}${wall ? ` - ${wall.name}` : ""}</span>
+        <small>${item.intent}</small>
+        <strong>${item.recommendation}</strong>
+        <small>Designer note: ${item.designerNote}</small>
+        <div class="kit-list">
+          ${handoff.map((task) => `<em>${task}</em>`).join("")}
+        </div>
+        <div class="workorder-actions">
+          ${client ? `<button type="button" class="mini-action" data-client-select="${client.id}">View client</button>` : ""}
+          ${wall ? `<button type="button" class="mini-action primary" data-wall-select="${wall.id}">View asset</button>` : ""}
+        </div>
+      </article>
+    `;
+  }).join("");
+
+  els.spatialPrincipleList.innerHTML = spatialPrinciples.map((item) => `
+    <div class="method-row spatial-principle-row">
+      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.rule}</strong>
+    </div>
+  `).join("");
+
+  els.spatialWorkflowList.innerHTML = spatialWorkflow.map((item) => `
+    <div class="method-row spatial-workflow-row">
+      <span>${item.step}<small class="zh">${item.stepZh}</small></span>
+      <strong>${item.body}</strong>
+    </div>
+  `).join("");
+
+  els.spatialProofList.innerHTML = spatialProofPack.map((item) => `
+    <div class="method-row spatial-proof-row">
+      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.body}</strong>
     </div>
   `).join("");
 }
@@ -3061,6 +3163,7 @@ function renderAll() {
   renderOverview();
   renderAiCommandCenter();
   renderHealthScoreMethod();
+  renderSpatialDesign();
   renderMvpControl();
   renderPlatform();
   renderPositioning();

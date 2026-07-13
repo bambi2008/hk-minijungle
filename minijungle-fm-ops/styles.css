@@ -999,6 +999,7 @@ small {
 .ai-card,
 .proof-pack-card,
 .health-score-card,
+.spatial-intervention-card,
 .asset-scope-card,
 .roadmap-row,
 .benchmark-row {
@@ -1022,6 +1023,7 @@ small {
 .mvp-readiness.complete,
 .proof-pack-card.ready,
 .health-score-card.ready,
+.spatial-intervention-card.ready,
 .ai-card.queued,
 .asset-scope-card.ready,
 .roadmap-row.ready,
@@ -1032,6 +1034,7 @@ small {
 }
 
 .asset-scope-card.next,
+.spatial-intervention-card.review,
 .roadmap-row.next {
   border-color: rgba(48, 97, 139, 0.25);
   background: #f1f7fb;
@@ -1052,12 +1055,15 @@ small {
 .ai-flywheel-panel,
 .esg-claims-panel,
 .esg-proof-layout,
-.health-layout {
+.health-layout,
+.spatial-layout,
+.spatial-proof-panel {
   margin-top: 14px;
 }
 
 .flywheel-grid,
-.claim-grid {
+.claim-grid,
+.spatial-proof-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -1070,7 +1076,11 @@ small {
 .health-source-row,
 .health-workflow-row,
 .health-camera-row,
-.health-quality-row {
+.health-quality-row,
+.spatial-diagnostic-row,
+.spatial-principle-row,
+.spatial-workflow-row,
+.spatial-proof-row {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
@@ -1221,6 +1231,7 @@ small {
     .quick-task-form,
     .flywheel-grid,
     .claim-grid,
+    .spatial-proof-grid,
     .two-col,
   .workbench,
   .client-layout,

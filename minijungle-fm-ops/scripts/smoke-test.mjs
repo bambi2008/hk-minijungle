@@ -100,6 +100,11 @@ async function verifyBrowserFlow(baseUrl) {
     assert(healthText?.includes("45%"), "Health score visual AI weight did not load");
     assert(healthText?.includes("Mobile phone camera"), "Health camera MVP strategy did not load");
     assert(healthText?.includes("Built-in camera"), "Health score camera stance did not load");
+    const spatialText = await page.textContent("#space");
+    assert(spatialText?.includes("Space Design Intelligence"), "Space Design Intelligence section did not load");
+    assert(spatialText?.includes("Architect and interior designer"), "Spatial design expertise did not load");
+    assert(spatialText?.includes("Spatial Diagnosis"), "Spatial diagnosis panel did not load");
+    assert(spatialText?.includes("Before / after view"), "Spatial proof pack did not load before/after evidence");
     const esgText = await page.textContent("#esg");
     assert(esgText?.includes("可持续统计"), "Bilingual ESG section did not load");
     assert(esgText?.includes("Recognized Proof Pack"), "ESG proof pack governance did not load");
@@ -363,6 +368,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/product-model.json", "application/json");
     await verifyResource(baseUrl, "/data/ai-insights.json", "application/json");
     await verifyResource(baseUrl, "/data/health-score.json", "application/json");
+    await verifyResource(baseUrl, "/data/spatial-design.json", "application/json");
     await verifyResource(baseUrl, "/assets/dr-forest-logo.png", "image/png");
     await verifyBrowserFlow(baseUrl);
     console.log(`Smoke test passed at ${baseUrl}`);

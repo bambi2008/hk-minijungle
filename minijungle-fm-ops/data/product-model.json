@@ -42,6 +42,13 @@
       "evidence": ["Issue closure rate", "Replacement history", "Client risk notes", "Contract and attach-rate summary"]
     },
     {
+      "id": "space-uplift",
+      "label": "Space Uplift",
+      "title": "Spatial Value and Biophilic Design Proof Pack",
+      "summary": "A client-facing pack showing how DR FOREST improves spatial use, visual focus, brand fit, maintainability and biophilic atmosphere.",
+      "evidence": ["Before/after viewpoint photos", "Designer note", "Spatial diagnosis score", "Design-to-ops handoff checklist"]
+    },
+    {
       "id": "audit",
       "label": "Audit Trail",
       "title": "Green Asset Service Audit Trail",
@@ -74,6 +81,11 @@
       "title": "AI layer",
       "value": "Predict, act, prove",
       "body": "AI turns service history, sensors, proof records and renewal signals into human-reviewed recommendations."
+    },
+    {
+      "title": "Spatial expertise",
+      "value": "Architect + interior design",
+      "body": "Senior design experience is operationalized into spatial diagnosis, viewpoint control, design intent and renewal proof."
     }
   ],
   "platformThesis": [
@@ -101,6 +113,11 @@
       "title": "AI leverage",
       "value": "Human-reviewed automation",
       "body": "AI recommends care timing, proof gaps, stock demand and renewal actions while keeping FM leads accountable for approval."
+    },
+    {
+      "title": "Design moat",
+      "value": "Space value layer",
+      "body": "Architectural and interior design judgment turns green rental into measurable spatial uplift, not commodity plant supply."
     }
   ],
   "assetClasses": [
@@ -242,6 +259,10 @@
     {
       "name": "Health Layer",
       "items": ["Health score formula", "Mobile photo AI", "Sensor stability", "Service compliance", "Recovery trend", "DR FOREST finding"]
+    },
+    {
+      "name": "Spatial Value Layer",
+      "items": ["Space diagnosis", "Design intent", "Sightline", "Material fit", "Before/after proof", "Design-to-ops handoff"]
     },
     {
       "name": "ESG Layer",

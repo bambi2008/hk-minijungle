@@ -1,0 +1,175 @@
+{
+  "summary": [
+    {
+      "label": "Design expertise",
+      "labelZh": "设计经验",
+      "value": "20+ yrs",
+      "detail": "Architect and interior designer review translated into repeatable spatial standards.",
+      "detailZh": "把建筑师与室内设计师经验转成可复用的空间标准。"
+    },
+    {
+      "label": "Space uplift model",
+      "labelZh": "空间提升模型",
+      "value": "5D",
+      "detail": "Use, flow, visual focus, brand fit and biophilic atmosphere.",
+      "detailZh": "从使用、动线、视觉焦点、品牌适配和亲生物氛围评估空间。"
+    },
+    {
+      "label": "Client value",
+      "labelZh": "客户价值",
+      "value": "Renewal proof",
+      "detail": "Spatial improvement evidence supports renewal, upsell and FM account expansion.",
+      "detailZh": "空间改善证据服务续约、加购和 FM 客户扩展。"
+    },
+    {
+      "label": "Human authority",
+      "labelZh": "专家把关",
+      "value": "Design review",
+      "detail": "AI can assist with diagnosis, but senior designers approve client-facing recommendations.",
+      "detailZh": "AI 辅助诊断，正式建议由资深设计团队把关。"
+    }
+  ],
+  "diagnostics": [
+    {
+      "label": "Use pattern",
+      "labelZh": "空间使用",
+      "score": 86,
+      "body": "Checks whether the green asset improves how people enter, wait, meet or circulate in the space.",
+      "evidence": ["Arrival path", "Waiting points", "Meeting entry view"]
+    },
+    {
+      "label": "Sightline focus",
+      "labelZh": "视线焦点",
+      "score": 91,
+      "body": "Maps what clients and visitors see first, then aligns the wall, pods and photo proof to those viewpoints.",
+      "evidence": ["Lift lobby view", "Reception sightline", "Same-angle proof photos"]
+    },
+    {
+      "label": "Material and light fit",
+      "labelZh": "材质与光照适配",
+      "score": 82,
+      "body": "Reviews lighting, wall material, brand signage and surrounding finishes before recommending plant density.",
+      "evidence": ["Light wash", "Backdrop finish", "Signage clearance"]
+    },
+    {
+      "label": "Biophilic atmosphere",
+      "labelZh": "亲生物氛围",
+      "score": 88,
+      "body": "Looks at texture, calmness, vertical rhythm and perceived comfort rather than only counting green area.",
+      "evidence": ["Texture balance", "Visual calmness", "Comfort signal"]
+    },
+    {
+      "label": "Maintainability",
+      "labelZh": "可维护性",
+      "score": 84,
+      "body": "Ensures the design can be maintained by FM teams without blocking access, signage, fire routes or cleaning.",
+      "evidence": ["Technician reach", "Service clearance", "Replacement path"]
+    }
+  ],
+  "interventions": [
+    {
+      "id": "SD-001",
+      "clientId": "central-office",
+      "wallId": "MJ-HK-001",
+      "spaceType": "Reception",
+      "intent": "Create a premium biophilic arrival moment.",
+      "recommendation": "Increase edge planting density and align after-photo angle with the lift arrival sightline.",
+      "designerNote": "Keep the green wall calm and vertical; avoid visual clutter near brand signage.",
+      "opsHandoff": ["Photo angle A", "Trim lower-left spillover", "Keep 4500K wash light"],
+      "status": "ready"
+    },
+    {
+      "id": "SD-002",
+      "clientId": "show-suite",
+      "wallId": "MJ-HK-021",
+      "spaceType": "Property show suite",
+      "intent": "Make the planted wall read as a sales asset, not a decorative backdrop.",
+      "recommendation": "Use same-angle before/after proof from the main buyer walk-in route and track visitor touchpoints.",
+      "designerNote": "The composition should frame the premium view and soften the hard material palette.",
+      "opsHandoff": ["Buyer route photo", "Weekly front-row leaf check", "Keep feature edge below signage line"],
+      "status": "review"
+    },
+    {
+      "id": "SD-003",
+      "clientId": "wellness-clinic",
+      "wallId": "MJ-HK-014",
+      "spaceType": "Clinic waiting lounge",
+      "intent": "Reduce perceived waiting stress while keeping the clinic clean, calm and trustworthy.",
+      "recommendation": "Rebalance plant texture near the waiting zone and keep the lower modules tidy for seated sightlines.",
+      "designerNote": "Avoid an overly wild look; the clinic needs calm greenery, controlled density and visible order.",
+      "opsHandoff": ["Waiting-zone close-up", "Lower module cleaning", "Monthly comfort note"],
+      "status": "ready"
+    }
+  ],
+  "designPrinciples": [
+    {
+      "label": "Function first",
+      "labelZh": "功能优先",
+      "rule": "Green assets must improve how the space is used, not only decorate it."
+    },
+    {
+      "label": "Viewpoint control",
+      "labelZh": "视角控制",
+      "rule": "The system records the most important visitor, staff and camera viewpoints for proof photos."
+    },
+    {
+      "label": "Brand and material fit",
+      "labelZh": "品牌与材质适配",
+      "rule": "Plant density, texture and rhythm should match the client's brand tone and interior palette."
+    },
+    {
+      "label": "Maintainability",
+      "labelZh": "可维护性",
+      "rule": "A beautiful installation is not accepted unless the FM team can maintain it repeatedly."
+    }
+  ],
+  "workflow": [
+    {
+      "step": "01 Spatial diagnosis",
+      "stepZh": "空间诊断",
+      "body": "Capture site photos, floor-plan notes, user flow, key view lines and pain points."
+    },
+    {
+      "step": "02 Design intent",
+      "stepZh": "设计意图",
+      "body": "Define the role of the green asset: arrival, privacy, premium branding, wellness or sales support."
+    },
+    {
+      "step": "03 Operations handoff",
+      "stepZh": "运营交接",
+      "body": "Translate the design intent into visit checks, photo angles, lighting notes and maintenance constraints."
+    },
+    {
+      "step": "04 Proof and renewal",
+      "stepZh": "证明与续约",
+      "body": "Use before/after views, designer notes and health records in the renewal or upsell pack."
+    }
+  ],
+  "proofPack": [
+    {
+      "label": "Before / after view",
+      "labelZh": "前后对比视角",
+      "body": "Same-angle photos show visible spatial uplift rather than generic plant maintenance."
+    },
+    {
+      "label": "Design intent",
+      "labelZh": "设计意图",
+      "body": "Each installation states what spatial job it performs for the client."
+    },
+    {
+      "label": "Designer note",
+      "labelZh": "设计师备注",
+      "body": "Senior architectural or interior design comments explain why a recommendation is credible."
+    },
+    {
+      "label": "Ops handoff",
+      "labelZh": "运营交接",
+      "body": "FM teams receive the exact checks needed to keep the design value alive after installation."
+    },
+    {
+      "label": "Renewal narrative",
+      "labelZh": "续约叙事",
+      "body": "The monthly report can show space improvement, health score, service proof and ESG evidence together."
+    }
+  ]
+}
