@@ -49,6 +49,13 @@
       "evidence": ["Before/after viewpoint photos", "Designer note", "Spatial diagnosis score", "Design-to-ops handoff checklist"]
     },
     {
+      "id": "impact-value",
+      "label": "Impact Value",
+      "title": "Workplace, Health and Green Brand Impact Pack",
+      "summary": "A proof-led pack covering Xponge health-safety evidence, employee experience indicators and green brand touchpoint value.",
+      "evidence": ["Xponge substrate and pest/disease ledger", "Chemical intervention control", "Staff or visitor pulse method", "Green brand touchpoint proof", "Impact claim boundary"]
+    },
+    {
       "id": "audit",
       "label": "Audit Trail",
       "title": "Green Asset Service Audit Trail",
@@ -86,6 +93,11 @@
       "title": "Spatial expertise",
       "value": "Architect + interior design",
       "body": "Senior design experience is operationalized into spatial diagnosis, viewpoint control, design intent and renewal proof."
+    },
+    {
+      "title": "Impact layer",
+      "value": "Health, workplace and brand proof",
+      "body": "Xponge, employee experience and green brand value are tracked as evidence-led impact indicators rather than loose marketing promises."
     }
   ],
   "platformThesis": [
@@ -118,6 +130,11 @@
       "title": "Design moat",
       "value": "Space value layer",
       "body": "Architectural and interior design judgment turns green rental into measurable spatial uplift, not commodity plant supply."
+    },
+    {
+      "title": "Impact moat",
+      "value": "From greenery to workplace and brand value",
+      "body": "The platform can show how low-disease living assets, staff-facing comfort and visible green brand touchpoints support retention and client ROI."
     }
   ],
   "assetClasses": [
@@ -263,6 +280,10 @@
     {
       "name": "Spatial Value Layer",
       "items": ["Space diagnosis", "Design intent", "Sightline", "Material fit", "Before/after proof", "Design-to-ops handoff"]
+    },
+    {
+      "name": "Impact Value Layer",
+      "items": ["Xponge health-safety", "Pest/disease ledger", "Chemical intervention control", "Workplace pulse", "Green brand touchpoint", "Impact claim register"]
     },
     {
       "name": "ESG Layer",

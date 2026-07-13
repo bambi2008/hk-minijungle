@@ -1,0 +1,264 @@
+{
+  "summary": [
+    {
+      "label": "Xponge safety layer",
+      "labelZh": "Xponge 安全层",
+      "value": "Low intervention",
+      "detail": "Soil-free root-zone evidence tracks disease pressure, pest complaints and chemical treatment events.",
+      "detailZh": "用无土根区证据追踪病害压力、虫害投诉和用药干预。"
+    },
+    {
+      "label": "Workplace wellbeing",
+      "labelZh": "员工体验",
+      "value": "Pulse based",
+      "detail": "Mood, stress, focus and space comfort are tracked as workplace indicators, not unverified productivity claims.",
+      "detailZh": "把心情、压力、专注和空间舒适作为职场指标，而不是直接夸大为效率结论。"
+    },
+    {
+      "label": "Green brand asset",
+      "labelZh": "绿色品牌资产",
+      "value": "Touchpoint score",
+      "detail": "Reception, showroom, clinic and club greenery become auditable brand touchpoints.",
+      "detailZh": "前台、展厅、诊所和会所绿化变成可证明的品牌触点。"
+    },
+    {
+      "label": "ESG fit",
+      "labelZh": "ESG 适配",
+      "value": "Support only",
+      "detail": "The app supports ESG reporting evidence; formal certifications still require qualified assurance.",
+      "detailZh": "系统支持 ESG 披露证据，正式认证仍需合资格鉴证。"
+    }
+  ],
+  "pillars": [
+    {
+      "id": "xponge-health-safety",
+      "label": "Xponge Health & Safety",
+      "labelZh": "Xponge 健康安全",
+      "value": "Less disease pressure, fewer chemical interventions",
+      "status": "ready",
+      "body": "The soil-free substrate story is operationalized as a hygiene and maintenance-risk layer for Hong Kong FM sites.",
+      "esgLink": "Supports Environmental chemical-reduction evidence and Social indoor-health perception evidence.",
+      "signals": ["Soil-free coverage", "Pest and disease incident rate", "Chemical treatment events", "Pesticide-free service days", "Root-zone replacement log"],
+      "proof": ["Xponge sleeve batch", "No-soil install photo", "Service note", "Pest complaint log", "Chemical treatment approval"],
+      "claimBoundary": "Xponge-specific performance should be backed by product datasheets, material tests or controlled service records before external claims."
+    },
+    {
+      "id": "workplace-wellbeing",
+      "label": "Workplace Wellbeing Impact",
+      "labelZh": "职场健康体验影响",
+      "value": "Mood, focus and perceived comfort",
+      "status": "review",
+      "body": "The system turns green space into a measurable workplace experience program for staff-facing environments.",
+      "esgLink": "Supports Social value evidence through occupant feedback, HR/FM notes and space-use context.",
+      "signals": ["Mood pulse", "Stress perception", "Focus perception", "Space comfort", "Complaint trend", "Usage observation"],
+      "proof": ["Monthly staff pulse", "FM complaint record", "Space-use note", "Before/after photos", "Survey method note"],
+      "claimBoundary": "Use 'supports employee experience' until the client connects survey results with HR or productivity data."
+    },
+    {
+      "id": "green-brand-asset",
+      "label": "Green Brand Asset Value",
+      "labelZh": "绿色品牌资产价值",
+      "value": "Visible green proof for clients and visitors",
+      "status": "ready",
+      "body": "High-touch spaces become green brand media with service proof, design intent and client-safe ESG language.",
+      "esgLink": "Supports governance and communication quality because every public claim links back to operational evidence.",
+      "signals": ["Touchpoint visibility", "Photo-ready condition", "Design intent", "Visitor-facing zone", "Campaign usability", "Report-ready proof"],
+      "proof": ["Same-angle brand photo", "Designer note", "Asset health score", "Approved usage rights", "Client report excerpt"],
+      "claimBoundary": "Use as brand and stakeholder communication evidence; do not present it as official ESG certification."
+    }
+  ],
+  "metrics": [
+    {
+      "group": "Xponge",
+      "label": "Soil-free coverage",
+      "labelZh": "无土覆盖率",
+      "value": "Tracked",
+      "tone": "ready",
+      "body": "Each wall can record whether pods use Xponge sleeves rather than loose soil."
+    },
+    {
+      "group": "Xponge",
+      "label": "Chemical treatment events",
+      "labelZh": "用药干预次数",
+      "value": "0 target",
+      "tone": "review",
+      "body": "Routine chemical spray should be logged as an exception requiring approval, not a hidden maintenance habit."
+    },
+    {
+      "group": "Xponge",
+      "label": "Pest complaint count",
+      "labelZh": "虫害投诉数",
+      "value": "Monthly",
+      "tone": "ready",
+      "body": "FM complaint logs can show whether soil-free assets reduce insects, odor and mess perception."
+    },
+    {
+      "group": "Workplace",
+      "label": "Mood and focus pulse",
+      "labelZh": "心情与专注脉搏",
+      "value": "1-5",
+      "tone": "review",
+      "body": "Short monthly staff questions can capture mood, stress relief, focus and space satisfaction."
+    },
+    {
+      "group": "Workplace",
+      "label": "Space comfort score",
+      "labelZh": "空间舒适分",
+      "value": "0-100",
+      "tone": "review",
+      "body": "Combines user feedback, spatial diagnosis and health score rather than relying on one survey answer."
+    },
+    {
+      "group": "Brand",
+      "label": "Green touchpoint score",
+      "labelZh": "绿色触点分",
+      "value": "0-100",
+      "tone": "ready",
+      "body": "Scores whether the asset is visible, healthy, on-brand and ready for client-facing communication."
+    },
+    {
+      "group": "Brand",
+      "label": "Approved media proof",
+      "labelZh": "已批准传播素材",
+      "value": "Count",
+      "tone": "ready",
+      "body": "Photos, captions and report excerpts need consent and evidence links before brand use."
+    }
+  ],
+  "clientAssessments": [
+    {
+      "clientId": "central-office",
+      "xpongeScore": 92,
+      "workplaceScore": 84,
+      "brandScore": 88,
+      "touchpoints": ["26/F reception", "Client arrival route", "ESG report photo"],
+      "surveyStatus": "Monthly pulse ready",
+      "note": "Strong reception visibility and stable health score make this a credible employee and client-facing proof site."
+    },
+    {
+      "clientId": "wellness-clinic",
+      "xpongeScore": 89,
+      "workplaceScore": 87,
+      "brandScore": 82,
+      "touchpoints": ["Patient lounge", "Waiting-zone comfort", "Hygiene-sensitive proof"],
+      "surveyStatus": "Patient perception pilot",
+      "note": "Clean, soil-free maintenance and calm greenery are especially relevant for clinic trust and perceived comfort."
+    },
+    {
+      "clientId": "show-suite",
+      "xpongeScore": 81,
+      "workplaceScore": 76,
+      "brandScore": 91,
+      "touchpoints": ["Lift lobby", "Buyer walk-in route", "Sales tour photo angle"],
+      "surveyStatus": "Visitor pulse phase 2",
+      "note": "Brand value is high, but health recovery and lighting stability must improve before premium ESG storytelling."
+    },
+    {
+      "clientId": "members-club",
+      "xpongeScore": 90,
+      "workplaceScore": 82,
+      "brandScore": 86,
+      "touchpoints": ["Pantry lounge", "Member photo spot", "Club hospitality route"],
+      "surveyStatus": "Member feedback ready",
+      "note": "Stable lounge greenery supports member comfort and recurring green brand exposure."
+    }
+  ],
+  "workflow": [
+    {
+      "step": "01 Health-safety baseline",
+      "stepZh": "健康安全基线",
+      "body": "Record Xponge sleeve coverage, substrate batch, pest/disease history and whether chemical treatment was used."
+    },
+    {
+      "step": "02 Staff or visitor pulse",
+      "stepZh": "员工或访客反馈",
+      "body": "Collect short client-approved pulse questions on mood, stress, focus, comfort or visit impression."
+    },
+    {
+      "step": "03 Brand touchpoint review",
+      "stepZh": "品牌触点复核",
+      "body": "Identify where clients, staff or visitors actually see the asset and whether the wall is photo/report ready."
+    },
+    {
+      "step": "04 Evidence boundary",
+      "stepZh": "证据边界",
+      "body": "Mark each statement as measured, surveyed, estimated or not claimed before it enters reports."
+    }
+  ],
+  "evidencePack": [
+    {
+      "label": "Xponge substrate log",
+      "labelZh": "Xponge 基质记录",
+      "category": "Health / Safety",
+      "status": "ready",
+      "body": "Links asset, pod, sleeve batch, replacement date and no-soil installation proof.",
+      "proof": "Asset ledger + install photo + replacement record"
+    },
+    {
+      "label": "Pest and disease ledger",
+      "labelZh": "病虫害台账",
+      "category": "Health / Safety",
+      "status": "ready",
+      "body": "Tracks issue type, severity, root-zone notes, treatment decision and follow-up result.",
+      "proof": "Service work order + issue photo + closure note"
+    },
+    {
+      "label": "Chemical intervention control",
+      "labelZh": "用药干预控制",
+      "category": "Environmental / Social",
+      "status": "review",
+      "body": "Makes any pesticide or chemical treatment visible, approved and reportable as an exception.",
+      "proof": "Approval log + safety note + treated zone photo"
+    },
+    {
+      "label": "Workplace pulse survey",
+      "labelZh": "员工体验脉搏问卷",
+      "category": "Social",
+      "status": "phase-2",
+      "body": "Client-approved lightweight survey captures perceived calmness, stress relief, focus and space satisfaction.",
+      "proof": "Survey method + response count + period"
+    },
+    {
+      "label": "Green brand touchpoint proof",
+      "labelZh": "绿色品牌触点证明",
+      "category": "Brand / Governance",
+      "status": "ready",
+      "body": "Connects a visible green asset to design intent, approved photos and client-safe ESG language.",
+      "proof": "Same-angle photo + designer note + usage permission"
+    },
+    {
+      "label": "Impact claim register",
+      "labelZh": "影响主张登记",
+      "category": "Governance",
+      "status": "ready",
+      "body": "Separates measured evidence, survey findings, estimates and blocked claims before investor or client use.",
+      "proof": "Claim boundary table + reviewer approval"
+    }
+  ],
+  "claimControls": [
+    {
+      "label": "Allowed: lower-risk maintenance evidence",
+      "labelZh": "可主张：低风险维护证据",
+      "tone": "ready",
+      "body": "Use pest/disease logs, no-soil coverage and chemical intervention records as supplier evidence."
+    },
+    {
+      "label": "Allowed with survey method: employee experience",
+      "labelZh": "可带方法说明：员工体验",
+      "tone": "review",
+      "body": "Use staff pulse results when question wording, response count, client scope and period are visible."
+    },
+    {
+      "label": "Allowed: green brand communication asset",
+      "labelZh": "可主张：绿色品牌传播资产",
+      "tone": "ready",
+      "body": "Use approved photos, design intent and touchpoint score to support brand and stakeholder communication."
+    },
+    {
+      "label": "Blocked: direct productivity or medical claims",
+      "labelZh": "禁止：直接效率或医疗主张",
+      "tone": "alert",
+      "body": "Do not claim productivity improvement, disease prevention, medical benefit or certified ESG impact without qualified evidence."
+    }
+  ]
+}

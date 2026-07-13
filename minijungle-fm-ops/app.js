@@ -18,7 +18,8 @@ const dataFiles = {
   productModel: "data/product-model.json",
   aiInsights: "data/ai-insights.json",
   healthScore: "data/health-score.json",
-  spatialDesign: "data/spatial-design.json"
+  spatialDesign: "data/spatial-design.json",
+  impactValue: "data/impact-value.json"
 };
 
 let clients = [];
@@ -83,6 +84,13 @@ let spatialInterventions = [];
 let spatialPrinciples = [];
 let spatialWorkflow = [];
 let spatialProofPack = [];
+let impactSummary = [];
+let impactPillars = [];
+let impactMetrics = [];
+let impactAssessments = [];
+let impactWorkflow = [];
+let impactEvidencePack = [];
+let impactClaimControls = [];
 let workorderCompletions = {};
 let dispatchStaging = {};
 let proofApprovals = {};
@@ -138,7 +146,8 @@ async function loadAppData() {
     productModel,
     aiInsights,
     healthScoreData,
-    spatialDesignData
+    spatialDesignData,
+    impactValueData
   ] = await Promise.all([
     loadJson(dataFiles.clients),
     loadJson(dataFiles.walls),
@@ -159,7 +168,8 @@ async function loadAppData() {
     loadJson(dataFiles.productModel),
     loadJson(dataFiles.aiInsights),
     loadJson(dataFiles.healthScore),
-    loadJson(dataFiles.spatialDesign)
+    loadJson(dataFiles.spatialDesign),
+    loadJson(dataFiles.impactValue)
   ]);
 
   clients = loadedClients;
@@ -210,6 +220,13 @@ async function loadAppData() {
   spatialPrinciples = spatialDesignData.designPrinciples || [];
   spatialWorkflow = spatialDesignData.workflow || [];
   spatialProofPack = spatialDesignData.proofPack || [];
+  impactSummary = impactValueData.summary || [];
+  impactPillars = impactValueData.pillars || [];
+  impactMetrics = impactValueData.metrics || [];
+  impactAssessments = impactValueData.clientAssessments || [];
+  impactWorkflow = impactValueData.workflow || [];
+  impactEvidencePack = impactValueData.evidencePack || [];
+  impactClaimControls = impactValueData.claimControls || [];
   esgTrend = esgMetrics.trend || [];
   esgMethods = esgMetrics.methods || [];
   esgLedger = esgMetrics.ledger || [];
@@ -834,6 +851,14 @@ const els = {
   spatialPrincipleList: document.querySelector("#spatial-principle-list"),
   spatialWorkflowList: document.querySelector("#spatial-workflow-list"),
   spatialProofList: document.querySelector("#spatial-proof-list"),
+  impactStatus: document.querySelector("#impact-status"),
+  impactGrid: document.querySelector("#impact-grid"),
+  impactPillarList: document.querySelector("#impact-pillar-list"),
+  impactAssessmentList: document.querySelector("#impact-assessment-list"),
+  impactMetricList: document.querySelector("#impact-metric-list"),
+  impactWorkflowList: document.querySelector("#impact-workflow-list"),
+  impactEvidenceList: document.querySelector("#impact-evidence-list"),
+  impactClaimList: document.querySelector("#impact-claim-list"),
   mvpStatus: document.querySelector("#mvp-status"),
   mvpGrid: document.querySelector("#mvp-grid"),
   activeRoleSelect: document.querySelector("#active-role-select"),
@@ -1452,6 +1477,7 @@ function portfolioMetrics() {
 
 function metricsForClient(clientId) {
   const clientWalls = walls.filter((wall) => wall.clientId === clientId);
+  const impactAssessment = impactAssessments.find((item) => item.clientId === clientId) || null;
   const clientWorkorders = workorders.filter((order) => clientWalls.some((wall) => wall.id === order.wallId));
   const completedWorkorders = clientWorkorders.filter((order) => isWorkorderCompleted(order.id));
   const openWorkorders = clientWorkorders.filter((order) => !isWorkorderCompleted(order.id));
@@ -1544,6 +1570,7 @@ function metricsForClient(clientId) {
     aiRecommendations: clientAiRecommendations,
     openAiRecommendations,
     queuedAiRecommendations,
+    impactAssessment,
     greenArea,
     waterSaved,
     serviceMilesSaved,
@@ -1828,6 +1855,109 @@ function renderSpatialDesign() {
       <strong>${item.body}</strong>
     </div>
   `).join("");
+}
+
+function renderImpactValue() {
+  if (!els.impactGrid) return;
+
+  const selected = selectedClient();
+  const selectedAssessment = selected
+    ? impactAssessments.find((item) => item.clientId === selected.id)
+    : null;
+  const averageWorkplace = impactAssessments.length
+    ? avg(impactAssessments, (item) => item.workplaceScore)
+    : 0;
+  const averageBrand = impactAssessments.length
+    ? avg(impactAssessments, (item) => item.brandScore)
+    : 0;
+  const averageXponge = impactAssessments.length
+    ? avg(impactAssessments, (item) => item.xpongeScore)
+    : 0;
+
+  els.impactStatus.textContent = `${impactPillars.length} value pillars, ${impactEvidencePack.length} evidence types / ${impactPillars.length} 个价值支柱，${impactEvidencePack.length} 类证据`;
+  els.impactStatus.classList.toggle("good", impactEvidencePack.length >= 5);
+
+  const fallbackCards = [
+    { label: "Xponge safety score", labelZh: "Xponge 安全分", value: averageXponge, detail: "Tracks soil-free coverage, pest/disease pressure and chemical intervention records", detailZh: "追踪无土覆盖、病虫害压力和用药干预记录" },
+    { label: "Workplace wellbeing", labelZh: "员工体验", value: averageWorkplace, detail: "Staff pulse and spatial comfort indicators, not unverified productivity claims", detailZh: "员工脉搏和空间舒适指标，不直接夸大为效率结论" },
+    { label: "Green brand value", labelZh: "绿色品牌价值", value: averageBrand, detail: "Visible green touchpoints for reception, showroom, clinic and club spaces", detailZh: "前台、展厅、诊所和会所的可见绿色触点" },
+    { label: "Claim boundary", labelZh: "主张边界", value: "Support", detail: "Evidence supports ESG and brand communication; certification still needs external assurance", detailZh: "支持 ESG 和品牌传播，不替代外部认证" }
+  ];
+
+  renderStatCards(els.impactGrid, impactSummary.length ? impactSummary : fallbackCards);
+
+  els.impactPillarList.innerHTML = impactPillars.map((pillar) => `
+    <div class="method-row impact-pillar-row ${pillar.status}">
+      <span>${pillar.label}<small class="zh">${pillar.labelZh}</small></span>
+      <strong>${pillar.value} - ${pillar.body}</strong>
+      <em>${pillar.esgLink}</em>
+      <div class="kit-list">
+        ${(pillar.signals || []).map((signal) => `<em>${signal}</em>`).join("")}
+      </div>
+      <small>${pillar.claimBoundary}</small>
+    </div>
+  `).join("");
+
+  els.impactAssessmentList.innerHTML = impactAssessments.map((assessment) => {
+    const client = clients.find((item) => item.id === assessment.clientId);
+    const isSelected = selected && assessment.clientId === selected.id;
+    return `
+      <article class="list-item impact-assessment-card ${isSelected ? "selected" : ""}" data-impact-client="${assessment.clientId}">
+        <div class="item-row">
+          <strong>${client?.name || assessment.clientId}</strong>
+          <span class="tag ${isSelected ? "good" : ""}">${isSelected ? "Selected" : "Tracked"}</span>
+        </div>
+        <div class="impact-score-row">
+          <span>Xponge <strong>${assessment.xpongeScore}</strong></span>
+          <span>Workplace <strong>${assessment.workplaceScore}</strong></span>
+          <span>Brand <strong>${assessment.brandScore}</strong></span>
+        </div>
+        <small>${assessment.note}</small>
+        <div class="kit-list">
+          ${(assessment.touchpoints || []).map((point) => `<em>${point}</em>`).join("")}
+        </div>
+        <button type="button" class="mini-action" data-client-select="${assessment.clientId}">View client</button>
+      </article>
+    `;
+  }).join("");
+
+  els.impactMetricList.innerHTML = impactMetrics.map((metric) => `
+    <div class="method-row impact-metric-row ${metric.tone}">
+      <span>${metric.label}<small class="zh">${metric.labelZh}</small></span>
+      <strong>${metric.value} - ${metric.body}</strong>
+      <em>${metric.group}</em>
+    </div>
+  `).join("");
+
+  els.impactWorkflowList.innerHTML = impactWorkflow.map((item) => `
+    <div class="method-row impact-workflow-row">
+      <span>${item.step}<small class="zh">${item.stepZh}</small></span>
+      <strong>${item.body}</strong>
+    </div>
+  `).join("");
+
+  els.impactEvidenceList.innerHTML = impactEvidencePack.map((item) => `
+    <article class="list-item impact-evidence-card ${item.status}">
+      <div class="item-row">
+        <strong>${item.label}</strong>
+        <span class="tag ${statusClass(item.status)}">${item.status}</span>
+      </div>
+      <span>${item.category}<small class="zh">${item.labelZh}</small></span>
+      <small>${item.body}</small>
+      <em>${item.proof}</em>
+    </article>
+  `).join("");
+
+  els.impactClaimList.innerHTML = impactClaimControls.map((item) => `
+    <div class="method-row impact-claim-row ${item.tone}">
+      <span>${item.label}<small class="zh">${item.labelZh}</small></span>
+      <strong>${item.body}</strong>
+    </div>
+  `).join("");
+
+  if (selectedAssessment) {
+    els.impactStatus.textContent = `${selected.name}: Xponge ${selectedAssessment.xpongeScore}, workplace ${selectedAssessment.workplaceScore}, brand ${selectedAssessment.brandScore} / 当前客户影响快照`;
+  }
 }
 
 function renderPlatform() {
@@ -2727,6 +2857,10 @@ function reportMethodRows() {
     ...esgClaimControls.map((control) => ({
       label: control.label,
       body: control.body
+    })),
+    ...impactClaimControls.map((control) => ({
+      label: control.label,
+      body: control.body
     }))
   ];
 }
@@ -2836,6 +2970,9 @@ function renderReports() {
   const metricLabelZh = {
     "Health score": "健康分",
     "Report readiness": "报告准备度",
+    "Xponge safety": "Xponge 安全",
+    "Workplace wellbeing": "员工体验",
+    "Green brand value": "绿色品牌价值",
     "Green area": "绿化面积",
     "Water estimate": "节水估算",
     "Open issues": "未关闭问题",
@@ -2861,6 +2998,9 @@ function renderReports() {
   els.reportMetrics.innerHTML = [
     ["Health score", data.health],
     ["Report readiness", `${data.reportReadiness}%`],
+    ["Xponge safety", data.impactAssessment ? data.impactAssessment.xpongeScore : "-"],
+    ["Workplace wellbeing", data.impactAssessment ? data.impactAssessment.workplaceScore : "-"],
+    ["Green brand value", data.impactAssessment ? data.impactAssessment.brandScore : "-"],
     ["Green area", `${data.greenArea.toFixed(1)} m2`],
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Open issues", data.issues],
@@ -2891,6 +3031,12 @@ function renderReports() {
 
   const evidence = [
     ...report.evidence,
+    ...(data.impactAssessment ? [
+      `Xponge safety score ${data.impactAssessment.xpongeScore}`,
+      `Workplace wellbeing score ${data.impactAssessment.workplaceScore}`,
+      `Green brand value score ${data.impactAssessment.brandScore}`
+    ] : []),
+    `${impactEvidencePack.length} impact evidence type(s)`,
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} DR FOREST finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
@@ -2933,6 +3079,12 @@ function buildReportHtml() {
   const data = metricsForClient(client.id);
   const evidence = [
     ...report.evidence,
+    ...(data.impactAssessment ? [
+      `Xponge safety score ${data.impactAssessment.xpongeScore}`,
+      `Workplace wellbeing score ${data.impactAssessment.workplaceScore}`,
+      `Green brand value score ${data.impactAssessment.brandScore}`
+    ] : []),
+    `${impactEvidencePack.length} impact evidence type(s)`,
     `${data.walls.length} wall ledger record(s)`,
     `${data.diagnoses.length} DR FOREST finding(s)`,
     `${data.completedWorkorders.length} completed work order(s)`,
@@ -2957,6 +3109,9 @@ function buildReportHtml() {
   const metricRows = [
     ["Health score", data.health],
     ["Report readiness", `${data.reportReadiness}%`],
+    ["Xponge safety", data.impactAssessment ? data.impactAssessment.xpongeScore : "-"],
+    ["Workplace wellbeing", data.impactAssessment ? data.impactAssessment.workplaceScore : "-"],
+    ["Green brand value", data.impactAssessment ? data.impactAssessment.brandScore : "-"],
     ["Green area", `${data.greenArea.toFixed(1)} m2`],
     ["Water estimate", `${data.waterSaved} L/mo`],
     ["Service miles avoided", `${data.serviceMilesSaved} km`],
@@ -3164,6 +3319,7 @@ function renderAll() {
   renderAiCommandCenter();
   renderHealthScoreMethod();
   renderSpatialDesign();
+  renderImpactValue();
   renderMvpControl();
   renderPlatform();
   renderPositioning();

@@ -1000,6 +1000,8 @@ small {
 .proof-pack-card,
 .health-score-card,
 .spatial-intervention-card,
+.impact-assessment-card,
+.impact-evidence-card,
 .asset-scope-card,
 .roadmap-row,
 .benchmark-row {
@@ -1008,6 +1010,7 @@ small {
 
 .mvp-readiness.phase-2,
 .proof-pack-card.phase-2,
+.impact-evidence-card.phase-2,
 .asset-scope-card.phase-2,
 .asset-scope-card.adjacent,
 .roadmap-row.phase-2,
@@ -1022,6 +1025,7 @@ small {
 
 .mvp-readiness.complete,
 .proof-pack-card.ready,
+.impact-evidence-card.ready,
 .health-score-card.ready,
 .spatial-intervention-card.ready,
 .ai-card.queued,
@@ -1035,6 +1039,7 @@ small {
 
 .asset-scope-card.next,
 .spatial-intervention-card.review,
+.impact-evidence-card.review,
 .roadmap-row.next {
   border-color: rgba(48, 97, 139, 0.25);
   background: #f1f7fb;
@@ -1057,13 +1062,15 @@ small {
 .esg-proof-layout,
 .health-layout,
 .spatial-layout,
+.impact-layout,
 .spatial-proof-panel {
   margin-top: 14px;
 }
 
 .flywheel-grid,
 .claim-grid,
-.spatial-proof-grid {
+.spatial-proof-grid,
+.impact-pillar-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
@@ -1080,11 +1087,38 @@ small {
 .spatial-diagnostic-row,
 .spatial-principle-row,
 .spatial-workflow-row,
-.spatial-proof-row {
+.spatial-proof-row,
+.impact-pillar-row,
+.impact-metric-row,
+.impact-workflow-row,
+.impact-claim-row {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 12px;
   background: var(--surface-soft);
+}
+
+.impact-score-row {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.impact-score-row span {
+  display: grid;
+  gap: 4px;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.impact-score-row strong {
+  color: var(--ink);
+  font-size: 1rem;
 }
 
 .health-score-card.review {
@@ -1097,19 +1131,35 @@ small {
   background: #fff8f6;
 }
 
-.claim-row.alert {
+.claim-row.alert,
+.impact-claim-row.alert,
+.impact-metric-row.alert {
   border-color: rgba(173, 75, 66, 0.28);
   background: #fff8f6;
 }
 
-.claim-row.review {
+.claim-row.review,
+.impact-claim-row.review,
+.impact-metric-row.review {
   border-color: rgba(166, 121, 34, 0.28);
   background: #fffaf0;
 }
 
-.claim-row.ready {
+.claim-row.ready,
+.impact-claim-row.ready,
+.impact-metric-row.ready {
   border-color: rgba(31, 111, 75, 0.3);
   background: #f2f8f3;
+}
+
+.impact-pillar-row.ready {
+  border-color: rgba(31, 111, 75, 0.3);
+  background: #f2f8f3;
+}
+
+.impact-pillar-row.review {
+  border-color: rgba(166, 121, 34, 0.28);
+  background: #fffaf0;
 }
 
 .method-row em {
@@ -1232,6 +1282,8 @@ small {
     .flywheel-grid,
     .claim-grid,
     .spatial-proof-grid,
+    .impact-pillar-grid,
+    .impact-score-row,
     .two-col,
   .workbench,
   .client-layout,

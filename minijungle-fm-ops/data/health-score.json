@@ -50,6 +50,11 @@
       "body": "Inspection cadence, open issues, completion proof and replacement records anchor the score in actual FM delivery."
     },
     {
+      "label": "Xponge root-zone log",
+      "status": "Core",
+      "body": "Substrate sleeve, pest/disease observation and chemical intervention records explain whether a problem is plant stress, root-zone risk or FM exception."
+    },
+    {
       "label": "Manual review",
       "status": "Control",
       "body": "FM leads can confirm, override or request retake when lighting, angle or client context makes AI confidence weak."

@@ -105,10 +105,19 @@ async function verifyBrowserFlow(baseUrl) {
     assert(spatialText?.includes("Architect and interior designer"), "Spatial design expertise did not load");
     assert(spatialText?.includes("Spatial Diagnosis"), "Spatial diagnosis panel did not load");
     assert(spatialText?.includes("Before / after view"), "Spatial proof pack did not load before/after evidence");
+    const impactText = await page.textContent("#impact");
+    assert(impactText?.includes("Xponge, Workplace and Brand Impact"), "Impact Value section did not load");
+    assert(impactText?.includes("Xponge Health & Safety"), "Xponge health-safety pillar did not load");
+    assert(impactText?.includes("Workplace Wellbeing Impact"), "Workplace wellbeing pillar did not load");
+    assert(impactText?.includes("Green Brand Asset Value"), "Green brand asset pillar did not load");
+    assert(impactText?.includes("Chemical intervention control"), "Impact evidence pack did not load chemical intervention control");
     const esgText = await page.textContent("#esg");
     assert(esgText?.includes("可持续统计"), "Bilingual ESG section did not load");
     assert(esgText?.includes("Recognized Proof Pack"), "ESG proof pack governance did not load");
+    assert(esgText?.includes("Xponge health-safety evidence"), "ESG proof pack did not load Xponge evidence");
     assert(esgText?.includes("HKEX ESG Reporting Code"), "ESG framework mapping did not load");
+    const reportTabsText = await page.textContent("#report-tabs");
+    assert(reportTabsText?.includes("Impact Value"), "Report Center did not load Impact Value report mode");
     const platformStatus = await page.textContent("#platform-status");
     assert(platformStatus?.includes("expansion classes"), "Platform status did not load expansion scope");
     const assetScope = await page.textContent("#asset-scope-list");
@@ -369,6 +378,7 @@ async function main() {
     await verifyResource(baseUrl, "/data/ai-insights.json", "application/json");
     await verifyResource(baseUrl, "/data/health-score.json", "application/json");
     await verifyResource(baseUrl, "/data/spatial-design.json", "application/json");
+    await verifyResource(baseUrl, "/data/impact-value.json", "application/json");
     await verifyResource(baseUrl, "/assets/dr-forest-logo.png", "image/png");
     await verifyBrowserFlow(baseUrl);
     console.log(`Smoke test passed at ${baseUrl}`);

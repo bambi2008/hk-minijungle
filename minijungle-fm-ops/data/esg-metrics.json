@@ -17,6 +17,10 @@
       "body": "Water saving, service miles avoided, wellness reach and CO2e proxy are marked as estimates with method notes."
     },
     {
+      "label": "Impact indicators / 影响指标",
+      "body": "Xponge health-safety, employee experience and green brand value are tracked as impact indicators with source evidence and claim boundaries."
+    },
+    {
       "label": "Not claimed / 不主张",
       "body": "Carbon credits, carbon neutrality, formal air purification guarantees and certified WELL/LEED points are not claimed unless independently certified."
     },
@@ -33,6 +37,10 @@
     {
       "label": "Social",
       "template": "{{staffReach}} monthly staff and visitor touchpoints supported by visible biophilic space and stable presentation quality."
+    },
+    {
+      "label": "Health and brand impact",
+      "template": "Xponge substrate logs, pest/disease records, staff pulse and green brand touchpoint proof can support Social and brand-facing ESG narratives."
     },
     {
       "label": "Governance",
@@ -75,6 +83,24 @@
       "standard": "Optional third-party assurance package export with evidence index",
       "acceptedBy": "Independent assurance provider",
       "body": "DR FOREST can provide an audit-ready file, but third-party assurance is a separate engagement."
+    },
+    {
+      "id": "ESG-PROOF-05",
+      "label": "Xponge health-safety evidence",
+      "status": "ready",
+      "owner": "FM lead",
+      "standard": "Substrate record, pest/disease log, chemical intervention approval and no-soil proof",
+      "acceptedBy": "FM, workplace, ESG or hygiene reviewer",
+      "body": "The pack shows how fewer disease or pest events can reduce maintenance risk and routine chemical intervention in indoor FM environments."
+    },
+    {
+      "id": "ESG-PROOF-06",
+      "label": "Workplace and brand impact evidence",
+      "status": "review",
+      "owner": "Client success",
+      "standard": "Staff or visitor pulse method, touchpoint map, approved photos and claim boundary",
+      "acceptedBy": "HR, brand, ESG or property marketing reviewer",
+      "body": "Employee experience and green brand value can be recognized when the survey method, touchpoint logic and photo approval are visible."
     }
   ],
   "frameworkMapping": [
@@ -97,6 +123,12 @@
       "proof": "Environmental, social and governance ledger entries with source records."
     },
     {
+      "framework": "WELL-aligned workplace evidence",
+      "label": "Occupant experience support only",
+      "status": "not certification",
+      "proof": "Staff or visitor pulse, space comfort notes and biophilic design evidence can support wellbeing narratives without claiming WELL points."
+    },
+    {
       "framework": "GHG Protocol / ISO 14064-ready",
       "label": "Carbon-adjacent inputs only",
       "status": "not a carbon inventory",
@@ -113,6 +145,11 @@
       "label": "Allowed with method note: estimates",
       "tone": "review",
       "body": "Water saving, service miles avoided, wellness reach and CO2e proxy can be shown when formula, assumptions and period are visible."
+    },
+    {
+      "label": "Allowed with evidence: impact indicators",
+      "tone": "review",
+      "body": "Xponge low-intervention records, staff pulse results and green brand touchpoint scores can be shown when raw evidence, method and client approval are attached."
     },
     {
       "label": "Blocked without certification",
