@@ -17,14 +17,20 @@ import {
   saveSqliteOpsStateSnapshot
 } from "./lib/ops-sqlite-store.mjs";
 import {
+  importSqliteMasterData,
   readSqliteMasterDataHealth,
-  readSqliteMasterDataset
+  readSqliteMasterDataset,
+  upsertSqliteClient,
+  upsertSqliteLivingAsset,
+  upsertSqliteSensorReading,
+  upsertSqliteWorkOrder
 } from "./lib/ops-master-data-store.mjs";
 import {
   authPolicySummary,
   canAccessClient,
   filterByClientScope,
   requireActionAccess,
+  requireClientAccess,
   requireEventWriteAccess,
   requirePermission,
   requireSnapshotWriteAccess,
@@ -375,7 +381,7 @@ async function handleApi(req, res, pathname) {
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+        "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type"
       });
       res.end();
@@ -412,6 +418,141 @@ async function handleApi(req, res, pathname) {
         generatedAt: new Date().toISOString(),
         ...authPolicySummary()
       });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/admin/master-data/validate") {
+      requirePermission(auth, "master.data.validate");
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        masterData: await readSqliteMasterDataHealth(runtimeDbPath, dataRoot)
+      });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/admin/master-data/import") {
+      requirePermission(auth, "master.data.import");
+      const masterData = await importSqliteMasterData(runtimeDbPath, dataRoot);
+      const event = normalizeOpsEvent({
+        type: "master-data.imported",
+        actor: auth.name,
+        entityType: "master-data",
+        entityId: "json-seed",
+        source: "master-data-admin",
+        note: "Master data imported from JSON seed files into SQLite tables.",
+        payload: {
+          principalId: auth.id,
+          counts: masterData.counts
+        }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, 200, {
+        masterData,
+        event
+      });
+      return;
+    }
+
+    const clientAdminMatch = pathname.match(/^\/api\/admin\/master-data\/clients\/([^/]+)$/);
+    if (req.method === "PUT" && clientAdminMatch) {
+      requirePermission(auth, "master.data.write");
+      const input = {
+        ...(await readJsonBody(req)),
+        id: decodeURIComponent(clientAdminMatch[1])
+      };
+      requireClientAccess(auth, input.id, "client upsert");
+      const client = await upsertSqliteClient(runtimeDbPath, dataRoot, input);
+      const event = normalizeOpsEvent({
+        type: "master-data.client.upserted",
+        actor: auth.name,
+        entityType: "client",
+        entityId: client.id,
+        clientId: client.id,
+        source: "master-data-admin",
+        note: `Client ${client.name} upserted through admin API.`,
+        payload: { principalId: auth.id }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { client, event });
+      return;
+    }
+
+    const assetAdminMatch = pathname.match(/^\/api\/admin\/master-data\/living-assets\/([^/]+)$/);
+    if (req.method === "PUT" && assetAdminMatch) {
+      requirePermission(auth, "master.data.write");
+      const input = {
+        ...(await readJsonBody(req)),
+        id: decodeURIComponent(assetAdminMatch[1])
+      };
+      requireClientAccess(auth, input.clientId, "living asset upsert");
+      const asset = await upsertSqliteLivingAsset(runtimeDbPath, dataRoot, input);
+      const event = normalizeOpsEvent({
+        type: "master-data.asset.upserted",
+        actor: auth.name,
+        entityType: "wall",
+        entityId: asset.id,
+        clientId: asset.clientId,
+        wallId: asset.id,
+        source: "master-data-admin",
+        note: `Living asset ${asset.name} upserted through admin API.`,
+        payload: { principalId: auth.id }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { asset, event });
+      return;
+    }
+
+    const workOrderAdminMatch = pathname.match(/^\/api\/admin\/master-data\/work-orders\/([^/]+)$/);
+    if (req.method === "PUT" && workOrderAdminMatch) {
+      requirePermission(auth, "master.data.write");
+      const input = {
+        ...(await readJsonBody(req)),
+        id: decodeURIComponent(workOrderAdminMatch[1])
+      };
+      const resolveEntityClientId = await buildEntityClientResolver();
+      const clientId = resolveEntityClientId("wall", input.wallId);
+      requireClientAccess(auth, clientId, "work order upsert");
+      const workOrder = await upsertSqliteWorkOrder(runtimeDbPath, dataRoot, input);
+      const event = normalizeOpsEvent({
+        type: "master-data.workorder.upserted",
+        actor: auth.name,
+        entityType: "workorder",
+        entityId: workOrder.id,
+        clientId,
+        wallId: workOrder.wallId,
+        source: "master-data-admin",
+        note: `Work order ${workOrder.id} upserted through admin API.`,
+        payload: { principalId: auth.id }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { workOrder, event });
+      return;
+    }
+
+    const sensorAdminMatch = pathname.match(/^\/api\/admin\/master-data\/sensor-readings\/([^/]+)$/);
+    if (req.method === "PUT" && sensorAdminMatch) {
+      requirePermission(auth, "master.data.write");
+      const input = {
+        ...(await readJsonBody(req)),
+        id: decodeURIComponent(sensorAdminMatch[1])
+      };
+      const resolveEntityClientId = await buildEntityClientResolver();
+      const clientId = resolveEntityClientId("wall", input.wallId);
+      requireClientAccess(auth, clientId, "sensor reading upsert");
+      const sensor = await upsertSqliteSensorReading(runtimeDbPath, dataRoot, input);
+      const event = normalizeOpsEvent({
+        type: "master-data.sensor.upserted",
+        actor: auth.name,
+        entityType: "sensor",
+        entityId: sensor.id,
+        clientId,
+        wallId: sensor.wallId,
+        source: "master-data-admin",
+        note: `Sensor reading ${sensor.id} upserted through admin API.`,
+        payload: { principalId: auth.id }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { sensor, event });
       return;
     }
 

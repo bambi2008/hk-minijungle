@@ -3,6 +3,7 @@ import { DatabaseSync } from "node:sqlite";
 import { dirname, join } from "node:path";
 
 export const masterDataMigrationVersion = "2026-07-15.master-data-v1";
+export const masterDataCrudVersion = "2026-07-15.master-crud-v1";
 
 const masterDataFiles = {
   clients: "clients.json",
@@ -214,6 +215,48 @@ function initializeMasterDataDatabase(db) {
     INSERT OR IGNORE INTO schema_migrations (version, applied_at)
     VALUES (?, ?)
   `).run(masterDataMigrationVersion, new Date().toISOString());
+
+  db.prepare(`
+    INSERT OR IGNORE INTO schema_migrations (version, applied_at)
+    VALUES (?, ?)
+  `).run(masterDataCrudVersion, new Date().toISOString());
+}
+
+function validationError(message) {
+  const error = new Error(message);
+  error.status = 400;
+  error.code = "MASTER_DATA_VALIDATION_ERROR";
+  return error;
+}
+
+function rethrowConstraint(error, fallbackMessage) {
+  const message = String(error?.message || "");
+  if (message.includes("constraint failed") || message.includes("SQLITE_CONSTRAINT")) {
+    throw validationError(fallbackMessage);
+  }
+  throw error;
+}
+
+function requireString(value, field) {
+  const text = String(value || "").trim();
+  if (!text) throw validationError(`${field} is required`);
+  return text;
+}
+
+function boundedNumber(value, field, min, max) {
+  const number = Number(value);
+  if (!Number.isFinite(number) || number < min || number > max) {
+    throw validationError(`${field} must be between ${min} and ${max}`);
+  }
+  return number;
+}
+
+function positiveInteger(value, field) {
+  const number = Number(value);
+  if (!Number.isInteger(number) || number <= 0) {
+    throw validationError(`${field} must be a positive integer`);
+  }
+  return number;
 }
 
 function clearMasterData(db) {
@@ -405,20 +448,28 @@ function seedIncidents(db, incidents) {
   }
 }
 
-async function seedMasterData(dbPath, dataRoot) {
+function applyMasterSeed(db, seed) {
+  clearMasterData(db);
+  seedClients(db, seed.clients);
+  seedLivingAssets(db, seed.walls);
+  seedWorkOrders(db, seed.workorders);
+  seedProofRecords(db, seed.proofRecords);
+  seedSensorReadings(db, seed.sensorReadings);
+  seedIncidents(db, seed.incidents);
+  return seed;
+}
+
+async function ensureMasterDataSeeded(dbPath, dataRoot) {
   const seed = await loadMasterSeed(dataRoot);
   return withDatabase(dbPath, (db) => {
+    const clientCount = db.prepare("SELECT COUNT(*) AS count FROM clients").get().count;
+    if (clientCount > 0) return { seeded: false };
+
     db.exec("BEGIN IMMEDIATE");
     try {
-      clearMasterData(db);
-      seedClients(db, seed.clients);
-      seedLivingAssets(db, seed.walls);
-      seedWorkOrders(db, seed.workorders);
-      seedProofRecords(db, seed.proofRecords);
-      seedSensorReadings(db, seed.sensorReadings);
-      seedIncidents(db, seed.incidents);
+      applyMasterSeed(db, seed);
       db.exec("COMMIT");
-      return seed;
+      return { seeded: true };
     } catch (error) {
       db.exec("ROLLBACK");
       throw error;
@@ -567,41 +618,309 @@ function readDatasetFromDb(db) {
 }
 
 export async function readSqliteMasterDataset(dbPath, dataRoot) {
-  await seedMasterData(dbPath, dataRoot);
+  await ensureMasterDataSeeded(dbPath, dataRoot);
   return withDatabase(dbPath, readDatasetFromDb);
 }
 
-export async function readSqliteMasterDataHealth(dbPath, dataRoot) {
-  await seedMasterData(dbPath, dataRoot);
-  return withDatabase(dbPath, (db) => {
-    const count = (table) => db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
-    const foreignKeyIssues = db.prepare("PRAGMA foreign_key_check").all();
-    const tables = db.prepare(`
-      SELECT name
-      FROM sqlite_master
-      WHERE type = 'table'
-        AND name IN ('clients', 'living_assets', 'asset_zones', 'work_orders', 'proof_records', 'sensor_readings', 'incidents')
-      ORDER BY name ASC
-    `).all().map((row) => row.name);
+function readMasterDataHealthFromDb(db) {
+  const count = (table) => db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
+  const foreignKeyIssues = db.prepare("PRAGMA foreign_key_check").all();
+  const tables = db.prepare(`
+    SELECT name
+    FROM sqlite_master
+    WHERE type = 'table'
+      AND name IN ('clients', 'living_assets', 'asset_zones', 'work_orders', 'proof_records', 'sensor_readings', 'incidents')
+    ORDER BY name ASC
+  `).all().map((row) => row.name);
 
-    return {
-      migrationVersion: masterDataMigrationVersion,
-      source: "json-seeded-sqlite",
-      sourceFiles: Object.values(masterDataFiles),
-      tables,
-      counts: {
-        clients: count("clients"),
-        livingAssets: count("living_assets"),
-        assetZones: count("asset_zones"),
-        workOrders: count("work_orders"),
-        proofRecords: count("proof_records"),
-        sensorReadings: count("sensor_readings"),
-        incidents: count("incidents")
-      },
-      relationshipIntegrity: {
-        foreignKeysEnabled: db.prepare("PRAGMA foreign_keys").get().foreign_keys === 1,
-        foreignKeyIssues: foreignKeyIssues.length
-      }
-    };
+  return {
+    migrationVersion: masterDataMigrationVersion,
+    crudVersion: masterDataCrudVersion,
+    source: "sqlite-master-data",
+    seedSource: "json-import",
+    sourceFiles: Object.values(masterDataFiles),
+    tables,
+    counts: {
+      clients: count("clients"),
+      livingAssets: count("living_assets"),
+      assetZones: count("asset_zones"),
+      workOrders: count("work_orders"),
+      proofRecords: count("proof_records"),
+      sensorReadings: count("sensor_readings"),
+      incidents: count("incidents")
+    },
+    relationshipIntegrity: {
+      foreignKeysEnabled: db.prepare("PRAGMA foreign_keys").get().foreign_keys === 1,
+      foreignKeyIssues: foreignKeyIssues.length
+    }
+  };
+}
+
+export async function importSqliteMasterData(dbPath, dataRoot) {
+  const seed = await loadMasterSeed(dataRoot);
+  return withDatabase(dbPath, (db) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      applyMasterSeed(db, seed);
+      db.exec("COMMIT");
+      return readMasterDataHealthFromDb(db);
+    } catch (error) {
+      db.exec("ROLLBACK");
+      throw error;
+    }
+  });
+}
+
+export async function readSqliteMasterDataHealth(dbPath, dataRoot) {
+  await ensureMasterDataSeeded(dbPath, dataRoot);
+  return withDatabase(dbPath, readMasterDataHealthFromDb);
+}
+
+export async function upsertSqliteClient(dbPath, dataRoot, input) {
+  await ensureMasterDataSeeded(dbPath, dataRoot);
+  const client = {
+    id: requireString(input.id, "client.id"),
+    name: requireString(input.name, "client.name"),
+    segment: input.segment || null,
+    district: input.district || null,
+    contact: input.contact || null,
+    plan: input.plan || null,
+    contract: input.contract || null,
+    renewalDate: input.renewalDate || null,
+    renewalRisk: input.renewalRisk || null,
+    revenue: Number(input.revenue || 0),
+    proofNeed: input.proofNeed || null
+  };
+
+  return withDatabase(dbPath, (db) => {
+    db.prepare(`
+      INSERT INTO clients (
+        id, name, segment, district, contact, plan, contract, renewal_date, renewal_risk, revenue, proof_need, raw_json
+      )
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        name = excluded.name,
+        segment = excluded.segment,
+        district = excluded.district,
+        contact = excluded.contact,
+        plan = excluded.plan,
+        contract = excluded.contract,
+        renewal_date = excluded.renewal_date,
+        renewal_risk = excluded.renewal_risk,
+        revenue = excluded.revenue,
+        proof_need = excluded.proof_need,
+        raw_json = excluded.raw_json
+    `).run(
+      client.id,
+      client.name,
+      client.segment,
+      client.district,
+      client.contact,
+      client.plan,
+      client.contract,
+      client.renewalDate,
+      client.renewalRisk,
+      client.revenue,
+      client.proofNeed,
+      JSON.stringify(client)
+    );
+
+    return clientFromRow(db.prepare("SELECT * FROM clients WHERE id = ?").get(client.id));
+  });
+}
+
+export async function upsertSqliteLivingAsset(dbPath, dataRoot, input) {
+  await ensureMasterDataSeeded(dbPath, dataRoot);
+  const wall = {
+    id: requireString(input.id, "asset.id"),
+    clientId: requireString(input.clientId, "asset.clientId"),
+    name: requireString(input.name, "asset.name"),
+    location: input.location || null,
+    version: input.version || "Standard",
+    modules: positiveInteger(input.modules, "asset.modules"),
+    pods: positiveInteger(input.pods, "asset.pods"),
+    health: boundedNumber(input.health ?? 80, "asset.health", 0, 100),
+    survival: boundedNumber(input.survival ?? 90, "asset.survival", 0, 100),
+    issues: Number(input.issues || 0),
+    nextVisit: input.nextVisit || null,
+    cadence: input.cadence || null,
+    greenArea: Number(input.greenArea || 0),
+    waterSaved: Number(input.waterSaved || 0),
+    serviceMilesSaved: Number(input.serviceMilesSaved || 0),
+    staffReach: Number(input.staffReach || 0),
+    co2eProxy: Number(input.co2eProxy || 0),
+    status: input.status || "stable",
+    sensors: Array.isArray(input.sensors) ? input.sensors : [],
+    tags: Array.isArray(input.tags) ? input.tags : [],
+    zones: Array.isArray(input.zones) ? input.zones : []
+  };
+
+  return withDatabase(dbPath, (db) => {
+    db.exec("BEGIN IMMEDIATE");
+    try {
+      db.prepare(`
+        INSERT INTO living_assets (
+          id, client_id, name, location, version, modules, pods, health, survival, issues, next_visit, cadence,
+          green_area, water_saved, service_miles_saved, staff_reach, co2e_proxy, status, sensors_json, tags_json, raw_json
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          client_id = excluded.client_id,
+          name = excluded.name,
+          location = excluded.location,
+          version = excluded.version,
+          modules = excluded.modules,
+          pods = excluded.pods,
+          health = excluded.health,
+          survival = excluded.survival,
+          issues = excluded.issues,
+          next_visit = excluded.next_visit,
+          cadence = excluded.cadence,
+          green_area = excluded.green_area,
+          water_saved = excluded.water_saved,
+          service_miles_saved = excluded.service_miles_saved,
+          staff_reach = excluded.staff_reach,
+          co2e_proxy = excluded.co2e_proxy,
+          status = excluded.status,
+          sensors_json = excluded.sensors_json,
+          tags_json = excluded.tags_json,
+          raw_json = excluded.raw_json
+      `).run(
+        wall.id,
+        wall.clientId,
+        wall.name,
+        wall.location,
+        wall.version,
+        wall.modules,
+        wall.pods,
+        wall.health,
+        wall.survival,
+        wall.issues,
+        wall.nextVisit,
+        wall.cadence,
+        wall.greenArea,
+        wall.waterSaved,
+        wall.serviceMilesSaved,
+        wall.staffReach,
+        wall.co2eProxy,
+        wall.status,
+        JSON.stringify(wall.sensors),
+        JSON.stringify(wall.tags),
+        JSON.stringify(wall)
+      );
+
+      db.prepare("DELETE FROM asset_zones WHERE asset_id = ?").run(wall.id);
+      const insertZone = db.prepare(`
+        INSERT INTO asset_zones (asset_id, sequence, name, pods, health, issue, raw_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+      `);
+      wall.zones.forEach((zone, index) => {
+        insertZone.run(
+          wall.id,
+          index + 1,
+          requireString(zone.name || `Zone ${index + 1}`, "zone.name"),
+          Number(zone.pods || 0),
+          boundedNumber(zone.health ?? wall.health, "zone.health", 0, 100),
+          zone.issue || null,
+          JSON.stringify(zone)
+        );
+      });
+
+      db.exec("COMMIT");
+      return wallFromRow(db.prepare("SELECT * FROM living_assets WHERE id = ?").get(wall.id), wall.zones);
+    } catch (error) {
+      db.exec("ROLLBACK");
+      rethrowConstraint(error, "asset references a missing client or violates asset constraints");
+    }
+  });
+}
+
+export async function upsertSqliteWorkOrder(dbPath, dataRoot, input) {
+  await ensureMasterDataSeeded(dbPath, dataRoot);
+  const order = {
+    id: requireString(input.id, "workorder.id"),
+    wallId: requireString(input.wallId, "workorder.wallId"),
+    type: requireString(input.type, "workorder.type"),
+    due: input.due || null,
+    status: input.status || "Scheduled",
+    priority: input.priority || "medium",
+    tasks: Array.isArray(input.tasks) ? input.tasks : []
+  };
+
+  return withDatabase(dbPath, (db) => {
+    try {
+      db.prepare(`
+        INSERT INTO work_orders (id, wall_id, type, due, status, priority, tasks_json, raw_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          wall_id = excluded.wall_id,
+          type = excluded.type,
+          due = excluded.due,
+          status = excluded.status,
+          priority = excluded.priority,
+          tasks_json = excluded.tasks_json,
+          raw_json = excluded.raw_json
+      `).run(
+        order.id,
+        order.wallId,
+        order.type,
+        order.due,
+        order.status,
+        order.priority,
+        JSON.stringify(order.tasks),
+        JSON.stringify(order)
+      );
+      return workorderFromRow(db.prepare("SELECT * FROM work_orders WHERE id = ?").get(order.id));
+    } catch (error) {
+      rethrowConstraint(error, "work order references a missing living asset");
+    }
+  });
+}
+
+export async function upsertSqliteSensorReading(dbPath, dataRoot, input) {
+  await ensureMasterDataSeeded(dbPath, dataRoot);
+  const reading = {
+    id: requireString(input.id, "sensor.id"),
+    wallId: requireString(input.wallId, "sensor.wallId"),
+    type: input.type || null,
+    value: Number(input.value || 0),
+    unit: input.unit || null,
+    target: input.target || null,
+    status: input.status || "ok",
+    lastSeen: input.lastSeen || null,
+    action: input.action || null
+  };
+
+  return withDatabase(dbPath, (db) => {
+    try {
+      db.prepare(`
+        INSERT INTO sensor_readings (id, wall_id, type, value, unit, target, status, last_seen, action, raw_json)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          wall_id = excluded.wall_id,
+          type = excluded.type,
+          value = excluded.value,
+          unit = excluded.unit,
+          target = excluded.target,
+          status = excluded.status,
+          last_seen = excluded.last_seen,
+          action = excluded.action,
+          raw_json = excluded.raw_json
+      `).run(
+        reading.id,
+        reading.wallId,
+        reading.type,
+        reading.value,
+        reading.unit,
+        reading.target,
+        reading.status,
+        reading.lastSeen,
+        reading.action,
+        JSON.stringify(reading)
+      );
+      return sensorFromRow(db.prepare("SELECT * FROM sensor_readings WHERE id = ?").get(reading.id));
+    } catch (error) {
+      rethrowConstraint(error, "sensor reading references a missing living asset");
+    }
   });
 }

@@ -388,6 +388,149 @@ async function verifyApi(baseUrl) {
   assert(finalStorage.body.masterData.counts.clients === 4, "SQLite master clients table count changed unexpectedly");
   assert(finalStorage.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "SQLite master-data FK check regressed after runtime writes");
   assert(finalStorage.body.migrations.some((item) => item.version === "2026-07-14.sqlite-runtime-v1"), "SQLite migration was not recorded");
+
+  const viewerDeniedMasterWrite = await fetchJson(`${baseUrl}api/admin/master-data/clients/demo-retail`, {
+    method: "PUT",
+    headers: jsonHeaders("client-show-suite"),
+    body: JSON.stringify({
+      name: "Demo Retail Client"
+    })
+  });
+  assert(viewerDeniedMasterWrite.response.status === 403, "Client viewer should not write master data");
+
+  const clientUpsert = await fetchJson(`${baseUrl}api/admin/master-data/clients/demo-retail`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      name: "Demo Retail Client",
+      segment: "Retail",
+      district: "Central",
+      contact: "Store Manager: Ms. Ng",
+      plan: "Premium Care",
+      contract: "HK$8,800 setup + HK$880/mo",
+      renewalDate: "2026-11-30",
+      renewalRisk: "medium",
+      revenue: 19360,
+      proofNeed: "Retail ambience and ESG proof"
+    })
+  });
+  assert(clientUpsert.response.ok, "Admin client upsert failed");
+  assert(clientUpsert.body.client.id === "demo-retail", "Admin client upsert returned wrong client");
+  assert(clientUpsert.body.event.type === "master-data.client.upserted", "Client upsert did not create audit event");
+
+  const assetUpsert = await fetchJson(`${baseUrl}api/admin/master-data/living-assets/MJ-HK-901`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      clientId: "demo-retail",
+      name: "Retail Entry Living Wall",
+      location: "Shop entrance",
+      version: "Smart",
+      modules: 2,
+      pods: 90,
+      health: 87,
+      survival: 93,
+      issues: 2,
+      nextVisit: "Jul 18",
+      cadence: "Twice monthly",
+      greenArea: 4.4,
+      waterSaved: 72,
+      serviceMilesSaved: 9,
+      staffReach: 120,
+      co2eProxy: 54,
+      status: "stable",
+      sensors: ["water level", "light"],
+      tags: ["new store"],
+      zones: [
+        { name: "Left", pods: 45, health: 88, issue: "none" },
+        { name: "Right", pods: 45, health: 86, issue: "trim due" }
+      ]
+    })
+  });
+  assert(assetUpsert.response.ok, "Admin living asset upsert failed");
+  assert(assetUpsert.body.asset.id === "MJ-HK-901", "Admin asset upsert returned wrong asset");
+
+  const invalidAsset = await fetchJson(`${baseUrl}api/admin/master-data/living-assets/MJ-HK-BAD`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      clientId: "missing-client",
+      name: "Invalid Asset",
+      modules: 1,
+      pods: 45,
+      health: 80,
+      survival: 90
+    })
+  });
+  assert(invalidAsset.response.status === 400, "Invalid living asset should fail FK validation");
+
+  const workOrderUpsert = await fetchJson(`${baseUrl}api/admin/master-data/work-orders/WO-1901`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      wallId: "MJ-HK-901",
+      type: "New retail care visit",
+      due: "Jul 18 11:00",
+      status: "Scheduled",
+      priority: "medium",
+      tasks: ["Check retail lighting", "Capture entrance proof photos"]
+    })
+  });
+  assert(workOrderUpsert.response.ok, "Admin work order upsert failed");
+  assert(workOrderUpsert.body.workOrder.wallId === "MJ-HK-901", "Admin work order did not link to new asset");
+
+  const sensorUpsert = await fetchJson(`${baseUrl}api/admin/master-data/sensor-readings/SNS-901-LIGHT`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      wallId: "MJ-HK-901",
+      type: "Light exposure",
+      value: 71,
+      unit: "%",
+      target: "65-90%",
+      status: "ok",
+      lastSeen: "2026-07-15 09:00",
+      action: "No action required"
+    })
+  });
+  assert(sensorUpsert.response.ok, "Admin sensor upsert failed");
+  assert(sensorUpsert.body.sensor.wallId === "MJ-HK-901", "Admin sensor did not link to new asset");
+
+  const adminAssets = await fetchJson(`${baseUrl}api/assets`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(adminAssets.body.assets.some((asset) => asset.id === "MJ-HK-901"), "Admin assets endpoint did not read newly upserted SQLite asset");
+
+  const adminPortfolio = await fetchJson(`${baseUrl}api/portfolio`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(adminPortfolio.body.counts.clients === 5, "Portfolio did not reflect admin-created client");
+  assert(adminPortfolio.body.counts.assets === 5, "Portfolio did not reflect admin-created asset");
+  assert(adminPortfolio.body.counts.workorders === 5, "Portfolio did not reflect admin-created work order");
+
+  const validationAfterCrud = await fetchJson(`${baseUrl}api/admin/master-data/validate`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(validationAfterCrud.response.ok, "Admin master-data validation endpoint failed");
+  assert(validationAfterCrud.body.masterData.counts.clients === 5, "Master-data validation did not reflect admin-created client");
+  assert(validationAfterCrud.body.masterData.counts.livingAssets === 5, "Master-data validation did not reflect admin-created asset");
+  assert(validationAfterCrud.body.masterData.counts.workOrders === 5, "Master-data validation did not reflect admin-created work order");
+  assert(validationAfterCrud.body.masterData.counts.sensorReadings === 5, "Master-data validation did not reflect admin-created sensor");
+  assert(validationAfterCrud.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "Master-data CRUD introduced FK issues");
+
+  const importReset = await fetchJson(`${baseUrl}api/admin/master-data/import`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead")
+  });
+  assert(importReset.response.ok, "Admin master-data import endpoint failed");
+  assert(importReset.body.masterData.counts.clients === 4, "Master-data import did not reset client seed count");
+  assert(importReset.body.masterData.counts.livingAssets === 4, "Master-data import did not reset asset seed count");
+  assert(importReset.body.event.type === "master-data.imported", "Master-data import did not create audit event");
+
+  const storageAfterAdmin = await fetchJson(`${baseUrl}api/storage`);
+  assert(storageAfterAdmin.body.counts.opsEvents === 8, "Admin CRUD/import events were not retained in ops event log");
+  assert(storageAfterAdmin.body.masterData.counts.clients === 4, "Storage did not show imported client seed count");
+  assert(storageAfterAdmin.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "Imported master data has FK issues");
 }
 
 async function main() {

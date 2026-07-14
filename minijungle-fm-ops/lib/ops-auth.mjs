@@ -22,7 +22,11 @@ const roleDefinitions = {
       "data.model.read",
       "data.quality.read",
       "production.seed.read",
-      "auth.policy.read"
+      "auth.policy.read",
+      "master.data.read",
+      "master.data.write",
+      "master.data.import",
+      "master.data.validate"
     ],
     actionTypes: ["*"]
   },

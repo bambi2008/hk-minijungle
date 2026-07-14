@@ -67,7 +67,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: `/api/storage` exposes master-data migration version, table names, row counts and `PRAGMA foreign_key_check` status. API smoke tests verify client/asset/work-order/sensor table counts and zero foreign-key issues.
 - Still not solved: JSON is still the seed source, and there is no admin CRUD workflow, bulk import UI, production backup/restore, schema migration runner, managed PostgreSQL/MySQL deployment, or historical versioning for master-data changes.
 
+### Step 8 - Admin CRUD and Import Workflow v1
+
+- Target score after completion: 65%
+- Capability added: Permission-protected admin APIs for master-data validation, JSON seed import, and upsert workflows for clients, living assets, work orders and sensor readings.
+- Why this matters: Master data can now be created or updated through backend APIs instead of being overwritten from JSON on every read. Successful admin writes create ops audit events, while invalid foreign-key writes are rejected.
+- What is objectively better: API smoke tests verify read-only roles are blocked, valid admin client/asset/work-order/sensor upserts persist into SQLite, invalid asset-client references fail validation, portfolio/assets read paths reflect admin changes, and explicit import resets master data back to the seed baseline.
+- Still not solved: There is still no visual admin CRUD UI, approval workflow, bulk CSV/XLSX importer, migration rollback tooling, master-data version history, soft delete/recovery model, or production database service.
+
 ### Current Honest Score
 
-- Production-readiness score: 60%
+- Production-readiness score: 65%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.
