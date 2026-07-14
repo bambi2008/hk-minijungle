@@ -68,6 +68,7 @@ async function verifyApi(baseUrl) {
   assert(health.body.masterDataStore === "sqlite", "Health endpoint did not expose SQLite master data store");
   assert(health.body.authPolicy === "role-client-scope-v1", "Health endpoint did not expose auth policy");
   assert(health.body.mobileWorkflow === "offline-capture-v1", "Health endpoint did not expose mobile workflow mode");
+  assert(health.body.proofMediaVault === "metadata-ledger-v1", "Health endpoint did not expose proof media vault mode");
 
   const authContext = await fetchJson(`${baseUrl}api/auth/context`, {
     headers: principalHeaders("client-show-suite")
@@ -82,6 +83,9 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.response.ok, "Auth policy endpoint failed for FM lead");
   assert(authPolicy.body.roles["field-tech"].actionTypes.includes("sensor.acknowledge"), "Auth policy did not expose field action whitelist");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.capture.write"), "Auth policy did not expose field mobile capture permission");
+  assert(authPolicy.body.roles["field-tech"].permissions.includes("proof.media.write"), "Auth policy did not expose field proof media write permission");
+  assert(authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.read"), "Auth policy did not expose client proof media read permission");
+  assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
 
   const unknownAuth = await fetchJson(`${baseUrl}api/assets`, {
     headers: principalHeaders("unknown-principal")
@@ -114,6 +118,12 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.mobileCapture.counts.captureBatches === 0, "Mobile capture batches should start empty in test mode");
   assert(initialStorage.body.mobileCapture.counts.captureItems === 0, "Mobile capture items should start empty in test mode");
   assert(initialStorage.body.mobileCapture.relationshipIntegrity.foreignKeysEnabled === true, "SQLite mobile capture foreign keys are not enabled");
+  assert(initialStorage.body.proofMedia.migrationVersion === "2026-07-15.proof-media-v1", "Storage endpoint did not expose proof media migration");
+  assert(initialStorage.body.proofMedia.tables.includes("proof_media_objects"), "Storage endpoint did not expose proof media objects table");
+  assert(initialStorage.body.proofMedia.tables.includes("proof_media_links"), "Storage endpoint did not expose proof media links table");
+  assert(initialStorage.body.proofMedia.counts.mediaObjects === 0, "Proof media objects should start empty in test mode");
+  assert(initialStorage.body.proofMedia.counts.mediaLinks === 0, "Proof media links should start empty in test mode");
+  assert(initialStorage.body.proofMedia.relationshipIntegrity.foreignKeysEnabled === true, "SQLite proof media foreign keys are not enabled");
 
   const deniedStorage = await fetchJson(`${baseUrl}api/storage`, {
     headers: principalHeaders("client-show-suite")
@@ -138,16 +148,19 @@ async function verifyApi(baseUrl) {
 
   const dataModel = await fetchJson(`${baseUrl}api/data-model`);
   assert(dataModel.response.ok, "Data model endpoint failed");
-  assert(dataModel.body.scoreTarget.before === 31, "Data model did not preserve production-readiness baseline");
-  assert(dataModel.body.scoreTarget.after === 35, "Data model did not expose this step's target score");
+  assert(dataModel.body.scoreTarget.before === 70, "Data model did not preserve Step 10 readiness baseline");
+  assert(dataModel.body.scoreTarget.after === 75, "Data model did not expose Step 10 target score");
   assert(dataModel.body.entities.some((item) => item.name === "assetModules"), "Data model did not include module entity");
+  assert(dataModel.body.entities.some((item) => item.name === "proofMediaObjects"), "Data model did not include proof media entity");
 
   const dataQuality = await fetchJson(`${baseUrl}api/data-quality`);
   assert(dataQuality.response.ok, "Data quality endpoint failed");
   assert(dataQuality.body.status === "pass-with-warnings", "Data quality should pass with honest production warnings");
   assert(dataQuality.body.errors.length === 0, "Data quality report should not contain relationship errors");
   assert(dataQuality.body.entityCounts.assetModules === 12, "Data quality report did not derive asset module count");
+  assert(dataQuality.body.entityCounts.proofMediaObjects === 0, "Data quality report should expose proof media entity count");
   assert(dataQuality.body.scaleReadiness.needsRealDatabase === true, "Data quality report should preserve honest database gap");
+  assert(dataQuality.body.scaleReadiness.needsObjectStorage === true, "Data quality report should preserve honest object-storage gap");
 
   const seed = await fetchJson(`${baseUrl}api/production-seed`);
   assert(seed.response.ok, "Production seed endpoint failed");
@@ -660,6 +673,190 @@ async function verifyApi(baseUrl) {
   assert(storageAfterMobile.body.mobileCapture.counts.captureBatches === 1, "Mobile capture batch count did not persist");
   assert(storageAfterMobile.body.mobileCapture.counts.captureItems === 5, "Mobile capture item count did not persist");
   assert(storageAfterMobile.body.mobileCapture.relationshipIntegrity.foreignKeyIssues === 0, "Mobile capture FK check found issues");
+
+  const initialMediaVault = await fetchJson(`${baseUrl}api/proof/media-vault`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(initialMediaVault.response.ok, "Client-scoped proof media vault read failed");
+  assert(initialMediaVault.body.uploadPolicy.requiredIntegrity.includes("sha256"), "Proof media vault did not expose SHA-256 integrity policy");
+  assert(initialMediaVault.body.objects.length === 0, "Proof media vault should start empty before media registration");
+
+  const viewerDeniedMediaIntent = await fetchJson(`${baseUrl}api/proof/media-intents`, {
+    method: "POST",
+    headers: jsonHeaders("client-show-suite"),
+    body: JSON.stringify({
+      id: "PM-DENIED-001",
+      clientId: "show-suite",
+      wallId: "MJ-HK-021",
+      workorderId: "WO-1047",
+      filename: "viewer-denied.jpg",
+      contentType: "image/jpeg",
+      byteSize: 1200,
+      sha256: "b".repeat(64)
+    })
+  });
+  assert(viewerDeniedMediaIntent.response.status === 403, "Client viewer should not create proof media upload intents");
+
+  const fieldCrossClientMediaDenied = await fetchJson(`${baseUrl}api/proof/media-intents`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      id: "PM-DENIED-002",
+      clientId: "central-office",
+      wallId: "MJ-HK-001",
+      workorderId: "WO-1051",
+      filename: "cross-client.jpg",
+      contentType: "image/jpeg",
+      byteSize: 1200,
+      sha256: "c".repeat(64)
+    })
+  });
+  assert(fieldCrossClientMediaDenied.response.status === 403, "Field technician should not create proof media outside assigned client");
+
+  const mismatchedMediaIntent = await fetchJson(`${baseUrl}api/proof/media-intents`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      id: "PM-DENIED-003",
+      clientId: "show-suite",
+      wallId: "MJ-HK-001",
+      workorderId: "WO-1047",
+      proofRecordId: "PRF-1047",
+      filename: "mismatch.jpg",
+      contentType: "image/jpeg",
+      byteSize: 1200,
+      sha256: "d".repeat(64)
+    })
+  });
+  assert(mismatchedMediaIntent.response.status === 400, "Mismatched proof media scope should fail validation");
+  assert(mismatchedMediaIntent.body.code === "PROOF_MEDIA_SCOPE_MISMATCH", "Mismatched proof media did not expose scope mismatch code");
+
+  const proofMedia = {
+    id: "PM-9001",
+    clientId: "show-suite",
+    wallId: "MJ-HK-021",
+    workorderId: "WO-1047",
+    proofRecordId: "PRF-1047",
+    captureBatchId: "MCB-9001",
+    captureItemId: "MCB-9001-ITEM-1",
+    category: "after-care-photo",
+    filename: "show-suite-low-light-after.jpg",
+    contentType: "image/jpeg",
+    byteSize: 481234,
+    sha256: "a".repeat(64),
+    source: "technician-mobile",
+    metadata: {
+      zone: "North",
+      cameraAngle: "fixed-front",
+      privacy: "plant-zone-only"
+    }
+  };
+
+  const mediaIntent = await fetchJson(`${baseUrl}api/proof/media-intents`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify(proofMedia)
+  });
+  assert(mediaIntent.response.status === 201, "Assigned field technician proof media intent should be created");
+  assert(mediaIntent.body.duplicate === false, "First proof media intent should not be duplicate");
+  assert(mediaIntent.body.object.uploadStatus === "intent-created", "Proof media intent should start as intent-created");
+  assert(mediaIntent.body.upload.putUrl.startsWith("drf-local-upload://"), "Proof media intent did not return local upload placeholder URL");
+  assert(mediaIntent.body.object.links.length === 5, "Proof media intent did not link wall, work order, proof and mobile capture records");
+
+  const duplicateMediaIntent = await fetchJson(`${baseUrl}api/proof/media-intents`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify(proofMedia)
+  });
+  assert(duplicateMediaIntent.response.ok, "Duplicate proof media intent should return existing object");
+  assert(duplicateMediaIntent.body.duplicate === true, "Duplicate proof media intent should be marked duplicate");
+
+  const mediaHashMismatch = await fetchJson(`${baseUrl}api/proof/media-evidence`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      id: "PM-9001",
+      byteSize: 481234,
+      sha256: "e".repeat(64)
+    })
+  });
+  assert(mediaHashMismatch.response.status === 400, "Proof media registration should reject hash mismatch");
+  assert(mediaHashMismatch.body.code === "PROOF_MEDIA_HASH_MISMATCH", "Proof media hash mismatch did not expose mismatch code");
+
+  const mediaRegister = await fetchJson(`${baseUrl}api/proof/media-evidence`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      id: "PM-9001",
+      byteSize: 481234,
+      sha256: "a".repeat(64),
+      uploadedAt: "2026-07-15T09:23:00.000Z"
+    })
+  });
+  assert(mediaRegister.response.status === 201, "Proof media registration should create registered evidence");
+  assert(mediaRegister.body.duplicate === false, "First proof media registration should not be duplicate");
+  assert(mediaRegister.body.object.uploadStatus === "registered", "Proof media registration did not mark object registered");
+  assert(mediaRegister.body.event.type === "proof.media.registered", "Proof media registration did not create audit event");
+
+  const duplicateMediaRegister = await fetchJson(`${baseUrl}api/proof/media-evidence`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      id: "PM-9001",
+      byteSize: 481234,
+      sha256: "a".repeat(64),
+      uploadedAt: "2026-07-15T09:23:00.000Z"
+    })
+  });
+  assert(duplicateMediaRegister.response.ok, "Duplicate proof media registration should return existing object");
+  assert(duplicateMediaRegister.body.duplicate === true, "Duplicate proof media registration should be marked duplicate");
+  assert(duplicateMediaRegister.body.event === null, "Duplicate proof media registration should not create a second event");
+
+  const viewerDeniedMediaVerify = await fetchJson(`${baseUrl}api/proof/media-evidence/PM-9001/verify`, {
+    method: "PUT",
+    headers: jsonHeaders("client-show-suite"),
+    body: JSON.stringify({
+      status: "verified",
+      note: "Viewer should not verify evidence."
+    })
+  });
+  assert(viewerDeniedMediaVerify.response.status === 403, "Client viewer should not verify proof media");
+
+  const mediaVerify = await fetchJson(`${baseUrl}api/proof/media-evidence/PM-9001/verify`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      status: "verified",
+      note: "SHA-256 and fixed-angle proof metadata reviewed for client report."
+    })
+  });
+  assert(mediaVerify.response.ok, "FM lead proof media verification failed");
+  assert(mediaVerify.body.object.uploadStatus === "verified", "Proof media verification did not mark object verified");
+  assert(mediaVerify.body.object.verifiedBy === "Hong Kong FM Lead", "Proof media verification did not default reviewer to FM lead");
+  assert(mediaVerify.body.event.type === "proof.media.verified", "Proof media verification did not create verified event");
+
+  const clientMediaVault = await fetchJson(`${baseUrl}api/proof/media-vault`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientMediaVault.response.ok, "Client-scoped proof media vault failed after verification");
+  assert(clientMediaVault.body.objects.length === 1, "Client-scoped proof media vault should expose one scoped object");
+  assert(clientMediaVault.body.objects[0].id === "PM-9001", "Client-scoped proof media vault returned wrong object");
+  assert(clientMediaVault.body.objects[0].uploadStatus === "verified", "Client-scoped proof media vault did not expose verified status");
+  assert(clientMediaVault.body.objects[0].integrity.sha256 === "a".repeat(64), "Client-scoped proof media vault did not expose SHA-256 integrity");
+
+  const clientEventsAfterProofMedia = await fetchJson(`${baseUrl}api/ops-events`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.registered"), "Client-scoped events did not include proof media registration");
+  assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.verified"), "Client-scoped events did not include proof media verification");
+
+  const storageAfterProofMedia = await fetchJson(`${baseUrl}api/storage`);
+  assert(storageAfterProofMedia.body.counts.opsEvents === 11, "Proof media events were not retained in ops event log");
+  assert(storageAfterProofMedia.body.proofMedia.counts.mediaObjects === 1, "Proof media object count did not persist");
+  assert(storageAfterProofMedia.body.proofMedia.counts.mediaLinks === 5, "Proof media link count did not persist");
+  assert(storageAfterProofMedia.body.proofMedia.counts.verified === 1, "Proof media verified count did not persist");
+  assert(storageAfterProofMedia.body.proofMedia.hashCoverage.mediaObjectsWithSha256 === 1, "Proof media hash coverage did not persist");
+  assert(storageAfterProofMedia.body.proofMedia.relationshipIntegrity.foreignKeyIssues === 0, "Proof media FK check found issues");
 }
 
 async function main() {

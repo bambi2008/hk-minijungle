@@ -83,7 +83,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: API smoke tests verify that client viewers cannot sync mobile evidence, field technicians cannot sync outside their assigned client, mismatched wall/work-order/client payloads are rejected, valid offline batches persist into SQLite, repeated batch IDs do not duplicate rows or events, and `/api/storage` reports mobile capture table counts and foreign-key integrity.
 - Still not solved: This is not a native mobile app. It does not yet upload real image files to object storage, hash media blobs, perform camera capture, geolocation proof, background retry, offline conflict resolution, push notifications, route navigation, or supervisor review workflow.
 
+### Step 10 - Proof Object Storage and Media Evidence v1
+
+- Target score after completion: 75%
+- Capability added: SQLite proof-media metadata ledger, upload-intent API, evidence-registration API, proof-media verification API, scoped media vault read API, object-key/SHA-256/byte-size tracking, relationship links to wall/work order/proof/mobile capture, and storage health reporting.
+- Why this matters: Investor and FM users need evidence that can survive reporting, ESG packs, dispute handling and renewal conversations. The app now has a structured chain from technician capture to proof media object, hash, object key, verification status and audit event.
+- What is objectively better: API smoke tests verify that clients can read only scoped proof media, clients cannot create or verify proof media, field technicians cannot create proof media outside assigned client scope, mismatched wall/work-order/client/proof relationships are rejected, hash mismatches are rejected, duplicate registration does not duplicate audit events, verified proof media is visible in the client vault, and `/api/storage` reports proof-media table counts, hash coverage and foreign-key integrity.
+- Still not solved: This is still a local metadata ledger, not production cloud object storage. It does not yet provide actual file upload, signed S3/GCS/Azure Blob URLs, antivirus/malware scanning, image EXIF stripping, immutable bucket retention, CDN delivery, backup policy, or lifecycle deletion controls.
+
 ### Current Honest Score
 
-- Production-readiness score: 70%
+- Production-readiness score: 75%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.

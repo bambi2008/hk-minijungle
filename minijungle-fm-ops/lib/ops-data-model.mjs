@@ -2,10 +2,10 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const productionDataModel = {
-  version: "2026-07-14.production-readiness-v1",
+  version: "2026-07-15.proof-media-v1",
   scoreTarget: {
-    before: 31,
-    after: 35
+    before: 70,
+    after: 75
   },
   scope: "Hong Kong FM living-green module operations at 1,000+ modules",
   entities: [
@@ -44,6 +44,12 @@ export const productionDataModel = {
       idField: "id",
       source: ".ops-data/ops-runtime.sqlite::proof_records seeded from data/proof.json",
       purpose: "Photos, notes and method evidence used in ESG, renewal and audit packs."
+    },
+    {
+      name: "proofMediaObjects",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::proof_media_objects",
+      purpose: "Object-key, hash, size, source and verification ledger for proof media."
     },
     {
       name: "sensorReadings",
@@ -95,6 +101,10 @@ export const productionDataModel = {
     { from: "workOrders.wallId", to: "livingAssets.id" },
     { from: "proofRecords.workorderId", to: "workOrders.id" },
     { from: "proofRecords.wallId", to: "livingAssets.id" },
+    { from: "proofMediaObjects.clientId", to: "clients.id" },
+    { from: "proofMediaObjects.wallId", to: "livingAssets.id" },
+    { from: "proofMediaObjects.workorderId", to: "workOrders.id" },
+    { from: "proofMediaObjects.proofRecordId", to: "proofRecords.id", optional: true },
     { from: "sensorReadings.wallId", to: "livingAssets.id" },
     { from: "incidents.wallId", to: "livingAssets.id" },
     { from: "incidents.linkedWorkorderId", to: "workOrders.id" },
@@ -114,6 +124,9 @@ export const productionDataModel = {
     "workOrders.wallId",
     "workOrders.status",
     "proofRecords.wallId",
+    "proofMediaObjects.clientId",
+    "proofMediaObjects.sha256",
+    "proofMediaObjects.uploadStatus",
     "sensorReadings.wallId",
     "incidents.wallId",
     "incidents.status",
@@ -247,6 +260,7 @@ export function buildProductionSeed(dataset, opsEvents = []) {
       assetModules: dataset.walls.flatMap(moduleRecordsForWall),
       workOrders: dataset.workorders,
       proofRecords: dataset.proofRecords,
+      proofMediaObjects: [],
       sensorReadings: dataset.sensorReadings,
       incidents: dataset.incidents,
       serviceSlots: dataset.serviceSlots,
@@ -397,7 +411,7 @@ export function validateProductionDataset(dataset, seed = buildProductionSeed(da
   }
 
   pushWarning(true, "Plant Pod records are still aggregate counts; production needs module/pod-level IDs before 1,000+ module rollout.", warnings);
-  pushWarning(true, "Proof records do not yet include object storage URLs, hashes or signed upload metadata.", warnings);
+  pushWarning(true, "Proof media now has a local metadata ledger for object keys, hashes and verification, but production still needs managed object storage, signed upload URLs, malware scanning and retention policies.", warnings);
   pushWarning(true, "Auth, roles and client scope now have server-side demo enforcement; production still needs SSO/MFA, session lifecycle and database row policies.", warnings);
   pushWarning(true, "Sensor readings are latest-state demo records; production needs append-only time-series ingestion.", warnings);
 

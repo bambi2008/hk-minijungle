@@ -31,6 +31,14 @@ import {
   saveSqliteMobileCaptureBatch
 } from "./lib/ops-mobile-store.mjs";
 import {
+  createSqliteProofMediaIntent,
+  listSqliteProofMediaObjects,
+  readSqliteProofMediaObject,
+  readSqliteProofMediaStorageHealth,
+  registerSqliteProofMediaEvidence,
+  verifySqliteProofMediaEvidence
+} from "./lib/ops-proof-media-store.mjs";
+import {
   authPolicySummary,
   canAccessClient,
   filterByClientScope,
@@ -468,6 +476,74 @@ async function validateMobileCaptureScope(auth, batch) {
   }
 }
 
+function proofMediaUploadPolicy() {
+  return {
+    version: "2026-07-15.proof-media-v1",
+    acceptedContentTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
+    maxByteSize: 25 * 1024 * 1024,
+    requiredIntegrity: ["sha256", "byteSize", "objectKey"],
+    supportedSources: ["technician-mobile", "robotic-care", "fm-admin", "client-approved-upload"],
+    productionNote: "This demo creates local metadata intents. Production must replace putUrl with signed object-storage URLs and malware scanning."
+  };
+}
+
+async function validateProofMediaScope(auth, media) {
+  if (!media || typeof media !== "object") {
+    throw validationError("proof media payload is required", "PROOF_MEDIA_VALIDATION_ERROR");
+  }
+
+  const clientId = String(media.clientId || "").trim();
+  if (!clientId) {
+    throw validationError("proof media clientId is required", "PROOF_MEDIA_VALIDATION_ERROR");
+  }
+
+  requireClientAccess(auth, clientId, "proof media");
+  const resolveEntityClientId = await buildEntityClientResolver();
+  const wallClientId = resolveEntityClientId("wall", media.wallId);
+  const workOrderClientId = resolveEntityClientId("workorder", media.workorderId);
+
+  if (!wallClientId) {
+    throw validationError("proof media references an unknown wall", "PROOF_MEDIA_UNKNOWN_WALL");
+  }
+
+  if (!workOrderClientId) {
+    throw validationError("proof media references an unknown work order", "PROOF_MEDIA_UNKNOWN_WORKORDER");
+  }
+
+  if (wallClientId !== clientId || workOrderClientId !== clientId) {
+    throw validationError("proof media wall, work order and client do not match", "PROOF_MEDIA_SCOPE_MISMATCH");
+  }
+
+  if (media.proofRecordId) {
+    const proofClientId = resolveEntityClientId("proof", media.proofRecordId);
+    if (!proofClientId) {
+      throw validationError("proof media references an unknown proof record", "PROOF_MEDIA_UNKNOWN_PROOF_RECORD");
+    }
+
+    if (proofClientId !== clientId) {
+      throw validationError("proof media proof record and client do not match", "PROOF_MEDIA_SCOPE_MISMATCH");
+    }
+  }
+
+  if (media.captureBatchId) {
+    const batches = await listSqliteMobileCaptureBatches(runtimeDbPath);
+    const batch = batches.find((item) => item.id === media.captureBatchId);
+    if (!batch) {
+      throw validationError("proof media references an unknown mobile capture batch", "PROOF_MEDIA_UNKNOWN_CAPTURE_BATCH");
+    }
+
+    if (batch.clientId !== clientId || batch.wallId !== media.wallId || batch.workorderId !== media.workorderId) {
+      throw validationError("proof media mobile capture batch does not match client, wall and work order", "PROOF_MEDIA_SCOPE_MISMATCH");
+    }
+
+    if (media.captureItemId && !batch.items.some((item) => item.id === media.captureItemId)) {
+      throw validationError("proof media references an unknown mobile capture item", "PROOF_MEDIA_UNKNOWN_CAPTURE_ITEM");
+    }
+  }
+
+  return clientId;
+}
+
 function normalizeOpsEvent(input) {
   const type = String(input.type || "").trim();
   const actor = String(input.actor || "").trim();
@@ -516,6 +592,7 @@ async function handleApi(req, res, pathname) {
         masterDataStore: "sqlite",
         authPolicy: "role-client-scope-v1",
         mobileWorkflow: "offline-capture-v1",
+        proofMediaVault: "metadata-ledger-v1",
         generatedAt: new Date().toISOString(),
         dataFiles: Object.keys(dataFileMap)
       });
@@ -678,16 +755,18 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage] = await Promise.all([
         readSqliteOpsStorageHealth(runtimeDbPath),
         readSqliteMasterDataHealth(runtimeDbPath, dataRoot),
-        readSqliteMobileCaptureStorageHealth(runtimeDbPath)
+        readSqliteMobileCaptureStorageHealth(runtimeDbPath),
+        readSqliteProofMediaStorageHealth(runtimeDbPath)
       ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...runtimeStorage,
         masterData: masterDataStorage,
-        mobileCapture: mobileCaptureStorage
+        mobileCapture: mobileCaptureStorage,
+        proofMedia: proofMediaStorage
       });
       return;
     }
@@ -793,6 +872,110 @@ async function handleApi(req, res, pathname) {
 
       sendJson(res, result.duplicate ? 200 : 201, {
         ...result,
+        event
+      });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/proof/media-vault") {
+      requirePermission(auth, "proof.media.read");
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        auth: {
+          principalId: auth.id,
+          roleId: auth.roleId,
+          clientScope: auth.clientScope,
+          clientIds: auth.clientIds
+        },
+        uploadPolicy: proofMediaUploadPolicy(),
+        objects: filterByClientScope(auth, await listSqliteProofMediaObjects(runtimeDbPath), (object) => object.clientId)
+      });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/proof/media-intents") {
+      requirePermission(auth, "proof.media.write");
+      const input = await readJsonBody(req);
+      const mediaInput = input.media && typeof input.media === "object" ? input.media : input;
+      await validateProofMediaScope(auth, mediaInput);
+      const result = await createSqliteProofMediaIntent(runtimeDbPath, mediaInput);
+      sendJson(res, result.duplicate ? 200 : 201, result);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/proof/media-evidence") {
+      requirePermission(auth, "proof.media.write");
+      const input = await readJsonBody(req);
+      const existing = await readSqliteProofMediaObject(runtimeDbPath, input.id);
+      if (!existing) {
+        throw validationError("proof media object must be created before registration", "PROOF_MEDIA_NOT_FOUND");
+      }
+      requireClientAccess(auth, existing.clientId, "proof media registration");
+      const result = await registerSqliteProofMediaEvidence(runtimeDbPath, input);
+      let event = null;
+
+      if (!result.duplicate) {
+        event = normalizeOpsEvent({
+          type: "proof.media.registered",
+          actor: auth.name,
+          entityType: "proof-media",
+          entityId: result.object.id,
+          clientId: result.object.clientId,
+          wallId: result.object.wallId,
+          source: "proof-media-vault",
+          note: `Proof media ${result.object.filename} registered with SHA-256 evidence metadata.`,
+          payload: {
+            principalId: auth.id,
+            mediaId: result.object.id,
+            objectKey: result.object.objectKey,
+            sha256: result.object.sha256,
+            byteSize: result.object.byteSize
+          }
+        });
+        await appendOpsEvent(event);
+      }
+
+      sendJson(res, result.duplicate ? 200 : 201, {
+        ...result,
+        event
+      });
+      return;
+    }
+
+    const proofMediaVerifyMatch = pathname.match(/^\/api\/proof\/media-evidence\/([^/]+)\/verify$/);
+    if (req.method === "PUT" && proofMediaVerifyMatch) {
+      requirePermission(auth, "proof.media.verify");
+      const mediaId = decodeURIComponent(proofMediaVerifyMatch[1]);
+      const existing = await readSqliteProofMediaObject(runtimeDbPath, mediaId);
+      if (!existing) {
+        throw validationError("proof media object must exist before verification", "PROOF_MEDIA_NOT_FOUND");
+      }
+      requireClientAccess(auth, existing.clientId, "proof media verification");
+      const input = await readJsonBody(req);
+      const object = await verifySqliteProofMediaEvidence(runtimeDbPath, mediaId, {
+        ...input,
+        verifiedBy: input.verifiedBy || auth.name
+      });
+      const event = normalizeOpsEvent({
+        type: `proof.media.${object.uploadStatus}`,
+        actor: auth.name,
+        entityType: "proof-media",
+        entityId: object.id,
+        clientId: object.clientId,
+        wallId: object.wallId,
+        source: "proof-media-vault",
+        note: `Proof media ${object.filename} marked ${object.uploadStatus}.`,
+        payload: {
+          principalId: auth.id,
+          mediaId: object.id,
+          objectKey: object.objectKey,
+          status: object.uploadStatus,
+          verificationNote: object.verificationNote
+        }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, 200, {
+        object,
         event
       });
       return;

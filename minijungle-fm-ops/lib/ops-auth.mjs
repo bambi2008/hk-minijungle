@@ -29,7 +29,10 @@ const roleDefinitions = {
       "master.data.validate",
       "mobile.route.read",
       "mobile.capture.read",
-      "mobile.capture.write"
+      "mobile.capture.write",
+      "proof.media.read",
+      "proof.media.write",
+      "proof.media.verify"
     ],
     actionTypes: ["*"]
   },
@@ -44,7 +47,9 @@ const roleDefinitions = {
       "ops.state.write.action",
       "mobile.route.read",
       "mobile.capture.read",
-      "mobile.capture.write"
+      "mobile.capture.write",
+      "proof.media.read",
+      "proof.media.write"
     ],
     actionTypes: [
       "workorder.complete",
@@ -61,7 +66,8 @@ const roleDefinitions = {
       "portfolio.read",
       "assets.read",
       "ops.events.read",
-      "ops.state.read"
+      "ops.state.read",
+      "proof.media.read"
     ],
     actionTypes: []
   },
@@ -75,7 +81,8 @@ const roleDefinitions = {
       "ops.state.read",
       "data.model.read",
       "data.quality.read",
-      "auth.policy.read"
+      "auth.policy.read",
+      "proof.media.read"
     ],
     actionTypes: []
   }
