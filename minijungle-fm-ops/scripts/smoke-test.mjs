@@ -120,6 +120,11 @@ async function verifyBrowserFlow(baseUrl) {
       const snapshot = await response.json();
       return Boolean(snapshot.state?.aiQueuedActions?.["AI-ESG-001"]);
     }, { timeout: 5000 });
+    await page.waitForFunction(async () => {
+      const response = await fetch("/api/ops-events");
+      const body = await response.json();
+      return body.events.some((event) => event.entityId === "AI-ESG-001" && event.payload?.actionType === "ai.queueRecommendation");
+    }, { timeout: 5000 });
     const healthText = await page.textContent("#health");
     assert(healthText?.includes("Health Score Method"), "Health Score Method section did not load");
     assert(healthText?.includes("Visual AI condition"), "Health score formula did not load visual AI component");

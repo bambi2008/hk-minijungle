@@ -116,52 +116,99 @@ async function verifyApi(baseUrl) {
   const updatedPortfolio = await fetchJson(`${baseUrl}api/portfolio`);
   assert(updatedPortfolio.body.counts.serverSideOpsEvents === 1, "Portfolio endpoint did not reflect server-side event count");
 
-  const stateSnapshot = await fetchJson(`${baseUrl}api/ops-state/snapshot`, {
+  const stateAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      state: {
-        workorderCompletions: {
-          "WO-1047": {
-            completedAt: "2026-07-14T08:00:00.000Z",
-            completedBy: "API smoke test"
-          }
-        },
-        dispatchStaging: {},
-        proofApprovals: {},
-        sensorAcknowledgements: {},
-        supplyRequests: {},
-        invoicePayments: {},
-        scheduleConfirmations: {},
-        incidentResolutions: {},
-        complianceClearances: {},
-        activeRoleId: "fm-lead",
-        quickOpsTasks: [],
-        auditEvents: [],
-        aiQueuedActions: {}
-      },
-      event: {
-        type: "workorder.completed",
+      expectedRevision: 0,
+      action: {
+        type: "workorder.complete",
         actor: "API smoke test",
         entityType: "workorder",
         entityId: "WO-1047",
         clientId: "show-suite",
         wallId: "MJ-HK-021",
-        note: "Server-side state snapshot smoke test"
+        note: "Typed state action smoke test",
+        value: {
+            completedAt: "2026-07-14T08:00:00.000Z",
+            completedBy: "API smoke test"
+        },
+        auditEvent: {
+          id: "AUD-API-ACTION-001",
+          timestamp: "2026-07-14T08:00:01.000Z",
+          actor: "API smoke test",
+          action: "Work order completed",
+          entityType: "workorder",
+          entityId: "WO-1047",
+          clientId: "show-suite",
+          tone: "completed",
+          detail: "Typed action persisted by API smoke test."
+        }
       }
     })
   });
-  assert(stateSnapshot.response.ok, "Ops state snapshot endpoint failed");
-  assert(stateSnapshot.body.revision === 1, "Ops state snapshot did not increment revision");
-  assert(stateSnapshot.body.summary.completedWorkorders === 1, "Ops state snapshot did not summarize completed work order");
+  assert(stateAction.response.ok, "Ops state action endpoint failed");
+  assert(stateAction.body.revision === 1, "Ops state action did not increment revision");
+  assert(stateAction.body.action.appliedCollections.includes("workorderCompletions"), "Ops state action did not apply work order collection");
+  assert(stateAction.body.action.appliedCollections.includes("auditEvents"), "Ops state action did not apply audit event collection");
+  assert(stateAction.body.summary.completedWorkorders === 1, "Ops state action did not summarize completed work order");
 
   const persistedState = await fetchJson(`${baseUrl}api/ops-state`);
   assert(persistedState.body.state.workorderCompletions["WO-1047"], "Ops state did not persist completed work order");
+  assert(persistedState.body.state.auditEvents.some((event) => event.id === "AUD-API-ACTION-001"), "Ops state did not persist typed action audit event");
   assert(persistedState.body.summary.completedWorkorders === 1, "Ops state summary did not persist completed work order");
 
+  const conflictAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      expectedRevision: 0,
+      action: {
+        type: "sensor.acknowledge",
+        actor: "API smoke test",
+        entityType: "sensor",
+        entityId: "SNS-021-LIGHT",
+        clientId: "show-suite",
+        wallId: "MJ-HK-021",
+        note: "This action should fail because the revision is stale",
+        value: {
+          acknowledgedAt: "2026-07-14T08:02:00.000Z",
+          acknowledgedBy: "API smoke test"
+        },
+        auditEvent: {
+          id: "AUD-API-CONFLICT-001",
+          timestamp: "2026-07-14T08:02:01.000Z",
+          actor: "API smoke test",
+          action: "Sensor alert acknowledged",
+          entityType: "sensor",
+          entityId: "SNS-021-LIGHT",
+          clientId: "show-suite",
+          tone: "acknowledged",
+          detail: "Stale revision conflict probe."
+        }
+      }
+    })
+  });
+  assert(conflictAction.response.status === 409, "Stale ops state action should return 409");
+  assert(conflictAction.body.code === "REVISION_CONFLICT", "Conflict response should expose revision conflict code");
+  assert(conflictAction.body.currentRevision === 1, "Conflict response did not expose current revision");
+
+  const snapshotCompatibility = await fetchJson(`${baseUrl}api/ops-state/snapshot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      state: {
+        ...persistedState.body.state,
+        activeRoleId: "fm-lead"
+      }
+    })
+  });
+  assert(snapshotCompatibility.response.ok, "Ops state snapshot compatibility endpoint failed");
+  assert(snapshotCompatibility.body.revision === 2, "Ops state snapshot compatibility did not increment revision");
+
   const portfolioAfterState = await fetchJson(`${baseUrl}api/portfolio`);
-  assert(portfolioAfterState.body.counts.serverSideOpsEvents === 2, "Portfolio endpoint did not include state snapshot event");
-  assert(portfolioAfterState.body.counts.serverStateRevision === 1, "Portfolio endpoint did not expose state revision");
+  assert(portfolioAfterState.body.counts.serverSideOpsEvents === 2, "Portfolio endpoint did not include typed state action event");
+  assert(portfolioAfterState.body.counts.serverStateRevision === 2, "Portfolio endpoint did not expose state revision");
 
   const updatedQuality = await fetchJson(`${baseUrl}api/data-quality`);
   assert(updatedQuality.body.entityCounts.opsEvents === 2, "Data quality report did not include server-side event count");

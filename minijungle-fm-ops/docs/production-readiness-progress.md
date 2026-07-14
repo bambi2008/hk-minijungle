@@ -35,7 +35,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: AI queue, work-order completion, proof approval, sensor acknowledgement, invoice payment, schedule confirmation, incident resolution, compliance clearance, quick tasks and audit events now have a server-side state path.
 - Still not solved: This is a JSON-file state store, not a production database. It does not provide multi-user conflict control, authentication, access policy, tenant isolation, object storage, background jobs or high-availability deployment.
 
+### Step 4 - Typed Action API and Revision Conflict Control
+
+- Target score after completion: 45%
+- Capability added: Server-side typed action endpoint for operational state changes, action reducer, action-level audit event creation, browser action queue, and optimistic revision conflict detection.
+- Why this matters: The platform no longer relies only on full-state snapshot overwrite. Work-order completion, dispatch staging, proof approval, sensor acknowledgement, inventory reorder, invoice payment, schedule confirmation, incident resolution, compliance clearance, role switch, quick task updates, AI queueing and report actions now have explicit server action types.
+- What is objectively better: Stale writes now return a 409 revision conflict instead of silently replacing newer server state. API and browser smoke tests verify typed action persistence and conflict behavior.
+- Still not solved: Conflict handling is still single-node and file-backed. It is not a transactional database, does not provide row-level locks, user permissions, tenant isolation, mobile offline reconciliation, object-storage proof validation, or device-ingestion pipelines.
+
 ### Current Honest Score
 
-- Production-readiness score: 40%
+- Production-readiness score: 45%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.

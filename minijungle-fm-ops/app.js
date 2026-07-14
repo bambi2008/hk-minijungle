@@ -130,10 +130,12 @@ const aiQueuedActionStorageKey = "dr-forest-fm-ops.ai-queued-actions.v1";
 const languageStorageKey = "dr-forest-fm-ops.language.v1";
 const serverOpsStateEndpoint = "/api/ops-state";
 const serverOpsSnapshotEndpoint = "/api/ops-state/snapshot";
+const serverOpsActionEndpoint = "/api/ops-state/actions";
 
 let currentLanguage = "en";
 let serverOpsStateAvailable = false;
 let serverOpsStateRevision = 0;
+let serverOpsPersistQueue = Promise.resolve();
 
 const simplifiedToTraditionalMap = {
   "与": "與",
@@ -2071,9 +2073,84 @@ function auditActionType(action = "") {
     .replace(/^\.+|\.+$/g, "") || "ops.state.updated";
 }
 
-function persistServerOpsState(auditEvent) {
-  if (!window.location.protocol.startsWith("http")) return;
+const serverActionTypesByAuditAction = {
+  "Work order completed": "workorder.complete",
+  "Dispatch kit staged": "dispatch.stage",
+  "Proof approved": "proof.approve",
+  "Sensor alert acknowledged": "sensor.acknowledge",
+  "Supply reorder requested": "supply.request",
+  "Invoice marked paid": "invoice.markPaid",
+  "Visit slot confirmed": "schedule.confirm",
+  "Incident resolved": "incident.resolve",
+  "Compliance item cleared": "compliance.clear",
+  "Operator role switched": "role.switch",
+  "Quick task created": "quickTask.create",
+  "Quick task closed": "quickTask.close",
+  "Renewal proof pack prepared": "renewal.prepare",
+  "AI recommendation queued": "ai.queueRecommendation",
+  "HTML report exported": "report.export",
+  "Portfolio visit simulated": "portfolio.visitSimulate",
+  "ESG pack generated": "report.generate"
+};
 
+function opsStateValueForAuditEvent(auditEvent) {
+  switch (auditEvent.action) {
+    case "Work order completed":
+      return workorderCompletions[auditEvent.entityId] || {};
+    case "Dispatch kit staged":
+      return dispatchStaging[auditEvent.entityId] || {};
+    case "Proof approved":
+      return proofApprovals[auditEvent.entityId] || {};
+    case "Sensor alert acknowledged":
+      return sensorAcknowledgements[auditEvent.entityId] || {};
+    case "Supply reorder requested":
+      return supplyRequests[auditEvent.entityId] || {};
+    case "Invoice marked paid":
+      return invoicePayments[auditEvent.entityId] || {};
+    case "Visit slot confirmed":
+      return scheduleConfirmations[auditEvent.entityId] || {};
+    case "Incident resolved":
+      return incidentResolutions[auditEvent.entityId] || {};
+    case "Compliance item cleared":
+      return complianceClearances[auditEvent.entityId] || {};
+    case "Operator role switched":
+      return { activeRoleId };
+    case "Quick task created":
+    case "Quick task closed":
+      return quickOpsTasks.find((item) => item.id === auditEvent.entityId) || {};
+    case "AI recommendation queued":
+      return aiQueuedActions[auditEvent.entityId] || {};
+    case "HTML report exported":
+    case "ESG pack generated":
+    case "Renewal proof pack prepared":
+      return {
+        reportMode: state.reportMode,
+        reportClientId: state.selectedReportClientId,
+        reportMonth: state.selectedReportMonth,
+        generated: state.reportGenerated
+      };
+    case "Portfolio visit simulated":
+      return { simulatedVisits: state.simulatedVisits };
+    default:
+      return {};
+  }
+}
+
+function buildServerOpsAction(auditEvent) {
+  if (!auditEvent) return null;
+  return {
+    type: serverActionTypesByAuditAction[auditEvent.action] || auditActionType(auditEvent.action),
+    actor: auditEvent.actor,
+    entityType: auditEvent.entityType,
+    entityId: auditEvent.entityId,
+    clientId: auditEvent.clientId,
+    note: auditEvent.detail,
+    value: opsStateValueForAuditEvent(auditEvent),
+    auditEvent
+  };
+}
+
+async function persistServerOpsSnapshot(auditEvent) {
   const event = auditEvent ? {
     type: auditActionType(auditEvent.action),
     actor: auditEvent.actor,
@@ -2088,20 +2165,58 @@ function persistServerOpsState(auditEvent) {
     }
   } : null;
 
-  fetch(serverOpsSnapshotEndpoint, {
+  const response = await fetch(serverOpsSnapshotEndpoint, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       state: collectOpsStateSnapshot(),
       event
     })
-  })
-    .then((response) => response.ok ? response.json() : null)
-    .then((snapshot) => {
-      if (!snapshot) return;
-      serverOpsStateAvailable = true;
-      serverOpsStateRevision = Number(snapshot.revision || serverOpsStateRevision);
+  });
+  if (!response.ok) throw new Error(`Snapshot sync failed: ${response.status}`);
+  const snapshot = await response.json();
+  serverOpsStateAvailable = true;
+  serverOpsStateRevision = Number(snapshot.revision || serverOpsStateRevision);
+}
+
+async function persistServerOpsAction(action, retryOnConflict = true) {
+  if (!action) return;
+
+  const response = await fetch(serverOpsActionEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      expectedRevision: serverOpsStateRevision,
+      action
     })
+  });
+
+  if (response.status === 404 || response.status === 405) {
+    await persistServerOpsSnapshot(action.auditEvent);
+    return;
+  }
+
+  if (response.status === 409 && retryOnConflict) {
+    const conflict = await response.json();
+    serverOpsStateAvailable = true;
+    serverOpsStateRevision = Number(conflict.currentRevision ?? serverOpsStateRevision);
+    await persistServerOpsAction(action, false);
+    return;
+  }
+
+  if (!response.ok) throw new Error(`Action sync failed: ${response.status}`);
+  const snapshot = await response.json();
+  serverOpsStateAvailable = true;
+  serverOpsStateRevision = Number(snapshot.revision || serverOpsStateRevision);
+}
+
+function persistServerOpsState(auditEvent) {
+  if (!window.location.protocol.startsWith("http")) return;
+
+  const action = buildServerOpsAction(auditEvent);
+  serverOpsPersistQueue = serverOpsPersistQueue
+    .catch(() => {})
+    .then(() => persistServerOpsAction(action))
     .catch(() => {
       serverOpsStateAvailable = false;
     });

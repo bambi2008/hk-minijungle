@@ -1,7 +1,27 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 
-export const opsStateVersion = "2026-07-14.server-state-v1";
+export const opsStateVersion = "2026-07-14.typed-actions-v1";
+
+const keyedActionCollections = {
+  "workorder.complete": "workorderCompletions",
+  "dispatch.stage": "dispatchStaging",
+  "proof.approve": "proofApprovals",
+  "sensor.acknowledge": "sensorAcknowledgements",
+  "supply.request": "supplyRequests",
+  "invoice.markPaid": "invoicePayments",
+  "schedule.confirm": "scheduleConfirmations",
+  "incident.resolve": "incidentResolutions",
+  "compliance.clear": "complianceClearances",
+  "ai.queueRecommendation": "aiQueuedActions"
+};
+
+const auditOnlyActionTypes = new Set([
+  "portfolio.visitSimulate",
+  "renewal.prepare",
+  "report.export",
+  "report.generate"
+]);
 
 export function defaultOpsState() {
   return {
@@ -33,6 +53,70 @@ function plainObject(value) {
 
 function arrayValue(value) {
   return Array.isArray(value) ? value : [];
+}
+
+function cloneJson(value) {
+  return JSON.parse(JSON.stringify(value));
+}
+
+function actionValue(action) {
+  return plainObject(action.value);
+}
+
+function normalizeAction(input) {
+  const action = plainObject(input);
+  const type = String(action.type || "").trim();
+  const entityId = String(action.entityId || "").trim();
+
+  if (!type) {
+    const error = new Error("action.type is required");
+    error.status = 400;
+    throw error;
+  }
+
+  if (!entityId) {
+    const error = new Error("action.entityId is required");
+    error.status = 400;
+    throw error;
+  }
+
+  return {
+    type,
+    actor: String(action.actor || "FM Ops").trim(),
+    entityType: String(action.entityType || "ops").trim(),
+    entityId,
+    clientId: action.clientId || null,
+    wallId: action.wallId || null,
+    note: action.note || "",
+    value: actionValue(action),
+    auditEvent: plainObject(action.auditEvent)
+  };
+}
+
+function assertKnownActionType(type) {
+  if (keyedActionCollections[type] || type === "role.switch" || type === "quickTask.create" || type === "quickTask.close" || auditOnlyActionTypes.has(type)) {
+    return;
+  }
+
+  const error = new Error(`Unsupported ops action type: ${type}`);
+  error.status = 400;
+  throw error;
+}
+
+function upsertTask(tasks, task) {
+  const existingIndex = tasks.findIndex((item) => item.id === task.id);
+  if (existingIndex >= 0) {
+    const next = tasks.slice();
+    next[existingIndex] = { ...next[existingIndex], ...task };
+    return next.slice(0, 200);
+  }
+  return [task, ...tasks].slice(0, 200);
+}
+
+function appendAuditEvent(state, auditEvent) {
+  if (!auditEvent.id) return state.auditEvents;
+  const existing = state.auditEvents.filter((event) => event.id !== auditEvent.id);
+  return [auditEvent, ...existing].slice(0, 500);
 }
 
 export function sanitizeOpsState(input = {}) {
@@ -98,6 +182,69 @@ export async function saveOpsStateSnapshot(statePath, input, event = null) {
 
   await writeOpsState(statePath, next);
   return next;
+}
+
+export async function applyOpsStateAction(statePath, input, event = null) {
+  const body = plainObject(input);
+  const current = await readOpsState(statePath);
+  const expectedRevision = body.expectedRevision;
+
+  if (expectedRevision !== undefined && expectedRevision !== null && Number(expectedRevision) !== current.revision) {
+    const error = new Error(`Ops state revision conflict: expected ${expectedRevision}, current ${current.revision}`);
+    error.status = 409;
+    error.code = "REVISION_CONFLICT";
+    error.currentRevision = current.revision;
+    error.snapshot = current;
+    throw error;
+  }
+
+  const action = normalizeAction(body.action || body);
+  assertKnownActionType(action.type);
+
+  const state = cloneJson(sanitizeOpsState(current.state));
+  const collection = keyedActionCollections[action.type];
+  const appliedCollections = [];
+
+  if (collection) {
+    state[collection] = {
+      ...state[collection],
+      [action.entityId]: action.value
+    };
+    appliedCollections.push(collection);
+  } else if (action.type === "role.switch") {
+    state.activeRoleId = action.value.activeRoleId || action.entityId;
+    appliedCollections.push("activeRoleId");
+  } else if (action.type === "quickTask.create" || action.type === "quickTask.close") {
+    const task = {
+      ...action.value,
+      id: action.value.id || action.entityId
+    };
+    state.quickOpsTasks = upsertTask(state.quickOpsTasks, task);
+    appliedCollections.push("quickOpsTasks");
+  }
+
+  state.auditEvents = appendAuditEvent(state, action.auditEvent);
+  if (action.auditEvent.id) appliedCollections.push("auditEvents");
+
+  const next = {
+    version: opsStateVersion,
+    revision: current.revision + 1,
+    updatedAt: new Date().toISOString(),
+    lastEventId: event?.id || current.lastEventId || null,
+    state: sanitizeOpsState(state)
+  };
+
+  await writeOpsState(statePath, next);
+  return {
+    snapshot: next,
+    action: {
+      type: action.type,
+      entityType: action.entityType,
+      entityId: action.entityId,
+      clientId: action.clientId,
+      appliedCollections: [...new Set(appliedCollections)]
+    }
+  };
 }
 
 export function summarizeOpsState(snapshot) {

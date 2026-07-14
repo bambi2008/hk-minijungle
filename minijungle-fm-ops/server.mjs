@@ -8,6 +8,7 @@ import {
   productionDataModel
 } from "./lib/ops-data-model.mjs";
 import {
+  applyOpsStateAction,
   readOpsState,
   saveOpsStateSnapshot,
   summarizeOpsState
@@ -328,12 +329,52 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "POST" && pathname === "/api/ops-state/actions") {
+      const input = await readJsonBody(req);
+      const action = input.action && typeof input.action === "object" ? input.action : input;
+      const event = normalizeOpsEvent({
+        type: action.type,
+        actor: action.actor,
+        entityType: action.entityType,
+        entityId: action.entityId,
+        clientId: action.clientId || null,
+        wallId: action.wallId || null,
+        source: "state-action",
+        note: action.note || "",
+        payload: {
+          auditEventId: action.auditEvent?.id || null,
+          actionType: action.type
+        }
+      });
+      const result = await applyOpsStateAction(runtimeStatePath, {
+        expectedRevision: input.expectedRevision,
+        action
+      }, event);
+      await appendOpsEvent(event);
+      sendJson(res, 200, {
+        ...result.snapshot,
+        action: result.action,
+        event,
+        summary: summarizeOpsState(result.snapshot)
+      });
+      return;
+    }
+
     sendJson(res, 404, { error: "API endpoint not found" });
   } catch (error) {
     const status = Number(error.status || 500);
-    sendJson(res, status, {
+    const payload = {
       error: status >= 500 ? "Internal server error" : error.message
-    });
+    };
+    if (error.code) payload.code = error.code;
+    if (status === 409 && error.snapshot) {
+      payload.currentRevision = error.currentRevision;
+      payload.snapshot = {
+        ...error.snapshot,
+        summary: summarizeOpsState(error.snapshot)
+      };
+    }
+    sendJson(res, status, payload);
   }
 }
 
