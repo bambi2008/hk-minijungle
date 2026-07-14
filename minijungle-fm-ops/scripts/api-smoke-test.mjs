@@ -67,6 +67,7 @@ async function verifyApi(baseUrl) {
   assert(health.body.runtimeStore === "sqlite", "Health endpoint did not expose SQLite runtime store");
   assert(health.body.masterDataStore === "sqlite", "Health endpoint did not expose SQLite master data store");
   assert(health.body.authPolicy === "role-client-scope-v1", "Health endpoint did not expose auth policy");
+  assert(health.body.mobileWorkflow === "offline-capture-v1", "Health endpoint did not expose mobile workflow mode");
 
   const authContext = await fetchJson(`${baseUrl}api/auth/context`, {
     headers: principalHeaders("client-show-suite")
@@ -80,6 +81,7 @@ async function verifyApi(baseUrl) {
   });
   assert(authPolicy.response.ok, "Auth policy endpoint failed for FM lead");
   assert(authPolicy.body.roles["field-tech"].actionTypes.includes("sensor.acknowledge"), "Auth policy did not expose field action whitelist");
+  assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.capture.write"), "Auth policy did not expose field mobile capture permission");
 
   const unknownAuth = await fetchJson(`${baseUrl}api/assets`, {
     headers: principalHeaders("unknown-principal")
@@ -106,6 +108,12 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.masterData.counts.sensorReadings === 4, "SQLite master sensor_readings table did not seed all sensor readings");
   assert(initialStorage.body.masterData.relationshipIntegrity.foreignKeysEnabled === true, "SQLite master-data foreign keys are not enabled");
   assert(initialStorage.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "SQLite master-data foreign key check found issues");
+  assert(initialStorage.body.mobileCapture.migrationVersion === "2026-07-15.mobile-capture-v1", "Storage endpoint did not expose mobile capture migration");
+  assert(initialStorage.body.mobileCapture.tables.includes("mobile_capture_batches"), "Storage endpoint did not expose mobile capture batch table");
+  assert(initialStorage.body.mobileCapture.tables.includes("mobile_capture_items"), "Storage endpoint did not expose mobile capture item table");
+  assert(initialStorage.body.mobileCapture.counts.captureBatches === 0, "Mobile capture batches should start empty in test mode");
+  assert(initialStorage.body.mobileCapture.counts.captureItems === 0, "Mobile capture items should start empty in test mode");
+  assert(initialStorage.body.mobileCapture.relationshipIntegrity.foreignKeysEnabled === true, "SQLite mobile capture foreign keys are not enabled");
 
   const deniedStorage = await fetchJson(`${baseUrl}api/storage`, {
     headers: principalHeaders("client-show-suite")
@@ -531,6 +539,127 @@ async function verifyApi(baseUrl) {
   assert(storageAfterAdmin.body.counts.opsEvents === 8, "Admin CRUD/import events were not retained in ops event log");
   assert(storageAfterAdmin.body.masterData.counts.clients === 4, "Storage did not show imported client seed count");
   assert(storageAfterAdmin.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "Imported master data has FK issues");
+  assert(storageAfterAdmin.body.mobileCapture.counts.captureBatches === 0, "Mobile capture batches should still be empty before mobile sync");
+
+  const fieldRoute = await fetchJson(`${baseUrl}api/mobile/route`, {
+    headers: principalHeaders("field-tech-show-suite")
+  });
+  assert(fieldRoute.response.ok, "Field technician mobile route endpoint failed");
+  assert(fieldRoute.body.captureSchema.itemTypes.includes("photo"), "Mobile route did not expose capture item schema");
+  assert(fieldRoute.body.route.length === 1, "Field technician route should only include assigned client work orders");
+  assert(fieldRoute.body.route.some((item) => item.workOrderId === "WO-1047"), "Field technician route did not include assigned show-suite work order");
+  assert(!fieldRoute.body.route.some((item) => item.workOrderId === "WO-1051"), "Field technician route leaked another client's work order");
+
+  const viewerDeniedMobileSync = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    method: "POST",
+    headers: jsonHeaders("client-show-suite"),
+    body: JSON.stringify({
+      id: "MCB-DENIED-001",
+      technicianId: "client-show-suite",
+      clientId: "show-suite",
+      wallId: "MJ-HK-021",
+      workorderId: "WO-1047",
+      capturedAt: "2026-07-15T09:10:00.000Z",
+      items: [{ type: "photo", label: "viewer denied", value: "offline://photo/denied.jpg" }]
+    })
+  });
+  assert(viewerDeniedMobileSync.response.status === 403, "Client viewer should not sync mobile capture batches");
+
+  const fieldCrossClientMobileDenied = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      id: "MCB-DENIED-002",
+      technicianId: "field-tech-show-suite",
+      clientId: "central-office",
+      wallId: "MJ-HK-001",
+      workorderId: "WO-1051",
+      capturedAt: "2026-07-15T09:12:00.000Z",
+      items: [{ type: "photo", label: "cross client denied", value: "offline://photo/cross-client.jpg" }]
+    })
+  });
+  assert(fieldCrossClientMobileDenied.response.status === 403, "Field technician should not sync mobile captures outside assigned client scope");
+
+  const mismatchedMobileSync = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      id: "MCB-DENIED-003",
+      technicianId: "fm-lead",
+      clientId: "show-suite",
+      wallId: "MJ-HK-001",
+      workorderId: "WO-1047",
+      capturedAt: "2026-07-15T09:14:00.000Z",
+      items: [{ type: "photo", label: "mismatch denied", value: "offline://photo/mismatch.jpg" }]
+    })
+  });
+  assert(mismatchedMobileSync.response.status === 400, "Mismatched wall, work order and client should fail validation");
+  assert(mismatchedMobileSync.body.code === "MOBILE_CAPTURE_SCOPE_MISMATCH", "Mismatched mobile sync did not expose scope mismatch code");
+
+  const mobileBatch = {
+    id: "MCB-9001",
+    technicianId: "field-tech-show-suite",
+    clientId: "show-suite",
+    wallId: "MJ-HK-021",
+    workorderId: "WO-1047",
+    deviceId: "offline-ipad-01",
+    capturedAt: "2026-07-15T09:20:00.000Z",
+    notes: "Offline visit package captured at show-suite lift lobby.",
+    items: [
+      {
+        type: "photo",
+        label: "low-light zone retake",
+        value: "offline://photo/001.jpg",
+        metadata: { zone: "North", hash: "demo-hash-001" }
+      },
+      { type: "water", label: "reservoir top-up", value: "2.5", unit: "L" },
+      { type: "nutrient", label: "nutrient dose", value: "18", unit: "ml" },
+      { type: "health-check", label: "visual health score", value: "82", unit: "score" },
+      { type: "exception", label: "LED schedule verified", value: "resolved" }
+    ]
+  };
+
+  const mobileSync = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify(mobileBatch)
+  });
+  assert(mobileSync.response.status === 201, "Assigned field technician mobile sync should create a batch");
+  assert(mobileSync.body.duplicate === false, "First mobile sync should not be marked duplicate");
+  assert(mobileSync.body.batch.items.length === 5, "Mobile sync did not persist all capture items");
+  assert(mobileSync.body.event.type === "mobile.capture.synced", "Mobile sync did not create a capture audit event");
+
+  const duplicateMobileSync = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify(mobileBatch)
+  });
+  assert(duplicateMobileSync.response.ok, "Duplicate mobile sync should return the existing batch");
+  assert(duplicateMobileSync.body.duplicate === true, "Duplicate mobile sync should be marked duplicate");
+  assert(duplicateMobileSync.body.event === null, "Duplicate mobile sync should not create a second audit event");
+
+  const mobileBatches = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(mobileBatches.response.ok, "FM lead mobile capture batch listing failed");
+  assert(mobileBatches.body.batches.length === 1, "Mobile capture listing should include exactly one synced batch");
+  assert(mobileBatches.body.batches[0].items.length === 5, "Mobile capture listing did not include captured items");
+
+  const viewerDeniedMobileList = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(viewerDeniedMobileList.response.status === 403, "Client viewer should not list technician mobile capture batches");
+
+  const clientEventsAfterMobile = await fetchJson(`${baseUrl}api/ops-events`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientEventsAfterMobile.body.events.some((event) => event.type === "mobile.capture.synced"), "Client-scoped events did not include mobile sync audit event");
+
+  const storageAfterMobile = await fetchJson(`${baseUrl}api/storage`);
+  assert(storageAfterMobile.body.counts.opsEvents === 9, "Mobile sync event was not retained in ops event log");
+  assert(storageAfterMobile.body.mobileCapture.counts.captureBatches === 1, "Mobile capture batch count did not persist");
+  assert(storageAfterMobile.body.mobileCapture.counts.captureItems === 5, "Mobile capture item count did not persist");
+  assert(storageAfterMobile.body.mobileCapture.relationshipIntegrity.foreignKeyIssues === 0, "Mobile capture FK check found issues");
 }
 
 async function main() {

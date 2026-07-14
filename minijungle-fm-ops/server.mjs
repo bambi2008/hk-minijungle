@@ -26,6 +26,11 @@ import {
   upsertSqliteWorkOrder
 } from "./lib/ops-master-data-store.mjs";
 import {
+  listSqliteMobileCaptureBatches,
+  readSqliteMobileCaptureStorageHealth,
+  saveSqliteMobileCaptureBatch
+} from "./lib/ops-mobile-store.mjs";
+import {
   authPolicySummary,
   canAccessClient,
   filterByClientScope,
@@ -349,6 +354,120 @@ async function buildAssetIndex(auth) {
   });
 }
 
+function mobileCaptureSchema() {
+  return {
+    version: "2026-07-15.mobile-capture-v1",
+    requiredBatchFields: ["id", "technicianId", "clientId", "wallId", "workorderId", "capturedAt", "items"],
+    itemTypes: ["photo", "water", "nutrient", "health-check", "exception"],
+    proofChecklist: [
+      "fixed-angle full wall photo",
+      "zone close-up photo when health score is below target",
+      "water refill volume",
+      "nutrient dose volume",
+      "exception note when access, pest, light or leak risk is observed"
+    ],
+    offlineRules: {
+      idempotencyKey: "batch.id",
+      acceptedSyncStatus: "synced",
+      duplicateHandling: "same batch.id returns existing synced batch without adding a second event"
+    }
+  };
+}
+
+async function buildMobileRoute(auth) {
+  const [clients, walls, workorders, proofData, sensorData, incidentData] = await Promise.all([
+    readJsonData("clients"),
+    readJsonData("walls"),
+    readJsonData("workorders"),
+    readJsonData("proof"),
+    readJsonData("sensors"),
+    readJsonData("incidents")
+  ]);
+
+  const clientById = new Map(clients.map((client) => [client.id, client]));
+  const scopedWalls = walls.filter((wall) => canAccessClient(auth, wall.clientId));
+  const wallById = new Map(scopedWalls.map((wall) => [wall.id, wall]));
+  const proofRecords = proofData.records || [];
+  const sensors = sensorData.readings || [];
+  const incidents = incidentData.incidents || [];
+
+  return activeWorkorders(workorders)
+    .filter((order) => wallById.has(order.wallId))
+    .map((order) => {
+      const wall = wallById.get(order.wallId);
+      const client = clientById.get(wall.clientId);
+      const wallProof = proofRecords.filter((item) => item.wallId === wall.id);
+      const wallSensors = sensors.filter((item) => item.wallId === wall.id);
+      const wallIncidents = incidents.filter((item) => item.wallId === wall.id);
+
+      return {
+        workOrderId: order.id,
+        wallId: wall.id,
+        clientId: wall.clientId,
+        due: order.due || null,
+        priority: order.priority || "medium",
+        status: order.status || null,
+        readiness: wall.status === "risk" || order.priority === "high" ? "exception-first" : "standard-care",
+        client: {
+          id: wall.clientId,
+          name: client?.name || wall.clientId,
+          district: client?.district || null
+        },
+        asset: {
+          id: wall.id,
+          name: wall.name,
+          location: wall.location,
+          health: wall.health,
+          status: wall.status,
+          modules: wall.modules,
+          pods: wall.pods
+        },
+        workOrder: order,
+        signals: {
+          openIncidents: openIncidents(wallIncidents).length,
+          activeSensorAlerts: wallSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).length,
+          proofRecords: wallProof.length
+        }
+      };
+    })
+    .sort((a, b) => String(a.due || "").localeCompare(String(b.due || "")) || a.workOrderId.localeCompare(b.workOrderId));
+}
+
+function validationError(message, code = "VALIDATION_ERROR") {
+  const error = new Error(message);
+  error.status = 400;
+  error.code = code;
+  return error;
+}
+
+async function validateMobileCaptureScope(auth, batch) {
+  if (!batch || typeof batch !== "object") {
+    throw validationError("mobile capture batch payload is required", "MOBILE_CAPTURE_VALIDATION_ERROR");
+  }
+
+  const clientId = String(batch.clientId || "").trim();
+  if (!clientId) {
+    throw validationError("mobile capture clientId is required", "MOBILE_CAPTURE_VALIDATION_ERROR");
+  }
+
+  requireClientAccess(auth, clientId, "mobile capture sync");
+  const resolveEntityClientId = await buildEntityClientResolver();
+  const wallClientId = resolveEntityClientId("wall", batch.wallId);
+  const workOrderClientId = resolveEntityClientId("workorder", batch.workorderId);
+
+  if (!wallClientId) {
+    throw validationError("mobile capture references an unknown wall", "MOBILE_CAPTURE_UNKNOWN_WALL");
+  }
+
+  if (!workOrderClientId) {
+    throw validationError("mobile capture references an unknown work order", "MOBILE_CAPTURE_UNKNOWN_WORKORDER");
+  }
+
+  if (wallClientId !== clientId || workOrderClientId !== clientId) {
+    throw validationError("mobile capture wall, work order and client do not match", "MOBILE_CAPTURE_SCOPE_MISMATCH");
+  }
+}
+
 function normalizeOpsEvent(input) {
   const type = String(input.type || "").trim();
   const actor = String(input.actor || "").trim();
@@ -382,7 +501,7 @@ async function handleApi(req, res, pathname) {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type"
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-dr-forest-principal, x-dr-forest-session"
       });
       res.end();
       return;
@@ -396,6 +515,7 @@ async function handleApi(req, res, pathname) {
         runtimeStore: "sqlite",
         masterDataStore: "sqlite",
         authPolicy: "role-client-scope-v1",
+        mobileWorkflow: "offline-capture-v1",
         generatedAt: new Date().toISOString(),
         dataFiles: Object.keys(dataFileMap)
       });
@@ -558,14 +678,16 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage] = await Promise.all([
         readSqliteOpsStorageHealth(runtimeDbPath),
-        readSqliteMasterDataHealth(runtimeDbPath, dataRoot)
+        readSqliteMasterDataHealth(runtimeDbPath, dataRoot),
+        readSqliteMobileCaptureStorageHealth(runtimeDbPath)
       ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...runtimeStorage,
-        masterData: masterDataStorage
+        masterData: masterDataStorage,
+        mobileCapture: mobileCaptureStorage
       });
       return;
     }
@@ -605,6 +727,73 @@ async function handleApi(req, res, pathname) {
           clientIds: auth.clientIds
         },
         assets: await buildAssetIndex(auth)
+      });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/mobile/route") {
+      requirePermission(auth, "mobile.route.read");
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        auth: {
+          principalId: auth.id,
+          roleId: auth.roleId,
+          clientScope: auth.clientScope,
+          clientIds: auth.clientIds
+        },
+        captureSchema: mobileCaptureSchema(),
+        route: await buildMobileRoute(auth)
+      });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/mobile/capture-batches") {
+      requirePermission(auth, "mobile.capture.read");
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        auth: {
+          principalId: auth.id,
+          roleId: auth.roleId,
+          clientScope: auth.clientScope,
+          clientIds: auth.clientIds
+        },
+        batches: filterByClientScope(auth, await listSqliteMobileCaptureBatches(runtimeDbPath), (batch) => batch.clientId)
+      });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/mobile/capture-batches") {
+      requirePermission(auth, "mobile.capture.write");
+      const input = await readJsonBody(req);
+      const batchInput = input.batch && typeof input.batch === "object" ? input.batch : input;
+      await validateMobileCaptureScope(auth, batchInput);
+      const result = await saveSqliteMobileCaptureBatch(runtimeDbPath, batchInput);
+      let event = null;
+
+      if (!result.duplicate) {
+        event = normalizeOpsEvent({
+          type: "mobile.capture.synced",
+          actor: auth.name,
+          entityType: "workorder",
+          entityId: result.batch.workorderId,
+          clientId: result.batch.clientId,
+          wallId: result.batch.wallId,
+          source: "technician-mobile",
+          note: `Offline capture batch ${result.batch.id} synced from ${result.batch.deviceId || "mobile device"}.`,
+          payload: {
+            principalId: auth.id,
+            batchId: result.batch.id,
+            technicianId: result.batch.technicianId,
+            itemCount: result.batch.items.length,
+            duplicate: false
+          }
+        });
+        await appendOpsEvent(event);
+      }
+
+      sendJson(res, result.duplicate ? 200 : 201, {
+        ...result,
+        event
       });
       return;
     }

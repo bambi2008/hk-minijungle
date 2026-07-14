@@ -26,7 +26,10 @@ const roleDefinitions = {
       "master.data.read",
       "master.data.write",
       "master.data.import",
-      "master.data.validate"
+      "master.data.validate",
+      "mobile.route.read",
+      "mobile.capture.read",
+      "mobile.capture.write"
     ],
     actionTypes: ["*"]
   },
@@ -38,7 +41,10 @@ const roleDefinitions = {
       "assets.read",
       "ops.events.read",
       "ops.state.read",
-      "ops.state.write.action"
+      "ops.state.write.action",
+      "mobile.route.read",
+      "mobile.capture.read",
+      "mobile.capture.write"
     ],
     actionTypes: [
       "workorder.complete",

@@ -75,7 +75,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: API smoke tests verify read-only roles are blocked, valid admin client/asset/work-order/sensor upserts persist into SQLite, invalid asset-client references fail validation, portfolio/assets read paths reflect admin changes, and explicit import resets master data back to the seed baseline.
 - Still not solved: There is still no visual admin CRUD UI, approval workflow, bulk CSV/XLSX importer, migration rollback tooling, master-data version history, soft delete/recovery model, or production database service.
 
+### Step 9 - Technician Mobile Workflow and Offline Capture v1
+
+- Target score after completion: 70%
+- Capability added: Permission-protected mobile route API, technician offline capture batch sync API, SQLite tables for mobile capture batches/items, idempotent duplicate handling, client/wall/work-order scope validation, and mobile sync audit events.
+- Why this matters: Field service can now produce structured operational evidence instead of relying only on browser state or static proof JSON. A technician can receive a scoped route, capture photos/refill/nutrient/health/exception records offline, and sync them back into the platform with a server-side audit trail.
+- What is objectively better: API smoke tests verify that client viewers cannot sync mobile evidence, field technicians cannot sync outside their assigned client, mismatched wall/work-order/client payloads are rejected, valid offline batches persist into SQLite, repeated batch IDs do not duplicate rows or events, and `/api/storage` reports mobile capture table counts and foreign-key integrity.
+- Still not solved: This is not a native mobile app. It does not yet upload real image files to object storage, hash media blobs, perform camera capture, geolocation proof, background retry, offline conflict resolution, push notifications, route navigation, or supervisor review workflow.
+
 ### Current Honest Score
 
-- Production-readiness score: 65%
+- Production-readiness score: 70%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.
