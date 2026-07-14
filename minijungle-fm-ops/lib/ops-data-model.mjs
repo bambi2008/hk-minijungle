@@ -398,7 +398,7 @@ export function validateProductionDataset(dataset, seed = buildProductionSeed(da
 
   pushWarning(true, "Plant Pod records are still aggregate counts; production needs module/pod-level IDs before 1,000+ module rollout.", warnings);
   pushWarning(true, "Proof records do not yet include object storage URLs, hashes or signed upload metadata.", warnings);
-  pushWarning(true, "Users, roles and permission policies are still represented in demo state, not a production auth model.", warnings);
+  pushWarning(true, "Auth, roles and client scope now have server-side demo enforcement; production still needs SSO/MFA, session lifecycle and database row policies.", warnings);
   pushWarning(true, "Sensor readings are latest-state demo records; production needs append-only time-series ingestion.", warnings);
 
   checks.push({

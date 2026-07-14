@@ -51,7 +51,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: `/api/storage` exposes backend type, migration version, SQLite table list, row counts and latest state revision. Automated API tests confirm the SQLite file is created and retains event, action and state rows.
 - Still not solved: Static master data still lives in JSON files, and SQLite is only a single-node embedded database. This does not yet provide production PostgreSQL/MySQL deployment, tenant-level row policies, user authentication, backup/restore automation, sensor time-series ingestion or object-storage proof retention.
 
+### Step 6 - Auth, Role and Tenant Boundary v1
+
+- Target score after completion: 55%
+- Capability added: Server-side demo auth policy with principals, roles, client scope, permission checks and action-type allowlists.
+- Why this matters: The platform now has a testable boundary for who can read portfolio data, who can see which client assets, who can write operations events and which action types a field technician may perform.
+- What is objectively better: `/api/auth/context` exposes the current principal, `/api/auth/policy` exposes the role model, client viewers are filtered to their own client data, read-only viewers are blocked from writes, and field technicians cannot write outside assigned client scope. API smoke tests verify both allowed and denied paths.
+- Still not solved: This is not production IAM. There is no password flow, SSO, MFA, signed session lifecycle, secret rotation, audit-grade login trail, row-level database policy or admin console for user management.
+
 ### Current Honest Score
 
-- Production-readiness score: 50%
+- Production-readiness score: 55%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.

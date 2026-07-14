@@ -16,6 +16,16 @@ import {
   readSqliteOpsStorageHealth,
   saveSqliteOpsStateSnapshot
 } from "./lib/ops-sqlite-store.mjs";
+import {
+  authPolicySummary,
+  canAccessClient,
+  filterByClientScope,
+  requireActionAccess,
+  requireEventWriteAccess,
+  requirePermission,
+  requireSnapshotWriteAccess,
+  resolveAuthContext
+} from "./lib/ops-auth.mjs";
 
 const root = process.cwd();
 const dataRoot = join(root, "data");
@@ -45,6 +55,13 @@ const dataFileMap = {
   productModel: "product-model.json"
 };
 
+const scopedDataFiles = {
+  billing: "billing.json",
+  schedule: "schedule.json",
+  compliance: "compliance.json",
+  aiInsights: "ai-insights.json"
+};
+
 function resolvePath(url) {
   const requestUrl = (url || "/").replace(/^\/+/, "/");
   const pathname = new URL(requestUrl, `http://${host}:${port}`).pathname;
@@ -57,6 +74,10 @@ function resolvePath(url) {
 async function readJsonData(key) {
   const filename = dataFileMap[key];
   if (!filename) throw new Error(`Unknown data file: ${key}`);
+  return JSON.parse(await readFile(join(dataRoot, filename), "utf8"));
+}
+
+async function readJsonFile(filename) {
   return JSON.parse(await readFile(join(dataRoot, filename), "utf8"));
 }
 
@@ -78,6 +99,79 @@ async function saveOpsStateSnapshot(input, event = null) {
 
 async function applyOpsStateAction(input, event = null) {
   return applySqliteOpsStateAction(runtimeDbPath, input, event);
+}
+
+async function buildEntityClientResolver() {
+  const [walls, workorders, proofData, sensorData, incidentData, billingData, scheduleData, complianceData, aiData] = await Promise.all([
+    readJsonData("walls"),
+    readJsonData("workorders"),
+    readJsonData("proof"),
+    readJsonData("sensors"),
+    readJsonData("incidents"),
+    readJsonFile(scopedDataFiles.billing),
+    readJsonFile(scopedDataFiles.schedule),
+    readJsonFile(scopedDataFiles.compliance),
+    readJsonFile(scopedDataFiles.aiInsights)
+  ]);
+
+  const wallClientById = new Map(walls.map((wall) => [wall.id, wall.clientId]));
+  const workorderClientById = new Map(workorders.map((order) => [order.id, wallClientById.get(order.wallId) || null]));
+  const proofClientById = new Map((proofData.records || []).map((record) => [record.id, wallClientById.get(record.wallId) || null]));
+  const sensorClientById = new Map((sensorData.readings || []).map((reading) => [reading.id, wallClientById.get(reading.wallId) || null]));
+  const incidentClientById = new Map((incidentData.incidents || []).map((incident) => [incident.id, wallClientById.get(incident.wallId) || null]));
+  const invoiceClientById = new Map((billingData.invoices || []).map((invoice) => [invoice.id, invoice.clientId || null]));
+  const scheduleClientById = new Map((scheduleData.slots || []).map((slot) => [slot.id, workorderClientById.get(slot.workorderId) || null]));
+  const complianceClientById = new Map((complianceData.items || []).map((item) => [item.id, item.clientId || null]));
+  const aiClientById = new Map((aiData.recommendations || []).map((item) => [item.id, item.clientId || null]));
+
+  return (entityType, entityId) => {
+    if (entityType === "client") return entityId;
+    if (entityType === "wall" || entityType === "asset") return wallClientById.get(entityId) || null;
+    if (entityType === "workorder") return workorderClientById.get(entityId) || null;
+    if (entityType === "proof") return proofClientById.get(entityId) || null;
+    if (entityType === "sensor") return sensorClientById.get(entityId) || null;
+    if (entityType === "invoice") return invoiceClientById.get(entityId) || null;
+    if (entityType === "schedule") return scheduleClientById.get(entityId) || null;
+    if (entityType === "incident") return incidentClientById.get(entityId) || null;
+    if (entityType === "compliance") return complianceClientById.get(entityId) || null;
+    if (entityType === "ai-recommendation") return aiClientById.get(entityId) || null;
+    return null;
+  };
+}
+
+function filterOpsEventsForAuth(events, auth, resolveEntityClientId) {
+  return filterByClientScope(auth, events, (event) => event.clientId || resolveEntityClientId(event.entityType, event.entityId));
+}
+
+function filterStateMap(auth, map, entityType, resolveEntityClientId) {
+  return Object.fromEntries(
+    Object.entries(map || {}).filter(([id]) => canAccessClient(auth, resolveEntityClientId(entityType, id)))
+  );
+}
+
+async function filterOpsStateForAuth(snapshot, auth) {
+  if (auth.clientScope === "all") return snapshot;
+  const resolveEntityClientId = await buildEntityClientResolver();
+  const state = snapshot.state || {};
+
+  return {
+    ...snapshot,
+    state: {
+      ...state,
+      workorderCompletions: filterStateMap(auth, state.workorderCompletions, "workorder", resolveEntityClientId),
+      dispatchStaging: filterStateMap(auth, state.dispatchStaging, "workorder", resolveEntityClientId),
+      proofApprovals: filterStateMap(auth, state.proofApprovals, "proof", resolveEntityClientId),
+      sensorAcknowledgements: filterStateMap(auth, state.sensorAcknowledgements, "sensor", resolveEntityClientId),
+      supplyRequests: {},
+      invoicePayments: filterStateMap(auth, state.invoicePayments, "invoice", resolveEntityClientId),
+      scheduleConfirmations: filterStateMap(auth, state.scheduleConfirmations, "schedule", resolveEntityClientId),
+      incidentResolutions: filterStateMap(auth, state.incidentResolutions, "incident", resolveEntityClientId),
+      complianceClearances: filterStateMap(auth, state.complianceClearances, "compliance", resolveEntityClientId),
+      quickOpsTasks: (state.quickOpsTasks || []).filter((task) => canAccessClient(auth, task.clientId)),
+      auditEvents: (state.auditEvents || []).filter((event) => canAccessClient(auth, event.clientId || resolveEntityClientId(event.entityType, event.entityId))),
+      aiQueuedActions: filterStateMap(auth, state.aiQueuedActions, "ai-recommendation", resolveEntityClientId)
+    }
+  };
 }
 
 function sendJson(res, status, payload) {
@@ -122,7 +216,7 @@ function openIncidents(incidents) {
   return incidents.filter((item) => !["resolved", "closed"].includes(String(item.status || "").toLowerCase()));
 }
 
-async function buildPortfolioSummary() {
+async function buildPortfolioSummary(auth) {
   const [clients, walls, workorders, proofData, sensorData, incidentData, productModel, events, opsState] = await Promise.all([
     readJsonData("clients"),
     readJsonData("walls"),
@@ -135,43 +229,59 @@ async function buildPortfolioSummary() {
     readOpsState()
   ]);
 
+  const scopedClients = filterByClientScope(auth, clients, (client) => client.id);
+  const scopedClientIds = new Set(scopedClients.map((client) => client.id));
+  const scopedWalls = walls.filter((wall) => scopedClientIds.has(wall.clientId));
+  const scopedWallIds = new Set(scopedWalls.map((wall) => wall.id));
+  const scopedWorkorders = workorders.filter((item) => scopedWallIds.has(item.wallId));
   const proofRecords = proofData.records || [];
   const sensors = sensorData.readings || [];
   const incidents = incidentData.incidents || [];
+  const scopedProofRecords = proofRecords.filter((item) => scopedWallIds.has(item.wallId));
+  const scopedSensors = sensors.filter((item) => scopedWallIds.has(item.wallId));
+  const scopedIncidents = incidents.filter((item) => scopedWallIds.has(item.wallId));
   const reportModes = productModel.reportModes || [];
-  const avgHealth = walls.length
-    ? Math.round(walls.reduce((total, wall) => total + Number(wall.health || 0), 0) / walls.length)
+  const resolveEntityClientId = await buildEntityClientResolver();
+  const scopedEvents = filterOpsEventsForAuth(events, auth, resolveEntityClientId);
+  const avgHealth = scopedWalls.length
+    ? Math.round(scopedWalls.reduce((total, wall) => total + Number(wall.health || 0), 0) / scopedWalls.length)
     : 0;
 
   return {
     generatedAt: new Date().toISOString(),
     scope: "demo-data-api",
+    auth: {
+      principalId: auth.id,
+      roleId: auth.roleId,
+      clientScope: auth.clientScope,
+      clientIds: auth.clientIds
+    },
     counts: {
-      clients: clients.length,
-      assets: walls.length,
-      modules: walls.reduce((total, wall) => total + Number(wall.modules || 0), 0),
-      pods: walls.reduce((total, wall) => total + Number(wall.pods || 0), 0),
-      workorders: workorders.length,
-      activeWorkorders: activeWorkorders(workorders).length,
-      proofRecords: proofRecords.length,
-      sensorReadings: sensors.length,
-      activeSensorAlerts: sensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).length,
-      incidents: incidents.length,
-      openIncidents: openIncidents(incidents).length,
+      clients: scopedClients.length,
+      assets: scopedWalls.length,
+      modules: scopedWalls.reduce((total, wall) => total + Number(wall.modules || 0), 0),
+      pods: scopedWalls.reduce((total, wall) => total + Number(wall.pods || 0), 0),
+      workorders: scopedWorkorders.length,
+      activeWorkorders: activeWorkorders(scopedWorkorders).length,
+      proofRecords: scopedProofRecords.length,
+      sensorReadings: scopedSensors.length,
+      activeSensorAlerts: scopedSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).length,
+      incidents: scopedIncidents.length,
+      openIncidents: openIncidents(scopedIncidents).length,
       reportModes: reportModes.length,
-      serverSideOpsEvents: events.length,
+      serverSideOpsEvents: scopedEvents.length,
       serverStateRevision: opsState.revision
     },
     health: {
       averageScore: avgHealth,
-      riskAssets: walls.filter((wall) => wall.status === "risk").length,
-      watchAssets: walls.filter((wall) => wall.status === "watch").length,
-      stableAssets: walls.filter((wall) => wall.status === "stable").length
+      riskAssets: scopedWalls.filter((wall) => wall.status === "risk").length,
+      watchAssets: scopedWalls.filter((wall) => wall.status === "watch").length,
+      stableAssets: scopedWalls.filter((wall) => wall.status === "stable").length
     }
   };
 }
 
-async function buildAssetIndex() {
+async function buildAssetIndex(auth) {
   const [clients, walls, workorders, proofData, sensorData, incidentData] = await Promise.all([
     readJsonData("clients"),
     readJsonData("walls"),
@@ -186,7 +296,7 @@ async function buildAssetIndex() {
   const incidents = incidentData.incidents || [];
   const clientById = new Map(clients.map((client) => [client.id, client]));
 
-  return walls.map((wall) => {
+  return walls.filter((wall) => canAccessClient(auth, wall.clientId)).map((wall) => {
     const client = clientById.get(wall.clientId);
     const wallWorkorders = workorders.filter((item) => item.wallId === wall.id);
     const wallProof = proofRecords.filter((item) => item.wallId === wall.id);
@@ -259,13 +369,34 @@ async function handleApi(req, res, pathname) {
         service: "dr-forest-fm-ops",
         mode: "api-foundation",
         runtimeStore: "sqlite",
+        authPolicy: "role-client-scope-v1",
         generatedAt: new Date().toISOString(),
         dataFiles: Object.keys(dataFileMap)
       });
       return;
     }
 
+    const auth = resolveAuthContext(req);
+
+    if (req.method === "GET" && pathname === "/api/auth/context") {
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        auth
+      });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/auth/policy") {
+      requirePermission(auth, "auth.policy.read");
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        ...authPolicySummary()
+      });
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/storage") {
+      requirePermission(auth, "storage.read");
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...(await readSqliteOpsStorageHealth(runtimeDbPath))
@@ -274,45 +405,71 @@ async function handleApi(req, res, pathname) {
     }
 
     if (req.method === "GET" && pathname === "/api/portfolio") {
-      sendJson(res, 200, await buildPortfolioSummary());
+      requirePermission(auth, "portfolio.read");
+      sendJson(res, 200, await buildPortfolioSummary(auth));
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/data-model") {
+      requirePermission(auth, "data.model.read");
       sendJson(res, 200, productionDataModel);
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/data-quality") {
+      requirePermission(auth, "data.quality.read");
       sendJson(res, 200, await buildDataQualityReport(dataRoot, await readOpsEvents()));
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/production-seed") {
+      requirePermission(auth, "production.seed.read");
       sendJson(res, 200, buildProductionSeed(await loadOpsDataset(dataRoot), await readOpsEvents()));
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/assets") {
+      requirePermission(auth, "assets.read");
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
-        assets: await buildAssetIndex()
+        auth: {
+          principalId: auth.id,
+          roleId: auth.roleId,
+          clientScope: auth.clientScope,
+          clientIds: auth.clientIds
+        },
+        assets: await buildAssetIndex(auth)
       });
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/ops-events") {
+      requirePermission(auth, "ops.events.read");
+      const resolveEntityClientId = await buildEntityClientResolver();
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
-        events: await readOpsEvents()
+        auth: {
+          principalId: auth.id,
+          roleId: auth.roleId,
+          clientScope: auth.clientScope,
+          clientIds: auth.clientIds
+        },
+        events: filterOpsEventsForAuth(await readOpsEvents(), auth, resolveEntityClientId)
       });
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/ops-state") {
-      const snapshot = await readOpsState();
+      requirePermission(auth, "ops.state.read");
+      const snapshot = await filterOpsStateForAuth(await readOpsState(), auth);
       sendJson(res, 200, {
         ...snapshot,
+        auth: {
+          principalId: auth.id,
+          roleId: auth.roleId,
+          clientScope: auth.clientScope,
+          clientIds: auth.clientIds
+        },
         summary: summarizeOpsState(snapshot)
       });
       return;
@@ -321,6 +478,7 @@ async function handleApi(req, res, pathname) {
     if (req.method === "POST" && pathname === "/api/ops-events") {
       const input = await readJsonBody(req);
       const event = normalizeOpsEvent(input);
+      requireEventWriteAccess(auth, event);
       await appendOpsEvent(event);
       sendJson(res, 201, { event });
       return;
@@ -332,6 +490,7 @@ async function handleApi(req, res, pathname) {
         source: "state-snapshot",
         ...input.event
       }) : null;
+      requireSnapshotWriteAccess(auth, event);
       const snapshot = await saveOpsStateSnapshot(input, event);
       if (event) await appendOpsEvent(event);
       sendJson(res, 200, {
@@ -345,6 +504,7 @@ async function handleApi(req, res, pathname) {
     if (req.method === "POST" && pathname === "/api/ops-state/actions") {
       const input = await readJsonBody(req);
       const action = input.action && typeof input.action === "object" ? input.action : input;
+      requireActionAccess(auth, action);
       const event = normalizeOpsEvent({
         type: action.type,
         actor: action.actor,

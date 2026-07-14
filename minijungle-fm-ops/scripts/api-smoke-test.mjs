@@ -47,12 +47,43 @@ async function fetchJson(url, options = {}) {
   return { response, body };
 }
 
+function principalHeaders(principalId, headers = {}) {
+  return {
+    ...headers,
+    "x-dr-forest-principal": principalId
+  };
+}
+
+function jsonHeaders(principalId = null) {
+  const headers = { "Content-Type": "application/json" };
+  return principalId ? principalHeaders(principalId, headers) : headers;
+}
+
 async function verifyApi(baseUrl) {
   const health = await fetchJson(`${baseUrl}api/health`);
   assert(health.response.ok, "Health endpoint failed");
   assert(health.body.status === "ok", "Health endpoint did not return ok status");
   assert(health.body.mode === "api-foundation", "Health endpoint did not expose API foundation mode");
   assert(health.body.runtimeStore === "sqlite", "Health endpoint did not expose SQLite runtime store");
+  assert(health.body.authPolicy === "role-client-scope-v1", "Health endpoint did not expose auth policy");
+
+  const authContext = await fetchJson(`${baseUrl}api/auth/context`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(authContext.response.ok, "Auth context endpoint failed");
+  assert(authContext.body.auth.roleId === "client-viewer", "Auth context did not resolve client viewer role");
+  assert(authContext.body.auth.clientIds.includes("show-suite"), "Auth context did not expose client scope");
+
+  const authPolicy = await fetchJson(`${baseUrl}api/auth/policy`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(authPolicy.response.ok, "Auth policy endpoint failed for FM lead");
+  assert(authPolicy.body.roles["field-tech"].actionTypes.includes("sensor.acknowledge"), "Auth policy did not expose field action whitelist");
+
+  const unknownAuth = await fetchJson(`${baseUrl}api/assets`, {
+    headers: principalHeaders("unknown-principal")
+  });
+  assert(unknownAuth.response.status === 401, "Unknown principal should receive 401");
 
   const initialStorage = await fetchJson(`${baseUrl}api/storage`);
   assert(initialStorage.response.ok, "Storage endpoint failed");
@@ -63,6 +94,11 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.counts.opsEvents === 0, "SQLite ops_events table should start empty in test mode");
   assert(initialStorage.body.counts.opsActions === 0, "SQLite ops_actions table should start empty in test mode");
 
+  const deniedStorage = await fetchJson(`${baseUrl}api/storage`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(deniedStorage.response.status === 403, "Client viewer should not read storage metadata");
+
   const portfolio = await fetchJson(`${baseUrl}api/portfolio`);
   assert(portfolio.response.ok, "Portfolio endpoint failed");
   assert(portfolio.body.counts.clients === 4, "Portfolio endpoint did not count clients");
@@ -70,6 +106,14 @@ async function verifyApi(baseUrl) {
   assert(portfolio.body.counts.modules === 12, "Portfolio endpoint did not count modules");
   assert(portfolio.body.counts.activeSensorAlerts >= 1, "Portfolio endpoint did not count sensor alerts");
   assert(portfolio.body.counts.serverSideOpsEvents === 0, "Runtime event store should start empty in test mode");
+
+  const clientPortfolio = await fetchJson(`${baseUrl}api/portfolio`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientPortfolio.response.ok, "Client-scoped portfolio endpoint failed");
+  assert(clientPortfolio.body.counts.clients === 1, "Client portfolio should expose exactly one client");
+  assert(clientPortfolio.body.counts.assets === 1, "Client portfolio should expose exactly one asset");
+  assert(clientPortfolio.body.auth.clientIds.includes("show-suite"), "Client portfolio did not echo scoped client IDs");
 
   const dataModel = await fetchJson(`${baseUrl}api/data-model`);
   assert(dataModel.response.ok, "Data model endpoint failed");
@@ -101,9 +145,60 @@ async function verifyApi(baseUrl) {
   assert(showSuite?.clientName === "Property Show Suite", "Assets endpoint did not join client data");
   assert(showSuite?.sensorAlerts >= 1, "Assets endpoint did not expose wall alert count");
 
+  const clientAssets = await fetchJson(`${baseUrl}api/assets`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientAssets.response.ok, "Client-scoped assets endpoint failed");
+  assert(clientAssets.body.assets.length === 1, "Client-scoped assets should return one asset");
+  assert(clientAssets.body.assets[0].clientId === "show-suite", "Client-scoped assets leaked another client");
+
+  const viewerDeniedAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
+    method: "POST",
+    headers: jsonHeaders("client-show-suite"),
+    body: JSON.stringify({
+      expectedRevision: 0,
+      action: {
+        type: "sensor.acknowledge",
+        actor: "Client viewer",
+        entityType: "sensor",
+        entityId: "SNS-021-LIGHT",
+        clientId: "show-suite",
+        wallId: "MJ-HK-021",
+        note: "Viewer should not be able to write operations state",
+        value: {
+          acknowledgedAt: "2026-07-15T08:00:00.000Z",
+          acknowledgedBy: "Client viewer"
+        }
+      }
+    })
+  });
+  assert(viewerDeniedAction.response.status === 403, "Client viewer should not write ops state actions");
+
+  const fieldCrossTenantDenied = await fetchJson(`${baseUrl}api/ops-state/actions`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      expectedRevision: 0,
+      action: {
+        type: "workorder.complete",
+        actor: "Show Suite field tech",
+        entityType: "workorder",
+        entityId: "WO-1051",
+        clientId: "central-office",
+        wallId: "MJ-HK-001",
+        note: "Field tech should not close another client's work order",
+        value: {
+          completedAt: "2026-07-15T08:05:00.000Z",
+          completedBy: "Show Suite field tech"
+        }
+      }
+    })
+  });
+  assert(fieldCrossTenantDenied.response.status === 403, "Field tech should not write outside assigned client scope");
+
   const eventCreate = await fetchJson(`${baseUrl}api/ops-events`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       type: "workorder.completed",
       actor: "API smoke test",
@@ -128,7 +223,7 @@ async function verifyApi(baseUrl) {
 
   const stateAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       expectedRevision: 0,
       action: {
@@ -170,7 +265,7 @@ async function verifyApi(baseUrl) {
 
   const conflictAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       expectedRevision: 0,
       action: {
@@ -205,7 +300,7 @@ async function verifyApi(baseUrl) {
 
   const snapshotCompatibility = await fetchJson(`${baseUrl}api/ops-state/snapshot`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: jsonHeaders(),
     body: JSON.stringify({
       state: {
         ...persistedState.body.state,
@@ -220,14 +315,63 @@ async function verifyApi(baseUrl) {
   assert(portfolioAfterState.body.counts.serverSideOpsEvents === 2, "Portfolio endpoint did not include typed state action event");
   assert(portfolioAfterState.body.counts.serverStateRevision === 2, "Portfolio endpoint did not expose state revision");
 
+  const fieldAllowedAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({
+      expectedRevision: 2,
+      action: {
+        type: "sensor.acknowledge",
+        actor: "Show Suite field tech",
+        entityType: "sensor",
+        entityId: "SNS-021-LIGHT",
+        clientId: "show-suite",
+        wallId: "MJ-HK-021",
+        note: "Assigned field tech acknowledges show-suite sensor alert",
+        value: {
+          acknowledgedAt: "2026-07-15T08:10:00.000Z",
+          acknowledgedBy: "Show Suite field tech"
+        },
+        auditEvent: {
+          id: "AUD-FIELD-ACTION-001",
+          timestamp: "2026-07-15T08:10:01.000Z",
+          actor: "Show Suite field tech",
+          action: "Sensor alert acknowledged",
+          entityType: "sensor",
+          entityId: "SNS-021-LIGHT",
+          clientId: "show-suite",
+          tone: "acknowledged",
+          detail: "Assigned field tech action accepted inside client scope."
+        }
+      }
+    })
+  });
+  assert(fieldAllowedAction.response.ok, "Assigned field tech action should be allowed");
+  assert(fieldAllowedAction.body.revision === 3, "Assigned field tech action did not advance revision");
+  assert(fieldAllowedAction.body.summary.acknowledgedSensorAlerts === 1, "Assigned field tech action did not acknowledge sensor");
+
+  const clientEvents = await fetchJson(`${baseUrl}api/ops-events`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientEvents.response.ok, "Client-scoped ops events endpoint failed");
+  assert(clientEvents.body.events.length === 3, "Client viewer should see only show-suite events created in the test");
+  assert(clientEvents.body.events.every((event) => event.clientId === "show-suite"), "Client-scoped events leaked another client");
+
+  const clientState = await fetchJson(`${baseUrl}api/ops-state`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientState.response.ok, "Client-scoped ops state endpoint failed");
+  assert(clientState.body.state.workorderCompletions["WO-1047"], "Client-scoped state should include show-suite work order completion");
+  assert(!clientState.body.state.workorderCompletions["WO-1051"], "Client-scoped state leaked central-office work order");
+
   const updatedQuality = await fetchJson(`${baseUrl}api/data-quality`);
-  assert(updatedQuality.body.entityCounts.opsEvents === 2, "Data quality report did not include server-side event count");
+  assert(updatedQuality.body.entityCounts.opsEvents === 3, "Data quality report did not include server-side event count");
 
   const finalStorage = await fetchJson(`${baseUrl}api/storage`);
-  assert(finalStorage.body.counts.opsEvents === 2, "SQLite storage did not retain event rows");
-  assert(finalStorage.body.counts.opsActions === 1, "SQLite storage did not retain typed action row");
-  assert(finalStorage.body.counts.opsStateSnapshots === 2, "SQLite storage did not retain state snapshot rows");
-  assert(finalStorage.body.latestStateRevision === 2, "SQLite storage did not expose latest state revision");
+  assert(finalStorage.body.counts.opsEvents === 3, "SQLite storage did not retain event rows");
+  assert(finalStorage.body.counts.opsActions === 2, "SQLite storage did not retain typed action rows");
+  assert(finalStorage.body.counts.opsStateSnapshots === 3, "SQLite storage did not retain state snapshot rows");
+  assert(finalStorage.body.latestStateRevision === 3, "SQLite storage did not expose latest state revision");
   assert(finalStorage.body.migrations.some((item) => item.version === "2026-07-14.sqlite-runtime-v1"), "SQLite migration was not recorded");
 }
 
