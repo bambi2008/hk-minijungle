@@ -1,24 +1,26 @@
 import { createServer } from "node:http";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
-import { dirname, extname, join, normalize } from "node:path";
+import { readFile } from "node:fs/promises";
+import { extname, join, normalize } from "node:path";
 import {
   buildDataQualityReport,
   buildProductionSeed,
   loadOpsDataset,
   productionDataModel
 } from "./lib/ops-data-model.mjs";
+import { summarizeOpsState } from "./lib/ops-state-store.mjs";
 import {
-  applyOpsStateAction,
-  readOpsState,
-  saveOpsStateSnapshot,
-  summarizeOpsState
-} from "./lib/ops-state-store.mjs";
+  appendSqliteOpsEvent,
+  applySqliteOpsStateAction,
+  readSqliteOpsEvents,
+  readSqliteOpsState,
+  readSqliteOpsStorageHealth,
+  saveSqliteOpsStateSnapshot
+} from "./lib/ops-sqlite-store.mjs";
 
 const root = process.cwd();
 const dataRoot = join(root, "data");
 const runtimeRoot = process.env.DR_FOREST_RUNTIME_DIR || join(root, ".ops-data");
-const runtimeEventPath = join(runtimeRoot, "ops-events.jsonl");
-const runtimeStatePath = join(runtimeRoot, "ops-state.json");
+const runtimeDbPath = process.env.DR_FOREST_RUNTIME_DB_PATH || join(runtimeRoot, "ops-runtime.sqlite");
 const portArgIndex = process.argv.indexOf("--port");
 const cliPort = portArgIndex >= 0 ? process.argv[portArgIndex + 1] : null;
 const port = Number(cliPort || process.env.PORT || 8010);
@@ -59,21 +61,23 @@ async function readJsonData(key) {
 }
 
 async function readOpsEvents() {
-  try {
-    const body = await readFile(runtimeEventPath, "utf8");
-    return body
-      .split(/\r?\n/)
-      .filter(Boolean)
-      .map((line) => JSON.parse(line));
-  } catch (error) {
-    if (error.code === "ENOENT") return [];
-    throw error;
-  }
+  return readSqliteOpsEvents(runtimeDbPath);
 }
 
 async function appendOpsEvent(event) {
-  await mkdir(dirname(runtimeEventPath), { recursive: true });
-  await writeFile(runtimeEventPath, `${JSON.stringify(event)}\n`, { flag: "a" });
+  return appendSqliteOpsEvent(runtimeDbPath, event);
+}
+
+async function readOpsState() {
+  return readSqliteOpsState(runtimeDbPath);
+}
+
+async function saveOpsStateSnapshot(input, event = null) {
+  return saveSqliteOpsStateSnapshot(runtimeDbPath, input, event);
+}
+
+async function applyOpsStateAction(input, event = null) {
+  return applySqliteOpsStateAction(runtimeDbPath, input, event);
 }
 
 function sendJson(res, status, payload) {
@@ -128,7 +132,7 @@ async function buildPortfolioSummary() {
     readJsonData("incidents"),
     readJsonData("productModel"),
     readOpsEvents(),
-    readOpsState(runtimeStatePath)
+    readOpsState()
   ]);
 
   const proofRecords = proofData.records || [];
@@ -254,8 +258,17 @@ async function handleApi(req, res, pathname) {
         status: "ok",
         service: "dr-forest-fm-ops",
         mode: "api-foundation",
+        runtimeStore: "sqlite",
         generatedAt: new Date().toISOString(),
         dataFiles: Object.keys(dataFileMap)
+      });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/storage") {
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        ...(await readSqliteOpsStorageHealth(runtimeDbPath))
       });
       return;
     }
@@ -297,7 +310,7 @@ async function handleApi(req, res, pathname) {
     }
 
     if (req.method === "GET" && pathname === "/api/ops-state") {
-      const snapshot = await readOpsState(runtimeStatePath);
+      const snapshot = await readOpsState();
       sendJson(res, 200, {
         ...snapshot,
         summary: summarizeOpsState(snapshot)
@@ -319,7 +332,7 @@ async function handleApi(req, res, pathname) {
         source: "state-snapshot",
         ...input.event
       }) : null;
-      const snapshot = await saveOpsStateSnapshot(runtimeStatePath, input, event);
+      const snapshot = await saveOpsStateSnapshot(input, event);
       if (event) await appendOpsEvent(event);
       sendJson(res, 200, {
         ...snapshot,
@@ -346,7 +359,7 @@ async function handleApi(req, res, pathname) {
           actionType: action.type
         }
       });
-      const result = await applyOpsStateAction(runtimeStatePath, {
+      const result = await applyOpsStateAction({
         expectedRevision: input.expectedRevision,
         action
       }, event);

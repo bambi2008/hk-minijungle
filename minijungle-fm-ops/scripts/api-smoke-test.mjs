@@ -1,6 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
 const host = "127.0.0.1";
@@ -52,6 +52,16 @@ async function verifyApi(baseUrl) {
   assert(health.response.ok, "Health endpoint failed");
   assert(health.body.status === "ok", "Health endpoint did not return ok status");
   assert(health.body.mode === "api-foundation", "Health endpoint did not expose API foundation mode");
+  assert(health.body.runtimeStore === "sqlite", "Health endpoint did not expose SQLite runtime store");
+
+  const initialStorage = await fetchJson(`${baseUrl}api/storage`);
+  assert(initialStorage.response.ok, "Storage endpoint failed");
+  assert(initialStorage.body.backend === "sqlite", "Storage endpoint did not expose SQLite backend");
+  assert(initialStorage.body.tables.includes("ops_events"), "Storage endpoint did not expose ops_events table");
+  assert(initialStorage.body.tables.includes("ops_state_snapshots"), "Storage endpoint did not expose state snapshot table");
+  assert(initialStorage.body.tables.includes("ops_actions"), "Storage endpoint did not expose ops_actions table");
+  assert(initialStorage.body.counts.opsEvents === 0, "SQLite ops_events table should start empty in test mode");
+  assert(initialStorage.body.counts.opsActions === 0, "SQLite ops_actions table should start empty in test mode");
 
   const portfolio = await fetchJson(`${baseUrl}api/portfolio`);
   assert(portfolio.response.ok, "Portfolio endpoint failed");
@@ -212,6 +222,13 @@ async function verifyApi(baseUrl) {
 
   const updatedQuality = await fetchJson(`${baseUrl}api/data-quality`);
   assert(updatedQuality.body.entityCounts.opsEvents === 2, "Data quality report did not include server-side event count");
+
+  const finalStorage = await fetchJson(`${baseUrl}api/storage`);
+  assert(finalStorage.body.counts.opsEvents === 2, "SQLite storage did not retain event rows");
+  assert(finalStorage.body.counts.opsActions === 1, "SQLite storage did not retain typed action row");
+  assert(finalStorage.body.counts.opsStateSnapshots === 2, "SQLite storage did not retain state snapshot rows");
+  assert(finalStorage.body.latestStateRevision === 2, "SQLite storage did not expose latest state revision");
+  assert(finalStorage.body.migrations.some((item) => item.version === "2026-07-14.sqlite-runtime-v1"), "SQLite migration was not recorded");
 }
 
 async function main() {
@@ -236,6 +253,8 @@ async function main() {
   try {
     await waitForServer(baseUrl);
     await verifyApi(baseUrl);
+    const dbStats = await stat(join(runtimeDir, "ops-runtime.sqlite"));
+    assert(dbStats.size > 0, "SQLite runtime database file was not created");
     console.log(`API smoke test passed at ${baseUrl}`);
   } catch (error) {
     if (serverOutput.length) {

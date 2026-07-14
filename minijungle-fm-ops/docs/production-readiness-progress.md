@@ -43,7 +43,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: Stale writes now return a 409 revision conflict instead of silently replacing newer server state. API and browser smoke tests verify typed action persistence and conflict behavior.
 - Still not solved: Conflict handling is still single-node and file-backed. It is not a transactional database, does not provide row-level locks, user permissions, tenant isolation, mobile offline reconciliation, object-storage proof validation, or device-ingestion pipelines.
 
+### Step 5 - SQLite Runtime Persistence v1
+
+- Target score after completion: 50%
+- Capability added: SQLite-backed runtime database for operations events, typed actions and state snapshots, with schema migration tracking and storage health API.
+- Why this matters: Runtime operations are no longer stored as loose JSON/JSONL files. The app now has durable tables for event history, action history and state revision snapshots, which is a necessary bridge toward real operational data management.
+- What is objectively better: `/api/storage` exposes backend type, migration version, SQLite table list, row counts and latest state revision. Automated API tests confirm the SQLite file is created and retains event, action and state rows.
+- Still not solved: Static master data still lives in JSON files, and SQLite is only a single-node embedded database. This does not yet provide production PostgreSQL/MySQL deployment, tenant-level row policies, user authentication, backup/restore automation, sensor time-series ingestion or object-storage proof retention.
+
 ### Current Honest Score
 
-- Production-readiness score: 45%
+- Production-readiness score: 50%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.

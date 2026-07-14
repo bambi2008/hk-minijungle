@@ -10,7 +10,7 @@
     "smoke": "node scripts/smoke-test.mjs",
     "smoke:api": "node scripts/api-smoke-test.mjs",
     "validate:data-model": "node scripts/validate-data-model.mjs",
-    "check": "node --check app.js && node --check server.mjs && node --check lib/ops-data-model.mjs && node --check lib/ops-state-store.mjs && node --check scripts/smoke-test.mjs && node --check scripts/api-smoke-test.mjs && node --check scripts/validate-data-model.mjs && node scripts/validate-data-model.mjs && node scripts/api-smoke-test.mjs && node scripts/smoke-test.mjs"
+    "check": "node --check app.js && node --check server.mjs && node --check lib/ops-data-model.mjs && node --check lib/ops-state-store.mjs && node --check lib/ops-sqlite-store.mjs && node --check scripts/smoke-test.mjs && node --check scripts/api-smoke-test.mjs && node --check scripts/validate-data-model.mjs && node scripts/validate-data-model.mjs && node scripts/api-smoke-test.mjs && node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1",

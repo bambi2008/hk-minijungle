@@ -84,8 +84,8 @@ export const productionDataModel = {
     {
       name: "opsEvents",
       idField: "id",
-      source: ".ops-data/ops-events.jsonl",
-      purpose: "Append-only operational event stream for future audit and analytics."
+      source: ".ops-data/ops-runtime.sqlite::ops_events",
+      purpose: "SQLite-backed operational event stream for future audit and analytics."
     }
   ],
   relationships: [

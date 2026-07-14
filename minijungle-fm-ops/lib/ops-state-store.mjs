@@ -139,7 +139,7 @@ export function sanitizeOpsState(input = {}) {
   };
 }
 
-function sanitizeSnapshot(input) {
+export function sanitizeSnapshot(input) {
   const fallback = defaultOpsState();
   const snapshot = plainObject(input);
 
@@ -152,41 +152,20 @@ function sanitizeSnapshot(input) {
   };
 }
 
-export async function readOpsState(statePath) {
-  try {
-    const body = await readFile(statePath, "utf8");
-    return sanitizeSnapshot(JSON.parse(body));
-  } catch (error) {
-    if (error.code === "ENOENT") return defaultOpsState();
-    throw error;
-  }
-}
-
-export async function writeOpsState(statePath, snapshot) {
-  await mkdir(dirname(statePath), { recursive: true });
-  const body = JSON.stringify(sanitizeSnapshot(snapshot), null, 2);
-  const tempPath = `${statePath}.${process.pid}.tmp`;
-  await writeFile(tempPath, body);
-  await rename(tempPath, statePath);
-}
-
-export async function saveOpsStateSnapshot(statePath, input, event = null) {
-  const current = await readOpsState(statePath);
-  const next = {
+export function buildOpsStateSnapshot(currentSnapshot, input, event = null) {
+  const current = sanitizeSnapshot(currentSnapshot);
+  return {
     version: opsStateVersion,
     revision: current.revision + 1,
     updatedAt: new Date().toISOString(),
     lastEventId: event?.id || current.lastEventId || null,
     state: sanitizeOpsState(input?.state || input)
   };
-
-  await writeOpsState(statePath, next);
-  return next;
 }
 
-export async function applyOpsStateAction(statePath, input, event = null) {
+export function reduceOpsStateAction(currentSnapshot, input, event = null) {
   const body = plainObject(input);
-  const current = await readOpsState(statePath);
+  const current = sanitizeSnapshot(currentSnapshot);
   const expectedRevision = body.expectedRevision;
 
   if (expectedRevision !== undefined && expectedRevision !== null && Number(expectedRevision) !== current.revision) {
@@ -234,7 +213,6 @@ export async function applyOpsStateAction(statePath, input, event = null) {
     state: sanitizeOpsState(state)
   };
 
-  await writeOpsState(statePath, next);
   return {
     snapshot: next,
     action: {
@@ -245,6 +223,40 @@ export async function applyOpsStateAction(statePath, input, event = null) {
       appliedCollections: [...new Set(appliedCollections)]
     }
   };
+}
+
+export async function readOpsState(statePath) {
+  try {
+    const body = await readFile(statePath, "utf8");
+    return sanitizeSnapshot(JSON.parse(body));
+  } catch (error) {
+    if (error.code === "ENOENT") return defaultOpsState();
+    throw error;
+  }
+}
+
+export async function writeOpsState(statePath, snapshot) {
+  await mkdir(dirname(statePath), { recursive: true });
+  const body = JSON.stringify(sanitizeSnapshot(snapshot), null, 2);
+  const tempPath = `${statePath}.${process.pid}.tmp`;
+  await writeFile(tempPath, body);
+  await rename(tempPath, statePath);
+}
+
+export async function saveOpsStateSnapshot(statePath, input, event = null) {
+  const current = await readOpsState(statePath);
+  const next = buildOpsStateSnapshot(current, input, event);
+
+  await writeOpsState(statePath, next);
+  return next;
+}
+
+export async function applyOpsStateAction(statePath, input, event = null) {
+  const current = await readOpsState(statePath);
+  const result = reduceOpsStateAction(current, input, event);
+
+  await writeOpsState(statePath, result.snapshot);
+  return result;
 }
 
 export function summarizeOpsState(snapshot) {
