@@ -1,9 +1,12 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { mkdir, rm } from "node:fs/promises";
+import { join } from "node:path";
 import { chromium } from "playwright";
 
 const host = "127.0.0.1";
 const projectRoot = process.cwd();
+const runtimeDir = join(projectRoot, ".ops-data-browser-test");
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -112,6 +115,11 @@ async function verifyBrowserFlow(baseUrl) {
     assert(queuedAiCard?.includes("Queued for review"), "Queuing AI recommendation did not update card");
     const aiAudit = await page.textContent("#audit-event-list");
     assert(aiAudit?.includes("AI recommendation queued"), "AI recommendation did not create audit event");
+    await page.waitForFunction(async () => {
+      const response = await fetch("/api/ops-state");
+      const snapshot = await response.json();
+      return Boolean(snapshot.state?.aiQueuedActions?.["AI-ESG-001"]);
+    }, { timeout: 5000 });
     const healthText = await page.textContent("#health");
     assert(healthText?.includes("Health Score Method"), "Health Score Method section did not load");
     assert(healthText?.includes("Visual AI condition"), "Health score formula did not load visual AI component");
@@ -364,11 +372,18 @@ async function verifyBrowserFlow(baseUrl) {
 }
 
 async function main() {
+  await rm(runtimeDir, { recursive: true, force: true });
+  await mkdir(runtimeDir, { recursive: true });
+
   const port = await getFreePort();
   const baseUrl = `http://${host}:${port}/`;
   const serverOutput = [];
   const server = spawn(process.execPath, ["server.mjs", "--port", String(port)], {
     cwd: projectRoot,
+    env: {
+      ...process.env,
+      DR_FOREST_RUNTIME_DIR: runtimeDir
+    },
     stdio: ["ignore", "pipe", "pipe"]
   });
   server.stdout.on("data", (chunk) => serverOutput.push(chunk.toString()));
@@ -417,6 +432,7 @@ async function main() {
     throw error;
   } finally {
     server.kill();
+    await rm(runtimeDir, { recursive: true, force: true });
   }
 }
 

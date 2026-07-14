@@ -79,6 +79,11 @@ async function verifyApi(baseUrl) {
   assert(seed.body.entities.livingAssets.length === 4, "Production seed did not expose living assets");
   assert(seed.body.entities.assetModules.length === 12, "Production seed did not expose derived modules");
 
+  const initialState = await fetchJson(`${baseUrl}api/ops-state`);
+  assert(initialState.response.ok, "Ops state endpoint failed");
+  assert(initialState.body.revision === 0, "Ops state should start at revision 0 in test mode");
+  assert(initialState.body.summary.completedWorkorders === 0, "Ops state should start without completed work orders");
+
   const assets = await fetchJson(`${baseUrl}api/assets`);
   assert(assets.response.ok, "Assets endpoint failed");
   assert(assets.body.assets.length === 4, "Assets endpoint did not return all assets");
@@ -111,8 +116,55 @@ async function verifyApi(baseUrl) {
   const updatedPortfolio = await fetchJson(`${baseUrl}api/portfolio`);
   assert(updatedPortfolio.body.counts.serverSideOpsEvents === 1, "Portfolio endpoint did not reflect server-side event count");
 
+  const stateSnapshot = await fetchJson(`${baseUrl}api/ops-state/snapshot`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      state: {
+        workorderCompletions: {
+          "WO-1047": {
+            completedAt: "2026-07-14T08:00:00.000Z",
+            completedBy: "API smoke test"
+          }
+        },
+        dispatchStaging: {},
+        proofApprovals: {},
+        sensorAcknowledgements: {},
+        supplyRequests: {},
+        invoicePayments: {},
+        scheduleConfirmations: {},
+        incidentResolutions: {},
+        complianceClearances: {},
+        activeRoleId: "fm-lead",
+        quickOpsTasks: [],
+        auditEvents: [],
+        aiQueuedActions: {}
+      },
+      event: {
+        type: "workorder.completed",
+        actor: "API smoke test",
+        entityType: "workorder",
+        entityId: "WO-1047",
+        clientId: "show-suite",
+        wallId: "MJ-HK-021",
+        note: "Server-side state snapshot smoke test"
+      }
+    })
+  });
+  assert(stateSnapshot.response.ok, "Ops state snapshot endpoint failed");
+  assert(stateSnapshot.body.revision === 1, "Ops state snapshot did not increment revision");
+  assert(stateSnapshot.body.summary.completedWorkorders === 1, "Ops state snapshot did not summarize completed work order");
+
+  const persistedState = await fetchJson(`${baseUrl}api/ops-state`);
+  assert(persistedState.body.state.workorderCompletions["WO-1047"], "Ops state did not persist completed work order");
+  assert(persistedState.body.summary.completedWorkorders === 1, "Ops state summary did not persist completed work order");
+
+  const portfolioAfterState = await fetchJson(`${baseUrl}api/portfolio`);
+  assert(portfolioAfterState.body.counts.serverSideOpsEvents === 2, "Portfolio endpoint did not include state snapshot event");
+  assert(portfolioAfterState.body.counts.serverStateRevision === 1, "Portfolio endpoint did not expose state revision");
+
   const updatedQuality = await fetchJson(`${baseUrl}api/data-quality`);
-  assert(updatedQuality.body.entityCounts.opsEvents === 1, "Data quality report did not include server-side event count");
+  assert(updatedQuality.body.entityCounts.opsEvents === 2, "Data quality report did not include server-side event count");
 }
 
 async function main() {

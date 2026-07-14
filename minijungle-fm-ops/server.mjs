@@ -7,11 +7,17 @@ import {
   loadOpsDataset,
   productionDataModel
 } from "./lib/ops-data-model.mjs";
+import {
+  readOpsState,
+  saveOpsStateSnapshot,
+  summarizeOpsState
+} from "./lib/ops-state-store.mjs";
 
 const root = process.cwd();
 const dataRoot = join(root, "data");
 const runtimeRoot = process.env.DR_FOREST_RUNTIME_DIR || join(root, ".ops-data");
 const runtimeEventPath = join(runtimeRoot, "ops-events.jsonl");
+const runtimeStatePath = join(runtimeRoot, "ops-state.json");
 const portArgIndex = process.argv.indexOf("--port");
 const cliPort = portArgIndex >= 0 ? process.argv[portArgIndex + 1] : null;
 const port = Number(cliPort || process.env.PORT || 8010);
@@ -112,7 +118,7 @@ function openIncidents(incidents) {
 }
 
 async function buildPortfolioSummary() {
-  const [clients, walls, workorders, proofData, sensorData, incidentData, productModel, events] = await Promise.all([
+  const [clients, walls, workorders, proofData, sensorData, incidentData, productModel, events, opsState] = await Promise.all([
     readJsonData("clients"),
     readJsonData("walls"),
     readJsonData("workorders"),
@@ -120,7 +126,8 @@ async function buildPortfolioSummary() {
     readJsonData("sensors"),
     readJsonData("incidents"),
     readJsonData("productModel"),
-    readOpsEvents()
+    readOpsEvents(),
+    readOpsState(runtimeStatePath)
   ]);
 
   const proofRecords = proofData.records || [];
@@ -147,7 +154,8 @@ async function buildPortfolioSummary() {
       incidents: incidents.length,
       openIncidents: openIncidents(incidents).length,
       reportModes: reportModes.length,
-      serverSideOpsEvents: events.length
+      serverSideOpsEvents: events.length,
+      serverStateRevision: opsState.revision
     },
     health: {
       averageScore: avgHealth,
@@ -287,11 +295,36 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/ops-state") {
+      const snapshot = await readOpsState(runtimeStatePath);
+      sendJson(res, 200, {
+        ...snapshot,
+        summary: summarizeOpsState(snapshot)
+      });
+      return;
+    }
+
     if (req.method === "POST" && pathname === "/api/ops-events") {
       const input = await readJsonBody(req);
       const event = normalizeOpsEvent(input);
       await appendOpsEvent(event);
       sendJson(res, 201, { event });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/ops-state/snapshot") {
+      const input = await readJsonBody(req);
+      const event = input.event ? normalizeOpsEvent({
+        source: "state-snapshot",
+        ...input.event
+      }) : null;
+      const snapshot = await saveOpsStateSnapshot(runtimeStatePath, input, event);
+      if (event) await appendOpsEvent(event);
+      sendJson(res, 200, {
+        ...snapshot,
+        event,
+        summary: summarizeOpsState(snapshot)
+      });
       return;
     }
 

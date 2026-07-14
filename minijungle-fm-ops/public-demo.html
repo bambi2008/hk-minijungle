@@ -2533,8 +2533,12 @@ const quickOpsTaskStorageKey = "dr-forest-fm-ops.quick-ops-tasks.v1";
 const auditEventStorageKey = "dr-forest-fm-ops.audit-events.v1";
 const aiQueuedActionStorageKey = "dr-forest-fm-ops.ai-queued-actions.v1";
 const languageStorageKey = "dr-forest-fm-ops.language.v1";
+const serverOpsStateEndpoint = "/api/ops-state";
+const serverOpsSnapshotEndpoint = "/api/ops-state/snapshot";
 
 let currentLanguage = "en";
+let serverOpsStateAvailable = false;
+let serverOpsStateRevision = 0;
 
 const simplifiedToTraditionalMap = {
   "与": "與",
@@ -4394,6 +4398,120 @@ function saveAiQueuedActions() {
   localStorage.setItem(aiQueuedActionStorageKey, JSON.stringify(aiQueuedActions));
 }
 
+function collectOpsStateSnapshot() {
+  return {
+    workorderCompletions,
+    dispatchStaging,
+    proofApprovals,
+    sensorAcknowledgements,
+    supplyRequests,
+    invoicePayments,
+    scheduleConfirmations,
+    incidentResolutions,
+    complianceClearances,
+    activeRoleId,
+    quickOpsTasks,
+    auditEvents,
+    aiQueuedActions
+  };
+}
+
+function applyOpsStateSnapshot(snapshot) {
+  const serverState = snapshot?.state;
+  if (!serverState || typeof serverState !== "object") return false;
+
+  workorderCompletions = serverState.workorderCompletions || {};
+  dispatchStaging = serverState.dispatchStaging || {};
+  proofApprovals = serverState.proofApprovals || {};
+  sensorAcknowledgements = serverState.sensorAcknowledgements || {};
+  supplyRequests = serverState.supplyRequests || {};
+  invoicePayments = serverState.invoicePayments || {};
+  scheduleConfirmations = serverState.scheduleConfirmations || {};
+  incidentResolutions = serverState.incidentResolutions || {};
+  complianceClearances = serverState.complianceClearances || {};
+  activeRoleId = serverState.activeRoleId || activeRoleId;
+  quickOpsTasks = Array.isArray(serverState.quickOpsTasks) ? serverState.quickOpsTasks : [];
+  auditEvents = Array.isArray(serverState.auditEvents) ? serverState.auditEvents : [];
+  aiQueuedActions = serverState.aiQueuedActions || {};
+  serverOpsStateRevision = Number(snapshot.revision || 0);
+
+  saveWorkorderCompletions();
+  saveDispatchStaging();
+  saveProofApprovals();
+  saveSensorAcknowledgements();
+  saveSupplyRequests();
+  saveInvoicePayments();
+  saveScheduleConfirmations();
+  saveIncidentResolutions();
+  saveComplianceClearances();
+  saveActiveRole();
+  saveQuickOpsTasks();
+  saveAuditEvents();
+  saveAiQueuedActions();
+
+  return true;
+}
+
+async function loadServerOpsState() {
+  if (!window.location.protocol.startsWith("http")) return;
+
+  try {
+    const response = await fetch(serverOpsStateEndpoint, { cache: "no-store" });
+    if (!response.ok) return;
+    const snapshot = await response.json();
+    serverOpsStateAvailable = true;
+    if (Number(snapshot.revision || 0) > 0) {
+      applyOpsStateSnapshot(snapshot);
+    }
+  } catch {
+    serverOpsStateAvailable = false;
+  }
+}
+
+function auditActionType(action = "") {
+  return String(action || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ".")
+    .replace(/^\.+|\.+$/g, "") || "ops.state.updated";
+}
+
+function persistServerOpsState(auditEvent) {
+  if (!window.location.protocol.startsWith("http")) return;
+
+  const event = auditEvent ? {
+    type: auditActionType(auditEvent.action),
+    actor: auditEvent.actor,
+    entityType: auditEvent.entityType,
+    entityId: auditEvent.entityId,
+    clientId: auditEvent.clientId,
+    source: "browser-ui",
+    note: auditEvent.detail,
+    payload: {
+      auditEventId: auditEvent.id,
+      tone: auditEvent.tone
+    }
+  } : null;
+
+  fetch(serverOpsSnapshotEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      state: collectOpsStateSnapshot(),
+      event
+    })
+  })
+    .then((response) => response.ok ? response.json() : null)
+    .then((snapshot) => {
+      if (!snapshot) return;
+      serverOpsStateAvailable = true;
+      serverOpsStateRevision = Number(snapshot.revision || serverOpsStateRevision);
+    })
+    .catch(() => {
+      serverOpsStateAvailable = false;
+    });
+}
+
 function isWorkorderCompleted(id) {
   return Boolean(workorderCompletions[id]);
 }
@@ -4489,7 +4607,7 @@ function auditEventsForClient(clientId) {
 }
 
 function recordAuditEvent(event) {
-  auditEvents = [{
+  const auditEvent = {
     id: `AUD-${Date.now()}-${Math.round(Math.random() * 1000)}`,
     timestamp: new Date().toISOString(),
     actor: event.actor || "FM Ops",
@@ -4499,8 +4617,10 @@ function recordAuditEvent(event) {
     clientId: event.clientId || null,
     tone: event.tone || "ready",
     detail: event.detail
-  }, ...auditEvents].slice(0, 80);
+  };
+  auditEvents = [auditEvent, ...auditEvents].slice(0, 80);
   saveAuditEvents();
+  persistServerOpsState(auditEvent);
 }
 
 function workorderView(order) {
@@ -7591,6 +7711,7 @@ async function bootstrap() {
     loadQuickOpsTasks();
     loadAuditEvents();
     loadAiQueuedActions();
+    await loadServerOpsState();
     initializeSelection();
     renderAll();
   } catch (error) {
