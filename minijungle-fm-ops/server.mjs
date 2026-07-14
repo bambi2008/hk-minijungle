@@ -1,6 +1,12 @@
 import { createServer } from "node:http";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, extname, join, normalize } from "node:path";
+import {
+  buildDataQualityReport,
+  buildProductionSeed,
+  loadOpsDataset,
+  productionDataModel
+} from "./lib/ops-data-model.mjs";
 
 const root = process.cwd();
 const dataRoot = join(root, "data");
@@ -247,6 +253,21 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/portfolio") {
       sendJson(res, 200, await buildPortfolioSummary());
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/data-model") {
+      sendJson(res, 200, productionDataModel);
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/data-quality") {
+      sendJson(res, 200, await buildDataQualityReport(dataRoot, await readOpsEvents()));
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/production-seed") {
+      sendJson(res, 200, buildProductionSeed(await loadOpsDataset(dataRoot), await readOpsEvents()));
       return;
     }
 

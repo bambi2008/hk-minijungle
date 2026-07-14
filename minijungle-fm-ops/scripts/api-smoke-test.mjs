@@ -61,6 +61,24 @@ async function verifyApi(baseUrl) {
   assert(portfolio.body.counts.activeSensorAlerts >= 1, "Portfolio endpoint did not count sensor alerts");
   assert(portfolio.body.counts.serverSideOpsEvents === 0, "Runtime event store should start empty in test mode");
 
+  const dataModel = await fetchJson(`${baseUrl}api/data-model`);
+  assert(dataModel.response.ok, "Data model endpoint failed");
+  assert(dataModel.body.scoreTarget.before === 31, "Data model did not preserve production-readiness baseline");
+  assert(dataModel.body.scoreTarget.after === 35, "Data model did not expose this step's target score");
+  assert(dataModel.body.entities.some((item) => item.name === "assetModules"), "Data model did not include module entity");
+
+  const dataQuality = await fetchJson(`${baseUrl}api/data-quality`);
+  assert(dataQuality.response.ok, "Data quality endpoint failed");
+  assert(dataQuality.body.status === "pass-with-warnings", "Data quality should pass with honest production warnings");
+  assert(dataQuality.body.errors.length === 0, "Data quality report should not contain relationship errors");
+  assert(dataQuality.body.entityCounts.assetModules === 12, "Data quality report did not derive asset module count");
+  assert(dataQuality.body.scaleReadiness.needsRealDatabase === true, "Data quality report should preserve honest database gap");
+
+  const seed = await fetchJson(`${baseUrl}api/production-seed`);
+  assert(seed.response.ok, "Production seed endpoint failed");
+  assert(seed.body.entities.livingAssets.length === 4, "Production seed did not expose living assets");
+  assert(seed.body.entities.assetModules.length === 12, "Production seed did not expose derived modules");
+
   const assets = await fetchJson(`${baseUrl}api/assets`);
   assert(assets.response.ok, "Assets endpoint failed");
   assert(assets.body.assets.length === 4, "Assets endpoint did not return all assets");
@@ -92,6 +110,9 @@ async function verifyApi(baseUrl) {
 
   const updatedPortfolio = await fetchJson(`${baseUrl}api/portfolio`);
   assert(updatedPortfolio.body.counts.serverSideOpsEvents === 1, "Portfolio endpoint did not reflect server-side event count");
+
+  const updatedQuality = await fetchJson(`${baseUrl}api/data-quality`);
+  assert(updatedQuality.body.entityCounts.opsEvents === 1, "Data quality report did not include server-side event count");
 }
 
 async function main() {
