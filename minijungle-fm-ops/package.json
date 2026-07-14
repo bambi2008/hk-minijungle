@@ -8,7 +8,8 @@
     "start:8010": "node server.mjs --port 8010",
     "build:public": "node scripts/build-public-demo.mjs",
     "smoke": "node scripts/smoke-test.mjs",
-    "check": "node --check app.js && node --check server.mjs && node --check scripts/smoke-test.mjs && node scripts/smoke-test.mjs"
+    "smoke:api": "node scripts/api-smoke-test.mjs",
+    "check": "node --check app.js && node --check server.mjs && node --check scripts/smoke-test.mjs && node --check scripts/api-smoke-test.mjs && node scripts/api-smoke-test.mjs && node scripts/smoke-test.mjs"
   },
   "devDependencies": {
     "playwright": "^1.61.1",
