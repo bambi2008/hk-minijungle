@@ -4,6 +4,8 @@
 
 This score tracks readiness for real Hong Kong FM operations at 1,000+ living-green modules. It does not measure investor-demo polish.
 
+Scoring is governed by `docs/progress-scoring-governance.md`. If architecture scaffold readiness and real production operations readiness differ, the production operations score is the official progress score.
+
 ## Baseline
 
 - Date: 2026-07-14
@@ -85,13 +87,23 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 
 ### Step 10 - Proof Object Storage and Media Evidence v1
 
-- Target score after completion: 75%
+- Original technical milestone target: 75% architecture scaffold readiness.
+- Official production-readiness score after recalibration: 62%.
 - Capability added: SQLite proof-media metadata ledger, upload-intent API, evidence-registration API, proof-media verification API, scoped media vault read API, object-key/SHA-256/byte-size tracking, relationship links to wall/work order/proof/mobile capture, and storage health reporting.
 - Why this matters: Investor and FM users need evidence that can survive reporting, ESG packs, dispute handling and renewal conversations. The app now has a structured chain from technician capture to proof media object, hash, object key, verification status and audit event.
 - What is objectively better: API smoke tests verify that clients can read only scoped proof media, clients cannot create or verify proof media, field technicians cannot create proof media outside assigned client scope, mismatched wall/work-order/client/proof relationships are rejected, hash mismatches are rejected, duplicate registration does not duplicate audit events, verified proof media is visible in the client vault, and `/api/storage` reports proof-media table counts, hash coverage and foreign-key integrity.
 - Still not solved: This is still a local metadata ledger, not production cloud object storage. It does not yet provide actual file upload, signed S3/GCS/Azure Blob URLs, antivirus/malware scanning, image EXIF stripping, immutable bucket retention, CDN delivery, backup policy, or lifecycle deletion controls.
 
+### Score Recalibration - Preventing Concept Drift
+
+- Date: 2026-07-15
+- Corrected official production-readiness score: 62%.
+- What changed: Step scores were previously mixing architecture scaffold readiness with real production operations readiness. That was too optimistic.
+- Why 62% is more accurate: The app now has important backend foundations, but it still lacks production database deployment, real technician mobile/offline UI, real object storage upload, sensor time-series ingestion, health scoring, production IAM, monitoring, backup/restore, support playbooks, and complete admin/client/auditor operational UI.
+- Reporting rule going forward: Future progress must state the score before and after, the scoring dimensions improved, the evidence added, remaining production blockers, applicable hard caps, and whether the number refers to production readiness, architecture scaffold readiness or investor-demo readiness.
+
 ### Current Honest Score
 
-- Production-readiness score: 75%
+- Production-readiness score: 62%
+- Architecture scaffold readiness: roughly 70-75%, but this is not the official production-readiness score.
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.
