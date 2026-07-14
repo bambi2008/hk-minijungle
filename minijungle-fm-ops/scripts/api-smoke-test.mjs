@@ -65,6 +65,7 @@ async function verifyApi(baseUrl) {
   assert(health.body.status === "ok", "Health endpoint did not return ok status");
   assert(health.body.mode === "api-foundation", "Health endpoint did not expose API foundation mode");
   assert(health.body.runtimeStore === "sqlite", "Health endpoint did not expose SQLite runtime store");
+  assert(health.body.masterDataStore === "sqlite", "Health endpoint did not expose SQLite master data store");
   assert(health.body.authPolicy === "role-client-scope-v1", "Health endpoint did not expose auth policy");
 
   const authContext = await fetchJson(`${baseUrl}api/auth/context`, {
@@ -93,6 +94,18 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.tables.includes("ops_actions"), "Storage endpoint did not expose ops_actions table");
   assert(initialStorage.body.counts.opsEvents === 0, "SQLite ops_events table should start empty in test mode");
   assert(initialStorage.body.counts.opsActions === 0, "SQLite ops_actions table should start empty in test mode");
+  assert(initialStorage.body.masterData.migrationVersion === "2026-07-15.master-data-v1", "Storage endpoint did not expose master-data migration");
+  assert(initialStorage.body.masterData.tables.includes("clients"), "Storage endpoint did not expose clients master table");
+  assert(initialStorage.body.masterData.tables.includes("living_assets"), "Storage endpoint did not expose living_assets master table");
+  assert(initialStorage.body.masterData.tables.includes("work_orders"), "Storage endpoint did not expose work_orders master table");
+  assert(initialStorage.body.masterData.tables.includes("sensor_readings"), "Storage endpoint did not expose sensor_readings master table");
+  assert(initialStorage.body.masterData.counts.clients === 4, "SQLite master clients table did not seed all clients");
+  assert(initialStorage.body.masterData.counts.livingAssets === 4, "SQLite master living_assets table did not seed all assets");
+  assert(initialStorage.body.masterData.counts.assetZones === 13, "SQLite master asset_zones table did not seed all zones");
+  assert(initialStorage.body.masterData.counts.workOrders === 4, "SQLite master work_orders table did not seed all work orders");
+  assert(initialStorage.body.masterData.counts.sensorReadings === 4, "SQLite master sensor_readings table did not seed all sensor readings");
+  assert(initialStorage.body.masterData.relationshipIntegrity.foreignKeysEnabled === true, "SQLite master-data foreign keys are not enabled");
+  assert(initialStorage.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "SQLite master-data foreign key check found issues");
 
   const deniedStorage = await fetchJson(`${baseUrl}api/storage`, {
     headers: principalHeaders("client-show-suite")
@@ -372,6 +385,8 @@ async function verifyApi(baseUrl) {
   assert(finalStorage.body.counts.opsActions === 2, "SQLite storage did not retain typed action rows");
   assert(finalStorage.body.counts.opsStateSnapshots === 3, "SQLite storage did not retain state snapshot rows");
   assert(finalStorage.body.latestStateRevision === 3, "SQLite storage did not expose latest state revision");
+  assert(finalStorage.body.masterData.counts.clients === 4, "SQLite master clients table count changed unexpectedly");
+  assert(finalStorage.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "SQLite master-data FK check regressed after runtime writes");
   assert(finalStorage.body.migrations.some((item) => item.version === "2026-07-14.sqlite-runtime-v1"), "SQLite migration was not recorded");
 }
 

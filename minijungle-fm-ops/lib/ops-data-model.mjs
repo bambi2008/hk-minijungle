@@ -12,7 +12,7 @@ export const productionDataModel = {
     {
       name: "clients",
       idField: "id",
-      source: "data/clients.json",
+      source: ".ops-data/ops-runtime.sqlite::clients seeded from data/clients.json",
       purpose: "Contract owner, district, commercial plan and renewal-risk anchor."
     },
     {
@@ -24,37 +24,37 @@ export const productionDataModel = {
     {
       name: "livingAssets",
       idField: "id",
-      source: "data/walls.json",
+      source: ".ops-data/ops-runtime.sqlite::living_assets seeded from data/walls.json",
       purpose: "Managed DR FOREST Wall or future living asset under SLA."
     },
     {
       name: "assetModules",
       idField: "id",
-      source: "derived from walls.modules",
+      source: "derived from living_assets.modules",
       purpose: "Robot, technician and sensor addressable module unit."
     },
     {
       name: "workOrders",
       idField: "id",
-      source: "data/workorders.json",
+      source: ".ops-data/ops-runtime.sqlite::work_orders seeded from data/workorders.json",
       purpose: "Field execution task with SLA, proof gate and closure audit."
     },
     {
       name: "proofRecords",
       idField: "id",
-      source: "data/proof.json",
+      source: ".ops-data/ops-runtime.sqlite::proof_records seeded from data/proof.json",
       purpose: "Photos, notes and method evidence used in ESG, renewal and audit packs."
     },
     {
       name: "sensorReadings",
       idField: "id",
-      source: "data/sensors.json",
+      source: ".ops-data/ops-runtime.sqlite::sensor_readings seeded from data/sensors.json",
       purpose: "Telemetry or manual observation record for health score and incident triggers."
     },
     {
       name: "incidents",
       idField: "id",
-      source: "data/incidents.json",
+      source: ".ops-data/ops-runtime.sqlite::incidents seeded from data/incidents.json",
       purpose: "Exception queue with owner, SLA clock, source evidence and proof requirements."
     },
     {

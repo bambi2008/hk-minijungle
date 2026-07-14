@@ -17,6 +17,10 @@ import {
   saveSqliteOpsStateSnapshot
 } from "./lib/ops-sqlite-store.mjs";
 import {
+  readSqliteMasterDataHealth,
+  readSqliteMasterDataset
+} from "./lib/ops-master-data-store.mjs";
+import {
   authPolicySummary,
   canAccessClient,
   filterByClientScope,
@@ -55,6 +59,8 @@ const dataFileMap = {
   productModel: "product-model.json"
 };
 
+const sqliteMasterDataKeys = new Set(["clients", "walls", "workorders", "proof", "sensors", "incidents"]);
+
 const scopedDataFiles = {
   billing: "billing.json",
   schedule: "schedule.json",
@@ -72,6 +78,19 @@ function resolvePath(url) {
 }
 
 async function readJsonData(key) {
+  if (sqliteMasterDataKeys.has(key)) {
+    const dataset = await readSqliteMasterDataset(runtimeDbPath, dataRoot);
+    const data = {
+      clients: dataset.clients,
+      walls: dataset.walls,
+      workorders: dataset.workorders,
+      proof: { records: dataset.proofRecords },
+      sensors: { readings: dataset.sensorReadings },
+      incidents: { incidents: dataset.incidents }
+    };
+    return data[key];
+  }
+
   const filename = dataFileMap[key];
   if (!filename) throw new Error(`Unknown data file: ${key}`);
   return JSON.parse(await readFile(join(dataRoot, filename), "utf8"));
@@ -369,6 +388,7 @@ async function handleApi(req, res, pathname) {
         service: "dr-forest-fm-ops",
         mode: "api-foundation",
         runtimeStore: "sqlite",
+        masterDataStore: "sqlite",
         authPolicy: "role-client-scope-v1",
         generatedAt: new Date().toISOString(),
         dataFiles: Object.keys(dataFileMap)
@@ -397,9 +417,14 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
+      const [runtimeStorage, masterDataStorage] = await Promise.all([
+        readSqliteOpsStorageHealth(runtimeDbPath),
+        readSqliteMasterDataHealth(runtimeDbPath, dataRoot)
+      ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
-        ...(await readSqliteOpsStorageHealth(runtimeDbPath))
+        ...runtimeStorage,
+        masterData: masterDataStorage
       });
       return;
     }

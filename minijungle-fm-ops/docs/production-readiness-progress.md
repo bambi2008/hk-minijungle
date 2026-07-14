@@ -59,7 +59,15 @@ This score tracks readiness for real Hong Kong FM operations at 1,000+ living-gr
 - What is objectively better: `/api/auth/context` exposes the current principal, `/api/auth/policy` exposes the role model, client viewers are filtered to their own client data, read-only viewers are blocked from writes, and field technicians cannot write outside assigned client scope. API smoke tests verify both allowed and denied paths.
 - Still not solved: This is not production IAM. There is no password flow, SSO, MFA, signed session lifecycle, secret rotation, audit-grade login trail, row-level database policy or admin console for user management.
 
+### Step 7 - Master Data DB Migration v1
+
+- Target score after completion: 60%
+- Capability added: SQLite master-data tables for clients, living assets, asset zones, work orders, proof records, sensor readings and incidents, seeded from existing JSON with foreign-key constraints.
+- Why this matters: Core operational master data is no longer only read from JSON files. Portfolio, asset index and tenant-scope resolution now read from SQLite-backed master tables with enforceable relationships.
+- What is objectively better: `/api/storage` exposes master-data migration version, table names, row counts and `PRAGMA foreign_key_check` status. API smoke tests verify client/asset/work-order/sensor table counts and zero foreign-key issues.
+- Still not solved: JSON is still the seed source, and there is no admin CRUD workflow, bulk import UI, production backup/restore, schema migration runner, managed PostgreSQL/MySQL deployment, or historical versioning for master-data changes.
+
 ### Current Honest Score
 
-- Production-readiness score: 55%
+- Production-readiness score: 60%
 - Investor-demo score remains higher, but should not be mixed into the production-readiness score.
