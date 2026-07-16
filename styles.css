@@ -814,7 +814,7 @@ body.customer-mode .customer-app-shell {
   display: grid;
   width: 100%;
   min-height: 76px;
-  grid-template-columns: 44px 1fr 44px;
+  grid-template-columns: 1fr auto auto auto;
   gap: 10px;
   align-items: center;
   padding: 12px 20px;
@@ -895,7 +895,27 @@ body.customer-mode .customer-app-shell {
 }
 
 .customer-privacy-top-btn {
+  grid-column: 4;
+}
+
+.customer-internal-btn {
+  display: inline-flex;
   grid-column: 3;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 12px;
+  color: var(--customer-ink);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 4px 18px rgba(23, 16, 20, 0.12);
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
 }
 
 .customer-app-content {
@@ -1496,7 +1516,6 @@ body.customer-mode .customer-app-shell {
 .customer-sticky-privacy,
 .customer-followup-preview,
 .customer-progress,
-.customer-internal-btn,
 .customer-section-title {
   display: none;
 }

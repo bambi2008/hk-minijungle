@@ -9838,9 +9838,25 @@ editAutoIntakeBtn.addEventListener("click", () => {
   document.querySelector("#stage")?.focus();
 });
 
-customerModeBtn.addEventListener("click", () => setMode("customer"));
-expertModeBtn.addEventListener("click", () => setMode("expert"));
-customerInternalBtn?.addEventListener("click", () => setMode("expert"));
+function replaceModeUrl(mode) {
+  const url = new URL(window.location.href);
+  url.searchParams.set("mode", mode);
+  url.searchParams.delete("capture");
+  window.history.replaceState({}, "", url);
+}
+
+customerModeBtn.addEventListener("click", () => {
+  setMode("customer");
+  replaceModeUrl("customer");
+});
+expertModeBtn.addEventListener("click", () => {
+  setMode("expert");
+  replaceModeUrl("expert");
+});
+customerInternalBtn?.addEventListener("click", () => {
+  setMode("expert");
+  replaceModeUrl("expert");
+});
 localeButtons.forEach((button) => {
   button.addEventListener("click", () => setLocale(button.dataset.localeOption));
 });
