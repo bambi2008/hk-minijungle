@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { extname, join, normalize } from "node:path";
 import {
   buildDataQualityReport,
@@ -59,6 +60,9 @@ const cliPort = portArgIndex >= 0 ? process.argv[portArgIndex + 1] : null;
 const port = Number(cliPort || process.env.PORT || 8010);
 const host = process.env.HOST || "127.0.0.1";
 const maxJsonBodyBytes = 64 * 1024;
+const maxProofUploadBytes = 5 * 1024 * 1024;
+const maxProofUploadPayloadBytes = 7 * 1024 * 1024;
+const proofMediaRoot = join(runtimeRoot, "proof-media");
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -228,13 +232,13 @@ function sendText(res, status, message) {
   res.end(message);
 }
 
-async function readJsonBody(req) {
+async function readJsonBody(req, maxBytes = maxJsonBodyBytes) {
   let size = 0;
   const chunks = [];
 
   for await (const chunk of req) {
     size += chunk.length;
-    if (size > maxJsonBodyBytes) {
+    if (size > maxBytes) {
       const error = new Error("Request body too large");
       error.status = 413;
       throw error;
@@ -478,13 +482,74 @@ async function validateMobileCaptureScope(auth, batch) {
 
 function proofMediaUploadPolicy() {
   return {
-    version: "2026-07-15.proof-media-v1",
+    version: "2026-08-17.proof-media-local-upload-v1",
     acceptedContentTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
-    maxByteSize: 25 * 1024 * 1024,
+    maxByteSize: maxProofUploadBytes,
     requiredIntegrity: ["sha256", "byteSize", "objectKey"],
     supportedSources: ["technician-mobile", "robotic-care", "fm-admin", "client-approved-upload"],
-    productionNote: "This demo creates local metadata intents. Production must replace putUrl with signed object-storage URLs and malware scanning."
+    productionNote: "Pilot storage writes verified bytes to a local server vault. Production still requires signed cloud object storage, malware scanning, retention controls and backups."
   };
+}
+
+function extensionForContentType(contentType) {
+  return ({
+    "image/jpeg": ".jpg",
+    "image/png": ".png",
+    "image/webp": ".webp",
+    "application/pdf": ".pdf"
+  })[contentType] || ".bin";
+}
+
+function proofMediaPath(media) {
+  const safeId = String(media.id || "proof-media").replace(/[^a-zA-Z0-9_-]+/g, "-").slice(0, 96);
+  return join(proofMediaRoot, `${safeId}${extensionForContentType(media.contentType)}`);
+}
+
+function decodeBase64ProofMedia(value) {
+  const source = String(value || "").trim();
+  if (!source || !/^[A-Za-z0-9+/]+={0,2}$/.test(source) || source.length % 4 !== 0) {
+    throw validationError("fileBase64 must be a valid base64 payload", "PROOF_MEDIA_INVALID_BASE64");
+  }
+  const bytes = Buffer.from(source, "base64");
+  if (!bytes.length) throw validationError("fileBase64 must not be empty", "PROOF_MEDIA_INVALID_BASE64");
+  if (bytes.length > maxProofUploadBytes) {
+    const error = validationError(`proof media file exceeds ${maxProofUploadBytes} byte pilot limit`, "PROOF_MEDIA_TOO_LARGE");
+    error.status = 413;
+    throw error;
+  }
+  return bytes;
+}
+
+async function writeLocalProofMedia(media, bytes) {
+  const target = proofMediaPath(media);
+  await mkdir(proofMediaRoot, { recursive: true });
+  await writeFile(target, bytes, { flag: "wx" });
+  return target;
+}
+
+async function readLocalProofMedia(media) {
+  const target = proofMediaPath(media);
+  const metadata = await stat(target);
+  if (metadata.size !== media.byteSize) {
+    throw validationError("stored proof media byteSize does not match ledger", "PROOF_MEDIA_STORAGE_SIZE_MISMATCH");
+  }
+  const bytes = await readFile(target);
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  if (sha256 !== media.sha256) {
+    throw validationError("stored proof media sha256 does not match ledger", "PROOF_MEDIA_STORAGE_HASH_MISMATCH");
+  }
+  return bytes;
+}
+
+function sendProofMedia(res, media, bytes) {
+  res.writeHead(200, {
+    "Content-Type": media.contentType,
+    "Content-Length": bytes.length,
+    "Content-Disposition": `inline; filename="${String(media.filename).replace(/[\"\\]/g, "_")}"`,
+    "Cache-Control": "private, no-store",
+    "X-Content-Type-Options": "nosniff"
+  });
+  res.end(bytes);
 }
 
 async function validateProofMediaScope(auth, media) {
@@ -939,6 +1004,74 @@ async function handleApi(req, res, pathname) {
         ...result,
         event
       });
+      return;
+    }
+
+    const proofMediaUploadMatch = pathname.match(/^\/api\/proof\/media-evidence\/([^/]+)\/upload$/);
+    if (req.method === "POST" && proofMediaUploadMatch) {
+      requirePermission(auth, "proof.media.write");
+      const mediaId = decodeURIComponent(proofMediaUploadMatch[1]);
+      const existing = await readSqliteProofMediaObject(runtimeDbPath, mediaId);
+      if (!existing) throw validationError("proof media object must be created before upload", "PROOF_MEDIA_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "proof media upload");
+      const input = await readJsonBody(req, maxProofUploadPayloadBytes);
+      const bytes = decodeBase64ProofMedia(input.fileBase64);
+      const sha256 = createHash("sha256").update(bytes).digest("hex");
+
+      if (bytes.length !== existing.byteSize) {
+        throw validationError("uploaded byteSize does not match the upload intent", "PROOF_MEDIA_SIZE_MISMATCH");
+      }
+      if (sha256 !== existing.sha256) {
+        throw validationError("uploaded sha256 does not match the upload intent", "PROOF_MEDIA_HASH_MISMATCH");
+      }
+
+      let duplicate = false;
+      try {
+        await writeLocalProofMedia(existing, bytes);
+      } catch (error) {
+        if (error?.code !== "EEXIST") throw error;
+        const stored = await readLocalProofMedia(existing);
+        if (!stored.equals(bytes)) throw validationError("stored proof media conflicts with this upload", "PROOF_MEDIA_STORAGE_CONFLICT");
+        duplicate = true;
+      }
+
+      const registration = await registerSqliteProofMediaEvidence(runtimeDbPath, {
+        id: existing.id,
+        byteSize: bytes.length,
+        sha256,
+        uploadedAt: input.uploadedAt || new Date().toISOString()
+      });
+      const event = registration.duplicate ? null : normalizeOpsEvent({
+        type: "proof.media.uploaded",
+        actor: auth.name,
+        entityType: "proof-media",
+        entityId: registration.object.id,
+        clientId: registration.object.clientId,
+        wallId: registration.object.wallId,
+        source: "proof-media-local-vault",
+        note: `Proof media ${registration.object.filename} uploaded to the pilot vault and hash checked.`,
+        payload: { principalId: auth.id, mediaId: registration.object.id, sha256, byteSize: bytes.length }
+      });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, duplicate || registration.duplicate ? 200 : 201, {
+        duplicate: duplicate || registration.duplicate,
+        object: registration.object,
+        event
+      });
+      return;
+    }
+
+    const proofMediaFileMatch = pathname.match(/^\/api\/proof\/media-evidence\/([^/]+)\/file$/);
+    if (req.method === "GET" && proofMediaFileMatch) {
+      requirePermission(auth, "proof.media.read");
+      const mediaId = decodeURIComponent(proofMediaFileMatch[1]);
+      const media = await readSqliteProofMediaObject(runtimeDbPath, mediaId);
+      if (!media) throw validationError("proof media object not found", "PROOF_MEDIA_NOT_FOUND");
+      requireClientAccess(auth, media.clientId, "proof media download");
+      if (!["registered", "verified", "rejected"].includes(media.uploadStatus)) {
+        throw validationError("proof media file is not uploaded", "PROOF_MEDIA_NOT_UPLOADED");
+      }
+      sendProofMedia(res, media, await readLocalProofMedia(media));
       return;
     }
 
