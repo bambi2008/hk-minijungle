@@ -432,3 +432,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 35 - Persisted Evidence Snapshot Registry v1
+
+- Official score remains **65%**. Local SQLite persistence and a production PostgreSQL adapter are application evidence; no managed database deployment, backup retention or real auditor delivery was executed.
+- Capability added: FM Lead/Platform Admin can persist the current server-generated evidence package into an append-only `evidence_snapshots` registry. The record stores scope, viewer role, canonical package JSON, generated/persisted timestamps and SHA-256.
+- Capability added: the same contract exists for PostgreSQL with `infra/postgres/002_evidence_snapshots.sql`; the adapter verifies the package hash before insert and returns duplicate records without updating them.
+- Permission boundary added: client viewers and ESG auditors can read only snapshots within their recorded client scope; only FM Lead/Platform Admin can create persisted snapshots. The client UI remains read-only.
+- Evidence added: API smoke verifies permission denial, SQLite insert, read-back hash equality, all-portfolio scope denial and storage health count; `check:evidence` and full `npm.cmd run check` must both pass before release.
+- Honest boundary: there is no snapshot signing key, immutable object-store copy, retention/expiry worker, report delivery receipt, backup restore test for this new table or managed PostgreSQL run in this workspace.
+- Target effect: architecture scaffold remains approximately **99%**; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 35
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

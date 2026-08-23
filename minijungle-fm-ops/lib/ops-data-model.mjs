@@ -128,6 +128,12 @@ export const productionDataModel = {
       idField: "id",
       source: ".ops-data/ops-runtime.sqlite::ops_events",
       purpose: "SQLite-backed operational event stream for future audit and analytics."
+    },
+    {
+      name: "evidenceSnapshots",
+      idField: "snapshotId",
+      source: ".ops-data/ops-runtime.sqlite::evidence_snapshots or PostgreSQL evidence_snapshots",
+      purpose: "Append-only server-generated report package registry with scope metadata and SHA-256 fingerprint."
     }
   ],
   relationships: [

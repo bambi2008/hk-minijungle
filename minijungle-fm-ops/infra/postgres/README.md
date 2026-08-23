@@ -12,6 +12,6 @@ DR_FOREST_DATABASE_URL=postgresql://...
 
 The current adapter covers append-only operations events, state snapshots, and actions with connection pooling, transactions, JSONB payloads, and idempotent migrations. The health endpoint reports the PostgreSQL migration and row counts.
 
-Before a real launch, apply the remaining master-data, telemetry, device, alert, AI, session, and audit migrations in the same managed database. Do not point production at the pilot SQLite file. Use a separate database role with only schema migration and application privileges, enable TLS, private networking, automated point-in-time recovery, and connection limits.
+Before a real launch, apply the remaining master-data, telemetry, device, alert, AI, session, audit, and evidence snapshot migrations in the same managed database. Do not point production at the pilot SQLite file. Use a separate database role with only schema migration and application privileges, enable TLS, private networking, automated point-in-time recovery, and connection limits.
 
 The application deliberately reports `not-ready` until the production storage and identity/object-storage gates are configured. A passing local adapter smoke test is not evidence that the cloud database is reachable.

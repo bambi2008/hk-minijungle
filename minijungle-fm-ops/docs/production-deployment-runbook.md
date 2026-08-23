@@ -61,6 +61,10 @@ After the data loads, `Download evidence / 下載證據` creates a role-labelled
 
 The portal now calls `GET /api/proof/evidence-snapshot` when exporting. The server assembles the current scoped package and returns `snapshotId`, `hashAlgorithm: sha256` and a 64-character fingerprint. This is a traceability fingerprint, not immutable storage: production still needs a persisted report record, signing key custody, object retention and an external delivery acknowledgement.
 
+For internal report preparation, FM Lead/Platform Admin can `POST /api/proof/evidence-snapshots`. The server verifies the canonical package hash before inserting an append-only record in `evidence_snapshots`; `GET /api/proof/evidence-snapshots/:snapshotId` rechecks access against the stored client scope. Client viewers have `proof.snapshot.read` but no `proof.snapshot.write`, and an all-portfolio snapshot is not readable by a client-scoped principal.
+
+The pilot uses SQLite migration `2026-08-23.evidence-snapshot-v1`. Production uses the matching PostgreSQL adapter and `infra/postgres/002_evidence_snapshots.sql`. Before launch, add signing, retention, off-host backup coverage and a delivery acknowledgement workflow.
+
 ## Backup consistency check
 
 `npm.cmd run backup:runtime` records a `2026-08-23.runtime-backup-v2` manifest with `consistency.method: sqlite-vacuum-into` and a source integrity result. `npm.cmd run backup:smoke` copies the current pilot database into an isolated temporary runtime, creates a backup, verifies checksums and restores the database into staging, then checks SQLite integrity before deleting the temporary files. This proves the local backup contract only. Production still requires a managed PostgreSQL backup, off-host retention, encryption-key custody and a dated restore drill.

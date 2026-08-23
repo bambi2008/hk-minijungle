@@ -178,6 +178,16 @@ import {
   registerPostgresProofMediaEvidence,
   verifyPostgresProofMediaEvidence
 } from "./lib/ops-postgres-proof-media-store.mjs";
+import {
+  createSqliteEvidenceSnapshot,
+  readSqliteEvidenceSnapshot,
+  readSqliteEvidenceStorageHealth
+} from "./lib/ops-evidence-snapshot-store.mjs";
+import {
+  createPostgresEvidenceSnapshot,
+  readPostgresEvidenceSnapshot,
+  readPostgresEvidenceStorageHealth
+} from "./lib/ops-postgres-evidence-snapshot-store.mjs";
 import { getS3Object, putS3Object } from "./lib/ops-object-storage.mjs";
 import {
   createPilotSession,
@@ -595,6 +605,24 @@ async function readProofMediaStorageHealth() {
     : readSqliteProofMediaStorageHealth(runtimeDbPath);
 }
 
+async function createEvidenceSnapshotRecord(input) {
+  return productionMasterDataEnabled()
+    ? createPostgresEvidenceSnapshot(input)
+    : createSqliteEvidenceSnapshot(runtimeDbPath, input);
+}
+
+async function readEvidenceSnapshot(snapshotId) {
+  return productionMasterDataEnabled()
+    ? readPostgresEvidenceSnapshot(snapshotId)
+    : readSqliteEvidenceSnapshot(runtimeDbPath, snapshotId);
+}
+
+async function readEvidenceSnapshotStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresEvidenceStorageHealth()
+    : readSqliteEvidenceStorageHealth(runtimeDbPath);
+}
+
 function resolvePath(url) {
   const requestUrl = (url || "/").replace(/^\/+/, "/");
   const pathname = new URL(requestUrl, `http://${host}:${port}`).pathname;
@@ -946,6 +974,12 @@ async function buildEvidenceSnapshot(auth) {
   };
 }
 
+function canAccessEvidenceSnapshot(auth, snapshot) {
+  const clientIds = Array.isArray(snapshot?.clientIds) ? snapshot.clientIds : [];
+  if (clientIds.includes("*")) return auth.clientScope === "all";
+  return clientIds.length > 0 && clientIds.every((clientId) => canAccessClient(auth, clientId));
+}
+
 function mobileCaptureSchema() {
   return {
     version: "2026-07-15.mobile-capture-v1",
@@ -1116,6 +1150,13 @@ async function buildMobileReminders(auth, includeCompleted = false) {
 function validationError(message, code = "VALIDATION_ERROR") {
   const error = new Error(message);
   error.status = 400;
+  error.code = code;
+  return error;
+}
+
+function apiError(status, message, code) {
+  const error = new Error(message);
+  error.status = status;
   error.code = code;
   return error;
 }
@@ -2019,7 +2060,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -2030,7 +2071,8 @@ async function handleApi(req, res, pathname) {
         readDeviceStorageHealth(),
         readAlertStorageHealth(),
         readAiVisionStorageHealth(),
-        readNotificationStorageHealth()
+        readNotificationStorageHealth(),
+        readEvidenceSnapshotStorageHealth()
       ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
@@ -2044,7 +2086,8 @@ async function handleApi(req, res, pathname) {
         devices: deviceStorage,
         alerts: alertStorage,
         aiVision: aiVisionStorage,
-        notifications: notificationStorage
+        notifications: notificationStorage,
+        evidenceSnapshots: evidenceSnapshotStorage
       });
       return;
     }
@@ -2085,6 +2128,23 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && pathname === "/api/proof/evidence-snapshot") {
       requirePermission(auth, "portfolio.read");
       sendJson(res, 200, await buildEvidenceSnapshot(auth));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/proof/evidence-snapshots") {
+      requirePermission(auth, "proof.snapshot.write");
+      const result = await createEvidenceSnapshotRecord(await buildEvidenceSnapshot(auth));
+      sendJson(res, result.duplicate ? 200 : 201, { ...result.snapshot, duplicate: result.duplicate, persisted: true });
+      return;
+    }
+
+    const persistedEvidenceSnapshotMatch = pathname.match(/^\/api\/proof\/evidence-snapshots\/([^/]+)$/);
+    if (req.method === "GET" && persistedEvidenceSnapshotMatch) {
+      requirePermission(auth, "proof.snapshot.read");
+      const snapshot = await readEvidenceSnapshot(decodeURIComponent(persistedEvidenceSnapshotMatch[1]));
+      if (!snapshot) throw apiError(404, "Evidence snapshot not found", "EVIDENCE_SNAPSHOT_NOT_FOUND");
+      if (!canAccessEvidenceSnapshot(auth, snapshot)) throw apiError(403, "Evidence snapshot is outside the current client scope", "EVIDENCE_SNAPSHOT_SCOPE_DENIED");
+      sendJson(res, 200, { ...snapshot, persisted: true });
       return;
     }
 

@@ -98,6 +98,9 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.capture.write"), "Auth policy did not expose field mobile capture permission");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("proof.media.write"), "Auth policy did not expose field proof media write permission");
   assert(authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.read"), "Auth policy did not expose client proof media read permission");
+  assert(authPolicy.body.roles["client-viewer"].permissions.includes("proof.snapshot.read"), "Auth policy did not expose client evidence snapshot read permission");
+  assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.snapshot.write"), "Client viewer should not receive evidence snapshot write permission");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("proof.snapshot.write"), "FM lead auth policy did not expose evidence snapshot write permission");
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
 
@@ -152,6 +155,8 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.proofMedia.counts.mediaObjects === 0, "Proof media objects should start empty in test mode");
   assert(initialStorage.body.proofMedia.counts.mediaLinks === 0, "Proof media links should start empty in test mode");
   assert(initialStorage.body.proofMedia.relationshipIntegrity.foreignKeysEnabled === true, "SQLite proof media foreign keys are not enabled");
+  assert(initialStorage.body.evidenceSnapshots.migrationVersion === "2026-08-23.evidence-snapshot-v1", "Storage endpoint did not expose evidence snapshot migration");
+  assert(initialStorage.body.evidenceSnapshots.counts.snapshots === 0, "Evidence snapshots should start empty in test mode");
   assert(initialStorage.body.telemetry.migrationVersion === "2026-08-17.telemetry-history-v2", "Storage endpoint did not expose telemetry history migration");
   assert(initialStorage.body.telemetry.tables.includes("sensor_reading_history"), "Storage endpoint did not expose sensor history table");
   assert(initialStorage.body.telemetry.counts.sensorReadingHistory === 0, "Sensor history should start empty in test mode");
@@ -192,12 +197,36 @@ async function verifyApi(baseUrl) {
   assert(auditorEvidenceSnapshot.body.package.assets.length === 4, "Auditor evidence snapshot did not expose the review portfolio");
   assert(auditorEvidenceSnapshot.body.package.dataQuality?.status === "pass-with-warnings", "Auditor evidence snapshot did not include data quality");
 
+  const clientEvidenceWriteDenied = await fetchJson(`${baseUrl}api/proof/evidence-snapshots`, {
+    method: "POST",
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientEvidenceWriteDenied.response.status === 403, "Client viewer should not persist evidence snapshots");
+  const persistedEvidenceSnapshot = await fetchJson(`${baseUrl}api/proof/evidence-snapshots`, {
+    method: "POST",
+    headers: principalHeaders("fm-lead")
+  });
+  assert(persistedEvidenceSnapshot.response.status === 201, "FM lead should persist an evidence snapshot");
+  assert(persistedEvidenceSnapshot.body.persisted === true, "Persisted evidence snapshot did not expose persistence state");
+  const persistedEvidenceRead = await fetchJson(`${baseUrl}api/proof/evidence-snapshots/${encodeURIComponent(persistedEvidenceSnapshot.body.snapshotId)}`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(persistedEvidenceRead.response.ok, "FM lead should read a persisted evidence snapshot");
+  assert(persistedEvidenceRead.body.sha256 === persistedEvidenceSnapshot.body.sha256, "Persisted evidence snapshot hash changed on read");
+  const clientPersistedEvidenceDenied = await fetchJson(`${baseUrl}api/proof/evidence-snapshots/${encodeURIComponent(persistedEvidenceSnapshot.body.snapshotId)}`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientPersistedEvidenceDenied.response.status === 403, "Client viewer should not read an all-portfolio persisted snapshot");
+  const storageAfterEvidenceSnapshot = await fetchJson(`${baseUrl}api/storage`);
+  assert(storageAfterEvidenceSnapshot.body.evidenceSnapshots.counts.snapshots === 1, "Persisted evidence snapshot did not reach SQLite storage");
+
   const dataModel = await fetchJson(`${baseUrl}api/data-model`);
   assert(dataModel.response.ok, "Data model endpoint failed");
   assert(dataModel.body.scoreTarget.before === 70, "Data model did not preserve Step 10 readiness baseline");
   assert(dataModel.body.scoreTarget.after === 75, "Data model did not expose Step 10 target score");
   assert(dataModel.body.entities.some((item) => item.name === "assetModules"), "Data model did not include module entity");
   assert(dataModel.body.entities.some((item) => item.name === "proofMediaObjects"), "Data model did not include proof media entity");
+  assert(dataModel.body.entities.some((item) => item.name === "evidenceSnapshots"), "Data model did not include evidence snapshot entity");
 
   const dataQuality = await fetchJson(`${baseUrl}api/data-quality`);
   assert(dataQuality.response.ok, "Data quality endpoint failed");
