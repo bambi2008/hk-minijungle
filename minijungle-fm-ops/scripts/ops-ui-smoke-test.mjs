@@ -73,6 +73,8 @@ async function main() {
       assert(await clientPortal.locator(".asset-row").count() === 1, "Client portal did not keep the client scope");
       assert(await clientPortal.locator("#capture-count").textContent() !== "--", "Client portal did not load field capture count");
       assert(await clientPortal.locator("#capture-list").textContent().then((text) => text.includes("No synced field captures") || clientPortal.locator(".capture-row").count() > 0), "Client portal did not render field capture chain");
+      assert(await clientPortal.locator("#persisted-state").textContent() === "0 in scope", "Client portal should hide the all-portfolio persisted snapshot");
+      assert((await clientPortal.locator("#persisted-list").textContent()).includes("No persisted snapshot in scope"), "Client portal persisted evidence panel did not report an empty scoped ledger");
       assert(await clientPortal.locator("#auditor-panel").getAttribute("hidden") !== null, "Client portal exposed the auditor panel");
       assert(await clientPortal.locator("#export").isEnabled(), "Client portal did not enable evidence export");
       const [clientDownload] = await Promise.all([clientPortal.waitForEvent("download"), clientPortal.locator("#export").click()]);
@@ -83,6 +85,9 @@ async function main() {
       await auditorPortal.goto(`${baseUrl}/portal.html?role=auditor`); await auditorPortal.waitForFunction(() => document.querySelector("#quality-status")?.textContent !== "Loading", null, { timeout: 5000 });
       assert(await auditorPortal.locator("#auditor-panel").isVisible(), "Auditor portal did not expose data quality review");
       assert(await auditorPortal.locator("#capture-list").textContent().then((text) => text.includes("No synced field captures") || auditorPortal.locator(".capture-row").count() > 0), "Auditor portal did not render field capture chain");
+      assert(await auditorPortal.locator(".persisted-row").count() === 1, "Auditor portal did not render the persisted evidence ledger");
+      const [persistedDownload] = await Promise.all([auditorPortal.waitForEvent("download"), auditorPortal.locator(".persisted-download").first().click()]);
+      assert(persistedDownload.suggestedFilename().includes("persisted-auditor"), "Persisted evidence download filename was not role-scoped"); await persistedDownload.delete();
       assert(await auditorPortal.locator("#export").isEnabled(), "Auditor portal did not enable evidence export");
       const [auditorDownload] = await Promise.all([auditorPortal.waitForEvent("download"), auditorPortal.locator("#export").click()]);
       assert(auditorDownload.suggestedFilename().includes("evidence-auditor"), "Auditor evidence export filename was not role-scoped"); await auditorDownload.delete();

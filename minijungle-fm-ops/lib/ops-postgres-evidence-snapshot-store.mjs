@@ -41,6 +41,13 @@ function snapshotFromRow(row) {
   };
 }
 
+function snapshotSummaryFromRow(row) {
+  const snapshot = snapshotFromRow(row);
+  if (!snapshot) return null;
+  const { package: _package, ...summary } = snapshot;
+  return summary;
+}
+
 async function initialize(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL);
@@ -122,6 +129,15 @@ export async function readPostgresEvidenceSnapshot(snapshotId) {
   await initialize(pool);
   const result = await pool.query("SELECT * FROM evidence_snapshots WHERE snapshot_id = $1", [snapshotId]);
   return snapshotFromRow(result.rows[0]);
+}
+
+export async function listPostgresEvidenceSnapshots(options = {}) {
+  const requestedLimit = Number(options.limit);
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 20, 1), 100);
+  const pool = getPostgresPool();
+  await initialize(pool);
+  const result = await pool.query("SELECT * FROM evidence_snapshots ORDER BY persisted_at DESC, snapshot_id DESC LIMIT $1", [limit]);
+  return result.rows.map(snapshotSummaryFromRow);
 }
 
 export async function verifyPostgresEvidenceSnapshot(snapshotId, options = {}) {

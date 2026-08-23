@@ -601,3 +601,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 45 - Scoped Persisted Evidence Ledger v1
+
+- Official score remains **65%**. This batch closes the read-only handoff for persisted evidence, but it does not create managed storage, external identity, signed pilot acceptance or off-host restore evidence.
+- Capability added: `GET /api/proof/evidence-snapshots?limit=N` returns metadata-only records from SQLite or the matching PostgreSQL adapter. The server filters every record through the stored client scope before returning it.
+- Safety boundary added: client-scoped principals cannot list or download an all-portfolio snapshot. ESG auditors and FM Lead can see the all-portfolio ledger; a future client-scoped persisted record can be shown only to matching client principals.
+- Capability added: the bilingual client/auditor portal now displays the in-scope persisted evidence ledger and provides a read-only download of a selected stored package. The portal keeps the existing current-snapshot export separate and does not call an unsigned pilot record certified ESG evidence.
+- Evidence added: API smoke verifies metadata-only listing, all-portfolio denial and auditor visibility. Playwright UI smoke verifies the client empty state, auditor ledger row and persisted download filename. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: the test uses temporary SQLite and demo principals. Production still requires PostgreSQL, immutable object storage, OIDC claims, real client/auditor acceptance, production signing-key custody, off-host retention and a dated restore drill.
+- Target effect: evidence access control and partner-facing review workflow become more complete; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 45
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

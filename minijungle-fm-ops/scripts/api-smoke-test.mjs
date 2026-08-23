@@ -256,6 +256,17 @@ async function verifyApi(baseUrl) {
     headers: principalHeaders("client-show-suite")
   });
   assert(clientPersistedEvidenceDenied.response.status === 403, "Client viewer should not read an all-portfolio persisted snapshot");
+  const clientPersistedEvidenceList = await fetchJson(`${baseUrl}api/proof/evidence-snapshots?limit=5`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientPersistedEvidenceList.response.ok, "Client viewer should list persisted evidence snapshots");
+  assert(clientPersistedEvidenceList.body.snapshots.length === 0, "Client viewer persisted evidence list leaked an all-portfolio snapshot");
+  const auditorPersistedEvidenceList = await fetchJson(`${baseUrl}api/proof/evidence-snapshots?limit=5`, {
+    headers: principalHeaders("esg-auditor")
+  });
+  assert(auditorPersistedEvidenceList.response.ok, "ESG auditor should list persisted evidence snapshots");
+  assert(auditorPersistedEvidenceList.body.snapshots.length === 1, "ESG auditor persisted evidence list should include the all-portfolio snapshot");
+  assert(!Object.prototype.hasOwnProperty.call(auditorPersistedEvidenceList.body.snapshots[0], "package"), "Persisted evidence list should return metadata only");
   const storageAfterEvidenceSnapshot = await fetchJson(`${baseUrl}api/storage`);
   assert(storageAfterEvidenceSnapshot.body.evidenceSnapshots.counts.snapshots === 1, "Persisted evidence snapshot did not reach SQLite storage");
   assert(storageAfterEvidenceSnapshot.body.evidenceSnapshots.counts.unsigned === 1, "Evidence storage did not retain unsigned verification state");

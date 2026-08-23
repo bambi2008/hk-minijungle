@@ -180,6 +180,7 @@ import {
 } from "./lib/ops-postgres-proof-media-store.mjs";
 import {
   createSqliteEvidenceSnapshot,
+  listSqliteEvidenceSnapshots,
   readSqliteEvidenceSnapshot,
   readSqliteEvidenceStorageHealth,
   sweepSqliteEvidenceSnapshots,
@@ -187,6 +188,7 @@ import {
 } from "./lib/ops-evidence-snapshot-store.mjs";
 import {
   createPostgresEvidenceSnapshot,
+  listPostgresEvidenceSnapshots,
   readPostgresEvidenceSnapshot,
   readPostgresEvidenceStorageHealth,
   sweepPostgresEvidenceSnapshots,
@@ -620,6 +622,12 @@ async function readEvidenceSnapshot(snapshotId) {
   return productionMasterDataEnabled()
     ? readPostgresEvidenceSnapshot(snapshotId)
     : readSqliteEvidenceSnapshot(runtimeDbPath, snapshotId);
+}
+
+async function listEvidenceSnapshots(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresEvidenceSnapshots(options)
+    : listSqliteEvidenceSnapshots(runtimeDbPath, options);
 }
 
 async function readEvidenceSnapshotStorageHealth() {
@@ -2194,6 +2202,14 @@ async function handleApi(req, res, pathname) {
       requirePermission(auth, "proof.snapshot.write");
       const result = await createEvidenceSnapshotRecord(await buildEvidenceSnapshot(auth));
       sendJson(res, result.duplicate ? 200 : 201, { ...result.snapshot, duplicate: result.duplicate, persisted: true });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/proof/evidence-snapshots") {
+      requirePermission(auth, "proof.snapshot.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const snapshots = (await listEvidenceSnapshots({ limit: url.searchParams.get("limit") })).filter((snapshot) => canAccessEvidenceSnapshot(auth, snapshot));
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), snapshots });
       return;
     }
 

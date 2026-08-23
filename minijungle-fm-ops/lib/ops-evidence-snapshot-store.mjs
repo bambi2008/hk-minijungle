@@ -47,6 +47,13 @@ function snapshotFromRow(row) {
   };
 }
 
+function snapshotSummaryFromRow(row) {
+  const snapshot = snapshotFromRow(row);
+  if (!snapshot) return null;
+  const { package: _package, ...summary } = snapshot;
+  return summary;
+}
+
 async function withDatabase(dbPath, callback) {
   await mkdir(dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
@@ -166,6 +173,12 @@ export async function createSqliteEvidenceSnapshot(dbPath, input) {
 
 export async function readSqliteEvidenceSnapshot(dbPath, snapshotId) {
   return withDatabase(dbPath, (db) => snapshotFromRow(db.prepare("SELECT * FROM evidence_snapshots WHERE snapshot_id = ?").get(snapshotId)));
+}
+
+export async function listSqliteEvidenceSnapshots(dbPath, options = {}) {
+  const requestedLimit = Number(options.limit);
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 20, 1), 100);
+  return withDatabase(dbPath, (db) => db.prepare("SELECT * FROM evidence_snapshots ORDER BY persisted_at DESC, snapshot_id DESC LIMIT ?").all(limit).map(snapshotSummaryFromRow));
 }
 
 export async function verifySqliteEvidenceSnapshot(dbPath, snapshotId, options = {}) {
