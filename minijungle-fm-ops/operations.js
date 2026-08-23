@@ -33,10 +33,15 @@ function renderNotifications(notifications, summary = {}) {
   $("#notification-state").textContent = `${due} due · ${Number(summary.failed || 0)} failed`;
   $("#notification-list").innerHTML = notifications.length ? notifications.slice(0, 8).map((item) => `<article class="notification-item"><div><strong>${escapeHtml(notificationLabel(item))} · ${escapeHtml(item.wallId || item.clientId || "platform")}</strong><span>${escapeHtml(item.status)} · ${escapeHtml(item.severity)} · ${escapeHtml(item.attempts)} attempt${item.attempts === 1 ? "" : "s"}</span><small>${escapeHtml(item.lastError ? `Last error: ${item.lastError}` : item.deliveredAt ? `Delivered ${formatTime(item.deliveredAt)}` : `Next attempt ${formatTime(item.nextAttemptAt)}`)}</small></div><span class="module-state ${["failed", "retry"].includes(item.status) ? "warn" : ""}">${escapeHtml(item.status)}</span></article>`).join("") : "<p class=\"empty\">No outbound notifications yet.</p>";
 }
+function renderTimeline(timeline = {}) {
+  const events = timeline.events || [];
+  $("#timeline-state").textContent = `${Number(timeline.total || 0)} events · ${timeline.hasMore ? "more available" : "latest"}`;
+  $("#timeline-list").innerHTML = events.length ? events.map((event) => `<article class="timeline-item"><span class="timeline-marker" aria-hidden="true"></span><div><strong>${escapeHtml(event.type)}</strong><span>${escapeHtml(event.entityType)} · ${escapeHtml(event.entityId)} · ${escapeHtml(event.actor)}</span><small>${escapeHtml(event.note || event.source)} · ${escapeHtml(formatTime(event.timestamp))}</small></div></article>`).join("") : "<p class=\"empty\">No operations events yet.</p>";
+}
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 async function load() {
   $("#notice").textContent = "";
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, storage] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/storage")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, storage] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/storage")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -53,6 +58,7 @@ async function load() {
   renderAiQueue(diagnoses.diagnoses || []);
   renderCaptures(captures.batches || []);
   renderNotifications(notifications.notifications || [], notifications.summary || {});
+  renderTimeline(timeline);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
 }

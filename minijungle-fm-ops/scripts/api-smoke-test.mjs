@@ -252,6 +252,25 @@ async function verifyApi(baseUrl) {
     headers: jsonHeaders("fm-lead")
   });
   assert(retentionSweep.response.ok && retentionSweep.body.expiredCount === 0, "Evidence retention sweep should not expire a fresh snapshot");
+  const evidenceTimeline = await fetchJson(`${baseUrl}api/ops/timeline?limit=2`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(evidenceTimeline.response.ok, "FM lead operations timeline endpoint failed");
+  assert(evidenceTimeline.body.total === 3, "Operations timeline should include persisted, verified and retention evidence events");
+  assert(evidenceTimeline.body.events.length === 2 && evidenceTimeline.body.hasMore === true, "Operations timeline limit and cursor metadata failed");
+  assert(evidenceTimeline.body.events.some((event) => event.type === "evidence.snapshot.retention.swept"), "Operations timeline did not return the latest evidence retention event");
+  const evidenceTimelineNextPage = await fetchJson(`${baseUrl}api/ops/timeline?limit=2&before=${encodeURIComponent(evidenceTimeline.body.nextCursor.before)}&beforeId=${encodeURIComponent(evidenceTimeline.body.nextCursor.beforeId)}`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(evidenceTimelineNextPage.body.total === 1 && evidenceTimelineNextPage.body.events[0]?.type === "evidence.snapshot.persisted", "Operations timeline cursor did not return the older page without duplication");
+  const evidenceTimelineByType = await fetchJson(`${baseUrl}api/ops/timeline?types=evidence.snapshot.persisted,evidence.snapshot.verified&limit=5`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(evidenceTimelineByType.body.total === 2, "Operations timeline type filter failed");
+  const clientEvidenceTimeline = await fetchJson(`${baseUrl}api/ops/timeline?limit=10`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientEvidenceTimeline.response.ok && clientEvidenceTimeline.body.total === 0, "Client timeline should not expose all-portfolio evidence events");
   const clientPersistedEvidenceDenied = await fetchJson(`${baseUrl}api/proof/evidence-snapshots/${encodeURIComponent(persistedEvidenceSnapshot.body.snapshotId)}`, {
     headers: principalHeaders("client-show-suite")
   });
@@ -376,11 +395,11 @@ async function verifyApi(baseUrl) {
 
   const events = await fetchJson(`${baseUrl}api/ops-events`);
   assert(events.response.ok, "Events endpoint failed");
-  assert(events.body.events.length === 1, "Events endpoint did not persist created event");
-  assert(events.body.events[0].entityId === "WO-1047", "Persisted event did not preserve entity ID");
+  assert(events.body.events.length === 4, "Events endpoint did not retain the evidence audit events and created event");
+  assert(events.body.events.some((event) => event.entityId === "WO-1047"), "Persisted event did not preserve entity ID");
 
   const updatedPortfolio = await fetchJson(`${baseUrl}api/portfolio`);
-  assert(updatedPortfolio.body.counts.serverSideOpsEvents === 1, "Portfolio endpoint did not reflect server-side event count");
+  assert(updatedPortfolio.body.counts.serverSideOpsEvents === 4, "Portfolio endpoint did not reflect server-side event count");
 
   const stateAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
     method: "POST",
@@ -473,7 +492,7 @@ async function verifyApi(baseUrl) {
   assert(snapshotCompatibility.body.revision === 2, "Ops state snapshot compatibility did not increment revision");
 
   const portfolioAfterState = await fetchJson(`${baseUrl}api/portfolio`);
-  assert(portfolioAfterState.body.counts.serverSideOpsEvents === 2, "Portfolio endpoint did not include typed state action event");
+  assert(portfolioAfterState.body.counts.serverSideOpsEvents === 5, "Portfolio endpoint did not include typed state action event");
   assert(portfolioAfterState.body.counts.serverStateRevision === 2, "Portfolio endpoint did not expose state revision");
 
   const fieldAllowedAction = await fetchJson(`${baseUrl}api/ops-state/actions`, {
@@ -526,10 +545,10 @@ async function verifyApi(baseUrl) {
   assert(!clientState.body.state.workorderCompletions["WO-1051"], "Client-scoped state leaked central-office work order");
 
   const updatedQuality = await fetchJson(`${baseUrl}api/data-quality`);
-  assert(updatedQuality.body.entityCounts.opsEvents === 3, "Data quality report did not include server-side event count");
+  assert(updatedQuality.body.entityCounts.opsEvents === 6, "Data quality report did not include server-side event count");
 
   const finalStorage = await fetchJson(`${baseUrl}api/storage`);
-  assert(finalStorage.body.counts.opsEvents === 3, "SQLite storage did not retain event rows");
+  assert(finalStorage.body.counts.opsEvents === 6, "SQLite storage did not retain event rows");
   assert(finalStorage.body.counts.opsActions === 2, "SQLite storage did not retain typed action rows");
   assert(finalStorage.body.counts.opsStateSnapshots === 3, "SQLite storage did not retain state snapshot rows");
   assert(finalStorage.body.latestStateRevision === 3, "SQLite storage did not expose latest state revision");
@@ -676,7 +695,7 @@ async function verifyApi(baseUrl) {
   assert(importReset.body.event.type === "master-data.imported", "Master-data import did not create audit event");
 
   const storageAfterAdmin = await fetchJson(`${baseUrl}api/storage`);
-  assert(storageAfterAdmin.body.counts.opsEvents === 8, "Admin CRUD/import events were not retained in ops event log");
+  assert(storageAfterAdmin.body.counts.opsEvents === 11, "Admin CRUD/import events were not retained in ops event log");
   assert(storageAfterAdmin.body.masterData.counts.clients === 4, "Storage did not show imported client seed count");
   assert(storageAfterAdmin.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "Imported master data has FK issues");
   assert(storageAfterAdmin.body.mobileCapture.counts.captureBatches === 0, "Mobile capture batches should still be empty before mobile sync");
@@ -807,7 +826,7 @@ async function verifyApi(baseUrl) {
   assert(clientEventsAfterMobile.body.events.some((event) => event.type === "mobile.capture.synced"), "Client-scoped events did not include mobile sync audit event");
 
   const storageAfterMobile = await fetchJson(`${baseUrl}api/storage`);
-  assert(storageAfterMobile.body.counts.opsEvents === 9, "Mobile sync event was not retained in ops event log");
+  assert(storageAfterMobile.body.counts.opsEvents === 12, "Mobile sync event was not retained in ops event log");
   assert(storageAfterMobile.body.mobileCapture.counts.captureBatches === 1, "Mobile capture batch count did not persist");
   assert(storageAfterMobile.body.mobileCapture.counts.captureItems === 5, "Mobile capture item count did not persist");
   assert(storageAfterMobile.body.mobileCapture.relationshipIntegrity.foreignKeyIssues === 0, "Mobile capture FK check found issues");
@@ -868,7 +887,7 @@ async function verifyApi(baseUrl) {
   assert(sensorScore.body.score.score === 50, "Sensor stability score should reflect latest watch status");
 
   const storageAfterTelemetry = await fetchJson(`${baseUrl}api/storage`, { headers: principalHeaders("fm-lead") });
-  assert(storageAfterTelemetry.body.counts.opsEvents === 12, "Telemetry events were not retained in ops event log");
+  assert(storageAfterTelemetry.body.counts.opsEvents === 15, "Telemetry events were not retained in ops event log");
   assert(storageAfterTelemetry.body.telemetry.counts.sensorReadingHistory === 2, "Telemetry history rows did not persist");
   assert(storageAfterTelemetry.body.telemetry.counts.healthScoreSnapshots === 1, "Health score snapshot did not persist");
 
@@ -1055,7 +1074,7 @@ async function verifyApi(baseUrl) {
   assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.verified"), "Client-scoped events did not include proof media verification");
 
   const storageAfterProofMedia = await fetchJson(`${baseUrl}api/storage`);
-  assert(storageAfterProofMedia.body.counts.opsEvents === 14, "Proof media, telemetry and reminder events were not retained in ops event log");
+  assert(storageAfterProofMedia.body.counts.opsEvents === 17, "Proof media, telemetry and reminder events were not retained in ops event log");
   assert(storageAfterProofMedia.body.proofMedia.counts.mediaObjects === 1, "Proof media object count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.counts.mediaLinks === 5, "Proof media link count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.counts.verified === 1, "Proof media verified count did not persist");

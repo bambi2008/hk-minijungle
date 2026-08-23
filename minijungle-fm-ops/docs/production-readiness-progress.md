@@ -617,3 +617,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 46 - Operations Timeline and Evidence Audit Chain v1
+
+- Official score remains **65%**. This batch improves operational traceability, but a derived timeline cannot substitute for managed PostgreSQL durability, off-host restore evidence, real identity or a repeated field pilot.
+- Capability added: `GET /api/ops/timeline` returns a newest-first, permission-filtered operations timeline with event-type/entity/client filters, bounded page size, total counts, `hasMore` and a timestamp/id cursor for the next page.
+- Scope boundary added: the timeline reuses the server-side client resolver and excludes platform/all-portfolio events from client-scoped views. A client filter is checked against the authenticated principal before the query is built.
+- Audit continuity added: evidence snapshot persistence, verification and retention-sweep actions now append typed `evidence.snapshot.*` records to the same append-only Ops event stream.
+- Capability added: Ops Today now shows `What just happened`, including event type, entity, actor, note/source and time. It refreshes with the existing page and does not invent delivery or AI completion state.
+- Evidence added: API smoke verifies cursor/limit behavior, type filtering and client isolation; Playwright UI smoke verifies the evidence persistence event appears in the timeline. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: the timeline is a read projection over the pilot event store and currently loads the bounded event history before filtering. Production still needs database-side pagination/index review, OIDC identity, centralized log retention and an accepted operations/audit runbook.
+- Target effect: cross-domain operational visibility and audit continuity improve; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 46
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

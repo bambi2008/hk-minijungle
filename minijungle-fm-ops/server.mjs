@@ -775,6 +775,40 @@ function filterOpsEventsForAuth(events, auth, resolveEntityClientId) {
   return filterByClientScope(auth, events, (event) => event.clientId || resolveEntityClientId(event.entityType, event.entityId));
 }
 
+async function buildOpsTimeline(auth, options = {}) {
+  const resolveEntityClientId = await buildEntityClientResolver();
+  const requestedLimit = Number(options.limit);
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 24, 1), 100);
+  const types = new Set((Array.isArray(options.types) ? options.types : []).map((item) => String(item || "").trim()).filter(Boolean));
+  const entityType = String(options.entityType || "").trim();
+  const clientId = String(options.clientId || "").trim();
+  const before = String(options.before || "").trim();
+  const beforeId = String(options.beforeId || "").trim();
+  const beforeMs = before ? Date.parse(before) : NaN;
+  const visible = filterOpsEventsForAuth(await readOpsEvents(), auth, resolveEntityClientId)
+    .filter((event) => !types.size || types.has(event.type))
+    .filter((event) => !entityType || event.entityType === entityType)
+    .filter((event) => !clientId || (event.clientId || resolveEntityClientId(event.entityType, event.entityId)) === clientId)
+    .filter((event) => !Number.isFinite(beforeMs) || Date.parse(event.timestamp) < beforeMs || (Date.parse(event.timestamp) === beforeMs && (!beforeId || event.id < beforeId)))
+    .sort((left, right) => {
+      const timeDelta = Date.parse(right.timestamp) - Date.parse(left.timestamp);
+      return timeDelta || String(right.id).localeCompare(String(left.id));
+    });
+  const counts = {};
+  for (const event of visible) counts[event.type] = (counts[event.type] || 0) + 1;
+  const events = visible.slice(0, limit);
+  const last = events.at(-1) || null;
+  return {
+    scope: auth.clientScope === "all" ? "all" : "client-scoped",
+    filters: { limit, types: [...types], entityType: entityType || null, clientId: clientId || null, before: before || null, beforeId: beforeId || null },
+    total: visible.length,
+    counts,
+    hasMore: visible.length > limit,
+    nextCursor: last ? { before: last.timestamp, beforeId: last.id } : null,
+    events
+  };
+}
+
 function filterStateMap(auth, map, entityType, resolveEntityClientId) {
   return Object.fromEntries(
     Object.entries(map || {}).filter(([id]) => canAccessClient(auth, resolveEntityClientId(entityType, id)))
@@ -2174,6 +2208,25 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/ops/timeline") {
+      requirePermission(auth, "ops.events.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const clientId = url.searchParams.get("clientId") || "";
+      if (clientId) requireClientAccess(auth, clientId, "operations timeline filter");
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        ...(await buildOpsTimeline(auth, {
+          limit: url.searchParams.get("limit"),
+          types: url.searchParams.get("types")?.split(",") || [],
+          entityType: url.searchParams.get("entityType"),
+          clientId,
+          before: url.searchParams.get("before"),
+          beforeId: url.searchParams.get("beforeId")
+        }))
+      });
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/portfolio") {
       requirePermission(auth, "portfolio.read");
       sendJson(res, 200, await buildPortfolioSummary(auth));
@@ -2201,6 +2254,19 @@ async function handleApi(req, res, pathname) {
     if (req.method === "POST" && pathname === "/api/proof/evidence-snapshots") {
       requirePermission(auth, "proof.snapshot.write");
       const result = await createEvidenceSnapshotRecord(await buildEvidenceSnapshot(auth));
+      if (!result.duplicate) {
+        const clientIds = Array.isArray(result.snapshot.clientIds) ? result.snapshot.clientIds : [];
+        await appendOpsEvent(normalizeOpsEvent({
+          type: "evidence.snapshot.persisted",
+          actor: auth.name,
+          entityType: "evidence-snapshot",
+          entityId: result.snapshot.snapshotId,
+          clientId: clientIds.length === 1 && clientIds[0] !== "*" ? clientIds[0] : null,
+          source: "evidence-ledger",
+          note: `Evidence snapshot ${result.snapshot.snapshotId} persisted for ${result.snapshot.scope}.`,
+          payload: { principalId: auth.id, snapshotId: result.snapshot.snapshotId, scope: result.snapshot.scope, signatureStatus: result.snapshot.signatureStatus, clientIds }
+        }));
+      }
       sendJson(res, result.duplicate ? 200 : 201, { ...result.snapshot, duplicate: result.duplicate, persisted: true });
       return;
     }
@@ -2215,7 +2281,17 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "POST" && pathname === "/api/proof/evidence-snapshots/retention-sweep") {
       requirePermission(auth, "proof.snapshot.retention");
-      sendJson(res, 200, { ...await sweepEvidenceSnapshots(), persisted: true });
+      const result = await sweepEvidenceSnapshots();
+      await appendOpsEvent(normalizeOpsEvent({
+        type: "evidence.snapshot.retention.swept",
+        actor: auth.name,
+        entityType: "evidence-snapshot",
+        entityId: "retention-sweep",
+        source: "evidence-ledger",
+        note: `Evidence retention sweep completed with ${Number(result.expiredCount || 0)} expired record(s).`,
+        payload: { principalId: auth.id, expiredCount: Number(result.expiredCount || 0), sweptAt: result.sweptAt }
+      }));
+      sendJson(res, 200, { ...result, persisted: true });
       return;
     }
 
@@ -2228,6 +2304,16 @@ async function handleApi(req, res, pathname) {
       if (!canAccessEvidenceSnapshot(auth, existing)) throw apiError(403, "Evidence snapshot is outside the current client scope", "EVIDENCE_SNAPSHOT_SCOPE_DENIED");
       const input = await readJsonBody(req);
       const result = await verifyEvidenceSnapshot(snapshotId, { verifiedBy: auth.id, note: input.note || null });
+      await appendOpsEvent(normalizeOpsEvent({
+        type: "evidence.snapshot.verified",
+        actor: auth.name,
+        entityType: "evidence-snapshot",
+        entityId: snapshotId,
+        clientId: Array.isArray(existing.clientIds) && existing.clientIds.length === 1 && existing.clientIds[0] !== "*" ? existing.clientIds[0] : null,
+        source: "evidence-ledger",
+        note: `Evidence snapshot ${snapshotId} verification completed with status ${result.snapshot.verificationStatus}.`,
+        payload: { principalId: auth.id, snapshotId, verificationStatus: result.snapshot.verificationStatus, hashValid: result.integrity.hashValid, signatureValid: result.integrity.signatureValid }
+      }));
       sendJson(res, 200, { ...result.snapshot, integrity: result.integrity, persisted: true });
       return;
     }
