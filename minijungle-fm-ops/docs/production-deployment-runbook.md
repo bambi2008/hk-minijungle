@@ -12,6 +12,7 @@ This runbook is the boundary between the pilot server and real Hong Kong FM oper
 
 ## Deployment order
 
+0. Run `npm.cmd run production:preflight -- --url https://ops.example.com --bearer-token <short-lived-token>` from the deployment runner. It must report `status: ready`; `blocked` or `unverified` is a release stop. The preflight is read-only: it does not migrate, seed, or repair the database.
 1. Run `node scripts/migrate-sqlite-to-postgres.mjs --dry-run` against the approved source snapshot and review the 27-table inventory.
 2. Apply `node scripts/migrate-sqlite-to-postgres.mjs` against a staging PostgreSQL database. The migrator derives the current master-data/device/telemetry/alert/AI/session schema and records a source hash in `ops_migration_runs`.
 3. Run `node scripts/verify-postgres-migration.mjs` against the same approved source snapshot and destination database. It must report matching table names, ordered columns, row counts, foreign-key coverage, zero orphan relations and a matching source hash.

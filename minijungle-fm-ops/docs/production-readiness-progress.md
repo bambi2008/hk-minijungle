@@ -483,3 +483,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 38 - Production Deployment Preflight v1
+
+- Official score remains **65%**. The preflight closes a deployment-control gap, but it cannot satisfy the managed database and backup/restore hard cap by itself.
+- Capability added: `npm.cmd run production:preflight -- --url <production-url> --bearer-token <short-lived-token> --strict` produces a redacted, read-only release report. It never migrates, seeds or repairs production data.
+- Capability added: the PostgreSQL probe checks TLS declaration, connection reachability, database identity, required production tables and the expected migration versions, including evidence snapshot v3. Missing tables/migrations are listed explicitly.
+- Capability added: the service probe checks `/api/health/ready` and `/api/storage`, and only reports success when readiness is HTTP 200 and all observed persistence sections report PostgreSQL. A missing URL, missing token, unavailable service or SQLite observation remains blocked/unverified.
+- Release gate added: `npm.cmd run check:preflight` tests pilot mode and production-without-external-services fail-closed behavior. The full `npm.cmd run check` now includes preflight syntax and blocked-case smoke coverage.
+- Configuration/docs added: `.env.production.example` documents `DR_FOREST_PRODUCTION_BASE_URL`; the deployment runbook makes preflight step 0 and states that it is read-only.
+- Evidence added: preflight smoke, evidence controls smoke, API smoke, migration compatibility test and full check pass. No database credential or token is printed by the report.
+- Honest boundary: no live PostgreSQL URL, production service URL, short-lived OIDC token, managed backup or restore artifact exists in this workspace, so this batch does not claim production connectivity.
+- Target effect: deployment/reliability architecture is stronger; official production operations readiness remains **65%** under the hard-cap governance.
+
+### Current Honest Score After Step 38
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
