@@ -501,3 +501,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 39 - Technician Offline Route and Exception Loop v1
+
+- Official score remains **65%**. This is a meaningful application-layer workflow improvement, but the managed PostgreSQL/off-host restore hard cap still binds exactly as before.
+- Capability added: the technician PWA now stores the last successful scoped route, reminders and last-known module readings locally. When the API is unavailable, the technician can reopen the cached route and sees an explicit cached/offline state rather than an empty route.
+- Capability added: route stops and the selected work order expose incident and sensor-alert counts; module telemetry cards show temperature, humidity, CO2 and MC values with their status and last observation time.
+- Capability added: an exception toggle requires a note and syncs a typed `exception` capture item, preserving the work order/module context and existing batch idempotency behavior.
+- Capability added: failed offline records show the last error and retry count, and can be retried individually as well as through the queue action.
+- Evidence added: Playwright UI smoke now verifies route signal rendering, exception validation and persistence, local route snapshot fallback with the mobile API aborted, and the existing offline queue behavior.
+- Honest boundary: this is still a browser/PWA implementation test. No native device fleet, real technician accounts, real device connectivity, field network cycle or repeated multi-client pilot has been evidenced in this workspace.
+- Target effect: technician workflow/application scaffold becomes stronger; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 39
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

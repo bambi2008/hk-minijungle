@@ -1,5 +1,6 @@
 const principal = "field-tech-show-suite";
 const queueKey = "dr-forest.field-capture.queue.v3";
+const routeSnapshotKey = "dr-forest.field-route.snapshot.v1";
 const queueLimit = 20;
 let route = [];
 let reminders = [];
@@ -23,6 +24,17 @@ function saveQueue(items) {
   catch { const error = new Error("Offline queue storage is full. Sync or remove a pending photo first."); error.code = "MOBILE_QUEUE_STORAGE_FULL"; throw error; }
   renderQueue();
 }
+function routeSnapshot() {
+  try {
+    const value = JSON.parse(localStorage.getItem(routeSnapshotKey) || "null");
+    return value && Array.isArray(value.route) && Array.isArray(value.reminders) ? value : null;
+  } catch { return null; }
+}
+function saveRouteSnapshot(nextRoute, nextReminders, counts) {
+  try {
+    localStorage.setItem(routeSnapshotKey, JSON.stringify({ savedAt: new Date().toISOString(), route: nextRoute, reminders: nextReminders, counts }));
+  } catch { /* Route cache is a convenience; the capture queue remains the durable local workflow. */ }
+}
 function enqueue(item, lastError = null) {
   const existing = queueItems().find((queued) => queued.id === item.id);
   const next = {
@@ -38,6 +50,12 @@ function enqueue(item, lastError = null) {
 }
 function setState(message, tone = "") { const el = $("#sync-state"); el.textContent = message; el.className = `state ${tone}`; }
 function id(prefix) { return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`; }
+function observedLabel(reading) {
+  const value = reading?.observedAt || reading?.lastSeenAt;
+  if (!value) return "no data";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "time unknown" : `last ${date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+}
 
 async function json(path, options = {}) {
   const response = await fetch(path, { credentials: "include", ...options });
@@ -47,22 +65,36 @@ async function json(path, options = {}) {
 }
 
 async function load() {
-  setState("Loading");
-  const [routeBody, reminderBody] = await Promise.all([
-    json(`/api/mobile/route`, { headers }),
-    json(`/api/mobile/reminders`, { headers })
-  ]);
-  route = routeBody.route || [];
-  reminders = reminderBody.items || [];
-  renderRoute();
-  renderReminders(reminderBody.counts || {});
-  setState("Ready");
+  setState(navigator.onLine ? "Loading" : "Offline · cached route");
+  let liveRoute = true;
+  try {
+    const [routeBody, reminderBody] = await Promise.all([
+      json(`/api/mobile/route`, { headers }),
+      json(`/api/mobile/reminders`, { headers })
+    ]);
+    route = routeBody.route || [];
+    reminders = reminderBody.items || [];
+    saveRouteSnapshot(route, reminders, reminderBody.counts || {});
+    renderRoute();
+    renderReminders(reminderBody.counts || {});
+    setState(queueItems().length ? `Ready · ${queueItems().length} pending` : "Ready");
+  } catch (error) {
+    const cached = routeSnapshot();
+    if (!cached) throw error;
+    liveRoute = false;
+    route = cached.route;
+    reminders = cached.reminders;
+    renderRoute();
+    renderReminders(cached.counts || {});
+    setState(navigator.onLine ? "Cached route · service unavailable" : "Offline · cached route", "error");
+  }
   const workOrderId = query.get("workOrderId");
   if (workOrderId) {
     const reminder = reminders.find((item) => item.workorderId === workOrderId) || null;
     const stop = route.find((item) => item.workOrderId === workOrderId);
     if (stop) selectStop(stop, reminder, false);
   }
+  return liveRoute;
 }
 
 function renderReminders(counts) {
@@ -87,7 +119,9 @@ function renderRoute() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = `stop ${selected?.workOrderId === stop.workOrderId ? "active" : ""}`;
-    button.innerHTML = `<strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.clientName || stop.client?.name || stop.clientId)}</span><span>${escapeHtml(stop.due || "Scheduled")} · ${escapeHtml(stop.priority || "normal")} · ${stop.modules?.length || 0} modules</span>`;
+    const signals = stop.signals || {};
+    const signalText = [signals.openIncidents ? `${signals.openIncidents} incident${signals.openIncidents === 1 ? "" : "s"}` : "", signals.activeSensorAlerts ? `${signals.activeSensorAlerts} sensor alert${signals.activeSensorAlerts === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ") || "No open signals";
+    button.innerHTML = `<strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.clientName || stop.client?.name || stop.clientId)}</span><span>${escapeHtml(stop.due || "Scheduled")} · ${escapeHtml(stop.priority || "normal")} · ${stop.modules?.length || 0} modules</span><small class="stop-signal ${signalText === "No open signals" ? "quiet" : "attention"}">${escapeHtml(signalText)}</small>`;
     button.onclick = () => selectStop(stop, reminders.find((item) => item.workorderId === stop.workOrderId && item.sourceType === "workorder"));
     list.append(button);
   });
@@ -99,6 +133,8 @@ async function selectStop(stop, reminder = null, scroll = true) {
   $("#capture-form").hidden = false;
   $("#asset-title").textContent = stop.assetName || stop.asset?.name || stop.wallId;
   $("#work-order").textContent = stop.workOrderId;
+  const signals = stop.signals || {};
+  $("#capture-context").innerHTML = `<span>${escapeHtml(stop.clientName || stop.client?.name || stop.clientId)} · ${escapeHtml(stop.asset?.location || "Location not set")}</span><span class="${signals.openIncidents || signals.activeSensorAlerts ? "attention" : "quiet"}">${signals.openIncidents || signals.activeSensorAlerts ? `${signals.openIncidents || 0} incidents · ${signals.activeSensorAlerts || 0} sensor alerts` : "No open signals"}</span>`;
   const moduleSelect = $("#module");
   moduleSelect.innerHTML = `<option value="">Whole wall / no module</option>` + (stop.modules || []).map((module) => `<option value="${escapeHtml(module.id)}">${escapeHtml(module.label)}${module.zone ? ` · ${escapeHtml(module.zone)}` : ""}</option>`).join("");
   const moduleFromUrl = query.get("moduleId");
@@ -111,21 +147,30 @@ async function selectStop(stop, reminder = null, scroll = true) {
 
 async function loadModuleStatus() {
   const moduleId = $("#module").value;
-  selectedModule = null;
+  selectedModule = selected?.modules?.find((module) => module.id === moduleId) || null;
   if (!moduleId || !selected) {
     $("#module-status").innerHTML = "<span>No module selected</span>";
     return;
   }
+  renderModuleStatus();
   try {
     const body = await json(`/api/modules?wallId=${encodeURIComponent(selected.wallId)}`, { headers });
     selectedModule = (body.modules || []).find((module) => module.id === moduleId) || null;
-    const byMetric = new Map((selectedModule?.latestReadings || []).map((reading) => [reading.metric, reading]));
-    $("#module-status").innerHTML = [
-      ["TEMP", "temperature", "C"], ["RH", "humidity", "%"], ["CO2", "co2", "ppm"], ["MC", "mc", "MC"]
-    ].map(([label, metric, unit]) => { const reading = byMetric.get(metric); return `<span><b>${label}</b><strong>${reading ? `${escapeHtml(reading.value)} ${unit}` : "--"}</strong><small>${reading ? escapeHtml(reading.status) : "no data"}</small></span>`; }).join("");
+    renderModuleStatus();
   } catch {
-    $("#module-status").innerHTML = "<span>Module data unavailable</span>";
+    renderModuleStatus();
   }
+}
+
+function renderModuleStatus() {
+  if (!selectedModule) {
+    $("#module-status").innerHTML = "<span>Module data unavailable</span>";
+    return;
+  }
+  const byMetric = new Map((selectedModule.latestReadings || []).map((reading) => [reading.metric, reading]));
+  $("#module-status").innerHTML = [
+    ["TEMP", "temperature", "C"], ["RH", "humidity", "%"], ["CO2", "co2", "ppm"], ["MC", "mc", "MC"]
+  ].map(([label, metric, unit]) => { const reading = byMetric.get(metric); const status = String(reading?.status || "no-data").replace(/[^a-z-]/gi, "").toLowerCase(); return `<span class="reading-${status}"><b>${label}</b><strong>${reading ? `${escapeHtml(reading.value)} ${unit}` : "--"}</strong><small>${reading ? `${escapeHtml(reading.status || "unknown")} · ${escapeHtml(observedLabel(reading))}` : "no data"}</small></span>`; }).join("");
 }
 
 async function acknowledgeReminder(reminder) {
@@ -137,8 +182,10 @@ function renderQueue() {
   $("#queue-count").textContent = items.length;
   $("#queue-list").innerHTML = items.length ? items.map((item) => {
     const status = item.lastError ? `retry ${item.attempts} · ${item.lastError}` : (item.attempts ? `${item.attempts} retry` : "pending");
-    return `<div class="queue-item"><strong>${escapeHtml(item.stop.wallId)}</strong><br>${escapeHtml(new Date(item.createdAt).toLocaleString())} · ${item.photo ? "photo pending" : "record pending"}<br><small>${escapeHtml(status)}</small></div>`;
+    const retry = item.lastError ? `<button type="button" class="secondary queue-retry" data-retry="${escapeHtml(item.id)}">Retry</button>` : "";
+    return `<div class="queue-item"><div><strong>${escapeHtml(item.stop?.assetName || item.stop?.wallId || "Unknown stop")}</strong><br>${escapeHtml(new Date(item.createdAt).toLocaleString())} · ${item.photo ? "photo pending" : "record pending"}${item.exception ? " · exception" : ""}<br><small>${escapeHtml(status)}</small></div>${retry}</div>`;
   }).join("") : "<p>Nothing waiting to sync.</p>";
+  $("#queue-list").querySelectorAll("[data-retry]").forEach((button) => button.addEventListener("click", () => flushQueue([button.dataset.retry])));
 }
 
 function toBase64(file) { return new Promise((resolve, reject) => { const reader = new FileReader(); reader.onerror = reject; reader.onload = () => resolve(String(reader.result).split(",")[1]); reader.readAsDataURL(file); }); }
@@ -146,6 +193,9 @@ async function createPayload() {
   if (!selected) throw new Error("Choose a stop first");
   const photoFile = $("#photo").files[0] || null;
   if (photoFile && photoFile.size > 2 * 1024 * 1024) throw new Error("Photo exceeds the 2 MB offline pilot limit");
+  const exception = $("#exception").checked;
+  const notes = $("#notes").value.trim();
+  if (exception && !notes) throw new Error("Add a short note before saving an exception");
   return {
     id: id("MCB"),
     createdAt: new Date().toISOString(),
@@ -157,7 +207,8 @@ async function createPayload() {
     water: $("#water").value,
     nutrient: $("#nutrient").value,
     health: $("#health").value,
-    notes: $("#notes").value.trim(),
+    notes,
+    exception,
     photo: photoFile ? { name: photoFile.name, type: photoFile.type, base64: await toBase64(photoFile) } : null
   };
 }
@@ -166,12 +217,14 @@ async function sha256(base64) { const bytes = Uint8Array.from(atob(base64), (c) 
 async function sync(item) {
   const photoItemId = `${item.id}-ITEM-1`;
   const mediaId = `${item.id}-PM`;
-  const capture = { id: item.id, technicianId: principal, clientId: item.stop.clientId, wallId: item.stop.wallId, moduleId: item.moduleId, workorderId: item.stop.workOrderId, deviceId: "field-browser", capturedAt: item.createdAt, notes: item.notes, items: [
+  const items = [
     { type: "photo", label: "Field proof photo", value: item.photo ? "pending proof upload" : "no photo", metadata: { moduleId: item.moduleId, source: "technician-camera" } },
     { type: "water", label: "Water added", value: item.water, unit: "L" },
     { type: "nutrient", label: "Nutrient added", value: item.nutrient, unit: "ml" },
     { type: "health-check", label: "Visual health score", value: item.health, unit: "score", metadata: { moduleId: item.moduleId, telemetry: item.latestReadings || [] } }
-  ] };
+  ];
+  if (item.exception) items.push({ type: "exception", label: "Exception follow-up", value: item.notes, metadata: { moduleId: item.moduleId, source: "technician-mobile" } });
+  const capture = { id: item.id, technicianId: principal, clientId: item.stop.clientId, wallId: item.stop.wallId, moduleId: item.moduleId, workorderId: item.stop.workOrderId, deviceId: "field-browser", capturedAt: item.createdAt, notes: item.notes, items };
   await json("/api/mobile/capture-batches", { method: "POST", headers, body: JSON.stringify(capture) });
   if (item.photo) {
     const bytes = Uint8Array.from(atob(item.photo.base64), (c) => c.charCodeAt(0));
@@ -187,26 +240,46 @@ async function submit(offlineOnly = false) {
   try {
     item = await createPayload();
     if (offlineOnly) { enqueue(item); setState("Saved offline"); return; }
-    setState("Syncing"); await sync(item); setState("Synced"); $("#capture-form").reset(); await load();
+    setState("Syncing"); await sync(item); setState("Synced"); $("#capture-form").reset(); clearPhotoPreview(); await load();
   } catch (error) {
     if (!offlineOnly && item && selected) { try { enqueue(item, error.message); } catch (queueError) { setState(queueError.message, "error"); return; } }
     setState(error.message || "Saved offline", "error");
   }
 }
 
-async function flushQueue() {
+async function flushQueue(onlyIds = null) {
   const pending = queueItems(); if (!pending.length) return;
-  setState(`Syncing ${pending.length}`); const remaining = [];
-  for (const item of pending) { try { await sync(item); } catch (error) { remaining.push({ ...item, attempts: Number(item.attempts || 0) + 1, lastError: error.message, lastAttemptAt: new Date().toISOString() }); } }
+  const selectedIds = onlyIds ? new Set(onlyIds) : null;
+  const toSync = selectedIds ? pending.filter((item) => selectedIds.has(item.id)) : pending;
+  const remaining = selectedIds ? pending.filter((item) => !selectedIds.has(item.id)) : [];
+  setState(`Syncing ${toSync.length}`);
+  for (const item of toSync) { try { await sync(item); } catch (error) { remaining.push({ ...item, attempts: Number(item.attempts || 0) + 1, lastError: error.message, lastAttemptAt: new Date().toISOString() }); } }
   saveQueue(remaining); setState(remaining.length ? `${remaining.length} pending` : "Queue synced", remaining.length ? "error" : "");
 }
+
+let photoPreviewUrl = null;
+function clearPhotoPreview() {
+  if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+  photoPreviewUrl = null;
+  $("#photo-preview").hidden = true;
+  $("#photo-preview-image").removeAttribute("src");
+}
+$("#photo").addEventListener("change", () => {
+  clearPhotoPreview();
+  const file = $("#photo").files[0];
+  if (!file) return;
+  photoPreviewUrl = URL.createObjectURL(file);
+  $("#photo-preview-image").src = photoPreviewUrl;
+  $("#photo-preview").hidden = false;
+});
+$("#clear-photo").onclick = () => { $("#photo").value = ""; clearPhotoPreview(); };
 
 $("#capture-form").addEventListener("submit", (event) => { event.preventDefault(); submit(false); });
 $("#queue").onclick = () => submit(true);
 $("#module").onchange = () => loadModuleStatus();
 $("#refresh").onclick = () => load().catch((error) => setState(error.message, "error"));
 $("#flush-queue").onclick = () => flushQueue();
-window.addEventListener("online", flushQueue);
+window.addEventListener("online", () => load().then((loaded) => loaded ? flushQueue() : null).catch((error) => setState(error.message, "error")));
 window.addEventListener("offline", () => setState("Offline · save locally", "error"));
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("/mobile-service-worker.js").catch(() => {});
-renderQueue(); load().then(flushQueue).catch((error) => setState(error.message, "error"));
+renderQueue(); load().then((loaded) => loaded ? flushQueue() : null).catch((error) => setState(error.message, "error"));

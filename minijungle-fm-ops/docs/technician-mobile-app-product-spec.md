@@ -76,6 +76,7 @@ When a module is selected, the app displays the latest readings and their status
 - Retry on app open, browser `online` event and manual `Sync queue`. A failed item remains in the queue with its error and attempt count; it is never silently discarded.
 - Use `batch.id` as the idempotency key. The photo evidence ID is derived deterministically from the same batch ID, so a retry after a partial upload reuses the original evidence intent instead of creating a second media record.
 - A duplicate server response must not create a second batch or audit event.
+- After one successful online load, the latest scoped route, reminders and last-known module readings are cached locally so the technician can reopen the day&apos;s work when the API is temporarily unavailable. The cache is a read-only convenience; new captures remain in the explicit capture queue.
 
 ## 4. Module and Device Model
 
@@ -211,6 +212,9 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 - A module-specific photo is linked to the correct module, wall and work order.
 - A device reading shows its real status and last-seen time; missing data is explicit.
 - A visit submitted offline appears in the queue and syncs after connectivity returns.
+- A route already loaded online can be reopened from the local snapshot while the API is unavailable, with the state shown as `Offline · cached route` or `Cached route · service unavailable`.
+- Selecting `Exception found` requires a short note and persists an `exception` capture item with the same batch id as the visit.
+- A failed queue item exposes its retry count, last error and a single-item retry action.
 - Queue retries use the capture's stored reminder action and telemetry snapshot, not whichever work order is currently open on the phone.
 - The field Service Worker caches only static application files. It does not cache API responses or intercept non-GET requests, preventing stale tenant data and accidental POST caching.
 - Replaying the same batch does not duplicate records or audit events.

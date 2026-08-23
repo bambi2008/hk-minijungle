@@ -27,13 +27,16 @@
     </section>
     <form id="capture-form" class="capture" hidden>
       <div class="section-heading"><div><p>VISIT RECORD / FIELD CAPTURE</p><h2 id="asset-title"></h2></div><span id="work-order" class="work-order"></span></div>
+      <div id="capture-context" class="capture-context" aria-live="polite"></div>
       <label>Module / MODULE<select id="module"><option value="">Whole wall / no module</option></select></label>
       <div id="module-status" class="module-status" aria-live="polite"><span>No module selected</span></div>
       <label>Water added (L)<input id="water" type="number" min="0" max="200" step="0.1" value="0"></label>
       <label>Nutrient added (ml)<input id="nutrient" type="number" min="0" max="2000" step="1" value="0"></label>
       <label>Visual health (0-100)<input id="health" type="number" min="0" max="100" step="1" value="80" required></label>
+      <label class="check-row"><input id="exception" type="checkbox"><span>Exception found / 異常需要跟進</span></label>
       <label>Visit note<textarea id="notes" rows="3" placeholder="What changed, what needs follow-up"></textarea></label>
       <label>Proof photo<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"></label>
+      <div id="photo-preview" class="photo-preview" hidden><img id="photo-preview-image" alt="Selected field proof preview"><button id="clear-photo" type="button" class="secondary">Remove photo</button></div>
       <p class="hint">Device readings appear when connected. Photo stays on this device until sync. Pilot limit: 2 MB.</p>
       <div class="actions"><button id="queue" type="button" class="secondary">Save offline</button><button type="submit">Sync visit</button></div>
     </form>

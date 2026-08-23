@@ -1047,6 +1047,9 @@ async function buildMobileRoute(auth) {
   const sensors = sensorData.readings || [];
   const incidents = incidentData.incidents || [];
   const modules = await listModules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+  const latestReadings = await listLatestReadingsByModules(modules.map((module) => module.id));
+  const readingsByModule = new Map();
+  for (const reading of latestReadings) readingsByModule.set(reading.moduleId, [...(readingsByModule.get(reading.moduleId) || []), reading]);
   const modulesByWall = new Map();
   for (const module of modules) modulesByWall.set(module.assetId, [...(modulesByWall.get(module.assetId) || []), module]);
 
@@ -1090,7 +1093,7 @@ async function buildMobileRoute(auth) {
           activeSensorAlerts: wallSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).length,
           proofRecords: wallProof.length
         },
-        modules: wallModules.map((module) => ({ id: module.id, label: module.label, zone: module.zone, status: module.status, cameraId: module.cameraId, monitoringDevices: module.monitoringDevices })),
+        modules: wallModules.map((module) => ({ id: module.id, label: module.label, zone: module.zone, status: module.status, cameraId: module.cameraId, monitoringDevices: module.monitoringDevices, latestReadings: readingsByModule.get(module.id) || [] })),
         incidents: openIncidents(wallIncidents).map((incident) => ({ id: incident.id, severity: incident.severity, category: incident.category, recommendedAction: incident.recommendedAction })),
         sensorAlerts: wallSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).map((sensor) => ({ id: sensor.id, type: sensor.type, status: sensor.status, action: sensor.action }))
       };
