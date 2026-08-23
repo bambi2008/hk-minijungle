@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
 
-export const evidenceSnapshotMigrationVersion = "2026-08-23.evidence-snapshot-v1";
+export const evidenceSnapshotMigrationVersion = "2026-08-23.evidence-snapshot-v2";
 
 function parseJson(value, fallback) {
   try { return JSON.parse(value || ""); } catch { return fallback; }
@@ -27,6 +27,10 @@ function snapshotFromRow(row) {
     persistedAt: row.persisted_at,
     hashAlgorithm: row.hash_algorithm,
     sha256: row.sha256,
+    signatureAlgorithm: row.signature_algorithm,
+    signatureStatus: row.signature_status,
+    signatureKeyId: row.signature_key_id || null,
+    signature: row.signature || null,
     package: parseJson(row.package_json, {})
   };
 }
@@ -56,24 +60,44 @@ function initialize(db) {
       persisted_at TEXT NOT NULL,
       hash_algorithm TEXT NOT NULL,
       sha256 TEXT NOT NULL UNIQUE,
+      signature_algorithm TEXT NOT NULL DEFAULT 'hmac-sha256',
+      signature_status TEXT NOT NULL DEFAULT 'unsigned',
+      signature_key_id TEXT,
+      signature TEXT,
       package_json TEXT NOT NULL
     );
     CREATE INDEX IF NOT EXISTS idx_evidence_snapshots_sha256 ON evidence_snapshots(sha256);
     CREATE INDEX IF NOT EXISTS idx_evidence_snapshots_generated ON evidence_snapshots(generated_at DESC);
   `);
+  for (const statement of [
+    "ALTER TABLE evidence_snapshots ADD COLUMN signature_algorithm TEXT NOT NULL DEFAULT 'hmac-sha256'",
+    "ALTER TABLE evidence_snapshots ADD COLUMN signature_status TEXT NOT NULL DEFAULT 'unsigned'",
+    "ALTER TABLE evidence_snapshots ADD COLUMN signature_key_id TEXT",
+    "ALTER TABLE evidence_snapshots ADD COLUMN signature TEXT"
+  ]) {
+    try { db.exec(statement); } catch {}
+  }
   db.prepare("INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(evidenceSnapshotMigrationVersion, new Date().toISOString());
 }
 
 function validateInput(input) {
   const snapshotId = String(input?.snapshotId || "").trim();
   const sha256 = String(input?.sha256 || "").trim().toLowerCase();
+  const signatureAlgorithm = String(input?.signatureAlgorithm || "hmac-sha256").trim().toLowerCase();
+  const signatureStatus = String(input?.signatureStatus || "unsigned").trim().toLowerCase();
+  const signature = input?.signature ? String(input.signature).trim().toLowerCase() : null;
+  const signatureKeyId = input?.signatureKeyId ? String(input.signatureKeyId).trim() : null;
   const payload = input?.package && typeof input.package === "object" ? input.package : null;
   if (!/^EVP-[a-f0-9]{16}$/.test(snapshotId)) throw storeError("snapshotId is invalid", "EVIDENCE_SNAPSHOT_ID_INVALID");
   if (!/^[a-f0-9]{64}$/.test(sha256)) throw storeError("sha256 is invalid", "EVIDENCE_SNAPSHOT_HASH_INVALID");
+  if (signatureAlgorithm !== "hmac-sha256") throw storeError("signatureAlgorithm is invalid", "EVIDENCE_SNAPSHOT_SIGNATURE_ALGORITHM_INVALID");
+  if (!["unsigned", "signed"].includes(signatureStatus)) throw storeError("signatureStatus is invalid", "EVIDENCE_SNAPSHOT_SIGNATURE_STATUS_INVALID");
+  if (signatureStatus === "signed" && !/^[a-f0-9]{64}$/.test(signature || "")) throw storeError("signed snapshots require a 64-character signature", "EVIDENCE_SNAPSHOT_SIGNATURE_INVALID");
+  if (signatureStatus === "unsigned" && signature) throw storeError("unsigned snapshots cannot carry a signature", "EVIDENCE_SNAPSHOT_SIGNATURE_INVALID");
   if (!payload) throw storeError("snapshot package is required", "EVIDENCE_SNAPSHOT_PACKAGE_REQUIRED");
   const actual = createHash("sha256").update(JSON.stringify(payload), "utf8").digest("hex");
   if (actual !== sha256 || snapshotId !== `EVP-${sha256.slice(0, 16)}`) throw storeError("snapshot package does not match its SHA-256 fingerprint", "EVIDENCE_SNAPSHOT_HASH_MISMATCH");
-  return { snapshotId, sha256, payload };
+  return { snapshotId, sha256, signatureStatus, signature, signatureAlgorithm, signatureKeyId, payload };
 }
 
 export async function createSqliteEvidenceSnapshot(dbPath, input) {
@@ -83,7 +107,7 @@ export async function createSqliteEvidenceSnapshot(dbPath, input) {
     if (existing) return { duplicate: true, snapshot: snapshotFromRow(existing) };
     const persistedAt = new Date().toISOString();
     const clientIds = validated.payload.portfolio?.auth?.clientIds || [];
-    db.prepare(`INSERT INTO evidence_snapshots (snapshot_id, viewer_role, scope, client_ids_json, generated_at, persisted_at, hash_algorithm, sha256, package_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    db.prepare(`INSERT INTO evidence_snapshots (snapshot_id, viewer_role, scope, client_ids_json, generated_at, persisted_at, hash_algorithm, sha256, signature_algorithm, signature_status, signature_key_id, signature, package_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
       validated.snapshotId,
       validated.payload.viewerRole || "unknown",
       validated.payload.scope || "unknown",
@@ -92,6 +116,10 @@ export async function createSqliteEvidenceSnapshot(dbPath, input) {
       persistedAt,
       input.hashAlgorithm || "sha256",
       validated.sha256,
+      validated.signatureAlgorithm,
+      validated.signatureStatus,
+      validated.signatureKeyId,
+      validated.signature,
       JSON.stringify(validated.payload)
     );
     return { duplicate: false, snapshot: snapshotFromRow(db.prepare("SELECT * FROM evidence_snapshots WHERE snapshot_id = ?").get(validated.snapshotId)) };

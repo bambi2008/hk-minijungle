@@ -965,11 +965,20 @@ async function buildEvidenceSnapshot(auth) {
   };
   const canonical = JSON.stringify(payload);
   const sha256 = createHash("sha256").update(canonical, "utf8").digest("hex");
+  const signingSecret = String(process.env.DR_FOREST_EVIDENCE_SIGNING_SECRET || "").trim();
+  const snapshotId = `EVP-${sha256.slice(0, 16)}`;
+  const signatureStatus = signingSecret ? "signed" : "unsigned";
+  const signature = signingSecret ? createHmac("sha256", signingSecret).update(`${snapshotId}.${sha256}`, "utf8").digest("hex") : null;
+  const signatureKeyId = signingSecret ? (String(process.env.DR_FOREST_EVIDENCE_SIGNING_KEY_ID || "").trim() || "dr-forest-evidence-hmac-v1") : null;
   return {
-    snapshotId: `EVP-${sha256.slice(0, 16)}`,
+    snapshotId,
     generatedAt,
     hashAlgorithm: "sha256",
     sha256,
+    signatureAlgorithm: "hmac-sha256",
+    signatureStatus,
+    signatureKeyId,
+    signature,
     package: payload
   };
 }

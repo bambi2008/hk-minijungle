@@ -155,7 +155,7 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.proofMedia.counts.mediaObjects === 0, "Proof media objects should start empty in test mode");
   assert(initialStorage.body.proofMedia.counts.mediaLinks === 0, "Proof media links should start empty in test mode");
   assert(initialStorage.body.proofMedia.relationshipIntegrity.foreignKeysEnabled === true, "SQLite proof media foreign keys are not enabled");
-  assert(initialStorage.body.evidenceSnapshots.migrationVersion === "2026-08-23.evidence-snapshot-v1", "Storage endpoint did not expose evidence snapshot migration");
+  assert(initialStorage.body.evidenceSnapshots.migrationVersion === "2026-08-23.evidence-snapshot-v2", "Storage endpoint did not expose evidence snapshot migration");
   assert(initialStorage.body.evidenceSnapshots.counts.snapshots === 0, "Evidence snapshots should start empty in test mode");
   assert(initialStorage.body.telemetry.migrationVersion === "2026-08-17.telemetry-history-v2", "Storage endpoint did not expose telemetry history migration");
   assert(initialStorage.body.telemetry.tables.includes("sensor_reading_history"), "Storage endpoint did not expose sensor history table");
@@ -188,6 +188,9 @@ async function verifyApi(baseUrl) {
   assert(clientEvidenceSnapshot.response.ok, "Client evidence snapshot endpoint failed");
   assert(clientEvidenceSnapshot.body.snapshotId.startsWith("EVP-"), "Client evidence snapshot did not expose a stable snapshot ID");
   assert(/^[a-f0-9]{64}$/.test(clientEvidenceSnapshot.body.sha256), "Client evidence snapshot did not expose a SHA-256 fingerprint");
+  assert(clientEvidenceSnapshot.body.signatureAlgorithm === "hmac-sha256", "Client evidence snapshot did not expose the signature algorithm");
+  assert(clientEvidenceSnapshot.body.signatureStatus === "unsigned", "Pilot evidence snapshot should explicitly report unsigned status");
+  assert(clientEvidenceSnapshot.body.signature === null, "Unsigned pilot evidence snapshot should not expose a signature");
   assert(clientEvidenceSnapshot.body.package.assets.length === 1, "Client evidence snapshot did not keep client scope");
   assert(!Object.prototype.hasOwnProperty.call(clientEvidenceSnapshot.body.package, "dataQuality"), "Client evidence snapshot leaked auditor data quality");
   const auditorEvidenceSnapshot = await fetchJson(`${baseUrl}api/proof/evidence-snapshot`, {

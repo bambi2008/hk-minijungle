@@ -1,6 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 
-export const productionConfigVersion = "2026-08-17.production-gate-v1";
+export const productionConfigVersion = "2026-08-23.production-gate-v2";
 
 const REQUIRED_PRODUCTION_CONFIG = [
   ["DR_FOREST_DATABASE_URL", "managed relational database URL"],
@@ -17,6 +17,7 @@ const REQUIRED_PRODUCTION_CONFIG = [
   ["DR_FOREST_IDP_AUDIENCE", "OIDC audience"],
   ["DR_FOREST_ALLOWED_ORIGINS", "allowed browser origins"],
   ["DR_FOREST_DEVICE_SIGNING_SECRET", "device request signing secret"],
+  ["DR_FOREST_EVIDENCE_SIGNING_SECRET", "evidence snapshot signing secret"],
   ["DR_FOREST_ALERT_WEBHOOK_URL", "alert notification webhook URL"],
   ["DR_FOREST_ALERT_WEBHOOK_SECRET", "alert notification webhook signing secret"],
   ["DR_FOREST_FULL_POSTGRES_MIGRATION", "full production database migration evidence"],
@@ -73,7 +74,7 @@ export function productionConfigReport() {
       valid = isHttpsUrl(value);
       detail = valid ? "https JWKS endpoint" : "must be an https JWKS URL";
     }
-    if (name === "DR_FOREST_BACKUP_ENCRYPTION_KEY" || name === "DR_FOREST_DEVICE_SIGNING_SECRET" || name === "DR_FOREST_ALERT_WEBHOOK_SECRET") {
+    if (name === "DR_FOREST_BACKUP_ENCRYPTION_KEY" || name === "DR_FOREST_DEVICE_SIGNING_SECRET" || name === "DR_FOREST_EVIDENCE_SIGNING_SECRET" || name === "DR_FOREST_ALERT_WEBHOOK_SECRET") {
       valid = hasMinEntropy(value);
       detail = valid ? "minimum 32 bytes" : "must contain at least 32 bytes";
     }

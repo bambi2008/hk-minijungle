@@ -448,3 +448,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 36 - Evidence Snapshot HMAC Signature Contract v1
+
+- Official score remains **65%**. A local secret-driven smoke test proves the application contract, not production key custody, rotation, external verification or auditor acceptance.
+- Capability added: server-generated evidence snapshots now return an explicit `signatureAlgorithm: hmac-sha256`, `signatureStatus`, `signatureKeyId` and `signature` contract. The HMAC input is the stable string `${snapshotId}.${sha256}`; the signing secret is never returned in the package.
+- Pilot behavior is explicit: when `DR_FOREST_EVIDENCE_SIGNING_SECRET` is absent, the API returns `signatureStatus: unsigned`, `signature: null` and no key ID. This prevents a SHA-256 fingerprint from being confused with a signed report.
+- Production gate added: `DR_FOREST_EVIDENCE_SIGNING_SECRET` is required in production and must contain at least 32 bytes. `.env.production.example` also documents the key ID used for rotation and verification mapping.
+- Persistence added: SQLite and PostgreSQL evidence snapshot stores persist signature algorithm, status, key ID and signature. Migration v2 is backward-compatible with the existing pilot v1 table through additive columns.
+- Evidence added: `npm.cmd run check:evidence` runs syntax checks plus an isolated signed-server smoke that independently recalculates the HMAC; API smoke verifies the unsigned pilot boundary; production-gate smoke verifies missing signing configuration fails closed.
+- Honest boundary: no managed secret manager, key rotation, independent external verifier, immutable object-store retention, signed delivery receipt or production PostgreSQL execution exists in this workspace yet.
+- Target effect: architecture scaffold remains approximately **99%**; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 36
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

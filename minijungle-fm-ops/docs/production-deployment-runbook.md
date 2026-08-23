@@ -59,11 +59,11 @@ The service also bounds the in-process rate-limit bucket map to 5,000 active key
 
 After the data loads, `Download evidence / 下載證據` creates a role-labelled JSON snapshot in the browser. It is useful for pilot review and partner walkthroughs, but it is not a signed report. A production release must replace or supplement it with an immutable server-side snapshot, a signed download URL, retention controls and a delivery acknowledgement.
 
-The portal now calls `GET /api/proof/evidence-snapshot` when exporting. The server assembles the current scoped package and returns `snapshotId`, `hashAlgorithm: sha256` and a 64-character fingerprint. This is a traceability fingerprint, not immutable storage: production still needs a persisted report record, signing key custody, object retention and an external delivery acknowledgement.
+The portal now calls `GET /api/proof/evidence-snapshot` when exporting. The server assembles the current scoped package and returns `snapshotId`, `hashAlgorithm: sha256` and a 64-character fingerprint. It also returns `signatureAlgorithm: hmac-sha256`, `signatureStatus`, `signatureKeyId` and `signature`. Without `DR_FOREST_EVIDENCE_SIGNING_SECRET`, pilot responses are explicitly `unsigned` and the signature is `null`; this is intentional and must not be presented as signed ESG evidence.
 
 For internal report preparation, FM Lead/Platform Admin can `POST /api/proof/evidence-snapshots`. The server verifies the canonical package hash before inserting an append-only record in `evidence_snapshots`; `GET /api/proof/evidence-snapshots/:snapshotId` rechecks access against the stored client scope. Client viewers have `proof.snapshot.read` but no `proof.snapshot.write`, and an all-portfolio snapshot is not readable by a client-scoped principal.
 
-The pilot uses SQLite migration `2026-08-23.evidence-snapshot-v1`. Production uses the matching PostgreSQL adapter and `infra/postgres/002_evidence_snapshots.sql`. Before launch, add signing, retention, off-host backup coverage and a delivery acknowledgement workflow.
+The pilot uses SQLite migration `2026-08-23.evidence-snapshot-v2`. Production uses the matching PostgreSQL adapter and `infra/postgres/002_evidence_snapshots.sql`. Production must load `DR_FOREST_EVIDENCE_SIGNING_SECRET` from a secret manager, keep the key ID stable during its validity window, define rotation and verification ownership, and cover the signed record with retention, off-host backup and delivery acknowledgement controls.
 
 ## Backup consistency check
 

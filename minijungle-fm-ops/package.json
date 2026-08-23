@@ -13,7 +13,7 @@
     "restore:runtime": "node scripts/restore-runtime.mjs",
     "migrate:postgres": "node scripts/migrate-sqlite-to-postgres.mjs",
     "verify:migration": "node scripts/verify-postgres-migration.mjs",
-    "check:evidence": "node --check lib/ops-evidence-snapshot-store.mjs && node --check lib/ops-postgres-evidence-snapshot-store.mjs",
+    "check:evidence": "node --check lib/ops-evidence-snapshot-store.mjs && node --check lib/ops-postgres-evidence-snapshot-store.mjs && node --check scripts/evidence-signature-smoke-test.mjs && node scripts/evidence-signature-smoke-test.mjs",
     "evidence:production": "node scripts/production-evidence-report.mjs",
     "notifications:once": "node scripts/process-notification-outbox.mjs",
     "backup:smoke": "node scripts/backup-restore-smoke-test.mjs",
