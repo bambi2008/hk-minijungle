@@ -10,6 +10,7 @@ const runtimeDir = join(projectRoot, ".ops-data-ui-test");
 function assert(condition, message) { if (!condition) throw new Error(message); }
 async function freePort() { return new Promise((resolve, reject) => { const probe = createServer(); probe.once("error", reject); probe.listen(0, host, () => { const address = probe.address(); const port = typeof address === "object" && address ? address.port : 0; probe.close(() => resolve(port)); }); }); }
 async function waitForServer(url) { const deadline = Date.now() + 8000; while (Date.now() < deadline) { try { if ((await fetch(url)).ok) return; } catch {} await new Promise((resolve) => setTimeout(resolve, 150)); } throw new Error("UI smoke server did not start"); }
+async function stopServer(server) { if (server.exitCode !== null) return; await new Promise((resolve) => { const timeout = setTimeout(resolve, 4000); server.once("exit", () => { clearTimeout(timeout); resolve(); }); server.kill(); }); }
 async function main() {
   await rm(runtimeDir, { recursive: true, force: true });
   await mkdir(runtimeDir, { recursive: true });
@@ -38,6 +39,11 @@ async function main() {
       await operations.locator('[data-ai-review="AIV-UI-001"]').click(); await operations.locator("#ai-review-confidence").fill("0.88"); await operations.locator("#ai-review-note").fill("Provider result reviewed against fixed-angle capture; schedule a follow-up photo."); await operations.locator("#ai-review-submit").click(); await operations.waitForSelector('[data-ai-review="AIV-UI-001"]', { state: "detached", timeout: 5000 });
       assert(aiPutBodies.some((body) => body.status === "running"), "AI start action did not send running update");
       assert(aiPutBodies.some((body) => body.status === "completed" && body.confidence === 0.88 && body.result?.reviewMode === "human-assisted"), "AI review form did not send a complete human-assisted result");
+      assert((await operations.locator("#snapshot-state").textContent()).includes("stored"), "Evidence control did not load snapshot storage state");
+      await operations.locator("#persist-snapshot").click(); await operations.waitForFunction(() => document.querySelector("#snapshot-notice")?.textContent.includes("persisted"), null, { timeout: 5000 }); await operations.waitForFunction(() => document.querySelector("#snapshot-state")?.textContent.includes("1 stored"), null, { timeout: 5000 });
+      assert(await operations.locator("#verify-snapshot").isEnabled(), `Persisted evidence snapshot did not enable verification: state=${await operations.locator("#snapshot-state").textContent()} summary=${await operations.locator("#snapshot-summary").textContent()} notice=${await operations.locator("#notice").textContent()} disabled=${await operations.locator("#verify-snapshot").isDisabled()}`);
+      await operations.locator("#verify-snapshot").click(); await operations.waitForFunction(() => document.querySelector("#snapshot-notice")?.textContent.includes("verification:"), null, { timeout: 5000 });
+      await operations.locator("#sweep-snapshots").click(); await operations.waitForFunction(() => document.querySelector("#snapshot-notice")?.textContent.includes("Retention sweep complete"), null, { timeout: 5000 });
       assert(!operationsErrors.length, `Operations page errors: ${operationsErrors.join(" | ")}`);
       const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const mobileErrors = []; mobile.on("console", (message) => { if (message.type() === "error") mobileErrors.push(message.text()); }); mobile.on("pageerror", (error) => mobileErrors.push(error.message));
@@ -88,6 +94,6 @@ async function main() {
       assert(!adminErrors.length, `Admin page errors: ${adminErrors.join(" | ")}`);
     } finally { await browser.close(); }
     console.log(`Ops UI smoke test passed at ${baseUrl}`);
-  } finally { server.kill(); await rm(runtimeDir, { recursive: true, force: true }); }
+  } finally { await stopServer(server); await rm(runtimeDir, { recursive: true, force: true }); }
 }
 main().catch((error) => { console.error(error.stack || error.message); process.exit(1); });

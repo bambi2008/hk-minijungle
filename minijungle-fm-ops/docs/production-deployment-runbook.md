@@ -68,6 +68,8 @@ The pilot uses SQLite migration `2026-08-23.evidence-snapshot-v3`. Production us
 
 FM Lead/Platform Admin can verify a persisted snapshot with `POST /api/proof/evidence-snapshots/:snapshotId`. The endpoint recalculates the package hash and HMAC, persists the verification result and never upgrades an unsigned pilot snapshot to `verified`. A scheduled `POST /api/proof/evidence-snapshots/retention-sweep` or `npm.cmd run evidence:retention` marks expired standard snapshots as `expired`; it does not delete evidence and does not expire `legal-hold` records.
 
+The FM Lead `operations.html` page now exposes these controls under `ESG snapshot ledger`: `Persist current snapshot`, `Verify latest` and `Run retention sweep`. The panel shows the persisted count, verified count, latest snapshot ID, signature status, verification status, hash prefix and expiry. Pilot mode intentionally displays `unsigned`; a visible persisted record is not a signed ESG certification.
+
 ## Backup consistency check
 
 `npm.cmd run backup:runtime` records a `2026-08-23.runtime-backup-v2` manifest with `consistency.method: sqlite-vacuum-into` and a source integrity result. `npm.cmd run backup:smoke` copies the current pilot database into an isolated temporary runtime, creates a backup, verifies checksums and restores the database into staging, then checks SQLite integrity before deleting the temporary files. This proves the local backup contract only. Production still requires a managed PostgreSQL backup, off-host retention, encryption-key custody and a dated restore drill.

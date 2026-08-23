@@ -584,3 +584,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 44 - Evidence Snapshot Control Center v1
+
+- Official score remains **65%**. This batch makes the existing evidence ledger usable from Ops Today, but it does not create managed storage, signed pilot keys, external auditor acknowledgement or off-host retention evidence.
+- Capability added: FM Lead can persist the current server-built evidence package from the Ops page. The control center reads the latest persisted record and shows snapshot count, verified count, signature status, verification status, hash prefix and expiry.
+- Capability added: FM Lead can verify the latest persisted snapshot and run the retention sweep without leaving the operations console. The actions call the existing server-side hash/HMAC and expiry controls; they do not silently rewrite or delete evidence.
+- Safety boundary added: pilot mode visibly reports `unsigned`; the UI does not call an unsigned snapshot certified ESG evidence. Client and auditor portals remain read-only.
+- Reliability fixes added: Ops API reads use `cache: no-store` so storage state cannot lag after a write, and the Playwright UI smoke waits for the server child process to exit before deleting its temporary SQLite runtime.
+- Evidence added: browser smoke completes persist -> read-back -> verify -> retention sweep against temporary SQLite; full `npm.cmd run check` remains the release gate.
+- Honest boundary: the smoke uses pilot data and local SQLite. No managed PostgreSQL, immutable object storage, production HMAC secret manager, external verifier or accepted client/auditor delivery exists yet.
+- Target effect: evidence workflow completeness, operational UI and test reliability improve; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 44
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
