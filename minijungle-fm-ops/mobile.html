@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#164a31">
+  <title>DR FOREST Technician App</title>
+  <link rel="manifest" href="mobile-manifest.json">
+  <link rel="icon" href="assets/dr-forest-logo.png">
+  <link rel="stylesheet" href="mobile.css">
+  <link rel="stylesheet" href="mobile-extra.css">
+</head>
+<body>
+  <main class="shell">
+    <header>
+      <img src="assets/dr-forest-logo.png" alt="DR FOREST">
+      <div><p>FIELD SERVICE / TECHNICIAN APP</p><h1>Today&apos;s work</h1></div>
+      <span id="sync-state" class="state">Loading</span>
+    </header>
+    <section class="reminders" aria-labelledby="reminders-heading">
+      <div class="section-heading"><div><p>DO FIRST / MOBILE ACTIONS</p><h2 id="reminders-heading">Priority reminders</h2></div><span id="reminder-count" class="work-order">0 open</span></div>
+      <div id="reminder-list" class="reminder-list" aria-live="polite"></div>
+    </section>
+    <section class="route" aria-labelledby="route-heading">
+      <div class="section-heading"><div><p>ASSIGNED WORK / FIELD ROUTE</p><h2 id="route-heading">Select a stop</h2></div><button id="refresh" type="button" aria-label="Refresh route">Refresh</button></div>
+      <div id="route-list" class="route-list" aria-live="polite"></div>
+    </section>
+    <form id="capture-form" class="capture" hidden>
+      <div class="section-heading"><div><p>VISIT RECORD / FIELD CAPTURE</p><h2 id="asset-title"></h2></div><span id="work-order" class="work-order"></span></div>
+      <label>Module / MODULE<select id="module"><option value="">Whole wall / no module</option></select></label>
+      <div id="module-status" class="module-status" aria-live="polite"><span>No module selected</span></div>
+      <label>Water added (L)<input id="water" type="number" min="0" max="200" step="0.1" value="0"></label>
+      <label>Nutrient added (ml)<input id="nutrient" type="number" min="0" max="2000" step="1" value="0"></label>
+      <label>Visual health (0-100)<input id="health" type="number" min="0" max="100" step="1" value="80" required></label>
+      <label>Visit note<textarea id="notes" rows="3" placeholder="What changed, what needs follow-up"></textarea></label>
+      <label>Proof photo<input id="photo" type="file" accept="image/jpeg,image/png,image/webp" capture="environment"></label>
+      <p class="hint">Device readings appear when connected. Photo stays on this device until sync. Pilot limit: 2 MB.</p>
+      <div class="actions"><button id="queue" type="button" class="secondary">Save offline</button><button type="submit">Sync visit</button></div>
+    </form>
+    <section class="queue"><div class="section-heading"><div><p>OFFLINE QUEUE</p><h2>Pending sync</h2></div><div class="queue-actions"><span id="queue-count" class="work-order">0</span><button id="flush-queue" type="button" class="secondary">Sync queue</button></div></div><div id="queue-list"></div></section>
+  </main>
+  <script src="mobile.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DR FOREST Ops Today</title>
+  <link rel="icon" href="assets/dr-forest-logo.png">
+  <link rel="stylesheet" href="operations.css">
+</head>
+<body>
+  <main class="ops-shell">
+    <header class="ops-header"><a href="/" class="brand"><img src="assets/dr-forest-logo.png" alt="DR FOREST"><span><small>DR FOREST OPS</small><strong>Today</strong></span></a><div><a class="header-link" href="portal.html?role=client">Client portal</a><span id="identity">Hong Kong FM Lead</span><button id="refresh" type="button">Refresh</button></div></header>
+    <section class="summary" aria-label="Today summary"><div><span>Open reminders</span><strong id="open-count">--</strong></div><div><span>Stops</span><strong id="stop-count">--</strong></div><div><span>Modules</span><strong id="module-count">--</strong></div><div><span>Device gaps</span><strong id="device-gap-count">--</strong></div><div><span>Alerts</span><strong id="alert-count">--</strong></div><div><span>AI queue</span><strong id="ai-count">--</strong></div></section>
+    <section class="today-grid">
+      <div class="panel"><div class="panel-heading"><div><p>DO FIRST</p><h1>Priority reminders</h1></div><a href="mobile.html">Open technician app</a></div><div id="reminder-list" class="reminder-list"></div></div>
+      <div class="panel"><div class="panel-heading"><div><p>FIELD ROUTE</p><h1>Today&apos;s stops</h1></div><span id="route-state">Loading</span></div><div id="route-list" class="route-list"></div></div>
+    </section>
+    <section class="panel insight-panel"><div class="panel-heading"><div><p>EXCEPTIONS &amp; AI</p><h1>What needs attention</h1></div><a href="admin.html">Configure thresholds</a></div><div class="insight-grid"><div><p class="insight-label">ALERT QUEUE</p><div id="alerts-list" class="insight-list"></div></div><div><p class="insight-label">AI VISION QUEUE</p><div id="ai-list" class="insight-list"></div></div></div></section>
+    <section class="panel modules-panel"><div class="panel-heading"><div><p>MODULE HEALTH</p><h1>Device coverage</h1></div><a href="admin.html">Manage master data</a></div><div id="modules-list" class="modules-list"></div></section>
+    <p id="notice" class="notice" aria-live="polite"></p>
+  </main>
+  <script src="operations.js"></script>
+</body>
+</html>

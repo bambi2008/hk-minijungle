@@ -57,8 +57,12 @@ If a step adds backend tables or APIs but no usable UI, real integration, deploy
 
 Date: 2026-07-15
 
-Official production operations readiness is recalibrated to 62%.
+Official production operations readiness was recalibrated to 62% at the Step 10 baseline and moved to 65% after the controlled pilot/session/telemetry work. The current official score after Step 17 remains **65%**.
 
 Reason: Steps 1-10 built meaningful API, SQLite, permission, master-data, mobile-capture and proof-media metadata foundations, but the platform is still not ready for real 1,000+ module operations because it lacks production database deployment, real mobile app/offline queue, real object storage upload, sensor time-series/health scoring, production IAM, monitoring, backup/restore, and complete workflow UI.
 
-Architecture scaffold readiness may be described separately as roughly 70-75%, but that is not the official production score.
+Architecture scaffold readiness may be described separately as roughly 78% after the production gate, OIDC/JWKS verifier, signed-device protocol, PostgreSQL runtime adapter and encrypted backup contract. That is not the official production score.
+
+## Anti-inflation release gate
+
+The application must stay in `not-ready` for `DR_FOREST_ENV=production` until all of these are evidenced, not merely configured: full PostgreSQL master-data/device/telemetry migration, successful off-host restore drill, real signed-device pilot, repeated multi-client operations, monitoring/alert routing, AI provider evaluation and media malware scanning. These checks are represented by the `verified` evidence markers in `.env.production.example`. A local test, placeholder env value, generated module ID or investor demo cannot satisfy them.

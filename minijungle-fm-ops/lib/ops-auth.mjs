@@ -27,12 +27,26 @@ const roleDefinitions = {
       "master.data.write",
       "master.data.import",
       "master.data.validate",
+      "device.registry.read",
+      "device.registry.write",
+      "device.captures.read",
       "mobile.route.read",
+      "mobile.reminders.read",
+      "mobile.reminders.write",
       "mobile.capture.read",
       "mobile.capture.write",
       "proof.media.read",
       "proof.media.write",
       "proof.media.verify"
+      ,"telemetry.read"
+      ,"telemetry.write"
+      ,"telemetry.health.read"
+      ,"telemetry.alerts.read"
+      ,"telemetry.alerts.write"
+      ,"ai.diagnosis.read"
+      ,"ai.diagnosis.request"
+      ,"ai.diagnosis.write"
+      ,"observability.read"
     ],
     actionTypes: ["*"]
   },
@@ -46,10 +60,20 @@ const roleDefinitions = {
       "ops.state.read",
       "ops.state.write.action",
       "mobile.route.read",
+      "mobile.reminders.read",
+      "mobile.reminders.write",
+      "device.registry.read",
+      "device.captures.read",
       "mobile.capture.read",
       "mobile.capture.write",
       "proof.media.read",
       "proof.media.write"
+      ,"telemetry.read"
+      ,"telemetry.write"
+      ,"telemetry.health.read"
+      ,"telemetry.alerts.read"
+      ,"ai.diagnosis.read"
+      ,"ai.diagnosis.request"
     ],
     actionTypes: [
       "workorder.complete",
@@ -68,6 +92,12 @@ const roleDefinitions = {
       "ops.events.read",
       "ops.state.read",
       "proof.media.read"
+      ,"device.registry.read"
+      ,"device.captures.read"
+      ,"telemetry.read"
+      ,"telemetry.health.read"
+      ,"telemetry.alerts.read"
+      ,"ai.diagnosis.read"
     ],
     actionTypes: []
   },
@@ -83,6 +113,12 @@ const roleDefinitions = {
       "data.quality.read",
       "auth.policy.read",
       "proof.media.read"
+      ,"device.registry.read"
+      ,"device.captures.read"
+      ,"telemetry.read"
+      ,"telemetry.health.read"
+      ,"telemetry.alerts.read"
+      ,"ai.diagnosis.read"
     ],
     actionTypes: []
   }
@@ -160,6 +196,26 @@ function publicPrincipal(principal, isDefault = false) {
   };
 }
 
+export function authContextFromSession(session) {
+  return publicPrincipal(session, false);
+}
+
+export function authContextFromOidcClaims(claims) {
+  const roleClaim = process.env.DR_FOREST_IDP_ROLE_CLAIM || "role";
+  const clientIdsClaim = process.env.DR_FOREST_IDP_CLIENT_IDS_CLAIM || "client_ids";
+  const roleId = String(claims?.[roleClaim] || claims?.["https://dr-forest.com/role"] || "client-viewer").trim();
+  const clientIdsValue = claims?.[clientIdsClaim] ?? claims?.["https://dr-forest.com/client_ids"] ?? [];
+  const clientIds = Array.isArray(clientIdsValue) ? clientIdsValue.map((item) => String(item).trim()).filter(Boolean) : String(clientIdsValue || "").split(",").map((item) => item.trim()).filter(Boolean);
+  const principal = {
+    id: `oidc:${String(claims?.sub || "unknown")}`,
+    name: String(claims?.name || claims?.email || claims?.preferred_username || claims?.sub || "OIDC user"),
+    roleId: roleDefinitions[roleId] ? roleId : "client-viewer",
+    tenantId: String(claims?.tenant_id || claims?.["https://dr-forest.com/tenant_id"] || process.env.DR_FOREST_DEFAULT_TENANT || "dr-forest-hk"),
+    clientIds: clientIds.length ? clientIds : ["*"]
+  };
+  return publicPrincipal(principal, false);
+}
+
 function tokenFromRequest(req) {
   const headerPrincipal = req.headers["x-dr-forest-principal"];
   const headerSession = req.headers["x-dr-forest-session"];
@@ -169,6 +225,9 @@ function tokenFromRequest(req) {
 }
 
 export function resolveAuthContext(req) {
+  if (String(process.env.DR_FOREST_ENV || "pilot").trim().toLowerCase() === "production") {
+    throw authError(503, "Production identity adapter is not configured; demo principals are disabled", "AUTH_OIDC_REQUIRED");
+  }
   const token = tokenFromRequest(req);
   const isDefault = !token;
   const principal = token

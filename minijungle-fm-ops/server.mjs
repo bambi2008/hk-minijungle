@@ -1,6 +1,6 @@
 import { createServer } from "node:http";
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
-import { createHash } from "node:crypto";
+import { createHash, createHmac, randomUUID } from "node:crypto";
 import { extname, join, normalize } from "node:path";
 import {
   buildDataQualityReport,
@@ -18,6 +18,15 @@ import {
   saveSqliteOpsStateSnapshot
 } from "./lib/ops-sqlite-store.mjs";
 import {
+  appendPostgresOpsEvent,
+  applyPostgresOpsStateAction,
+  closePostgresPools,
+  readPostgresOpsEvents,
+  readPostgresOpsState,
+  readPostgresOpsStorageHealth,
+  savePostgresOpsStateSnapshot
+} from "./lib/ops-postgres-store.mjs";
+import {
   importSqliteMasterData,
   readSqliteMasterDataHealth,
   readSqliteMasterDataset,
@@ -27,19 +36,159 @@ import {
   upsertSqliteWorkOrder
 } from "./lib/ops-master-data-store.mjs";
 import {
+  importPostgresMasterData,
+  readPostgresMasterDataHealth,
+  readPostgresMasterDataset,
+  upsertPostgresClient,
+  upsertPostgresLivingAsset,
+  upsertPostgresSensorReading,
+  upsertPostgresWorkOrder
+} from "./lib/ops-postgres-master-data-store.mjs";
+import {
+  listPostgresModules,
+  readPostgresModuleStorageHealth,
+  upsertPostgresModule
+} from "./lib/ops-postgres-module-store.mjs";
+import {
+  appendPostgresSensorReading,
+  appendPostgresSensorReadings,
+  calculatePostgresSensorStability,
+  listPostgresLatestReadingsByModules,
+  listPostgresSensorHistory,
+  readPostgresTelemetryStorageHealth
+} from "./lib/ops-postgres-telemetry-store.mjs";
+import {
+  listPostgresDevices,
+  listPostgresDeviceCameraCaptures,
+  consumePostgresDeviceReplay,
+  readPostgresDeviceByKey,
+  readPostgresDeviceCameraBytes,
+  readPostgresDeviceCameraCapture,
+  readPostgresDeviceStorageHealth,
+  recordPostgresDeviceIngestion,
+  recordPostgresDeviceIngestions,
+  registerPostgresDevice,
+  savePostgresDeviceCameraCapture,
+  touchPostgresDevice,
+  updatePostgresDevice
+} from "./lib/ops-postgres-device-store.mjs";
+import {
   listSqliteMobileCaptureBatches,
   readSqliteMobileCaptureStorageHealth,
   saveSqliteMobileCaptureBatch
 } from "./lib/ops-mobile-store.mjs";
 import {
+  listPostgresMobileCaptureBatches,
+  readPostgresMobileCaptureStorageHealth,
+  savePostgresMobileCaptureBatch
+} from "./lib/ops-postgres-mobile-store.mjs";
+import {
+  appendSqliteSensorReading,
+  appendSqliteSensorReadings,
+  calculateSqliteSensorStability,
+  listSqliteLatestReadingsByModules,
+  listSqliteSensorHistory,
+  readSqliteTelemetryStorageHealth
+} from "./lib/ops-telemetry-store.mjs";
+import {
+  evaluateSqliteTelemetryAlerts,
+  evaluateSqliteTelemetryAlertsBatch,
+  listSqliteAlertRules,
+  listSqliteAlerts,
+  readSqliteAlertStorageHealth,
+  registerSqliteAlertRule,
+  updateSqliteAlert
+} from "./lib/ops-alert-store.mjs";
+import {
+  evaluatePostgresTelemetryAlerts,
+  evaluatePostgresTelemetryAlertsBatch,
+  listPostgresAlertRules,
+  listPostgresAlerts,
+  readPostgresAlertStorageHealth,
+  registerPostgresAlertRule,
+  updatePostgresAlert
+} from "./lib/ops-postgres-alert-store.mjs";
+import {
+  createSqliteVisualDiagnosis,
+  listSqliteVisualDiagnoses,
+  readSqliteAiVisionStorageHealth,
+  updateSqliteVisualDiagnosis
+} from "./lib/ops-ai-store.mjs";
+import {
+  createPostgresVisualDiagnosis,
+  listPostgresVisualDiagnoses,
+  readPostgresAiVisionStorageHealth,
+  updatePostgresVisualDiagnosis
+} from "./lib/ops-postgres-ai-store.mjs";
+import {
+  listSqliteModules,
+  readSqliteModuleStorageHealth,
+  upsertSqliteModule
+} from "./lib/ops-module-store.mjs";
+import {
+  listSqliteDevices,
+  listSqliteDeviceCameraCaptures,
+  consumeSqliteDeviceReplay,
+  readSqliteDeviceByKey,
+  readSqliteDeviceCameraBytes,
+  readSqliteDeviceCameraCapture,
+  readSqliteDeviceStorageHealth,
+  recordSqliteDeviceIngestion,
+  recordSqliteDeviceIngestions,
+  registerSqliteDevice,
+  saveSqliteDeviceCameraCapture,
+  touchSqliteDevice,
+  updateSqliteDevice
+} from "./lib/ops-device-store.mjs";
+import {
+  listSqliteReminderActions,
+  readSqliteReminderStorageHealth,
+  saveSqliteReminderAction
+} from "./lib/ops-reminder-store.mjs";
+import {
+  listPostgresReminderActions,
+  readPostgresReminderStorageHealth,
+  savePostgresReminderAction
+} from "./lib/ops-postgres-reminder-store.mjs";
+import {
+  enqueueSqliteNotification,
+  listSqliteNotifications,
+  readSqliteNotificationStorageHealth
+} from "./lib/ops-notification-store.mjs";
+import {
+  enqueuePostgresNotification,
+  listPostgresNotifications,
+  readPostgresNotificationStorageHealth
+} from "./lib/ops-postgres-notification-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
+  markSqliteProofMediaStorageProvider,
   readSqliteProofMediaObject,
   readSqliteProofMediaStorageHealth,
   registerSqliteProofMediaEvidence,
   verifySqliteProofMediaEvidence
 } from "./lib/ops-proof-media-store.mjs";
 import {
+  createPostgresProofMediaIntent,
+  listPostgresProofMediaObjects,
+  markPostgresProofMediaStorageProvider,
+  readPostgresProofMediaObject,
+  readPostgresProofMediaStorageHealth,
+  registerPostgresProofMediaEvidence,
+  verifyPostgresProofMediaEvidence
+} from "./lib/ops-postgres-proof-media-store.mjs";
+import { getS3Object, putS3Object } from "./lib/ops-object-storage.mjs";
+import {
+  createPilotSession,
+  ensurePilotAccount,
+  readPilotSession,
+  revokePilotSession,
+  sessionCookie,
+  sessionTokenFromRequest
+} from "./lib/ops-session-store.mjs";
+import {
+  authContextFromSession,
   authPolicySummary,
   canAccessClient,
   filterByClientScope,
@@ -50,6 +199,14 @@ import {
   requireSnapshotWriteAccess,
   resolveAuthContext
 } from "./lib/ops-auth.mjs";
+import {
+  assertBrowserOrigin,
+  constantTimeEqual,
+  enforceRateLimit,
+  productionConfigReport
+} from "./lib/ops-production-config.mjs";
+import { oidcHealth, resolveOidcAuthContext } from "./lib/ops-oidc.mjs";
+import { observabilitySnapshot, recordApplicationError, recordHttpRequest, recordOperationalEvent } from "./lib/ops-observability.mjs";
 
 const root = process.cwd();
 const dataRoot = join(root, "data");
@@ -62,7 +219,13 @@ const host = process.env.HOST || "127.0.0.1";
 const maxJsonBodyBytes = 64 * 1024;
 const maxProofUploadBytes = 5 * 1024 * 1024;
 const maxProofUploadPayloadBytes = 7 * 1024 * 1024;
+const maxDeviceReadingBatchSize = Math.min(Math.max(Number(process.env.DR_FOREST_DEVICE_MAX_READING_BATCH || 100) || 100, 1), 1000);
+const deviceIngestionRateLimitPerIp = Math.min(Math.max(Number(process.env.DR_FOREST_DEVICE_INGESTION_IP_LIMIT || 1200) || 1200, 1), 10000);
+const deviceIngestionRateLimitPerDevice = Math.min(Math.max(Number(process.env.DR_FOREST_DEVICE_INGESTION_DEVICE_LIMIT || 300) || 300, 1), 5000);
+const deviceIngestionRateLimitPerGateway = Math.min(Math.max(Number(process.env.DR_FOREST_DEVICE_INGESTION_GATEWAY_LIMIT || 1200) || 1200, 1), 10000);
 const proofMediaRoot = join(runtimeRoot, "proof-media");
+let draining = false;
+let shutdownPromise = null;
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -91,6 +254,346 @@ const scopedDataFiles = {
   aiInsights: "ai-insights.json"
 };
 
+function productionMasterDataEnabled() {
+  return productionConfigReport().production;
+}
+
+async function readMasterDataDataset() {
+  return productionMasterDataEnabled()
+    ? readPostgresMasterDataset(runtimeDbPath, dataRoot)
+    : readSqliteMasterDataset(runtimeDbPath, dataRoot);
+}
+
+async function readMasterDataHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresMasterDataHealth(runtimeDbPath, dataRoot)
+    : readSqliteMasterDataHealth(runtimeDbPath, dataRoot);
+}
+
+async function importMasterData() {
+  return productionMasterDataEnabled()
+    ? importPostgresMasterData(runtimeDbPath, dataRoot)
+    : importSqliteMasterData(runtimeDbPath, dataRoot);
+}
+
+async function upsertMasterDataClient(input) {
+  return productionMasterDataEnabled()
+    ? upsertPostgresClient(runtimeDbPath, dataRoot, input)
+    : upsertSqliteClient(runtimeDbPath, dataRoot, input);
+}
+
+async function upsertMasterDataLivingAsset(input) {
+  return productionMasterDataEnabled()
+    ? upsertPostgresLivingAsset(runtimeDbPath, dataRoot, input)
+    : upsertSqliteLivingAsset(runtimeDbPath, dataRoot, input);
+}
+
+async function upsertMasterDataWorkOrder(input) {
+  return productionMasterDataEnabled()
+    ? upsertPostgresWorkOrder(runtimeDbPath, dataRoot, input)
+    : upsertSqliteWorkOrder(runtimeDbPath, dataRoot, input);
+}
+
+async function upsertMasterDataSensorReading(input) {
+  return productionMasterDataEnabled()
+    ? upsertPostgresSensorReading(runtimeDbPath, dataRoot, input)
+    : upsertSqliteSensorReading(runtimeDbPath, dataRoot, input);
+}
+
+async function listModules(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresModules(runtimeDbPath, dataRoot, options)
+    : listSqliteModules(runtimeDbPath, dataRoot, options);
+}
+
+async function upsertModule(input) {
+  return productionMasterDataEnabled()
+    ? upsertPostgresModule(runtimeDbPath, dataRoot, input)
+    : upsertSqliteModule(runtimeDbPath, dataRoot, input);
+}
+
+async function readModuleStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresModuleStorageHealth(runtimeDbPath, dataRoot)
+    : readSqliteModuleStorageHealth(runtimeDbPath, dataRoot);
+}
+
+async function appendSensorReading(input) {
+  return productionMasterDataEnabled()
+    ? appendPostgresSensorReading(runtimeDbPath, input)
+    : appendSqliteSensorReading(runtimeDbPath, input);
+}
+
+async function appendSensorReadings(inputs) {
+  return productionMasterDataEnabled()
+    ? appendPostgresSensorReadings(runtimeDbPath, inputs)
+    : appendSqliteSensorReadings(runtimeDbPath, inputs);
+}
+
+async function listLatestReadingsByModules(moduleIds) {
+  return productionMasterDataEnabled()
+    ? listPostgresLatestReadingsByModules(runtimeDbPath, moduleIds)
+    : listSqliteLatestReadingsByModules(runtimeDbPath, moduleIds);
+}
+
+async function listSensorHistory(wallId, limit, moduleId) {
+  return productionMasterDataEnabled()
+    ? listPostgresSensorHistory(runtimeDbPath, wallId, limit, moduleId)
+    : listSqliteSensorHistory(runtimeDbPath, wallId, limit, moduleId);
+}
+
+async function calculateSensorStability(wallId) {
+  return productionMasterDataEnabled()
+    ? calculatePostgresSensorStability(runtimeDbPath, wallId)
+    : calculateSqliteSensorStability(runtimeDbPath, wallId);
+}
+
+async function readTelemetryStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresTelemetryStorageHealth(runtimeDbPath)
+    : readSqliteTelemetryStorageHealth(runtimeDbPath);
+}
+
+async function listDevices(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresDevices(runtimeDbPath, dataRoot, options)
+    : listSqliteDevices(runtimeDbPath, dataRoot, options);
+}
+
+async function registerDevice(input, options = {}) {
+  return productionMasterDataEnabled()
+    ? registerPostgresDevice(runtimeDbPath, dataRoot, input, options)
+    : registerSqliteDevice(runtimeDbPath, dataRoot, input, options);
+}
+
+async function updateDevice(id, input) {
+  return productionMasterDataEnabled()
+    ? updatePostgresDevice(runtimeDbPath, dataRoot, id, input)
+    : updateSqliteDevice(runtimeDbPath, dataRoot, id, input);
+}
+
+async function readDeviceByKey(deviceKey) {
+  return productionMasterDataEnabled()
+    ? readPostgresDeviceByKey(runtimeDbPath, deviceKey)
+    : readSqliteDeviceByKey(runtimeDbPath, deviceKey);
+}
+
+async function consumeDeviceReplay(input) {
+  return productionMasterDataEnabled()
+    ? consumePostgresDeviceReplay(runtimeDbPath, input)
+    : consumeSqliteDeviceReplay(runtimeDbPath, input);
+}
+
+async function touchDevice(deviceId, input) {
+  return productionMasterDataEnabled()
+    ? touchPostgresDevice(runtimeDbPath, deviceId, input)
+    : touchSqliteDevice(runtimeDbPath, deviceId, input);
+}
+
+async function recordDeviceIngestion(input) {
+  return productionMasterDataEnabled()
+    ? recordPostgresDeviceIngestion(runtimeDbPath, input)
+    : recordSqliteDeviceIngestion(runtimeDbPath, input);
+}
+
+async function recordDeviceIngestions(inputs) {
+  return productionMasterDataEnabled()
+    ? recordPostgresDeviceIngestions(runtimeDbPath, inputs)
+    : recordSqliteDeviceIngestions(runtimeDbPath, inputs);
+}
+
+async function saveDeviceCameraCapture(input, fileBytes = null) {
+  return productionMasterDataEnabled()
+    ? savePostgresDeviceCameraCapture(runtimeDbPath, dataRoot, runtimeRoot, input, fileBytes)
+    : saveSqliteDeviceCameraCapture(runtimeDbPath, dataRoot, runtimeRoot, input, fileBytes);
+}
+
+async function readDeviceCameraCapture(captureId) {
+  return productionMasterDataEnabled()
+    ? readPostgresDeviceCameraCapture(runtimeDbPath, captureId)
+    : readSqliteDeviceCameraCapture(runtimeDbPath, captureId);
+}
+
+async function readDeviceCameraBytes(captureId) {
+  return productionMasterDataEnabled()
+    ? readPostgresDeviceCameraBytes(runtimeDbPath, captureId)
+    : readSqliteDeviceCameraBytes(runtimeDbPath, captureId);
+}
+
+async function listDeviceCameraCaptures(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresDeviceCameraCaptures(runtimeDbPath, dataRoot, options)
+    : listSqliteDeviceCameraCaptures(runtimeDbPath, dataRoot, options);
+}
+
+async function readDeviceStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresDeviceStorageHealth(runtimeDbPath, dataRoot)
+    : readSqliteDeviceStorageHealth(runtimeDbPath, dataRoot);
+}
+
+async function evaluateTelemetryAlerts(reading, clientId) {
+  return productionMasterDataEnabled()
+    ? evaluatePostgresTelemetryAlerts(runtimeDbPath, reading, clientId)
+    : evaluateSqliteTelemetryAlerts(runtimeDbPath, reading, clientId);
+}
+
+async function evaluateTelemetryAlertsBatch(readings, clientId) {
+  return productionMasterDataEnabled()
+    ? evaluatePostgresTelemetryAlertsBatch(runtimeDbPath, readings, clientId)
+    : evaluateSqliteTelemetryAlertsBatch(runtimeDbPath, readings, clientId);
+}
+
+async function listAlertRules(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresAlertRules(runtimeDbPath, options)
+    : listSqliteAlertRules(runtimeDbPath, options);
+}
+
+async function registerAlertRule(input) {
+  return productionMasterDataEnabled()
+    ? registerPostgresAlertRule(runtimeDbPath, input)
+    : registerSqliteAlertRule(runtimeDbPath, input);
+}
+
+async function listAlerts(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresAlerts(runtimeDbPath, options)
+    : listSqliteAlerts(runtimeDbPath, options);
+}
+
+async function updateAlert(id, input) {
+  return productionMasterDataEnabled()
+    ? updatePostgresAlert(runtimeDbPath, id, input)
+    : updateSqliteAlert(runtimeDbPath, id, input);
+}
+
+async function readAlertStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresAlertStorageHealth(runtimeDbPath)
+    : readSqliteAlertStorageHealth(runtimeDbPath);
+}
+
+async function createVisualDiagnosis(input) {
+  return productionMasterDataEnabled()
+    ? createPostgresVisualDiagnosis(runtimeDbPath, input)
+    : createSqliteVisualDiagnosis(runtimeDbPath, input);
+}
+
+async function listVisualDiagnoses(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresVisualDiagnoses(runtimeDbPath, options)
+    : listSqliteVisualDiagnoses(runtimeDbPath, options);
+}
+
+async function updateVisualDiagnosis(id, input) {
+  return productionMasterDataEnabled()
+    ? updatePostgresVisualDiagnosis(runtimeDbPath, id, input)
+    : updateSqliteVisualDiagnosis(runtimeDbPath, id, input);
+}
+
+async function readAiVisionStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresAiVisionStorageHealth(runtimeDbPath)
+    : readSqliteAiVisionStorageHealth(runtimeDbPath);
+}
+
+async function listMobileCaptureBatches() {
+  return productionMasterDataEnabled()
+    ? listPostgresMobileCaptureBatches(runtimeDbPath)
+    : listSqliteMobileCaptureBatches(runtimeDbPath);
+}
+
+async function saveMobileCaptureBatch(input) {
+  return productionMasterDataEnabled()
+    ? savePostgresMobileCaptureBatch(runtimeDbPath, input)
+    : saveSqliteMobileCaptureBatch(runtimeDbPath, input);
+}
+
+async function readMobileCaptureStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresMobileCaptureStorageHealth(runtimeDbPath)
+    : readSqliteMobileCaptureStorageHealth(runtimeDbPath);
+}
+
+async function listReminderActions() {
+  return productionMasterDataEnabled()
+    ? listPostgresReminderActions(runtimeDbPath)
+    : listSqliteReminderActions(runtimeDbPath);
+}
+
+async function saveReminderAction(input) {
+  return productionMasterDataEnabled()
+    ? savePostgresReminderAction(runtimeDbPath, input)
+    : saveSqliteReminderAction(runtimeDbPath, input);
+}
+
+async function readReminderStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresReminderStorageHealth(runtimeDbPath)
+    : readSqliteReminderStorageHealth(runtimeDbPath);
+}
+
+async function enqueueNotification(input) {
+  return productionMasterDataEnabled()
+    ? enqueuePostgresNotification(runtimeDbPath, input)
+    : enqueueSqliteNotification(runtimeDbPath, input);
+}
+
+async function readNotificationStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresNotificationStorageHealth(runtimeDbPath)
+    : readSqliteNotificationStorageHealth(runtimeDbPath);
+}
+
+async function listNotifications(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresNotifications(runtimeDbPath, options)
+    : listSqliteNotifications(runtimeDbPath, options);
+}
+
+async function createProofMediaIntent(input) {
+  return productionMasterDataEnabled()
+    ? createPostgresProofMediaIntent(runtimeDbPath, input)
+    : createSqliteProofMediaIntent(runtimeDbPath, input);
+}
+
+async function listProofMediaObjects() {
+  return productionMasterDataEnabled()
+    ? listPostgresProofMediaObjects(runtimeDbPath)
+    : listSqliteProofMediaObjects(runtimeDbPath);
+}
+
+async function readProofMediaObject(mediaId) {
+  return productionMasterDataEnabled()
+    ? readPostgresProofMediaObject(runtimeDbPath, mediaId)
+    : readSqliteProofMediaObject(runtimeDbPath, mediaId);
+}
+
+async function registerProofMediaEvidence(input) {
+  return productionMasterDataEnabled()
+    ? registerPostgresProofMediaEvidence(runtimeDbPath, input)
+    : registerSqliteProofMediaEvidence(runtimeDbPath, input);
+}
+
+async function markProofMediaStorageProvider(mediaId, provider) {
+  return productionMasterDataEnabled()
+    ? markPostgresProofMediaStorageProvider(runtimeDbPath, mediaId, provider)
+    : markSqliteProofMediaStorageProvider(runtimeDbPath, mediaId, provider);
+}
+
+async function verifyProofMediaEvidence(mediaId, input) {
+  return productionMasterDataEnabled()
+    ? verifyPostgresProofMediaEvidence(runtimeDbPath, mediaId, input)
+    : verifySqliteProofMediaEvidence(runtimeDbPath, mediaId, input);
+}
+
+async function readProofMediaStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresProofMediaStorageHealth(runtimeDbPath)
+    : readSqliteProofMediaStorageHealth(runtimeDbPath);
+}
+
 function resolvePath(url) {
   const requestUrl = (url || "/").replace(/^\/+/, "/");
   const pathname = new URL(requestUrl, `http://${host}:${port}`).pathname;
@@ -102,7 +605,7 @@ function resolvePath(url) {
 
 async function readJsonData(key) {
   if (sqliteMasterDataKeys.has(key)) {
-    const dataset = await readSqliteMasterDataset(runtimeDbPath, dataRoot);
+    const dataset = await readMasterDataDataset();
     const data = {
       clients: dataset.clients,
       walls: dataset.walls,
@@ -124,23 +627,41 @@ async function readJsonFile(filename) {
 }
 
 async function readOpsEvents() {
-  return readSqliteOpsEvents(runtimeDbPath);
+  return productionConfigReport().production ? readPostgresOpsEvents() : readSqliteOpsEvents(runtimeDbPath);
 }
 
 async function appendOpsEvent(event) {
-  return appendSqliteOpsEvent(runtimeDbPath, event);
+  recordOperationalEvent(event?.type);
+  const result = productionConfigReport().production ? await appendPostgresOpsEvent(event) : await appendSqliteOpsEvent(runtimeDbPath, event);
+  if (event?.type === "telemetry.alert.opened") {
+    await enqueueNotification({
+      id: `NTF-ALERT-${event.entityId}`,
+      channel: "webhook",
+      eventType: event.type,
+      severity: event.payload?.severity || "warning",
+      clientId: event.clientId,
+      wallId: event.wallId,
+      alertId: event.entityId,
+      payload: event
+    });
+  }
+  return result;
 }
 
 async function readOpsState() {
-  return readSqliteOpsState(runtimeDbPath);
+  return productionConfigReport().production ? readPostgresOpsState() : readSqliteOpsState(runtimeDbPath);
 }
 
 async function saveOpsStateSnapshot(input, event = null) {
-  return saveSqliteOpsStateSnapshot(runtimeDbPath, input, event);
+  return productionConfigReport().production ? savePostgresOpsStateSnapshot(input, event) : saveSqliteOpsStateSnapshot(runtimeDbPath, input, event);
 }
 
 async function applyOpsStateAction(input, event = null) {
-  return applySqliteOpsStateAction(runtimeDbPath, input, event);
+  return productionConfigReport().production ? applyPostgresOpsStateAction(input, event) : applySqliteOpsStateAction(runtimeDbPath, input, event);
+}
+
+async function readOpsStorageHealth() {
+  return productionConfigReport().production ? readPostgresOpsStorageHealth() : readSqliteOpsStorageHealth(runtimeDbPath);
 }
 
 async function buildEntityClientResolver() {
@@ -216,10 +737,15 @@ async function filterOpsStateForAuth(snapshot, auth) {
   };
 }
 
-function sendJson(res, status, payload) {
+function sendJson(res, status, payload, headers = {}) {
   res.writeHead(status, {
     "Content-Type": "application/json; charset=utf-8",
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer",
+    "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
+    ...headers
   });
   res.end(JSON.stringify(payload, null, 2));
 }
@@ -227,12 +753,29 @@ function sendJson(res, status, payload) {
 function sendText(res, status, message) {
   res.writeHead(status, {
     "Content-Type": "text/plain; charset=utf-8",
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY",
+    "Referrer-Policy": "no-referrer"
   });
   res.end(message);
 }
 
 async function readJsonBody(req, maxBytes = maxJsonBodyBytes) {
+  const contentType = String(req.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
+  if (contentType !== "application/json") {
+    const error = new Error("JSON request body must use Content-Type: application/json");
+    error.status = 415;
+    error.code = "JSON_CONTENT_TYPE_REQUIRED";
+    throw error;
+  }
+  const declaredLength = Number(req.headers["content-length"] || 0);
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    const error = new Error("Request body too large");
+    error.status = 413;
+    error.code = "REQUEST_BODY_TOO_LARGE";
+    throw error;
+  }
   let size = 0;
   const chunks = [];
 
@@ -241,13 +784,15 @@ async function readJsonBody(req, maxBytes = maxJsonBodyBytes) {
     if (size > maxBytes) {
       const error = new Error("Request body too large");
       error.status = 413;
+      error.code = "REQUEST_BODY_TOO_LARGE";
       throw error;
     }
     chunks.push(chunk);
   }
 
+  req.rawBody = Buffer.concat(chunks);
   if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  return JSON.parse(req.rawBody.toString("utf8"));
 }
 
 function activeWorkorders(workorders) {
@@ -402,6 +947,9 @@ async function buildMobileRoute(auth) {
   const proofRecords = proofData.records || [];
   const sensors = sensorData.readings || [];
   const incidents = incidentData.incidents || [];
+  const modules = await listModules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+  const modulesByWall = new Map();
+  for (const module of modules) modulesByWall.set(module.assetId, [...(modulesByWall.get(module.assetId) || []), module]);
 
   return activeWorkorders(workorders)
     .filter((order) => wallById.has(order.wallId))
@@ -411,6 +959,7 @@ async function buildMobileRoute(auth) {
       const wallProof = proofRecords.filter((item) => item.wallId === wall.id);
       const wallSensors = sensors.filter((item) => item.wallId === wall.id);
       const wallIncidents = incidents.filter((item) => item.wallId === wall.id);
+      const wallModules = modulesByWall.get(wall.id) || [];
 
       return {
         workOrderId: order.id,
@@ -425,6 +974,8 @@ async function buildMobileRoute(auth) {
           name: client?.name || wall.clientId,
           district: client?.district || null
         },
+        assetName: wall.name,
+        clientName: client?.name || wall.clientId,
         asset: {
           id: wall.id,
           name: wall.name,
@@ -439,10 +990,92 @@ async function buildMobileRoute(auth) {
           openIncidents: openIncidents(wallIncidents).length,
           activeSensorAlerts: wallSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).length,
           proofRecords: wallProof.length
-        }
+        },
+        modules: wallModules.map((module) => ({ id: module.id, label: module.label, zone: module.zone, status: module.status, cameraId: module.cameraId, monitoringDevices: module.monitoringDevices })),
+        incidents: openIncidents(wallIncidents).map((incident) => ({ id: incident.id, severity: incident.severity, category: incident.category, recommendedAction: incident.recommendedAction })),
+        sensorAlerts: wallSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).map((sensor) => ({ id: sensor.id, type: sensor.type, status: sensor.status, action: sensor.action }))
       };
     })
     .sort((a, b) => String(a.due || "").localeCompare(String(b.due || "")) || a.workOrderId.localeCompare(b.workOrderId));
+}
+
+async function buildMobileReminders(auth, includeCompleted = false) {
+  const [route, actions] = await Promise.all([buildMobileRoute(auth), listReminderActions()]);
+  const actionById = new Map(actions.map((action) => [action.reminderId, action]));
+  const reminders = [];
+  for (const stop of route) {
+    const workorderReminderId = `reminder:workorder:${stop.workOrderId}`;
+    reminders.push({
+      id: workorderReminderId,
+      sourceType: "workorder",
+      sourceId: stop.workOrderId,
+      title: `${stop.asset.name} visit`,
+      reason: `${stop.workOrder.type || "Service visit"} · ${stop.due || "scheduled"}`,
+      priority: stop.priority || "medium",
+      due: stop.due || null,
+      clientId: stop.clientId,
+      wallId: stop.wallId,
+      workorderId: stop.workOrderId,
+      status: actionById.get(workorderReminderId)?.status || "open",
+      mobileAction: {
+        actionType: "visit-record",
+        label: "Start visit",
+        path: `/mobile.html?workOrderId=${encodeURIComponent(stop.workOrderId)}&wallId=${encodeURIComponent(stop.wallId)}`,
+        requiredCaptureTypes: ["photo", "water", "nutrient", "health-check"],
+        moduleSelection: "optional-before-capture"
+      }
+    });
+
+    for (const incident of stop.incidents || []) {
+      const reminderId = `reminder:incident:${incident.id}`;
+      reminders.push({
+        id: reminderId,
+        sourceType: "incident",
+        sourceId: incident.id,
+        title: `${stop.asset.name}: ${incident.category || "exception"}`,
+        reason: incident.recommendedAction || "Inspect and record the exception",
+        priority: incident.severity || "high",
+        due: stop.due || null,
+        clientId: stop.clientId,
+        wallId: stop.wallId,
+        workorderId: stop.workOrderId,
+        status: actionById.get(reminderId)?.status || "open",
+        mobileAction: {
+          actionType: "record-exception",
+          label: "Inspect on phone",
+          path: `/mobile.html?workOrderId=${encodeURIComponent(stop.workOrderId)}&wallId=${encodeURIComponent(stop.wallId)}&mode=exception`,
+          requiredCaptureTypes: ["photo", "exception"],
+          moduleSelection: "recommended"
+        }
+      });
+    }
+
+    if ((stop.sensorAlerts || []).length) {
+      const reminderId = `reminder:sensors:${stop.wallId}`;
+      reminders.push({
+        id: reminderId,
+        sourceType: "sensor",
+        sourceId: stop.wallId,
+        title: `${stop.asset.name}: device check`,
+        reason: `${stop.sensorAlerts.length} sensor alert${stop.sensorAlerts.length === 1 ? "" : "s"} need a field check`,
+        priority: "high",
+        due: stop.due || null,
+        clientId: stop.clientId,
+        wallId: stop.wallId,
+        workorderId: stop.workOrderId,
+        status: actionById.get(reminderId)?.status || "open",
+        mobileAction: {
+          actionType: "inspect-sensor",
+          label: "Check devices",
+          path: `/mobile.html?workOrderId=${encodeURIComponent(stop.workOrderId)}&wallId=${encodeURIComponent(stop.wallId)}&mode=sensor`,
+          requiredCaptureTypes: ["photo", "health-check"],
+          moduleSelection: "recommended"
+        }
+      });
+    }
+  }
+  const visible = includeCompleted ? reminders : reminders.filter((reminder) => reminder.status !== "completed");
+  return { items: visible, counts: { open: reminders.filter((item) => item.status !== "completed").length, completed: reminders.filter((item) => item.status === "completed").length, total: reminders.length } };
 }
 
 function validationError(message, code = "VALIDATION_ERROR") {
@@ -478,16 +1111,23 @@ async function validateMobileCaptureScope(auth, batch) {
   if (wallClientId !== clientId || workOrderClientId !== clientId) {
     throw validationError("mobile capture wall, work order and client do not match", "MOBILE_CAPTURE_SCOPE_MISMATCH");
   }
+
+  if (batch.moduleId) {
+    const module = (await listModules({ wallId: batch.wallId })).find((item) => item.id === batch.moduleId);
+    if (!module || module.clientId !== clientId) throw validationError("mobile capture module does not belong to the selected wall and client", "MOBILE_CAPTURE_MODULE_SCOPE_MISMATCH");
+  }
 }
 
 function proofMediaUploadPolicy() {
+  const production = productionConfigReport().production;
   return {
-    version: "2026-08-17.proof-media-local-upload-v1",
+    version: production ? "2026-08-18.proof-media-s3-upload-v1" : "2026-08-17.proof-media-local-upload-v1",
     acceptedContentTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     maxByteSize: maxProofUploadBytes,
     requiredIntegrity: ["sha256", "byteSize", "objectKey"],
     supportedSources: ["technician-mobile", "robotic-care", "fm-admin", "client-approved-upload"],
-    productionNote: "Pilot storage writes verified bytes to a local server vault. Production still requires signed cloud object storage, malware scanning, retention controls and backups."
+    storageProvider: production ? "s3-compatible" : "dr-forest-local-vault",
+    productionNote: production ? "Production bytes are uploaded to the configured private S3-compatible bucket; malware scanning and retention evidence remain release-gated." : "Pilot storage writes verified bytes to a local server vault. Production switches to S3-compatible storage after the production gate passes."
   };
 }
 
@@ -579,6 +1219,11 @@ async function validateProofMediaScope(auth, media) {
     throw validationError("proof media wall, work order and client do not match", "PROOF_MEDIA_SCOPE_MISMATCH");
   }
 
+  if (media.moduleId) {
+    const module = (await listModules({ wallId: media.wallId })).find((item) => item.id === media.moduleId);
+    if (!module || module.clientId !== clientId) throw validationError("proof media module does not belong to the selected wall and client", "PROOF_MEDIA_MODULE_SCOPE_MISMATCH");
+  }
+
   if (media.proofRecordId) {
     const proofClientId = resolveEntityClientId("proof", media.proofRecordId);
     if (!proofClientId) {
@@ -591,13 +1236,13 @@ async function validateProofMediaScope(auth, media) {
   }
 
   if (media.captureBatchId) {
-    const batches = await listSqliteMobileCaptureBatches(runtimeDbPath);
+    const batches = await listMobileCaptureBatches();
     const batch = batches.find((item) => item.id === media.captureBatchId);
     if (!batch) {
       throw validationError("proof media references an unknown mobile capture batch", "PROOF_MEDIA_UNKNOWN_CAPTURE_BATCH");
     }
 
-    if (batch.clientId !== clientId || batch.wallId !== media.wallId || batch.workorderId !== media.workorderId) {
+    if (batch.clientId !== clientId || batch.wallId !== media.wallId || batch.workorderId !== media.workorderId || (media.moduleId && batch.moduleId !== media.moduleId)) {
       throw validationError("proof media mobile capture batch does not match client, wall and work order", "PROOF_MEDIA_SCOPE_MISMATCH");
     }
 
@@ -636,35 +1281,496 @@ function normalizeOpsEvent(input) {
   };
 }
 
+function deviceKeyFromRequest(req) {
+  const direct = req.headers["x-dr-forest-device-key"];
+  if (direct) return String(direct).trim();
+  const authorization = String(req.headers.authorization || "");
+  return authorization.startsWith("Bearer ") ? authorization.slice(7).trim() : "";
+}
+
+async function authenticateDeviceRequest(req) {
+  const deviceKey = deviceKeyFromRequest(req);
+  const device = await readDeviceByKey(deviceKey);
+  if (!device) {
+    const authError = validationError("Unknown or missing device key", "DEVICE_AUTH_REQUIRED");
+    authError.status = 401;
+    throw authError;
+  }
+  if (device.status === "disabled") {
+    const disabledError = validationError("Device is disabled", "DEVICE_DISABLED");
+    disabledError.status = 403;
+    throw disabledError;
+  }
+  if (productionConfigReport().production) {
+    const deviceId = String(req.headers["x-dr-forest-device-id"] || "").trim();
+    const timestamp = String(req.headers["x-dr-forest-timestamp"] || "").trim();
+    const nonce = String(req.headers["x-dr-forest-nonce"] || "").trim();
+    const signature = String(req.headers["x-dr-forest-signature"] || "").trim().toLowerCase();
+    if (!deviceId || deviceId !== device.id || !timestamp || !nonce || !signature) {
+      throw Object.assign(new Error("Production device requests require id, timestamp, nonce and HMAC signature"), { status: 401, code: "DEVICE_SIGNATURE_REQUIRED" });
+    }
+    const timestampMs = Number(timestamp);
+    const replayWindowMs = Number(process.env.DR_FOREST_DEVICE_REPLAY_WINDOW_SECONDS || 300) * 1000;
+    if (!Number.isFinite(timestampMs) || Math.abs(Date.now() - timestampMs) > replayWindowMs) {
+      throw Object.assign(new Error("Device request timestamp is outside the replay window"), { status: 401, code: "DEVICE_TIMESTAMP_INVALID" });
+    }
+    const bodyHash = createHash("sha256").update(req.rawBody || Buffer.alloc(0)).digest("hex");
+    const canonical = `${timestamp}.${nonce}.${req.method}.${req.url}.${bodyHash}`;
+    const expected = createHmac("sha256", deviceKey).update(canonical).digest("hex");
+    if (!constantTimeEqual(signature, expected)) {
+      throw Object.assign(new Error("Device request signature is invalid"), { status: 401, code: "DEVICE_SIGNATURE_INVALID" });
+    }
+    const replay = await consumeDeviceReplay({
+      deviceId: device.id,
+      nonce,
+      expiresAt: new Date(timestampMs + replayWindowMs).toISOString()
+    });
+    if (!replay.accepted) throw Object.assign(new Error("Device request nonce has already been used"), { status: 409, code: "DEVICE_REPLAY_DETECTED" });
+  }
+  return device;
+}
+
+function deviceReadingInput(device, input, index = 0) {
+  const metric = String(input?.metric || input?.type || (device.type !== "gateway" ? device.type : "")).trim().toLowerCase();
+  const allowedMetrics = ["temperature", "humidity", "co2", "mc"];
+  if (!allowedMetrics.includes(metric)) throw validationError(`readings[${index}].metric must be temperature, humidity, co2 or mc`, "DEVICE_METRIC_INVALID");
+  if (device.type !== "gateway" && device.type !== metric) throw validationError(`Device ${device.id} cannot publish ${metric}`, "DEVICE_METRIC_DEVICE_MISMATCH");
+  const moduleId = String(input?.moduleId || device.moduleId || "").trim();
+  const wallId = String(input?.wallId || device.wallId || "").trim();
+  if (!moduleId || !wallId) throw validationError("Device reading requires a module and wall mapping", "DEVICE_SCOPE_INCOMPLETE");
+  const observedAt = input?.observedAt || new Date().toISOString();
+  const sensorId = String(input?.sensorId || device.id).trim();
+  const idempotencyKey = String(input?.idempotencyKey || input?.id || `${sensorId}:${observedAt}`).trim();
+  return {
+    id: String(input?.id || `READ-${device.id}-${Date.now()}-${index}`).trim(),
+    idempotencyKey,
+    sensorId,
+    wallId,
+    moduleId,
+    metric,
+    type: metric,
+    value: input?.value,
+    unit: input?.unit || null,
+    status: input?.status || "ok",
+    observedAt,
+    source: input?.source || `device:${device.id}`,
+    metadata: input?.metadata && typeof input.metadata === "object" ? input.metadata : {}
+  };
+}
+
+async function ingestDeviceReading(device, input, index = 0) {
+  const reading = deviceReadingInput(device, input, index);
+  const module = (await listModules({ wallId: reading.wallId })).find((item) => item.id === reading.moduleId);
+  if (!module || module.clientId !== device.clientId) throw validationError("Device reading module does not belong to the registered device scope", "DEVICE_SCOPE_MISMATCH");
+  const result = await appendSensorReading(reading);
+  const ingestion = await recordDeviceIngestion({ id: `DIL-${device.id}-${reading.idempotencyKey}`, deviceId: device.id, kind: "reading", idempotencyKey: reading.idempotencyKey, moduleId: reading.moduleId, observedAt: reading.observedAt, status: result.duplicate ? "duplicate" : "accepted", payloadHash: createHash("sha256").update(JSON.stringify(input)).digest("hex"), payload: input });
+  await touchDevice(device.id, { ingestedAt: reading.observedAt });
+  const alerts = result.duplicate ? [] : await evaluateTelemetryAlerts(result.reading, device.clientId);
+  return { ...result, ingestion, reading: result.reading, alerts };
+}
+
+async function ingestDeviceReadings(device, inputs = []) {
+  const readings = inputs.map((input, index) => deviceReadingInput(device, input, index));
+  const modules = await listModules({ clientIds: [device.clientId] });
+  for (const reading of readings) {
+    const module = modules.find((item) => item.id === reading.moduleId && item.assetId === reading.wallId);
+    if (!module || module.clientId !== device.clientId || (device.type !== "gateway" && (module.id !== device.moduleId || module.assetId !== device.wallId))) throw validationError("Device reading module does not belong to the registered device scope", "DEVICE_SCOPE_MISMATCH");
+  }
+  const results = await appendSensorReadings(readings);
+  const ingestionInputs = results.map((result, index) => ({ id: `DIL-${device.id}-${readings[index].idempotencyKey}`, deviceId: device.id, kind: "reading", idempotencyKey: readings[index].idempotencyKey, moduleId: readings[index].moduleId, observedAt: readings[index].observedAt, status: result.duplicate ? "duplicate" : "accepted", payloadHash: createHash("sha256").update(JSON.stringify(inputs[index])).digest("hex"), payload: inputs[index] }));
+  const ingestions = await recordDeviceIngestions(ingestionInputs);
+  const acceptedReadings = results.filter((result) => !result.duplicate).map((result) => result.reading);
+  const alertResults = acceptedReadings.length ? await evaluateTelemetryAlertsBatch(acceptedReadings, device.clientId) : [];
+  await touchDevice(device.id, { ingestedAt: readings.at(-1)?.observedAt || null });
+  return results.map((result, index) => ({ ...result, ingestion: ingestions[index], reading: result.reading, alerts: alertResults.filter((item) => item.alert.sourceReadingId === result.reading.id) }));
+}
+
 async function handleApi(req, res, pathname) {
   try {
+    res.setHeader("X-Request-ID", String(req.requestId || randomUUID()));
+    if (req.method === "POST" && pathname === "/api/auth/login") enforceRateLimit(req, "auth-login", 8, 60_000);
+    if (req.method === "POST" && pathname.startsWith("/api/device-ingestion/")) enforceRateLimit(req, "device-ingestion", 240, 60_000);
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) assertBrowserOrigin(req);
     if (req.method === "OPTIONS") {
       res.writeHead(204, {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, POST, PUT, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-dr-forest-principal, x-dr-forest-session"
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, x-dr-forest-principal, x-dr-forest-session, x-dr-forest-device-key"
       });
       res.end();
       return;
     }
 
     if (req.method === "GET" && pathname === "/api/health") {
+      const production = productionConfigReport();
       sendJson(res, 200, {
         status: "ok",
         service: "dr-forest-fm-ops",
         mode: "api-foundation",
         runtimeStore: "sqlite",
         masterDataStore: "sqlite",
-        authPolicy: "role-client-scope-v1",
-        mobileWorkflow: "offline-capture-v1",
-        proofMediaVault: "metadata-ledger-v1",
+        authPolicy: "role-client-scope-plus-pilot-session-v1",
+        mobileWorkflow: "pwa-offline-capture-v2",
+        proofMediaVault: "local-verified-v1",
+        deviceIntegration: {
+          version: "registry-http-ingestion-v2",
+          maxReadingsPerBatch: maxDeviceReadingBatchSize,
+          rateLimitPerIpPerMinute: deviceIngestionRateLimitPerIp,
+          rateLimitPerDevicePerMinute: deviceIngestionRateLimitPerDevice,
+          rateLimitPerGatewayPerMinute: deviceIngestionRateLimitPerGateway
+        },
+        productionGate: production,
+        oidc: oidcHealth(),
         generatedAt: new Date().toISOString(),
         dataFiles: Object.keys(dataFileMap)
       });
       return;
     }
 
-    const auth = resolveAuthContext(req);
+    if (req.method === "GET" && pathname === "/api/health/ready") {
+      if (draining) {
+        sendJson(res, 503, { status: "draining", service: "dr-forest-fm-ops", checkedAt: new Date().toISOString(), code: "SERVICE_DRAINING", operationalLimits: ["Server is draining and will not accept new work."] });
+        return;
+      }
+      try {
+        const production = productionConfigReport();
+        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage] = await Promise.all([
+          readOpsStorageHealth(),
+          readMasterDataHealth(),
+          readMobileCaptureStorageHealth(),
+          readProofMediaStorageHealth(),
+          readTelemetryStorageHealth(),
+          readModuleStorageHealth(),
+          readReminderStorageHealth(),
+          readDeviceStorageHealth(),
+          readAlertStorageHealth(),
+          readAiVisionStorageHealth(),
+          readNotificationStorageHealth()
+        ]);
+        const ready = production.ready;
+        sendJson(res, ready ? 200 : 503, {
+          status: ready ? "ready" : "not-ready",
+          service: "dr-forest-fm-ops",
+          checkedAt: new Date().toISOString(),
+          productionGate: production,
+          runtime: { database: runtimeStorage.backend, migrations: runtimeStorage.migrations.length },
+          masterData: { backend: masterDataStorage.source, foreignKeyIssues: masterDataStorage.relationshipIntegrity.foreignKeyIssues },
+          mobileCapture: { batches: mobileCaptureStorage.counts.captureBatches, foreignKeyIssues: mobileCaptureStorage.relationshipIntegrity.foreignKeyIssues },
+          proofMedia: { backend: proofMediaStorage.backend, objects: proofMediaStorage.counts.mediaObjects, foreignKeyIssues: proofMediaStorage.relationshipIntegrity.foreignKeyIssues },
+          telemetry: { historyRows: telemetryStorage.counts.sensorReadingHistory, healthSnapshots: telemetryStorage.counts.healthScoreSnapshots },
+          modules: { count: moduleStorage.counts.modules, foreignKeyIssues: moduleStorage.relationshipIntegrity.foreignKeyIssues },
+          reminders: { actions: reminderStorage.counts.actions },
+          devices: { count: deviceStorage.counts.devices, ingestionLogs: deviceStorage.counts.ingestionLogs, cameraCaptures: deviceStorage.counts.cameraCaptures, foreignKeyIssues: deviceStorage.relationshipIntegrity.foreignKeyIssues },
+          alerts: { rules: alertStorage.counts.rules, alerts: alertStorage.counts.alerts, foreignKeyIssues: alertStorage.relationshipIntegrity.foreignKeyIssues },
+          aiVision: { diagnoses: aiVisionStorage.counts.diagnoses, foreignKeyIssues: aiVisionStorage.relationshipIntegrity.foreignKeyIssues },
+          notifications: { pending: notificationStorage.counts.pending, processing: notificationStorage.counts.processing, retry: notificationStorage.counts.retry, failed: notificationStorage.counts.failed, delivered: notificationStorage.counts.delivered, due: notificationStorage.counts.due },
+          operationalLimits: [
+            ...(ready ? [] : production.failures.map((item) => `${item.name}: ${item.detail}`)),
+            ...(production.production ? [] : [
+              "Pilot mode: local SQLite runtime is active; switch DR_FOREST_ENV=production only after external service checks pass.",
+              "Pilot mode: local proof vault and pilot/demo identity remain intentionally enabled."
+            ]),
+            "Device registry and HTTP ingestion ports are available; production requires HMAC request signing, network policy and replay protection."
+          ]
+        });
+      } catch (error) {
+        sendJson(res, 503, { status: "not-ready", service: "dr-forest-fm-ops", checkedAt: new Date().toISOString(), productionGate: productionConfigReport(), error: error.message, code: error.code || "HEALTH_DEPENDENCY_UNAVAILABLE" });
+      }
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/auth/login") {
+      if (productionConfigReport().production) throw Object.assign(new Error("Pilot login is disabled in production; configure the OIDC identity adapter."), { status: 503, code: "AUTH_OIDC_REQUIRED" });
+      const configuration = await ensurePilotAccount(runtimeDbPath);
+      if (!configuration.configured) throw validationError("Pilot login is not configured. Set DR_FOREST_OPERATOR_EMAIL and DR_FOREST_OPERATOR_PASSWORD before enabling it.", "AUTH_LOGIN_NOT_CONFIGURED");
+      const input = await readJsonBody(req);
+      const session = await createPilotSession(runtimeDbPath, input.email, input.password);
+      sendJson(res, 200, { authenticated: true, expiresAt: session.expiresAt, account: session.account }, { "Set-Cookie": sessionCookie(session.token, session.expiresAt) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/auth/logout") {
+      const token = sessionTokenFromRequest(req);
+      await revokePilotSession(runtimeDbPath, token);
+      sendJson(res, 200, { authenticated: false }, { "Set-Cookie": "drf_session=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0" });
+      return;
+    }
+
+    const session = await readPilotSession(runtimeDbPath, sessionTokenFromRequest(req));
+    const deviceIngestionRequest = req.method === "POST" && (pathname === "/api/device-ingestion/readings" || pathname === "/api/device-ingestion/camera-captures");
+    const auth = deviceIngestionRequest
+      ? null
+      : (productionConfigReport().production
+        ? await resolveOidcAuthContext(req)
+        : (session ? authContextFromSession(session) : resolveAuthContext(req)));
+
+    if (req.method === "GET" && pathname === "/api/devices") {
+      requirePermission(auth, "device.registry.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      const moduleId = url.searchParams.get("moduleId");
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "device list");
+      }
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), devices: await listDevices({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, wallId, moduleId }) });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/device-health") {
+      requirePermission(auth, "device.registry.read");
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), health: await readDeviceStorageHealth() });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/admin/devices") {
+      requirePermission(auth, "device.registry.write");
+      const input = await readJsonBody(req);
+      const resolveEntityClientId = await buildEntityClientResolver();
+      const clientId = resolveEntityClientId("wall", input.wallId);
+      requireClientAccess(auth, clientId, "device registration");
+      const result = await registerDevice({ ...input, clientId });
+      const event = normalizeOpsEvent({ type: "device.registered", actor: auth.name, entityType: "device", entityId: result.device.id, clientId: result.device.clientId, wallId: result.device.wallId, source: "device-registry", note: `Device ${result.device.id} registered for ${result.device.moduleId || result.device.wallId}.`, payload: { principalId: auth.id, deviceType: result.device.type, protocol: result.device.protocol, rotated: result.rotated || false } });
+      if (!result.duplicate) await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event: result.duplicate ? null : event });
+      return;
+    }
+
+    const deviceAdminMatch = pathname.match(/^\/api\/admin\/devices\/([^/]+)$/);
+    if (req.method === "PUT" && deviceAdminMatch) {
+      requirePermission(auth, "device.registry.write");
+      const id = decodeURIComponent(deviceAdminMatch[1]);
+      const input = await readJsonBody(req);
+      const existing = (await listDevices()).find((item) => item.id === id);
+      if (!existing) throw validationError("device not found", "DEVICE_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "device update");
+      const result = await updateDevice(id, input);
+      const event = normalizeOpsEvent({ type: "device.updated", actor: auth.name, entityType: "device", entityId: result.device.id, clientId: result.device.clientId, wallId: result.device.wallId, source: "device-registry", note: `Device ${result.device.id} updated.`, payload: { principalId: auth.id, rotated: result.rotated || false } });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { ...result, event });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/device-ingestion/readings") {
+      const input = await readJsonBody(req);
+      const device = await authenticateDeviceRequest(req);
+      enforceRateLimit(req, `device-ingestion-device:${device.id}`, device.type === "gateway" ? deviceIngestionRateLimitPerGateway : deviceIngestionRateLimitPerDevice, 60_000);
+      const readings = Array.isArray(input?.readings) ? input.readings : [input];
+      if (!readings.length || readings.length > maxDeviceReadingBatchSize) throw validationError(`device readings batch must contain 1 to ${maxDeviceReadingBatchSize} readings`, "DEVICE_BATCH_INVALID");
+      const results = await ingestDeviceReadings(device, readings);
+      const acceptedResults = results.filter((item) => !item.duplicate);
+      if (acceptedResults.length) {
+        await appendOpsEvent(normalizeOpsEvent({ type: "device.readings.batch_ingested", actor: `device:${device.id}`, entityType: "device", entityId: device.id, clientId: device.clientId, wallId: device.wallId, source: "device-ingestion", note: `Device ${device.id} published ${acceptedResults.length} readings in one batch.`, payload: { deviceId: device.id, accepted: acceptedResults.length, duplicates: results.length - acceptedResults.length, readingIds: acceptedResults.slice(0, 100).map((item) => item.reading.id) } }));
+        for (const alertResult of results.flatMap((item) => item.alerts || []).filter((item) => item.created)) await appendOpsEvent(normalizeOpsEvent({ type: "telemetry.alert.opened", actor: `device:${device.id}`, entityType: "telemetry-alert", entityId: alertResult.alert.id, clientId: alertResult.alert.clientId, wallId: alertResult.alert.wallId, source: "telemetry-alerts", note: alertResult.alert.reason, payload: { deviceId: device.id, ruleId: alertResult.alert.ruleId, severity: alertResult.alert.severity, moduleId: alertResult.alert.moduleId } }));
+      }
+      sendJson(res, results.some((item) => !item.duplicate) ? 201 : 200, { receivedAt: new Date().toISOString(), device: { id: device.id, type: device.type, moduleId: device.moduleId }, accepted: results.filter((item) => !item.duplicate).length, duplicates: results.filter((item) => item.duplicate).length, readings: results.map((item) => item.reading), alerts: results.flatMap((item) => item.alerts || []) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/device-ingestion/camera-captures") {
+      const input = await readJsonBody(req, maxProofUploadPayloadBytes);
+      const device = await authenticateDeviceRequest(req);
+      enforceRateLimit(req, `device-ingestion-device:${device.id}`, device.type === "gateway" ? deviceIngestionRateLimitPerGateway : deviceIngestionRateLimitPerDevice, 60_000);
+      if (!["camera", "gateway"].includes(device.type)) throw validationError("Only camera or gateway devices may publish camera captures", "DEVICE_CAMERA_TYPE_MISMATCH");
+      const fileBytes = input.fileBase64 ? decodeBase64ProofMedia(input.fileBase64) : null;
+      const capture = await saveDeviceCameraCapture({ ...input, deviceId: device.id, clientId: device.clientId, wallId: input.wallId || device.wallId, moduleId: input.moduleId || device.moduleId }, fileBytes);
+      const ingestion = await recordDeviceIngestion({ id: `DIL-${device.id}-${input.idempotencyKey || input.id}`, deviceId: device.id, kind: "camera", idempotencyKey: input.idempotencyKey || input.id, moduleId: capture.capture.moduleId, observedAt: capture.capture.capturedAt, status: capture.duplicate ? "duplicate" : "accepted", payloadHash: createHash("sha256").update(JSON.stringify({ ...input, fileBase64: undefined })).digest("hex"), payload: { captureId: capture.capture.id, contentType: capture.capture.contentType, byteSize: capture.capture.byteSize, sha256: capture.capture.sha256 } });
+      await touchDevice(device.id, { ingestedAt: capture.capture.capturedAt });
+      if (!capture.duplicate) await appendOpsEvent(normalizeOpsEvent({ type: "device.camera.ingested", actor: `device:${device.id}`, entityType: "device-camera-capture", entityId: capture.capture.id, clientId: device.clientId, wallId: device.wallId, source: "device-ingestion", note: `Camera ${device.id} published a module capture.`, payload: { deviceId: device.id, moduleId: capture.capture.moduleId, captureId: capture.capture.id, mediaStatus: capture.capture.mediaStatus } }));
+      sendJson(res, capture.duplicate ? 200 : 201, { ...capture, ingestion });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/device-ingestion/camera-captures") {
+      requirePermission(auth, "device.captures.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      const moduleId = url.searchParams.get("moduleId");
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "camera capture list");
+      }
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), captures: await listDeviceCameraCaptures({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, wallId, moduleId }) });
+      return;
+    }
+
+    const deviceCameraFileMatch = pathname.match(/^\/api\/device-ingestion\/camera-captures\/([^/]+)\/file$/);
+    if (req.method === "GET" && deviceCameraFileMatch) {
+      requirePermission(auth, "proof.media.read");
+      const capture = await readDeviceCameraCapture(decodeURIComponent(deviceCameraFileMatch[1]));
+      if (!capture) throw validationError("camera capture not found", "DEVICE_CAMERA_NOT_FOUND");
+      requireClientAccess(auth, capture.clientId, "camera capture file");
+      const file = await readDeviceCameraBytes(capture.id);
+      if (!file) throw validationError("camera capture has no stored bytes", "DEVICE_CAMERA_FILE_NOT_STORED");
+      res.writeHead(200, { "Content-Type": file.contentType, "Content-Length": file.bytes.length, "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff" });
+      res.end(file.bytes);
+      return;
+    }
+
+    const telemetryHistoryMatch = pathname.match(/^\/api\/telemetry\/sensor-history\/([^/]+)$/);
+    if (req.method === "GET" && telemetryHistoryMatch) {
+      requirePermission(auth, "telemetry.read");
+      const wallId = decodeURIComponent(telemetryHistoryMatch[1]);
+      const resolveEntityClientId = await buildEntityClientResolver();
+      requireClientAccess(auth, resolveEntityClientId("wall", wallId), "sensor history");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), wallId, moduleId: url.searchParams.get("moduleId"), readings: await listSensorHistory(wallId, url.searchParams.get("limit"), url.searchParams.get("moduleId")) });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/modules") {
+      requirePermission(auth, "telemetry.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "module list");
+      }
+      const modules = await listModules({ wallId, clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+      const latestReadings = await listLatestReadingsByModules(modules.map((module) => module.id));
+      const readingsByModule = new Map();
+      for (const reading of latestReadings) readingsByModule.set(reading.moduleId, [...(readingsByModule.get(reading.moduleId) || []), reading]);
+      const enriched = modules.map((module) => ({ ...module, latestReadings: readingsByModule.get(module.id) || [] }));
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), modules: enriched });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/telemetry/alert-rules") {
+      requirePermission(auth, "telemetry.alerts.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      const moduleId = url.searchParams.get("moduleId");
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "alert rule list");
+      }
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), rules: await listAlertRules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, wallId, moduleId }) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/admin/telemetry/alert-rules") {
+      requirePermission(auth, "telemetry.alerts.write");
+      const input = await readJsonBody(req);
+      const resolveEntityClientId = await buildEntityClientResolver();
+      const wallClientId = input.wallId ? resolveEntityClientId("wall", input.wallId) : null;
+      if (input.wallId && !wallClientId) throw validationError("alert rule references an unknown wall", "ALERT_UNKNOWN_WALL");
+      const clientId = input.clientId || wallClientId || null;
+      if (clientId) requireClientAccess(auth, clientId, "alert rule write");
+      if (input.wallId && clientId && clientId !== wallClientId) throw validationError("alert rule client and wall do not match", "ALERT_SCOPE_MISMATCH");
+      if (input.moduleId) {
+        const moduleRows = await listModules({ wallId: input.wallId || null });
+        const module = moduleRows.find((item) => item.id === input.moduleId);
+        if (!module || (input.wallId && module.assetId !== input.wallId) || (clientId && module.clientId !== clientId)) throw validationError("alert rule module is outside the selected scope", "ALERT_UNKNOWN_MODULE");
+      }
+      const result = await registerAlertRule({ ...input, clientId });
+      const event = normalizeOpsEvent({ type: "telemetry.alert-rule.upserted", actor: auth.name, entityType: "telemetry-alert-rule", entityId: result.rule.id, clientId: result.rule.clientId, wallId: result.rule.wallId, source: "telemetry-alerts", note: `Alert rule ${result.rule.name} was upserted.`, payload: { principalId: auth.id, metric: result.rule.metric, severity: result.rule.severity } });
+      await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/telemetry/alerts") {
+      requirePermission(auth, "telemetry.alerts.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      const moduleId = url.searchParams.get("moduleId");
+      const statuses = url.searchParams.getAll("status").length ? url.searchParams.getAll("status") : (url.searchParams.get("statuses") || "").split(",").filter(Boolean);
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "alert list");
+      }
+      const alerts = await listAlerts({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, statuses, wallId, moduleId, limit: url.searchParams.get("limit") });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), counts: { open: alerts.filter((item) => item.status === "open").length, acknowledged: alerts.filter((item) => item.status === "acknowledged").length, resolved: alerts.filter((item) => item.status === "resolved").length, total: alerts.length }, alerts });
+      return;
+    }
+
+    const telemetryAlertMatch = pathname.match(/^\/api\/telemetry\/alerts\/([^/]+)$/);
+    if (req.method === "PUT" && telemetryAlertMatch) {
+      requirePermission(auth, "telemetry.alerts.write");
+      const alertId = decodeURIComponent(telemetryAlertMatch[1]);
+      const visible = await listAlerts({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: 500 });
+      const existing = visible.find((item) => item.id === alertId);
+      if (!existing) throw validationError("alert not found", "ALERT_NOT_FOUND");
+      const input = await readJsonBody(req);
+      const alert = await updateAlert(alertId, input);
+      const event = normalizeOpsEvent({ type: `telemetry.alert.${alert.status}`, actor: auth.name, entityType: "telemetry-alert", entityId: alert.id, clientId: alert.clientId, wallId: alert.wallId, source: "telemetry-alerts", note: `Alert ${alert.id} marked ${alert.status}.`, payload: { principalId: auth.id, status: alert.status, resolutionNote: alert.resolutionNote } });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { alert, event });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/ai/visual-diagnoses") {
+      requirePermission(auth, "ai.diagnosis.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      const moduleId = url.searchParams.get("moduleId");
+      const statuses = (url.searchParams.get("statuses") || "").split(",").filter(Boolean);
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "AI diagnosis list");
+      }
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), diagnoses: await listVisualDiagnoses({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, statuses, wallId, moduleId, limit: url.searchParams.get("limit") }) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/ai/visual-diagnoses") {
+      requirePermission(auth, "ai.diagnosis.request");
+      const input = await readJsonBody(req);
+      const capture = await readDeviceCameraCapture(input.captureId);
+      if (!capture) throw validationError("AI diagnosis references an unknown camera capture", "AI_CAPTURE_NOT_FOUND");
+      requireClientAccess(auth, capture.clientId, "AI diagnosis request");
+      const result = await createVisualDiagnosis({ ...input, clientId: capture.clientId, wallId: capture.wallId, moduleId: capture.moduleId, captureId: capture.id, requestedBy: auth.id });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "ai.visual-diagnosis.queued", actor: auth.name, entityType: "ai-visual-diagnosis", entityId: result.diagnosis.id, clientId: result.diagnosis.clientId, wallId: result.diagnosis.wallId, source: "ai-vision-port", note: `AI visual diagnosis ${result.diagnosis.id} queued for capture ${capture.id}.`, payload: { principalId: auth.id, captureId: capture.id, moduleId: capture.moduleId, status: result.diagnosis.status } });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
+      return;
+    }
+
+    const aiDiagnosisMatch = pathname.match(/^\/api\/ai\/visual-diagnoses\/([^/]+)$/);
+    if (req.method === "PUT" && aiDiagnosisMatch) {
+      requirePermission(auth, "ai.diagnosis.write");
+      const diagnosisId = decodeURIComponent(aiDiagnosisMatch[1]);
+      const visible = await listVisualDiagnoses({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: 500 });
+      const existing = visible.find((item) => item.id === diagnosisId);
+      if (!existing) throw validationError("AI diagnosis not found", "AI_DIAGNOSIS_NOT_FOUND");
+      const diagnosis = await updateVisualDiagnosis(diagnosisId, await readJsonBody(req));
+      const event = normalizeOpsEvent({ type: `ai.visual-diagnosis.${diagnosis.status}`, actor: auth.name, entityType: "ai-visual-diagnosis", entityId: diagnosis.id, clientId: diagnosis.clientId, wallId: diagnosis.wallId, source: "ai-vision-port", note: `AI visual diagnosis ${diagnosis.id} is ${diagnosis.status}.`, payload: { principalId: auth.id, provider: diagnosis.provider, model: diagnosis.model, confidence: diagnosis.confidence } });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { diagnosis, event });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/telemetry/sensor-readings") {
+      requirePermission(auth, "telemetry.write");
+      const input = await readJsonBody(req);
+      const resolveEntityClientId = await buildEntityClientResolver();
+      const clientId = resolveEntityClientId("wall", input.wallId);
+      if (!clientId) throw validationError("telemetry reading references an unknown wall", "TELEMETRY_UNKNOWN_WALL");
+      requireClientAccess(auth, clientId, "sensor reading ingestion");
+      if (input.moduleId) {
+        const module = (await listModules({ wallId: input.wallId })).find((item) => item.id === input.moduleId);
+        if (!module) throw validationError("telemetry reading references an unknown module for this wall", "TELEMETRY_UNKNOWN_MODULE");
+      }
+      const result = await appendSensorReading(input);
+      const alerts = result.duplicate ? [] : await evaluateTelemetryAlerts(result.reading, clientId);
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "telemetry.sensor.ingested", actor: auth.name, entityType: "sensor", entityId: result.reading.sensorId, clientId, wallId: result.reading.wallId, source: "telemetry-gateway", note: `Sensor ${result.reading.sensorId} reading ingested into append-only history.`, payload: { principalId: auth.id, readingId: result.reading.id, observedAt: result.reading.observedAt, status: result.reading.status } });
+      if (event) await appendOpsEvent(event);
+      for (const alertResult of alerts.filter((item) => item.created)) await appendOpsEvent(normalizeOpsEvent({ type: "telemetry.alert.opened", actor: auth.name, entityType: "telemetry-alert", entityId: alertResult.alert.id, clientId: alertResult.alert.clientId, wallId: alertResult.alert.wallId, source: "telemetry-alerts", note: alertResult.alert.reason, payload: { principalId: auth.id, ruleId: alertResult.alert.ruleId, severity: alertResult.alert.severity, moduleId: alertResult.alert.moduleId } }));
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, alerts, event });
+      return;
+    }
+
+    const healthScoreMatch = pathname.match(/^\/api\/telemetry\/health-scores\/([^/]+)\/recompute$/);
+    if (req.method === "POST" && healthScoreMatch) {
+      requirePermission(auth, "telemetry.health.read");
+      const wallId = decodeURIComponent(healthScoreMatch[1]);
+      const resolveEntityClientId = await buildEntityClientResolver();
+      const clientId = resolveEntityClientId("wall", wallId);
+      requireClientAccess(auth, clientId, "sensor stability score");
+      const score = await calculateSensorStability(wallId);
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), score });
+      return;
+    }
 
     if (req.method === "GET" && pathname === "/api/auth/context") {
       sendJson(res, 200, {
@@ -683,18 +1789,76 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/mobile/reminders") {
+      requirePermission(auth, "mobile.reminders.read");
+      const includeCompleted = new URL(req.url, `http://${host}:${port}`).searchParams.get("includeCompleted") === "true";
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), ...(await buildMobileReminders(auth, includeCompleted)) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/mobile/reminder-actions") {
+      requirePermission(auth, "mobile.reminders.write");
+      const input = await readJsonBody(req);
+      if (input.clientId) requireClientAccess(auth, input.clientId, "mobile reminder action");
+      const result = await saveReminderAction({ ...input, actorId: input.actorId || auth.id });
+      const event = normalizeOpsEvent({
+        type: `mobile.reminder.${result.action.status}`,
+        actor: auth.name,
+        entityType: "mobile-reminder",
+        entityId: result.action.reminderId,
+        clientId: result.action.clientId,
+        wallId: result.action.wallId,
+        source: "technician-mobile",
+        note: result.action.note || `Mobile reminder ${result.action.reminderId} marked ${result.action.status}.`,
+        payload: { principalId: auth.id, actionType: result.action.actionType, captureBatchId: result.action.captureBatchId }
+      });
+      await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/admin/master-data") {
+      requirePermission(auth, "master.data.read");
+      const [clients, walls, workorders, sensorData, modules, devices, alertRules] = await Promise.all([readJsonData("clients"), readJsonData("walls"), readJsonData("workorders"), readJsonData("sensors"), listModules(), listDevices(), listAlertRules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds })]);
+      const scopedClients = filterByClientScope(auth, clients, (client) => client.id);
+      const clientIds = new Set(scopedClients.map((client) => client.id));
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        clients: scopedClients,
+        assets: walls.filter((asset) => clientIds.has(asset.clientId)),
+        workorders: workorders.filter((order) => clientIds.has(walls.find((asset) => asset.id === order.wallId)?.clientId)),
+        sensors: (sensorData.readings || []).filter((sensor) => clientIds.has(walls.find((asset) => asset.id === sensor.wallId)?.clientId)),
+        modules: modules.filter((module) => clientIds.has(module.clientId)),
+        devices: devices.filter((device) => clientIds.has(device.clientId)),
+        alertRules: alertRules.filter((rule) => !rule.clientId || clientIds.has(rule.clientId))
+      });
+      return;
+    }
+
+    const moduleAdminMatch = pathname.match(/^\/api\/admin\/master-data\/modules\/([^/]+)$/);
+    if (req.method === "PUT" && moduleAdminMatch) {
+      requirePermission(auth, "master.data.write");
+      const input = { ...(await readJsonBody(req)), id: decodeURIComponent(moduleAdminMatch[1]) };
+      requireClientAccess(auth, input.clientId, "module upsert");
+      const module = await upsertModule(input);
+      const event = normalizeOpsEvent({ type: "master-data.module.upserted", actor: auth.name, entityType: "module", entityId: module.id, clientId: module.clientId, wallId: module.assetId, source: "master-data-admin", note: `Module ${module.label} upserted through admin API.`, payload: { principalId: auth.id } });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { module, event });
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/admin/master-data/validate") {
       requirePermission(auth, "master.data.validate");
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
-        masterData: await readSqliteMasterDataHealth(runtimeDbPath, dataRoot)
+        masterData: await readMasterDataHealth()
       });
       return;
     }
 
     if (req.method === "POST" && pathname === "/api/admin/master-data/import") {
       requirePermission(auth, "master.data.import");
-      const masterData = await importSqliteMasterData(runtimeDbPath, dataRoot);
+      const masterData = await importMasterData();
       const event = normalizeOpsEvent({
         type: "master-data.imported",
         actor: auth.name,
@@ -723,7 +1887,7 @@ async function handleApi(req, res, pathname) {
         id: decodeURIComponent(clientAdminMatch[1])
       };
       requireClientAccess(auth, input.id, "client upsert");
-      const client = await upsertSqliteClient(runtimeDbPath, dataRoot, input);
+      const client = await upsertMasterDataClient(input);
       const event = normalizeOpsEvent({
         type: "master-data.client.upserted",
         actor: auth.name,
@@ -747,7 +1911,7 @@ async function handleApi(req, res, pathname) {
         id: decodeURIComponent(assetAdminMatch[1])
       };
       requireClientAccess(auth, input.clientId, "living asset upsert");
-      const asset = await upsertSqliteLivingAsset(runtimeDbPath, dataRoot, input);
+      const asset = await upsertMasterDataLivingAsset(input);
       const event = normalizeOpsEvent({
         type: "master-data.asset.upserted",
         actor: auth.name,
@@ -774,7 +1938,7 @@ async function handleApi(req, res, pathname) {
       const resolveEntityClientId = await buildEntityClientResolver();
       const clientId = resolveEntityClientId("wall", input.wallId);
       requireClientAccess(auth, clientId, "work order upsert");
-      const workOrder = await upsertSqliteWorkOrder(runtimeDbPath, dataRoot, input);
+      const workOrder = await upsertMasterDataWorkOrder(input);
       const event = normalizeOpsEvent({
         type: "master-data.workorder.upserted",
         actor: auth.name,
@@ -801,7 +1965,7 @@ async function handleApi(req, res, pathname) {
       const resolveEntityClientId = await buildEntityClientResolver();
       const clientId = resolveEntityClientId("wall", input.wallId);
       requireClientAccess(auth, clientId, "sensor reading upsert");
-      const sensor = await upsertSqliteSensorReading(runtimeDbPath, dataRoot, input);
+      const sensor = await upsertMasterDataSensorReading(input);
       const event = normalizeOpsEvent({
         type: "master-data.sensor.upserted",
         actor: auth.name,
@@ -820,19 +1984,48 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage] = await Promise.all([
-        readSqliteOpsStorageHealth(runtimeDbPath),
-        readSqliteMasterDataHealth(runtimeDbPath, dataRoot),
-        readSqliteMobileCaptureStorageHealth(runtimeDbPath),
-        readSqliteProofMediaStorageHealth(runtimeDbPath)
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage] = await Promise.all([
+        readOpsStorageHealth(),
+        readMasterDataHealth(),
+        readMobileCaptureStorageHealth(),
+        readProofMediaStorageHealth(),
+        readTelemetryStorageHealth(),
+        readModuleStorageHealth(),
+        readReminderStorageHealth(),
+        readDeviceStorageHealth(),
+        readAlertStorageHealth(),
+        readAiVisionStorageHealth(),
+        readNotificationStorageHealth()
       ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...runtimeStorage,
         masterData: masterDataStorage,
         mobileCapture: mobileCaptureStorage,
-        proofMedia: proofMediaStorage
+        proofMedia: proofMediaStorage,
+        telemetry: telemetryStorage,
+        modules: moduleStorage,
+        reminders: reminderStorage,
+        devices: deviceStorage,
+        alerts: alertStorage,
+        aiVision: aiVisionStorage,
+        notifications: notificationStorage
       });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/metrics") {
+      requirePermission(auth, "observability.read");
+      sendJson(res, 200, observabilitySnapshot());
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/notifications") {
+      requirePermission(auth, "observability.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const status = url.searchParams.get("status") || null;
+      const limit = url.searchParams.get("limit") || 100;
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), notifications: await listNotifications({ status, limit }) });
       return;
     }
 
@@ -901,7 +2094,7 @@ async function handleApi(req, res, pathname) {
           clientScope: auth.clientScope,
           clientIds: auth.clientIds
         },
-        batches: filterByClientScope(auth, await listSqliteMobileCaptureBatches(runtimeDbPath), (batch) => batch.clientId)
+        batches: filterByClientScope(auth, await listMobileCaptureBatches(), (batch) => batch.clientId)
       });
       return;
     }
@@ -911,7 +2104,7 @@ async function handleApi(req, res, pathname) {
       const input = await readJsonBody(req);
       const batchInput = input.batch && typeof input.batch === "object" ? input.batch : input;
       await validateMobileCaptureScope(auth, batchInput);
-      const result = await saveSqliteMobileCaptureBatch(runtimeDbPath, batchInput);
+      const result = await saveMobileCaptureBatch(batchInput);
       let event = null;
 
       if (!result.duplicate) {
@@ -953,7 +2146,7 @@ async function handleApi(req, res, pathname) {
           clientIds: auth.clientIds
         },
         uploadPolicy: proofMediaUploadPolicy(),
-        objects: filterByClientScope(auth, await listSqliteProofMediaObjects(runtimeDbPath), (object) => object.clientId)
+        objects: filterByClientScope(auth, await listProofMediaObjects(), (object) => object.clientId)
       });
       return;
     }
@@ -963,7 +2156,10 @@ async function handleApi(req, res, pathname) {
       const input = await readJsonBody(req);
       const mediaInput = input.media && typeof input.media === "object" ? input.media : input;
       await validateProofMediaScope(auth, mediaInput);
-      const result = await createSqliteProofMediaIntent(runtimeDbPath, mediaInput);
+      const result = await createProofMediaIntent({
+        ...mediaInput,
+        storageProvider: productionConfigReport().production ? "s3-compatible" : mediaInput.storageProvider
+      });
       sendJson(res, result.duplicate ? 200 : 201, result);
       return;
     }
@@ -971,12 +2167,12 @@ async function handleApi(req, res, pathname) {
     if (req.method === "POST" && pathname === "/api/proof/media-evidence") {
       requirePermission(auth, "proof.media.write");
       const input = await readJsonBody(req);
-      const existing = await readSqliteProofMediaObject(runtimeDbPath, input.id);
+      const existing = await readProofMediaObject(input.id);
       if (!existing) {
         throw validationError("proof media object must be created before registration", "PROOF_MEDIA_NOT_FOUND");
       }
       requireClientAccess(auth, existing.clientId, "proof media registration");
-      const result = await registerSqliteProofMediaEvidence(runtimeDbPath, input);
+      const result = await registerProofMediaEvidence(input);
       let event = null;
 
       if (!result.duplicate) {
@@ -1011,7 +2207,7 @@ async function handleApi(req, res, pathname) {
     if (req.method === "POST" && proofMediaUploadMatch) {
       requirePermission(auth, "proof.media.write");
       const mediaId = decodeURIComponent(proofMediaUploadMatch[1]);
-      const existing = await readSqliteProofMediaObject(runtimeDbPath, mediaId);
+      const existing = await readProofMediaObject(mediaId);
       if (!existing) throw validationError("proof media object must be created before upload", "PROOF_MEDIA_NOT_FOUND");
       requireClientAccess(auth, existing.clientId, "proof media upload");
       const input = await readJsonBody(req, maxProofUploadPayloadBytes);
@@ -1025,17 +2221,28 @@ async function handleApi(req, res, pathname) {
         throw validationError("uploaded sha256 does not match the upload intent", "PROOF_MEDIA_HASH_MISMATCH");
       }
 
+      const productionStorage = productionConfigReport().production;
       let duplicate = false;
-      try {
-        await writeLocalProofMedia(existing, bytes);
-      } catch (error) {
-        if (error?.code !== "EEXIST") throw error;
-        const stored = await readLocalProofMedia(existing);
-        if (!stored.equals(bytes)) throw validationError("stored proof media conflicts with this upload", "PROOF_MEDIA_STORAGE_CONFLICT");
-        duplicate = true;
+      if (productionStorage) {
+        await putS3Object({
+          bucket: process.env.DR_FOREST_OBJECT_STORAGE_BUCKET,
+          key: existing.objectKey,
+          body: bytes,
+          contentType: existing.contentType
+        });
+        await markProofMediaStorageProvider(existing.id, "s3-compatible");
+      } else {
+        try {
+          await writeLocalProofMedia(existing, bytes);
+        } catch (error) {
+          if (error?.code !== "EEXIST") throw error;
+          const stored = await readLocalProofMedia(existing);
+          if (!stored.equals(bytes)) throw validationError("stored proof media conflicts with this upload", "PROOF_MEDIA_STORAGE_CONFLICT");
+          duplicate = true;
+        }
       }
 
-      const registration = await registerSqliteProofMediaEvidence(runtimeDbPath, {
+      const registration = await registerProofMediaEvidence({
         id: existing.id,
         byteSize: bytes.length,
         sha256,
@@ -1048,8 +2255,8 @@ async function handleApi(req, res, pathname) {
         entityId: registration.object.id,
         clientId: registration.object.clientId,
         wallId: registration.object.wallId,
-        source: "proof-media-local-vault",
-        note: `Proof media ${registration.object.filename} uploaded to the pilot vault and hash checked.`,
+          source: productionStorage ? "proof-media-s3" : "proof-media-local-vault",
+          note: productionStorage ? `Proof media ${registration.object.filename} uploaded to the private S3-compatible vault and hash checked.` : `Proof media ${registration.object.filename} uploaded to the pilot vault and hash checked.`,
         payload: { principalId: auth.id, mediaId: registration.object.id, sha256, byteSize: bytes.length }
       });
       if (event) await appendOpsEvent(event);
@@ -1065,13 +2272,19 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && proofMediaFileMatch) {
       requirePermission(auth, "proof.media.read");
       const mediaId = decodeURIComponent(proofMediaFileMatch[1]);
-      const media = await readSqliteProofMediaObject(runtimeDbPath, mediaId);
+      const media = await readProofMediaObject(mediaId);
       if (!media) throw validationError("proof media object not found", "PROOF_MEDIA_NOT_FOUND");
       requireClientAccess(auth, media.clientId, "proof media download");
       if (!["registered", "verified", "rejected"].includes(media.uploadStatus)) {
         throw validationError("proof media file is not uploaded", "PROOF_MEDIA_NOT_UPLOADED");
       }
-      sendProofMedia(res, media, await readLocalProofMedia(media));
+      const stored = media.storageProvider === "s3-compatible"
+        ? await getS3Object({ bucket: process.env.DR_FOREST_OBJECT_STORAGE_BUCKET, key: media.objectKey })
+        : { bytes: await readLocalProofMedia(media) };
+      const bytes = stored.bytes;
+      const storedHash = createHash("sha256").update(bytes).digest("hex");
+      if (bytes.length !== media.byteSize || storedHash !== media.sha256) throw validationError("object storage bytes do not match the proof media ledger", "PROOF_MEDIA_REMOTE_INTEGRITY_MISMATCH");
+      sendProofMedia(res, media, bytes);
       return;
     }
 
@@ -1079,13 +2292,13 @@ async function handleApi(req, res, pathname) {
     if (req.method === "PUT" && proofMediaVerifyMatch) {
       requirePermission(auth, "proof.media.verify");
       const mediaId = decodeURIComponent(proofMediaVerifyMatch[1]);
-      const existing = await readSqliteProofMediaObject(runtimeDbPath, mediaId);
+      const existing = await readProofMediaObject(mediaId);
       if (!existing) {
         throw validationError("proof media object must exist before verification", "PROOF_MEDIA_NOT_FOUND");
       }
       requireClientAccess(auth, existing.clientId, "proof media verification");
       const input = await readJsonBody(req);
-      const object = await verifySqliteProofMediaEvidence(runtimeDbPath, mediaId, {
+      const object = await verifyProofMediaEvidence(mediaId, {
         ...input,
         verifiedBy: input.verifiedBy || auth.name
       });
@@ -1206,11 +2419,13 @@ async function handleApi(req, res, pathname) {
 
     sendJson(res, 404, { error: "API endpoint not found" });
   } catch (error) {
+    recordApplicationError(error);
     const status = Number(error.status || 500);
     const payload = {
       error: status >= 500 ? "Internal server error" : error.message
     };
     if (error.code) payload.code = error.code;
+    if (error.retryAfter) payload.retryAfterSeconds = error.retryAfter;
     if (status === 409 && error.snapshot) {
       payload.currentRevision = error.currentRevision;
       payload.snapshot = {
@@ -1223,8 +2438,29 @@ async function handleApi(req, res, pathname) {
 }
 
 const server = createServer(async (req, res) => {
+  const startedAt = Date.now();
+  const requestId = String(req.headers["x-request-id"] || randomUUID());
+  req.requestId = requestId;
+  res.setHeader("X-Request-ID", requestId);
+  res.once("finish", () => {
+    const durationMs = Date.now() - startedAt;
+    recordHttpRequest({ method: req.method, path: String(req.url || "/").split("?")[0], status: res.statusCode, durationMs });
+    console.log(JSON.stringify({
+      event: "http.request",
+      requestId,
+      method: req.method,
+      path: String(req.url || "/").split("?")[0],
+      status: res.statusCode,
+      durationMs,
+      userAgent: String(req.headers["user-agent"] || "").slice(0, 160)
+    }));
+  });
   const requestPath = (req.url || "/").replace(/^\/+/, "/");
   const requestUrl = new URL(requestPath, `http://${host}:${port}`);
+  if (draining && requestUrl.pathname !== "/api/health" && requestUrl.pathname !== "/api/health/ready") {
+    sendJson(res, 503, { error: "Service is draining", code: "SERVICE_DRAINING" });
+    return;
+  }
   if (requestUrl.pathname.startsWith("/api/")) {
     await handleApi(req, res, requestUrl.pathname);
     return;
@@ -1240,7 +2476,12 @@ const server = createServer(async (req, res) => {
     const body = await readFile(filePath);
     res.writeHead(200, {
       "Content-Type": types[extname(filePath)] || "application/octet-stream",
-      "Cache-Control": "no-store"
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "X-Frame-Options": "DENY",
+      "Referrer-Policy": "no-referrer",
+      "Permissions-Policy": "camera=(self), microphone=(), geolocation=()",
+      "Content-Security-Policy": "default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
     });
     res.end(body);
   } catch {
@@ -1251,3 +2492,29 @@ const server = createServer(async (req, res) => {
 server.listen(port, host, () => {
   console.log(`DR FOREST FM Ops running at http://${host}:${port}/`);
 });
+
+async function shutdown(signal) {
+  if (shutdownPromise) return shutdownPromise;
+  draining = true;
+  shutdownPromise = new Promise((resolve) => {
+    console.log(JSON.stringify({ event: "server.shutdown.start", signal, port }));
+    server.close(async () => {
+      try { await closePostgresPools(); } finally {
+        console.log(JSON.stringify({ event: "server.shutdown.complete", signal, port }));
+        resolve();
+      }
+    });
+    const timeout = setTimeout(() => {
+      console.error(JSON.stringify({ event: "server.shutdown.timeout", signal, port }));
+      process.exitCode = 1;
+      resolve();
+    }, Number(process.env.DR_FOREST_SHUTDOWN_TIMEOUT_MS || 15_000));
+    timeout.unref?.();
+  });
+  await shutdownPromise;
+  process.exit(process.exitCode || 0);
+}
+
+process.once("SIGTERM", () => { void shutdown("SIGTERM"); });
+process.once("SIGINT", () => { void shutdown("SIGINT"); });
+if (typeof process.send === "function") process.on("message", (message) => { if (message === "shutdown") void shutdown("IPC"); });

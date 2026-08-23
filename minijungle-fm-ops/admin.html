@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DR FOREST Ops Admin</title>
+  <link rel="icon" href="assets/dr-forest-logo.png">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <main class="admin-shell">
+    <header class="admin-header"><a href="/" class="brand"><img src="assets/dr-forest-logo.png" alt="DR FOREST"><span><small>DR FOREST OPS</small><strong>Operations control</strong></span></a><div class="header-actions"><span id="identity">Checking session...</span><button id="logout" type="button" hidden>Log out</button></div></header>
+    <section id="login-panel" class="panel login-panel"><p class="eyebrow">PILOT ACCESS / 試點登入</p><h1>Sign in to manage live master data</h1><p class="muted">The local pilot account is configured through deployment environment variables. Demo walkthrough access remains available from the main console.</p><form id="login-form"><label>Email<input id="email" type="email" autocomplete="username" required></label><label>Password<input id="password" type="password" autocomplete="current-password" required></label><button type="submit">Sign in / 登入</button></form><p id="login-error" class="error" aria-live="polite"></p></section>
+    <section id="workspace" hidden>
+      <div class="page-heading"><div><p class="eyebrow">MASTER DATA / 主數據</p><h1>Control the operational records</h1><p class="muted">Every write is sent to SQLite and creates an operations audit event. Use this surface for the controlled pilot only.</p></div><button id="refresh" type="button" class="secondary">Refresh / 重新整理</button></div>
+      <div id="summary" class="summary"></div>
+      <nav class="tabs" aria-label="Master data views"><button class="active" data-tab="clients">Clients</button><button data-tab="assets">Living assets</button><button data-tab="modules">Modules</button><button data-tab="devices">Devices</button><button data-tab="alerts">Alert rules</button><button data-tab="workorders">Work orders</button><button data-tab="sensors">Sensors</button></nav>
+      <section id="clients" class="tab-panel active"><div class="section-title"><h2>Clients</h2><button data-new="client" class="secondary">New client</button></div><div id="clients-list" class="table-wrap"></div></section>
+      <section id="assets" class="tab-panel"><div class="section-title"><h2>Living assets</h2><button data-new="asset" class="secondary">New asset</button></div><div id="assets-list" class="table-wrap"></div></section>
+      <section id="modules" class="tab-panel"><div class="section-title"><h2>Planting modules</h2><button data-new="module" class="secondary">New module</button></div><div id="modules-list" class="table-wrap"></div></section>
+      <section id="devices" class="tab-panel"><div class="section-title"><h2>Device registry</h2><button data-new="device" class="secondary">Register device</button></div><div id="devices-list" class="table-wrap"></div><p class="muted">Device keys are shown only once after registration or rotation. Use the ingestion port for gateway and camera data.</p></section>
+      <section id="alerts" class="tab-panel"><div class="section-title"><h2>Telemetry alert rules</h2><button data-new="alertRule" class="secondary">New alert rule</button></div><div id="alerts-list" class="table-wrap"></div><p class="muted">Rules are threshold configuration only. Calibrate these values with the horticulture and site teams before enabling production actions.</p></section>
+      <section id="workorders" class="tab-panel"><div class="section-title"><h2>Work orders</h2><button data-new="workorder" class="secondary">New work order</button></div><div id="workorders-list" class="table-wrap"></div></section>
+      <section id="sensors" class="tab-panel"><div class="section-title"><h2>Sensor latest values</h2><button data-new="sensor" class="secondary">New sensor value</button></div><div id="sensors-list" class="table-wrap"></div></section>
+      <p id="notice" class="notice" aria-live="polite"></p>
+    </section>
+  </main>
+  <dialog id="editor"><form method="dialog" id="editor-form"><div class="dialog-heading"><div><p class="eyebrow" id="editor-kicker">MASTER DATA</p><h2 id="editor-title">Edit record</h2></div><button value="cancel" class="icon-button" aria-label="Close">×</button></div><div id="fields"></div><div class="dialog-actions"><button value="cancel" type="button" class="secondary" id="cancel-editor">Cancel</button><button value="default" type="submit">Save / 儲存</button></div></form></dialog>
+  <script src="admin.js"></script>
+</body>
+</html>

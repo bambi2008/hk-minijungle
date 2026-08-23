@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-Hans">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DR FOREST | Spatial Value One-Pager</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root { --ink:#17251b; --green:#244d31; --moss:#728c57; --lime:#c9df77; --paper:#f5f7f1; --line:#cfd8c8; --muted:#627064; --blue:#dce8ef; --orange:#e4834a; }
+    * { box-sizing:border-box; }
+    body { margin:0; background:#d9ded5; font-family:Arial,"Microsoft YaHei","PingFang SC",sans-serif; color:var(--ink); }
+    .page { width:1920px; height:1080px; overflow:hidden; background:var(--paper); padding:58px 76px 50px; position:relative; }
+    .page::before { content:""; position:absolute; width:660px; height:660px; right:-270px; bottom:-305px; border:74px solid #d8e9c0; border-radius:50%; }
+    .page::after { content:""; position:absolute; width:260px; height:260px; left:-115px; top:300px; border:38px solid var(--blue); border-radius:50%; }
+    header,main,footer { position:relative; z-index:1; }
+    header { height:126px; display:flex; align-items:flex-start; justify-content:space-between; border-bottom:2px solid var(--ink); padding-bottom:25px; }
+    .brand { display:flex; align-items:center; gap:16px; }
+    .brand img { width:143px; height:100px; object-fit:contain; mix-blend-mode:multiply; }
+    .brand-copy { border-left:1px solid var(--line); padding-left:18px; }
+    .brand-copy strong { display:block; font-size:22px; letter-spacing:1px; }
+    .brand-copy span { display:block; margin-top:6px; font-size:14px; color:var(--muted); letter-spacing:.8px; }
+    .tag { background:var(--green); color:#fff; padding:10px 15px; font-size:16px; letter-spacing:1px; margin-top:9px; }
+    .intro { display:grid; grid-template-columns:1.5fr .9fr; gap:58px; padding:34px 0 27px; position:relative; z-index:1; }
+    .eyebrow { color:var(--green); font-weight:700; font-size:14px; letter-spacing:2px; margin-bottom:12px; }
+    h1 { font-size:45px; line-height:1.17; margin:0; letter-spacing:0; }
+    h1 em { color:var(--green); font-style:normal; }
+    .intro-note { border-left:5px solid var(--lime); align-self:end; padding:6px 0 5px 21px; color:var(--muted); font-size:18px; line-height:1.55; }
+    main { display:grid; grid-template-columns:1.1fr 1.27fr .96fr; gap:24px; }
+    .panel { min-height:640px; padding:27px 29px 24px; border:1px solid var(--line); background:rgba(255,255,255,.76); }
+    h2 { margin:0 0 19px; font-size:23px; }
+    h2 span { color:var(--moss); font-size:14px; margin-left:8px; font-weight:600; }
+    .lead { margin:-4px 0 19px; color:var(--muted); font-size:16px; line-height:1.48; }
+    .credential { border-top:3px solid var(--green); padding:13px 0 13px; }
+    .credential b { display:block; font-size:19px; margin-bottom:5px; }
+    .credential p { margin:0; color:var(--muted); font-size:14px; line-height:1.42; }
+    .principle { margin-top:17px; padding:15px 16px; background:#eaf0dc; }
+    .principle label { display:block; color:var(--green); font-weight:700; font-size:13px; letter-spacing:1px; margin-bottom:7px; }
+    .principle strong { font-size:20px; line-height:1.26; display:block; }
+    .value { background:var(--ink); border-color:var(--ink); color:white; padding-left:32px; padding-right:32px; }
+    .value h2 { color:white; }
+    .value h2 span { color:var(--lime); }
+    .value-lead { color:#d5dfd0; line-height:1.48; font-size:16px; margin-top:-6px; margin-bottom:22px; }
+    .value-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    .value-card { min-height:165px; padding:17px; background:#f7f9f1; color:var(--ink); }
+    .value-card .no { color:var(--moss); font-weight:700; font-size:13px; letter-spacing:1px; }
+    .value-card b { display:block; font-size:19px; margin:7px 0 5px; }
+    .value-card p { color:#566455; margin:0; font-size:13px; line-height:1.38; }
+    .statement { margin-top:21px; padding-top:17px; border-top:1px solid #60735f; }
+    .statement label { color:var(--lime); font-weight:700; font-size:13px; letter-spacing:1px; }
+    .statement strong { display:block; margin-top:7px; font-size:22px; line-height:1.25; }
+    .statement p { margin:7px 0 0; color:#d5dfd0; font-size:14px; line-height:1.42; }
+    .evidence { position:relative; }
+    .evidence::before { content:""; position:absolute; top:122px; bottom:107px; left:43px; width:2px; background:var(--line); }
+    .step { display:grid; grid-template-columns:50px 1fr; gap:14px; position:relative; margin-bottom:23px; }
+    .dot { width:23px; height:23px; border-radius:50%; background:var(--paper); border:5px solid var(--green); margin:3px 0 0 1px; z-index:1; }
+    .step:nth-of-type(4) .dot { border-color:var(--orange); }
+    .step label { color:var(--moss); font-size:13px; letter-spacing:1.2px; font-weight:700; }
+    .step b { display:block; font-size:19px; margin:4px 0 5px; }
+    .step p { margin:0; color:var(--muted); font-size:14px; line-height:1.42; }
+    .safe { margin-top:8px; padding:13px 14px; background:#edf3f4; border-left:4px solid #87afc0; font-size:13px; line-height:1.4; color:var(--muted); }
+    .safe b { color:var(--ink); font-size:14px; }
+    footer { padding-top:20px; display:flex; justify-content:space-between; align-items:end; color:var(--muted); font-size:13px; }
+    .claim { color:var(--ink); font-size:18px; font-weight:700; }
+    .claim i { color:var(--green); font-style:normal; }
+  </style>
+</head>
+<body>
+  <section class="page">
+    <header>
+      <div class="brand"><img src="/assets/dr-forest-logo.png" alt="DR FOREST"><div class="brand-copy"><strong>DR FOREST</strong><span>Spatial Greenery · FM Operations</span></div></div>
+      <div class="tag">PARTNER BRIEF · SPATIAL VALUE</div>
+    </header>
+    <section class="intro">
+      <div><div class="eyebrow">Design intelligence meets living-green operations</div><h1>我们不只提供绿化，<br>更以<em>建筑与室内设计的眼光</em>提升空间体验。</h1></div>
+      <div class="intro-note">DR FOREST 将专业空间判断、审美语言与可持续绿化结合，形成能被使用者感知、被管理者运营、被品牌方讲述的空间价值。</div>
+    </section>
+    <main>
+      <article class="panel">
+        <h2>专业背景优势 <span>WHY US</span></h2>
+        <p class="lead">核心成员拥有二十年建筑与室内设计实务经验，理解绿化进入商业空间后，必须同时回答功能、视觉、维护与品牌四个问题。</p>
+        <div class="credential"><b>空间先于植物清单</b><p>先看动线、视线、光环境、停留场景与材质，再决定 Wall、绿植组合或绿化隔断的形式与密度。</p></div>
+        <div class="credential"><b>审美与可维护性一起设计</b><p>不是“好看一次”，而是让植物布局、补水点、模块接口与维护动线在项目开始时就被纳入设计。</p></div>
+        <div class="credential"><b>从概念到运营的连续性</b><p>设计语言能被现场模块、服务标准、照片证据和客户报告延续，避免交付后品质失真。</p></div>
+        <div class="principle"><label>DR FOREST DESIGN PRINCIPLE</label><strong>让每一次绿化介入，都服务于空间本身的秩序、感受与长期使用。</strong></div>
+      </article>
+      <article class="panel value">
+        <h2>空间美学的作用 <span>VALUE CREATED</span></h2>
+        <p class="value-lead">绿化不是装饰层。被妥善设计、维护与叙述的绿化，能够参与塑造人对空间、组织与品牌的感受。</p>
+        <div class="value-grid">
+          <div class="value-card"><div class="no">01 / PEOPLE</div><b>员工与访客体验</b><p>通过自然感、视觉层次、等候与交流场景的优化，提升空间的舒适度、停留意愿和日常感受。</p></div>
+          <div class="value-card"><div class="no">02 / SPACE</div><b>空间使用质量</b><p>利用绿化界定区域、柔化硬质界面、组织视线和创造识别点，让空间更有秩序与记忆点。</p></div>
+          <div class="value-card"><div class="no">03 / BRAND</div><b>绿色品牌表达</b><p>把对环境、员工体验和运营品质的关注变成可见的空间语言，并以服务证据支持对外沟通。</p></div>
+          <div class="value-card"><div class="no">04 / OPERATIONS</div><b>长期品质管理</b><p>以模块、维护协议与 OPS 账本维持设计意图，不让空间价值随着植物状态和服务质量而流失。</p></div>
+        </div>
+        <div class="statement"><label>THE DIFFERENCE / 差异所在</label><strong>设计不是一次性交付，运营让设计的价值持续存在。</strong><p>DR FOREST 把空间专业判断转译成可实施、可维护、可复盘的绿色空间系统。</p></div>
+      </article>
+      <article class="panel evidence">
+        <h2>从价值到证据 <span>DESIGN → PROOF</span></h2>
+        <div class="step"><div class="dot"></div><div><label>01 / DIAGNOSE</label><b>空间诊断</b><p>识别动线、视觉焦点、采光、品牌触点与维护条件，形成合适的绿化策略。</p></div></div>
+        <div class="step"><div class="dot"></div><div><label>02 / DESIGN</label><b>美学与功能整合</b><p>确定尺度、植被密度、模块语言和材料关系，使绿化真正属于空间而非附加物。</p></div></div>
+        <div class="step"><div class="dot"></div><div><label>03 / OPERATE</label><b>把品质留在现场</b><p>通过 SOP、健康评分、维护记录与问题闭环，持续维持设计效果和使用质量。</p></div></div>
+        <div class="step"><div class="dot"></div><div><label>04 / COMMUNICATE</label><b>可讲述的品牌资产</b><p>把空间更新、服务过程与适用 ESG 证据整理为客户可理解、可复用的故事与材料。</p></div></div>
+        <div class="safe"><b>表达边界 / CLAIMS CONTROL</b><br>我们可以描述空间体验、设计意图与可验证的服务和绿化实践；不把员工效率、健康或 ESG 影响表述为未经独立证明的确定结果。</div>
+      </article>
+    </main>
+    <footer><div class="claim">DR FOREST · <i>Designed for people. Operated for the long term.</i></div><div>Partner discussion draft · 2026</div></footer>
+  </section>
+</body>
+</html>

@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { createServer } from "node:net";
+import { createHash } from "node:crypto";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 
@@ -66,9 +67,21 @@ async function verifyApi(baseUrl) {
   assert(health.body.mode === "api-foundation", "Health endpoint did not expose API foundation mode");
   assert(health.body.runtimeStore === "sqlite", "Health endpoint did not expose SQLite runtime store");
   assert(health.body.masterDataStore === "sqlite", "Health endpoint did not expose SQLite master data store");
-  assert(health.body.authPolicy === "role-client-scope-v1", "Health endpoint did not expose auth policy");
-  assert(health.body.mobileWorkflow === "offline-capture-v1", "Health endpoint did not expose mobile workflow mode");
-  assert(health.body.proofMediaVault === "metadata-ledger-v1", "Health endpoint did not expose proof media vault mode");
+  assert(health.body.authPolicy === "role-client-scope-plus-pilot-session-v1", "Health endpoint did not expose auth policy");
+  assert(health.body.mobileWorkflow === "pwa-offline-capture-v2", "Health endpoint did not expose mobile workflow mode");
+  assert(health.body.proofMediaVault === "local-verified-v1", "Health endpoint did not expose proof media vault mode");
+
+  const login = await fetchJson(`${baseUrl}api/auth/login`, {
+    method: "POST",
+    headers: jsonHeaders(),
+    body: JSON.stringify({ email: "ops@example.test", password: "pilot-password-123" })
+  });
+  assert(login.response.ok, "Pilot login should accept configured password credentials");
+  const sessionCookie = login.response.headers.get("set-cookie")?.split(";")[0];
+  assert(sessionCookie?.startsWith("drf_session="), "Pilot login should issue an HttpOnly session cookie");
+  const sessionContext = await fetchJson(`${baseUrl}api/auth/context`, { headers: { Cookie: sessionCookie } });
+  assert(sessionContext.body.auth.id === "pilot:ops@example.test", "Session auth context did not resolve pilot account");
+  assert(sessionContext.body.auth.roleId === "fm-lead", "Session auth context did not resolve FM lead role");
 
   const authContext = await fetchJson(`${baseUrl}api/auth/context`, {
     headers: principalHeaders("client-show-suite")
@@ -86,6 +99,18 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["field-tech"].permissions.includes("proof.media.write"), "Auth policy did not expose field proof media write permission");
   assert(authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.read"), "Auth policy did not expose client proof media read permission");
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
+
+  const metrics = await fetchJson(`${baseUrl}api/metrics`, { headers: principalHeaders("fm-lead") });
+  assert(metrics.response.ok, "FM lead should read protected observability metrics");
+  assert(metrics.body.observabilityVersion === "2026-08-19.observability-v1", "Metrics endpoint did not expose observability version");
+  assert(metrics.body.requests && Number.isInteger(metrics.body.requests.total), "Metrics endpoint did not expose request counters");
+  const deniedMetrics = await fetchJson(`${baseUrl}api/metrics`, { headers: principalHeaders("client-show-suite") });
+  assert(deniedMetrics.response.status === 403, "Client viewer should not read platform observability metrics");
+  const notifications = await fetchJson(`${baseUrl}api/notifications`, { headers: principalHeaders("fm-lead") });
+  assert(notifications.response.ok && Array.isArray(notifications.body.notifications), "FM lead should read the notification outbox");
+  const deniedNotifications = await fetchJson(`${baseUrl}api/notifications`, { headers: principalHeaders("client-show-suite") });
+  assert(deniedNotifications.response.status === 403, "Client viewer should not read the notification outbox");
 
   const unknownAuth = await fetchJson(`${baseUrl}api/assets`, {
     headers: principalHeaders("unknown-principal")
@@ -112,18 +137,24 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.masterData.counts.sensorReadings === 4, "SQLite master sensor_readings table did not seed all sensor readings");
   assert(initialStorage.body.masterData.relationshipIntegrity.foreignKeysEnabled === true, "SQLite master-data foreign keys are not enabled");
   assert(initialStorage.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "SQLite master-data foreign key check found issues");
-  assert(initialStorage.body.mobileCapture.migrationVersion === "2026-07-15.mobile-capture-v1", "Storage endpoint did not expose mobile capture migration");
+  assert(initialStorage.body.mobileCapture.migrationVersion === "2026-08-17.mobile-capture-v2", "Storage endpoint did not expose mobile capture migration");
   assert(initialStorage.body.mobileCapture.tables.includes("mobile_capture_batches"), "Storage endpoint did not expose mobile capture batch table");
   assert(initialStorage.body.mobileCapture.tables.includes("mobile_capture_items"), "Storage endpoint did not expose mobile capture item table");
   assert(initialStorage.body.mobileCapture.counts.captureBatches === 0, "Mobile capture batches should start empty in test mode");
   assert(initialStorage.body.mobileCapture.counts.captureItems === 0, "Mobile capture items should start empty in test mode");
   assert(initialStorage.body.mobileCapture.relationshipIntegrity.foreignKeysEnabled === true, "SQLite mobile capture foreign keys are not enabled");
-  assert(initialStorage.body.proofMedia.migrationVersion === "2026-07-15.proof-media-v1", "Storage endpoint did not expose proof media migration");
+  assert(initialStorage.body.modules.counts.modules === 12, "Module master table should seed addressable modules from wall module counts");
+  assert(initialStorage.body.modules.relationshipIntegrity.foreignKeyIssues === 0, "Module master table should have no foreign-key issues");
+  assert(initialStorage.body.reminders.counts.actions === 0, "Reminder action table should start empty in test mode");
+  assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_objects"), "Storage endpoint did not expose proof media objects table");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_links"), "Storage endpoint did not expose proof media links table");
   assert(initialStorage.body.proofMedia.counts.mediaObjects === 0, "Proof media objects should start empty in test mode");
   assert(initialStorage.body.proofMedia.counts.mediaLinks === 0, "Proof media links should start empty in test mode");
   assert(initialStorage.body.proofMedia.relationshipIntegrity.foreignKeysEnabled === true, "SQLite proof media foreign keys are not enabled");
+  assert(initialStorage.body.telemetry.migrationVersion === "2026-08-17.telemetry-history-v2", "Storage endpoint did not expose telemetry history migration");
+  assert(initialStorage.body.telemetry.tables.includes("sensor_reading_history"), "Storage endpoint did not expose sensor history table");
+  assert(initialStorage.body.telemetry.counts.sensorReadingHistory === 0, "Sensor history should start empty in test mode");
 
   const deniedStorage = await fetchJson(`${baseUrl}api/storage`, {
     headers: principalHeaders("client-show-suite")
@@ -614,6 +645,7 @@ async function verifyApi(baseUrl) {
     technicianId: "field-tech-show-suite",
     clientId: "show-suite",
     wallId: "MJ-HK-021",
+    moduleId: "MJ-HK-021-M01",
     workorderId: "WO-1047",
     deviceId: "offline-ipad-01",
     capturedAt: "2026-07-15T09:20:00.000Z",
@@ -674,6 +706,66 @@ async function verifyApi(baseUrl) {
   assert(storageAfterMobile.body.mobileCapture.counts.captureItems === 5, "Mobile capture item count did not persist");
   assert(storageAfterMobile.body.mobileCapture.relationshipIntegrity.foreignKeyIssues === 0, "Mobile capture FK check found issues");
 
+  const scopedModules = await fetchJson(`${baseUrl}api/modules?wallId=MJ-HK-021`, { headers: principalHeaders("client-show-suite") });
+  assert(scopedModules.response.ok, "Client should read scoped module master data");
+  assert(scopedModules.body.modules.length === 3, "Module list should expose all modules for the selected wall");
+  assert(scopedModules.body.modules[0].monitoringDevices.temperature, "Module should expose temperature device configuration");
+
+  const fieldReminders = await fetchJson(`${baseUrl}api/mobile/reminders`, { headers: principalHeaders("field-tech-show-suite") });
+  assert(fieldReminders.response.ok, "Field technician reminder list failed");
+  const visitReminder = fieldReminders.body.items.find((item) => item.sourceType === "workorder");
+  assert(visitReminder?.mobileAction?.path.includes("mobile.html"), "Reminder did not expose a mobile action path");
+  const reminderAction = await fetchJson(`${baseUrl}api/mobile/reminder-actions`, {
+    method: "POST",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({ reminderId: visitReminder.id, status: "completed", actionType: visitReminder.mobileAction.actionType, clientId: visitReminder.clientId, wallId: visitReminder.wallId, workorderId: visitReminder.workorderId, moduleId: mobileBatch.moduleId, captureBatchId: mobileBatch.id })
+  });
+  assert(reminderAction.response.status === 201, "Completing a mobile reminder should persist an action");
+  assert(reminderAction.body.action.status === "completed", "Mobile reminder action did not become completed");
+
+  const telemetryDenied = await fetchJson(`${baseUrl}api/telemetry/sensor-readings`, {
+    method: "POST",
+    headers: jsonHeaders("client-show-suite"),
+    body: JSON.stringify({ id: "TH-DENIED-001", sensorId: "SNS-021-LIGHT", wallId: "MJ-HK-001", type: "Light exposure", value: 70, unit: "%", status: "ok", observedAt: "2026-07-15T09:30:00.000Z" })
+  });
+  assert(telemetryDenied.response.status === 403, "Client viewer should not ingest sensor telemetry");
+
+  const telemetryInput = { id: "TH-9001", sensorId: "MJ-HK-021-M01-TEMP", wallId: "MJ-HK-021", moduleId: "MJ-HK-021-M01", metric: "temperature", type: "temperature", value: 24.5, unit: "C", status: "ok", observedAt: "2026-07-15T09:30:00.000Z", source: "gateway-pilot-01" };
+  const telemetryIngest = await fetchJson(`${baseUrl}api/telemetry/sensor-readings`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify(telemetryInput)
+  });
+  assert(telemetryIngest.response.status === 201, "Sensor telemetry ingestion should create a history row");
+  assert(telemetryIngest.body.duplicate === false, "First sensor telemetry ingestion should not be duplicate");
+  assert(telemetryIngest.body.event.type === "telemetry.sensor.ingested", "Sensor telemetry ingestion should create an audit event");
+
+  const telemetrySecond = await fetchJson(`${baseUrl}api/telemetry/sensor-readings`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ ...telemetryInput, id: "TH-9002", value: 66, status: "watch", observedAt: "2026-07-15T09:35:00.000Z" })
+  });
+  assert(telemetrySecond.response.status === 201, "Second sensor telemetry ingestion should create a history row");
+  const telemetryDuplicate = await fetchJson(`${baseUrl}api/telemetry/sensor-readings`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify(telemetryInput)
+  });
+  assert(telemetryDuplicate.response.ok && telemetryDuplicate.body.duplicate === true, "Repeated sensor timestamp should be idempotent");
+
+  const sensorHistory = await fetchJson(`${baseUrl}api/telemetry/sensor-history/MJ-HK-021`, { headers: principalHeaders("client-show-suite") });
+  assert(sensorHistory.response.ok, "Client should read sensor history for its scoped wall");
+  assert(sensorHistory.body.readings.length === 2, "Sensor history should return both pilot readings");
+  const sensorScore = await fetchJson(`${baseUrl}api/telemetry/health-scores/MJ-HK-021/recompute`, { method: "POST", headers: jsonHeaders("fm-lead") });
+  assert(sensorScore.response.ok, "Sensor stability score recompute failed");
+  assert(sensorScore.body.score.scoreType === "sensor-stability", "Health score should identify its sensor-only method");
+  assert(sensorScore.body.score.score === 50, "Sensor stability score should reflect latest watch status");
+
+  const storageAfterTelemetry = await fetchJson(`${baseUrl}api/storage`, { headers: principalHeaders("fm-lead") });
+  assert(storageAfterTelemetry.body.counts.opsEvents === 12, "Telemetry events were not retained in ops event log");
+  assert(storageAfterTelemetry.body.telemetry.counts.sensorReadingHistory === 2, "Telemetry history rows did not persist");
+  assert(storageAfterTelemetry.body.telemetry.counts.healthScoreSnapshots === 1, "Health score snapshot did not persist");
+
   const initialMediaVault = await fetchJson(`${baseUrl}api/proof/media-vault`, {
     headers: principalHeaders("client-show-suite")
   });
@@ -731,6 +823,7 @@ async function verifyApi(baseUrl) {
   assert(mismatchedMediaIntent.response.status === 400, "Mismatched proof media scope should fail validation");
   assert(mismatchedMediaIntent.body.code === "PROOF_MEDIA_SCOPE_MISMATCH", "Mismatched proof media did not expose scope mismatch code");
 
+  const proofBytes = Buffer.from("DR FOREST field evidence: show-suite north zone\n", "utf8");
   const proofMedia = {
     id: "PM-9001",
     clientId: "show-suite",
@@ -742,8 +835,8 @@ async function verifyApi(baseUrl) {
     category: "after-care-photo",
     filename: "show-suite-low-light-after.jpg",
     contentType: "image/jpeg",
-    byteSize: 481234,
-    sha256: "a".repeat(64),
+    byteSize: proofBytes.length,
+    sha256: createHash("sha256").update(proofBytes).digest("hex"),
     source: "technician-mobile",
     metadata: {
       zone: "North",
@@ -776,35 +869,40 @@ async function verifyApi(baseUrl) {
     headers: jsonHeaders("field-tech-show-suite"),
     body: JSON.stringify({
       id: "PM-9001",
-      byteSize: 481234,
+      byteSize: proofBytes.length,
       sha256: "e".repeat(64)
     })
   });
   assert(mediaHashMismatch.response.status === 400, "Proof media registration should reject hash mismatch");
   assert(mediaHashMismatch.body.code === "PROOF_MEDIA_HASH_MISMATCH", "Proof media hash mismatch did not expose mismatch code");
 
-  const mediaRegister = await fetchJson(`${baseUrl}api/proof/media-evidence`, {
+  const mediaRegister = await fetchJson(`${baseUrl}api/proof/media-evidence/PM-9001/upload`, {
     method: "POST",
     headers: jsonHeaders("field-tech-show-suite"),
     body: JSON.stringify({
-      id: "PM-9001",
-      byteSize: 481234,
-      sha256: "a".repeat(64),
+      fileBase64: proofBytes.toString("base64"),
       uploadedAt: "2026-07-15T09:23:00.000Z"
     })
   });
-  assert(mediaRegister.response.status === 201, "Proof media registration should create registered evidence");
-  assert(mediaRegister.body.duplicate === false, "First proof media registration should not be duplicate");
-  assert(mediaRegister.body.object.uploadStatus === "registered", "Proof media registration did not mark object registered");
-  assert(mediaRegister.body.event.type === "proof.media.registered", "Proof media registration did not create audit event");
+  assert(mediaRegister.response.status === 201, "Proof media upload should create registered evidence");
+  assert(mediaRegister.body.duplicate === false, "First proof media upload should not be duplicate");
+  assert(mediaRegister.body.object.uploadStatus === "registered", "Proof media upload did not mark object registered");
+  assert(mediaRegister.body.event.type === "proof.media.uploaded", "Proof media upload did not create audit event");
+
+  const uploadedProofFile = await fetch(`${baseUrl}api/proof/media-evidence/PM-9001/file`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(uploadedProofFile.status === 200, "Client should read its uploaded proof media file");
+  assert(uploadedProofFile.headers.get("content-type") === "image/jpeg", "Proof media file content type was not retained");
+  assert(Buffer.from(await uploadedProofFile.arrayBuffer()).equals(proofBytes), "Stored proof media bytes did not match uploaded evidence");
 
   const duplicateMediaRegister = await fetchJson(`${baseUrl}api/proof/media-evidence`, {
     method: "POST",
     headers: jsonHeaders("field-tech-show-suite"),
     body: JSON.stringify({
       id: "PM-9001",
-      byteSize: 481234,
-      sha256: "a".repeat(64),
+      byteSize: proofBytes.length,
+      sha256: proofMedia.sha256,
       uploadedAt: "2026-07-15T09:23:00.000Z"
     })
   });
@@ -842,16 +940,16 @@ async function verifyApi(baseUrl) {
   assert(clientMediaVault.body.objects.length === 1, "Client-scoped proof media vault should expose one scoped object");
   assert(clientMediaVault.body.objects[0].id === "PM-9001", "Client-scoped proof media vault returned wrong object");
   assert(clientMediaVault.body.objects[0].uploadStatus === "verified", "Client-scoped proof media vault did not expose verified status");
-  assert(clientMediaVault.body.objects[0].integrity.sha256 === "a".repeat(64), "Client-scoped proof media vault did not expose SHA-256 integrity");
+  assert(clientMediaVault.body.objects[0].integrity.sha256 === proofMedia.sha256, "Client-scoped proof media vault did not expose SHA-256 integrity");
 
   const clientEventsAfterProofMedia = await fetchJson(`${baseUrl}api/ops-events`, {
     headers: principalHeaders("client-show-suite")
   });
-  assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.registered"), "Client-scoped events did not include proof media registration");
+  assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.uploaded"), "Client-scoped events did not include proof media upload");
   assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.verified"), "Client-scoped events did not include proof media verification");
 
   const storageAfterProofMedia = await fetchJson(`${baseUrl}api/storage`);
-  assert(storageAfterProofMedia.body.counts.opsEvents === 11, "Proof media events were not retained in ops event log");
+  assert(storageAfterProofMedia.body.counts.opsEvents === 14, "Proof media, telemetry and reminder events were not retained in ops event log");
   assert(storageAfterProofMedia.body.proofMedia.counts.mediaObjects === 1, "Proof media object count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.counts.mediaLinks === 5, "Proof media link count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.counts.verified === 1, "Proof media verified count did not persist");
@@ -870,7 +968,9 @@ async function main() {
     cwd: projectRoot,
     env: {
       ...process.env,
-      DR_FOREST_RUNTIME_DIR: runtimeDir
+      DR_FOREST_RUNTIME_DIR: runtimeDir,
+      DR_FOREST_OPERATOR_EMAIL: "ops@example.test",
+      DR_FOREST_OPERATOR_PASSWORD: "pilot-password-123"
     },
     stdio: ["ignore", "pipe", "pipe"]
   });

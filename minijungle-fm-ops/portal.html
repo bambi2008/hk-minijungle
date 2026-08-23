@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en-HK">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DR FOREST Evidence Portal</title>
+  <link rel="icon" href="assets/dr-forest-logo.png">
+  <link rel="stylesheet" href="portal.css">
+</head>
+<body>
+  <main class="portal-shell">
+    <header class="portal-header">
+      <a class="brand" href="/"><img src="assets/dr-forest-logo.png" alt="DR FOREST"><span><small>DR FOREST OPS</small><strong>Evidence Portal</strong></span></a>
+      <div class="header-actions"><span id="portal-mode" class="mode-badge">Client Viewer</span><label class="role-switch">View / 視圖<select id="role-switch"><option value="client">Client Viewer / 客戶</option><option value="auditor">ESG Auditor / ESG 審計</option></select></label><button id="refresh" type="button">Refresh</button></div>
+    </header>
+
+    <section class="portal-intro">
+      <div><p class="eyebrow">CLIENT / AUDITOR PORTAL</p><h1 id="portal-title">Living asset evidence</h1><p id="portal-scope">Read-only service evidence for your scoped portfolio / 只讀服務證據</p></div>
+      <div class="read-only">READ ONLY<br><span>只讀檢視</span></div>
+    </section>
+
+    <section class="summary" aria-label="Portfolio summary">
+      <div><span>Assets / 資產</span><strong id="asset-count">--</strong></div>
+      <div><span>Modules / 模組</span><strong id="module-count">--</strong></div>
+      <div><span>Health / 健康分</span><strong id="health-score">--</strong></div>
+      <div><span>Proof records / 憑證</span><strong id="proof-count">--</strong></div>
+      <div><span>Open issues / 未結事項</span><strong id="issue-count">--</strong></div>
+    </section>
+
+    <section class="content-grid">
+      <article class="panel"><div class="panel-heading"><div><p class="eyebrow">LIVING ASSETS / 活體資產</p><h2>Portfolio status</h2></div><span id="asset-state" class="muted">Loading</span></div><div id="asset-list" class="asset-list" aria-live="polite"></div></article>
+      <article class="panel"><div class="panel-heading"><div><p class="eyebrow">PROOF VAULT / 憑證庫</p><h2>Service evidence</h2></div><span id="proof-state" class="muted">Loading</span></div><div id="evidence-list" class="evidence-list" aria-live="polite"></div></article>
+    </section>
+
+    <section class="panel"><div class="panel-heading"><div><p class="eyebrow">EXCEPTIONS / 例外</p><h2>Items requiring attention</h2></div><span id="exception-state" class="muted">Loading</span></div><div id="exception-list" class="exception-list" aria-live="polite"></div></section>
+
+    <section id="auditor-panel" class="panel auditor-panel" hidden><div class="panel-heading"><div><p class="eyebrow">ESG DATA QUALITY / ESG 數據質量</p><h2>Evidence boundary</h2></div><span id="quality-status" class="status-pill">Loading</span></div><div class="quality-grid"><div><strong id="quality-coverage">--</strong><span>reference checks passed / 參照檢查通過</span></div><div><strong id="quality-scale">--</strong><span>current modules / 目前模組</span></div><div><strong id="quality-gaps">--</strong><span>production gaps / 生產缺口</span></div></div><ul id="quality-list" class="quality-list"></ul></section>
+
+    <p id="notice" class="notice" aria-live="polite"></p>
+  </main>
+  <script src="portal.js"></script>
+</body>
+</html>

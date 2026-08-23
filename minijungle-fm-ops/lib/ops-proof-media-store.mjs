@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
 
-export const proofMediaMigrationVersion = "2026-07-15.proof-media-v1";
+export const proofMediaMigrationVersion = "2026-08-17.proof-media-v2";
 
 const acceptedContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const acceptedStatuses = new Set(["intent-created", "registered", "verified", "rejected"]);
@@ -86,6 +86,7 @@ function initializeProofMediaDatabase(db) {
       id TEXT PRIMARY KEY,
       client_id TEXT NOT NULL,
       wall_id TEXT NOT NULL,
+      module_id TEXT,
       workorder_id TEXT NOT NULL,
       proof_record_id TEXT,
       capture_batch_id TEXT,
@@ -140,6 +141,10 @@ function initializeProofMediaDatabase(db) {
       ON proof_media_links(entity_type, entity_id);
   `);
 
+  const columns = new Set(db.prepare("PRAGMA table_info(proof_media_objects)").all().map((row) => row.name));
+  if (!columns.has("module_id")) db.exec("ALTER TABLE proof_media_objects ADD COLUMN module_id TEXT");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_proof_media_module ON proof_media_objects(module_id)");
+
   db.prepare(`
     INSERT OR IGNORE INTO schema_migrations (version, applied_at)
     VALUES (?, ?)
@@ -161,6 +166,7 @@ function normalizeIntent(input) {
     id: requireString(input?.id, "media.id"),
     clientId: requireString(input?.clientId, "media.clientId"),
     wallId: requireString(input?.wallId, "media.wallId"),
+    moduleId: input?.moduleId ? String(input.moduleId).trim() : null,
     workorderId: requireString(input?.workorderId, "media.workorderId"),
     proofRecordId: input?.proofRecordId ? String(input.proofRecordId).trim() : null,
     captureBatchId: input?.captureBatchId ? String(input.captureBatchId).trim() : null,
@@ -194,6 +200,7 @@ function objectFromRow(row, links = []) {
     id: row.id,
     clientId: row.client_id,
     wallId: row.wall_id,
+    moduleId: row.module_id || null,
     workorderId: row.workorder_id,
     proofRecordId: row.proof_record_id || null,
     captureBatchId: row.capture_batch_id || null,
@@ -239,6 +246,8 @@ function linksForMedia(media) {
     { entityType: "wall", entityId: media.wallId, relation: "captures" },
     { entityType: "workorder", entityId: media.workorderId, relation: "evidence-for" }
   ];
+
+  if (media.moduleId) links.push({ entityType: "module", entityId: media.moduleId, relation: "captures" });
 
   if (media.proofRecordId) links.push({ entityType: "proof", entityId: media.proofRecordId, relation: "supports" });
   if (media.captureBatchId) links.push({ entityType: "mobile-capture-batch", entityId: media.captureBatchId, relation: "derived-from" });
@@ -306,6 +315,7 @@ export async function createSqliteProofMediaIntent(dbPath, input) {
           id,
           client_id,
           wall_id,
+          module_id,
           workorder_id,
           proof_record_id,
           capture_batch_id,
@@ -326,11 +336,12 @@ export async function createSqliteProofMediaIntent(dbPath, input) {
           source,
           metadata_json
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         media.id,
         media.clientId,
         media.wallId,
+        media.moduleId,
         media.workorderId,
         media.proofRecordId,
         media.captureBatchId,
@@ -418,6 +429,15 @@ export async function registerSqliteProofMediaEvidence(dbPath, input) {
       duplicate: false,
       object: readObjectById(db, mediaId)
     };
+  });
+}
+
+export async function markSqliteProofMediaStorageProvider(dbPath, mediaId, storageProvider) {
+  return withDatabase(dbPath, (db) => {
+    const existing = readObjectById(db, mediaId);
+    if (!existing) throw notFoundError(mediaId);
+    db.prepare("UPDATE proof_media_objects SET storage_provider = ? WHERE id = ?").run(String(storageProvider), mediaId);
+    return readObjectById(db, mediaId);
   });
 }
 

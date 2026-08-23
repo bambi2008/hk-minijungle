@@ -1,0 +1,7 @@
+node_modules
+.ops-data
+.ops-data-test
+backups
+output/playwright
+*.log
+docs/*.png

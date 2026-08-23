@@ -260,6 +260,11 @@ function positiveInteger(value, field) {
 }
 
 function clearMasterData(db) {
+  const hasTable = (name) => Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(name));
+  // Generated module/device mappings are derived from the wall seed and can be rebuilt after import.
+  // Real registered devices remain protected by foreign keys and therefore block an unsafe reset.
+  if (hasTable("asset_devices")) db.exec("DELETE FROM asset_devices WHERE metadata_json LIKE '%generated-from-module-device-map%'");
+  if (hasTable("asset_modules")) db.exec("DELETE FROM asset_modules WHERE source = 'generated-from-asset-module-count'");
   db.exec(`
     DELETE FROM incidents;
     DELETE FROM sensor_readings;

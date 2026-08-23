@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 export const productionDataModel = {
-  version: "2026-07-15.proof-media-v1",
+  version: "2026-08-17.device-ingestion-v1",
   scoreTarget: {
     before: 70,
     after: 75
@@ -30,8 +30,8 @@ export const productionDataModel = {
     {
       name: "assetModules",
       idField: "id",
-      source: "derived from living_assets.modules",
-      purpose: "Robot, technician and sensor addressable module unit."
+      source: ".ops-data/ops-runtime.sqlite::asset_modules generated from living_assets.modules during pilot bootstrap",
+      purpose: "Robot, technician, camera and sensor addressable module unit with four-metric device map."
     },
     {
       name: "workOrders",
@@ -56,6 +56,42 @@ export const productionDataModel = {
       idField: "id",
       source: ".ops-data/ops-runtime.sqlite::sensor_readings seeded from data/sensors.json",
       purpose: "Telemetry or manual observation record for health score and incident triggers."
+    },
+    {
+      name: "assetDevices",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::asset_devices",
+      purpose: "Registered temperature, humidity, CO2, MC, camera and gateway endpoint with module scope and device identity."
+    },
+    {
+      name: "deviceIngestionLog",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::device_ingestion_log",
+      purpose: "Idempotency, payload hash and acceptance trail for external device data."
+    },
+    {
+      name: "deviceCameraCaptures",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::device_camera_captures",
+      purpose: "Camera metadata and optional locally verified bytes linked to a planting module."
+    },
+    {
+      name: "telemetryAlertRules",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::telemetry_alert_rules",
+      purpose: "Calibrated module or client thresholds that turn sensor exceptions into an actionable queue."
+    },
+    {
+      name: "telemetryAlerts",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::telemetry_alerts",
+      purpose: "Persisted exception state with occurrence counts, acknowledgement, resolution and audit linkage."
+    },
+    {
+      name: "aiVisualDiagnoses",
+      idField: "id",
+      source: ".ops-data/ops-runtime.sqlite::ai_visual_diagnoses",
+      purpose: "AI vision request/result contract linked to a camera capture without claiming an unexecuted diagnosis."
     },
     {
       name: "incidents",
@@ -98,6 +134,19 @@ export const productionDataModel = {
     { from: "sites.clientId", to: "clients.id" },
     { from: "livingAssets.clientId", to: "clients.id" },
     { from: "assetModules.assetId", to: "livingAssets.id" },
+    { from: "assetDevices.clientId", to: "clients.id" },
+    { from: "assetDevices.wallId", to: "livingAssets.id" },
+    { from: "assetDevices.moduleId", to: "assetModules.id", optional: true },
+    { from: "telemetryAlertRules.clientId", to: "clients.id", optional: true },
+    { from: "telemetryAlertRules.wallId", to: "livingAssets.id", optional: true },
+    { from: "telemetryAlertRules.moduleId", to: "assetModules.id", optional: true },
+    { from: "telemetryAlerts.clientId", to: "clients.id" },
+    { from: "telemetryAlerts.wallId", to: "livingAssets.id" },
+    { from: "telemetryAlerts.moduleId", to: "assetModules.id", optional: true },
+    { from: "aiVisualDiagnoses.clientId", to: "clients.id" },
+    { from: "aiVisualDiagnoses.wallId", to: "livingAssets.id" },
+    { from: "aiVisualDiagnoses.moduleId", to: "assetModules.id" },
+    { from: "aiVisualDiagnoses.captureId", to: "deviceCameraCaptures.id" },
     { from: "workOrders.wallId", to: "livingAssets.id" },
     { from: "proofRecords.workorderId", to: "workOrders.id" },
     { from: "proofRecords.wallId", to: "livingAssets.id" },
@@ -121,6 +170,10 @@ export const productionDataModel = {
     "livingAssets.clientId",
     "livingAssets.status",
     "assetModules.assetId",
+    "assetDevices.moduleId",
+    "telemetryAlertRules.moduleId",
+    "telemetryAlerts.status+lastSeenAt",
+    "aiVisualDiagnoses.status+createdAt",
     "workOrders.wallId",
     "workOrders.status",
     "proofRecords.wallId",
@@ -410,10 +463,10 @@ export function validateProductionDataset(dataset, seed = buildProductionSeed(da
     if (Number(item.reserved) > Number(item.onHand)) warnings.push(`inventory item ${item.sku} has reserved units above on-hand stock`);
   }
 
-  pushWarning(true, "Plant Pod records are still aggregate counts; production needs module/pod-level IDs before 1,000+ module rollout.", warnings);
-  pushWarning(true, "Proof media now has a local metadata ledger for object keys, hashes and verification, but production still needs managed object storage, signed upload URLs, malware scanning and retention policies.", warnings);
-  pushWarning(true, "Auth, roles and client scope now have server-side demo enforcement; production still needs SSO/MFA, session lifecycle and database row policies.", warnings);
-  pushWarning(true, "Sensor readings are latest-state demo records; production needs append-only time-series ingestion.", warnings);
+  pushWarning(true, "Module-level pilot records now exist, but their IDs and device maps are generated from wall module counts; production needs real module, camera, gateway and calibration IDs before 1,000+ module rollout.", warnings);
+  pushWarning(true, "Proof media now has a local verified vault for object keys, hashes and files, but production still needs managed object storage, signed upload URLs, malware scanning and retention policies.", warnings);
+  pushWarning(true, "Auth, roles, client scope and pilot password sessions now have server-side enforcement; production still needs SSO/MFA, enterprise session controls and database row policies.", warnings);
+  pushWarning(true, "Master sensor readings remain latest-state for portfolio reads; append-only telemetry history and threshold alerts now exist, but production still needs signed device requests, managed time-series retention and alert ownership/SLA.", warnings);
 
   checks.push({
     name: "referential-integrity",

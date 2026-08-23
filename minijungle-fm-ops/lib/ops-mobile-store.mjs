@@ -2,7 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
 
-export const mobileCaptureMigrationVersion = "2026-07-15.mobile-capture-v1";
+export const mobileCaptureMigrationVersion = "2026-08-17.mobile-capture-v2";
 
 const allowedItemTypes = new Set(["photo", "water", "nutrient", "health-check", "exception"]);
 
@@ -53,6 +53,7 @@ function initializeMobileCaptureDatabase(db) {
       technician_id TEXT NOT NULL,
       client_id TEXT NOT NULL,
       wall_id TEXT NOT NULL,
+      module_id TEXT,
       workorder_id TEXT NOT NULL,
       device_id TEXT,
       captured_at TEXT NOT NULL,
@@ -92,6 +93,10 @@ function initializeMobileCaptureDatabase(db) {
       ON mobile_capture_items(type);
   `);
 
+  const columns = new Set(db.prepare("PRAGMA table_info(mobile_capture_batches)").all().map((row) => row.name));
+  if (!columns.has("module_id")) db.exec("ALTER TABLE mobile_capture_batches ADD COLUMN module_id TEXT");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_mobile_batches_module ON mobile_capture_batches(module_id)");
+
   db.prepare(`
     INSERT OR IGNORE INTO schema_migrations (version, applied_at)
     VALUES (?, ?)
@@ -120,6 +125,7 @@ function normalizeBatch(input) {
     technicianId: requireString(input?.technicianId, "batch.technicianId"),
     clientId: requireString(input?.clientId, "batch.clientId"),
     wallId: requireString(input?.wallId, "batch.wallId"),
+    moduleId: input?.moduleId ? String(input.moduleId).trim() : null,
     workorderId: requireString(input?.workorderId, "batch.workorderId"),
     deviceId: input?.deviceId ? String(input.deviceId).trim() : null,
     capturedAt: requireString(input?.capturedAt, "batch.capturedAt"),
@@ -156,6 +162,7 @@ function batchFromRow(row, items = []) {
     technicianId: row.technician_id,
     clientId: row.client_id,
     wallId: row.wall_id,
+    moduleId: row.module_id || null,
     workorderId: row.workorder_id,
     deviceId: row.device_id || null,
     capturedAt: row.captured_at,
@@ -204,6 +211,7 @@ export async function saveSqliteMobileCaptureBatch(dbPath, input) {
           technician_id,
           client_id,
           wall_id,
+          module_id,
           workorder_id,
           device_id,
           captured_at,
@@ -212,12 +220,13 @@ export async function saveSqliteMobileCaptureBatch(dbPath, input) {
           notes,
           payload_json
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         batch.id,
         batch.technicianId,
         batch.clientId,
         batch.wallId,
+        batch.moduleId,
         batch.workorderId,
         batch.deviceId,
         batch.capturedAt,
