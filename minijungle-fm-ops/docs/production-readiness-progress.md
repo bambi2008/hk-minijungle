@@ -567,3 +567,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 43 - AI Vision Human Review Workflow v1
+
+- Official score remains **65%**. The Ops-side AI action path is now usable, but no external AI provider, accuracy benchmark, production model governance or real horticulture review cycle was added.
+- Capability added: FM Lead can move a queued visual diagnosis to `running` from Ops Today, with an explicit pending-provider result marker.
+- Capability added: FM Lead can open a compact review dialog for a running diagnosis, choose complete or failed, provide confidence when completing, record provider/model and write a result or failure note.
+- Safety boundary added: the UI labels the action as manual/provider review, requires a result note, and keeps queued/running records as pending rather than displaying them as plant-health conclusions.
+- Audit continuity preserved: every status update uses the existing scoped `ai.diagnosis.write` permission and server audit event path; client viewers, auditors and field technicians cannot complete AI records.
+- Evidence added: Playwright UI smoke covers queued -> running -> human-assisted completed review, including request payload, confidence validation and removal from the active queue. Full `npm.cmd run check` passes.
+- Honest boundary: the smoke uses a mocked UI diagnosis and the existing API scale smoke uses a provider callback fixture. No real camera fleet, provider callback, model evaluation, human reviewer acceptance or treatment decision automation exists yet.
+- Target effect: AI workflow completeness, operational UI and auditability scaffold improve; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 43
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
