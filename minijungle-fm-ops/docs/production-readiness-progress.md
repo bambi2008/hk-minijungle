@@ -465,3 +465,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 37 - Evidence Verification and Retention Controls v1
+
+- Official score remains **65%**. This batch closes an important application-layer evidence lifecycle, but the scoring governance hard cap still binds: without a real managed PostgreSQL service plus backup/restore evidence, the official production score cannot exceed 65%.
+- Capability added: persisted evidence snapshots now carry a retention class, retention days, expiry timestamp, verification status, verifier, verification note and verification error. SQLite migration v3 is additive and upgrades existing v2 pilot rows without deleting data; PostgreSQL has the matching v3 DDL and adapter migration.
+- Capability added: FM Lead/Platform Admin can independently verify a persisted snapshot. Verification recomputes the canonical package SHA-256 and, when a configured signing secret exists, recalculates and timing-safely compares the HMAC. A pilot without a secret remains explicitly `unsigned`; it cannot be recorded as cryptographically verified.
+- Capability added: a retention sweep marks expired standard snapshots as `expired` without deleting the evidence ledger. `legal-hold` snapshots are excluded from automatic expiry. The same sweep exists as an API control and as `npm.cmd run evidence:retention` for a scheduled worker.
+- Permission boundary added: client viewers and ESG auditors remain read-only; only FM Lead/Platform Admin receive snapshot verification and retention permissions. Health/storage endpoints expose verified, unsigned and expired counts.
+- Production gate added: `DR_FOREST_EVIDENCE_RETENTION_DAYS` must be an integer from 30 to 3650 in production. The example deployment configuration now includes the setting.
+- Evidence added: signed verification smoke, unsigned pilot API smoke, client permission denial, fresh-snapshot retention sweep, v2-to-v3 SQLite migration test and full `npm.cmd run check` all pass.
+- Honest boundary: the workspace still has no managed PostgreSQL connection, secret-manager rotation, immutable cloud object retention, external auditor acknowledgement or real 1,000+ module deployment. These remain release tasks, not inferred achievements.
+- Target effect: architecture scaffold remains approximately **99%**; application-layer production controls are materially stronger, while official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 37
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

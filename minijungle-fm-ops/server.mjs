@@ -181,13 +181,18 @@ import {
 import {
   createSqliteEvidenceSnapshot,
   readSqliteEvidenceSnapshot,
-  readSqliteEvidenceStorageHealth
+  readSqliteEvidenceStorageHealth,
+  sweepSqliteEvidenceSnapshots,
+  verifySqliteEvidenceSnapshot
 } from "./lib/ops-evidence-snapshot-store.mjs";
 import {
   createPostgresEvidenceSnapshot,
   readPostgresEvidenceSnapshot,
-  readPostgresEvidenceStorageHealth
+  readPostgresEvidenceStorageHealth,
+  sweepPostgresEvidenceSnapshots,
+  verifyPostgresEvidenceSnapshot
 } from "./lib/ops-postgres-evidence-snapshot-store.mjs";
+import { normalizeEvidenceRetention } from "./lib/ops-evidence-integrity.mjs";
 import { getS3Object, putS3Object } from "./lib/ops-object-storage.mjs";
 import {
   createPilotSession,
@@ -623,6 +628,18 @@ async function readEvidenceSnapshotStorageHealth() {
     : readSqliteEvidenceStorageHealth(runtimeDbPath);
 }
 
+async function verifyEvidenceSnapshot(snapshotId, options = {}) {
+  return productionMasterDataEnabled()
+    ? verifyPostgresEvidenceSnapshot(snapshotId, options)
+    : verifySqliteEvidenceSnapshot(runtimeDbPath, snapshotId, options);
+}
+
+async function sweepEvidenceSnapshots() {
+  return productionMasterDataEnabled()
+    ? sweepPostgresEvidenceSnapshots()
+    : sweepSqliteEvidenceSnapshots(runtimeDbPath);
+}
+
 function resolvePath(url) {
   const requestUrl = (url || "/").replace(/^\/+/, "/");
   const pathname = new URL(requestUrl, `http://${host}:${port}`).pathname;
@@ -967,6 +984,7 @@ async function buildEvidenceSnapshot(auth) {
   const sha256 = createHash("sha256").update(canonical, "utf8").digest("hex");
   const signingSecret = String(process.env.DR_FOREST_EVIDENCE_SIGNING_SECRET || "").trim();
   const snapshotId = `EVP-${sha256.slice(0, 16)}`;
+  const retention = normalizeEvidenceRetention({ generatedAt });
   const signatureStatus = signingSecret ? "signed" : "unsigned";
   const signature = signingSecret ? createHmac("sha256", signingSecret).update(`${snapshotId}.${sha256}`, "utf8").digest("hex") : null;
   const signatureKeyId = signingSecret ? (String(process.env.DR_FOREST_EVIDENCE_SIGNING_KEY_ID || "").trim() || "dr-forest-evidence-hmac-v1") : null;
@@ -979,6 +997,9 @@ async function buildEvidenceSnapshot(auth) {
     signatureStatus,
     signatureKeyId,
     signature,
+    retentionClass: retention.retentionClass,
+    retentionDays: retention.retentionDays,
+    expiresAt: retention.expiresAt,
     package: payload
   };
 }
@@ -1519,7 +1540,7 @@ async function handleApi(req, res, pathname) {
       }
       try {
         const production = productionConfigReport();
-        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage] = await Promise.all([
+        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage] = await Promise.all([
           readOpsStorageHealth(),
           readMasterDataHealth(),
           readMobileCaptureStorageHealth(),
@@ -1530,7 +1551,8 @@ async function handleApi(req, res, pathname) {
           readDeviceStorageHealth(),
           readAlertStorageHealth(),
           readAiVisionStorageHealth(),
-          readNotificationStorageHealth()
+          readNotificationStorageHealth(),
+          readEvidenceSnapshotStorageHealth()
         ]);
         const ready = production.ready;
         sendJson(res, ready ? 200 : 503, {
@@ -1549,6 +1571,7 @@ async function handleApi(req, res, pathname) {
           alerts: { rules: alertStorage.counts.rules, alerts: alertStorage.counts.alerts, foreignKeyIssues: alertStorage.relationshipIntegrity.foreignKeyIssues },
           aiVision: { diagnoses: aiVisionStorage.counts.diagnoses, foreignKeyIssues: aiVisionStorage.relationshipIntegrity.foreignKeyIssues },
           notifications: { pending: notificationStorage.counts.pending, processing: notificationStorage.counts.processing, retry: notificationStorage.counts.retry, failed: notificationStorage.counts.failed, delivered: notificationStorage.counts.delivered, due: notificationStorage.counts.due },
+          evidenceSnapshots: { count: evidenceSnapshotStorage.counts.snapshots, verified: evidenceSnapshotStorage.counts.verified, unsigned: evidenceSnapshotStorage.counts.unsigned, expired: evidenceSnapshotStorage.counts.expired, migrationVersion: evidenceSnapshotStorage.migrationVersion },
           operationalLimits: [
             ...(ready ? [] : production.failures.map((item) => `${item.name}: ${item.detail}`)),
             ...(production.production ? [] : [
@@ -2147,7 +2170,24 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "POST" && pathname === "/api/proof/evidence-snapshots/retention-sweep") {
+      requirePermission(auth, "proof.snapshot.retention");
+      sendJson(res, 200, { ...await sweepEvidenceSnapshots(), persisted: true });
+      return;
+    }
+
     const persistedEvidenceSnapshotMatch = pathname.match(/^\/api\/proof\/evidence-snapshots\/([^/]+)$/);
+    if (req.method === "POST" && persistedEvidenceSnapshotMatch) {
+      requirePermission(auth, "proof.snapshot.verify");
+      const snapshotId = decodeURIComponent(persistedEvidenceSnapshotMatch[1]);
+      const existing = await readEvidenceSnapshot(snapshotId);
+      if (!existing) throw apiError(404, "Evidence snapshot not found", "EVIDENCE_SNAPSHOT_NOT_FOUND");
+      if (!canAccessEvidenceSnapshot(auth, existing)) throw apiError(403, "Evidence snapshot is outside the current client scope", "EVIDENCE_SNAPSHOT_SCOPE_DENIED");
+      const input = await readJsonBody(req);
+      const result = await verifyEvidenceSnapshot(snapshotId, { verifiedBy: auth.id, note: input.note || null });
+      sendJson(res, 200, { ...result.snapshot, integrity: result.integrity, persisted: true });
+      return;
+    }
     if (req.method === "GET" && persistedEvidenceSnapshotMatch) {
       requirePermission(auth, "proof.snapshot.read");
       const snapshot = await readEvidenceSnapshot(decodeURIComponent(persistedEvidenceSnapshotMatch[1]));

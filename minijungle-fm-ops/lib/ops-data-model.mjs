@@ -133,7 +133,7 @@ export const productionDataModel = {
       name: "evidenceSnapshots",
       idField: "snapshotId",
       source: ".ops-data/ops-runtime.sqlite::evidence_snapshots or PostgreSQL evidence_snapshots",
-      purpose: "Append-only server-generated report package registry with scope metadata and SHA-256 fingerprint."
+      purpose: "Append-only server-generated report package registry with scope metadata, SHA-256/HMAC integrity, verification state and retention expiry."
     }
   ],
   relationships: [

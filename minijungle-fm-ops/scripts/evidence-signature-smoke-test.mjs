@@ -100,6 +100,21 @@ async function main() {
     assert(readBack.response.ok, "Signed evidence snapshot read-back failed");
     assert(readBack.body.signatureStatus === "signed", "Read-back snapshot lost signed status");
     assert(readBack.body.signature === persistedExpected, "Read-back signed snapshot changed its HMAC");
+    assert(readBack.body.verificationStatus === "pending", "Signed evidence snapshot should start pending verification");
+    const verified = await fetchJson(`${baseUrl}api/proof/evidence-snapshots/${encodeURIComponent(persisted.body.snapshotId)}`, {
+      method: "POST",
+      headers: principalHeaders("fm-lead", { "Content-Type": "application/json" }),
+      body: JSON.stringify({ note: "Independent HMAC verification smoke." })
+    });
+    assert(verified.response.ok, "Signed evidence snapshot verification failed");
+    assert(verified.body.verificationStatus === "verified", "Signed evidence snapshot did not become verified");
+    assert(verified.body.integrity.hashValid === true, "Signed evidence verification did not validate the package hash");
+    assert(verified.body.integrity.signatureValid === true, "Signed evidence verification did not validate the HMAC");
+    const retentionSweep = await fetchJson(`${baseUrl}api/proof/evidence-snapshots/retention-sweep`, {
+      method: "POST",
+      headers: principalHeaders("fm-lead")
+    });
+    assert(retentionSweep.response.ok && retentionSweep.body.expiredCount === 0, "Fresh signed evidence snapshot should not be expired");
     console.log(`Evidence signature smoke test passed at ${baseUrl}`);
   } catch (error) {
     if (output.length) console.error(output.join(""));

@@ -63,7 +63,9 @@ The portal now calls `GET /api/proof/evidence-snapshot` when exporting. The serv
 
 For internal report preparation, FM Lead/Platform Admin can `POST /api/proof/evidence-snapshots`. The server verifies the canonical package hash before inserting an append-only record in `evidence_snapshots`; `GET /api/proof/evidence-snapshots/:snapshotId` rechecks access against the stored client scope. Client viewers have `proof.snapshot.read` but no `proof.snapshot.write`, and an all-portfolio snapshot is not readable by a client-scoped principal.
 
-The pilot uses SQLite migration `2026-08-23.evidence-snapshot-v2`. Production uses the matching PostgreSQL adapter and `infra/postgres/002_evidence_snapshots.sql`. Production must load `DR_FOREST_EVIDENCE_SIGNING_SECRET` from a secret manager, keep the key ID stable during its validity window, define rotation and verification ownership, and cover the signed record with retention, off-host backup and delivery acknowledgement controls.
+The pilot uses SQLite migration `2026-08-23.evidence-snapshot-v3`. Production uses the matching PostgreSQL adapter and `infra/postgres/002_evidence_snapshots.sql`. Production must load `DR_FOREST_EVIDENCE_SIGNING_SECRET` from a secret manager, keep the key ID stable during its validity window, define rotation and verification ownership, set `DR_FOREST_EVIDENCE_RETENTION_DAYS` between 30 and 3650, and cover the signed record with retention, off-host backup and delivery acknowledgement controls.
+
+FM Lead/Platform Admin can verify a persisted snapshot with `POST /api/proof/evidence-snapshots/:snapshotId`. The endpoint recalculates the package hash and HMAC, persists the verification result and never upgrades an unsigned pilot snapshot to `verified`. A scheduled `POST /api/proof/evidence-snapshots/retention-sweep` or `npm.cmd run evidence:retention` marks expired standard snapshots as `expired`; it does not delete evidence and does not expire `legal-hold` records.
 
 ## Backup consistency check
 

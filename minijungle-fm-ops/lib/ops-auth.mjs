@@ -39,7 +39,9 @@ const roleDefinitions = {
       "proof.media.write",
       "proof.media.verify",
       "proof.snapshot.read",
-      "proof.snapshot.write"
+      "proof.snapshot.write",
+      "proof.snapshot.verify",
+      "proof.snapshot.retention"
       ,"telemetry.read"
       ,"telemetry.write"
       ,"telemetry.health.read"
