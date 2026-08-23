@@ -691,6 +691,21 @@ async function appendOpsEvent(event) {
       payload: event
     });
   }
+  if (event?.type === "mobile.capture.synced" && Number(event.payload?.exceptionCount || 0) > 0) {
+    await enqueueNotification({
+      id: `NTF-CAPTURE-${event.payload.batchId || event.entityId}`,
+      channel: "webhook",
+      eventType: "mobile.capture.exception",
+      severity: "warning",
+      clientId: event.clientId,
+      wallId: event.wallId,
+      payload: {
+        ...event,
+        type: "mobile.capture.exception",
+        note: `${event.payload.exceptionCount} exception item(s) require FM review before client close-out.`
+      }
+    });
+  }
   return result;
 }
 
@@ -2139,11 +2154,15 @@ async function handleApi(req, res, pathname) {
     }
 
     if (req.method === "GET" && pathname === "/api/notifications") {
-      requirePermission(auth, "observability.read");
+      requirePermission(auth, "notifications.read");
       const url = new URL(req.url, `http://${host}:${port}`);
       const status = url.searchParams.get("status") || null;
       const limit = url.searchParams.get("limit") || 100;
-      sendJson(res, 200, { generatedAt: new Date().toISOString(), notifications: await listNotifications({ status, limit }) });
+      const [notifications, storage] = await Promise.all([
+        listNotifications({ status, limit }),
+        readNotificationStorageHealth()
+      ]);
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), notifications, summary: storage.counts });
       return;
     }
 
@@ -2266,6 +2285,7 @@ async function handleApi(req, res, pathname) {
       let event = null;
 
       if (!result.duplicate) {
+        const exceptionCount = result.batch.items.filter((item) => item.type === "exception").length;
         event = normalizeOpsEvent({
           type: "mobile.capture.synced",
           actor: auth.name,
@@ -2280,6 +2300,7 @@ async function handleApi(req, res, pathname) {
             batchId: result.batch.id,
             technicianId: result.batch.technicianId,
             itemCount: result.batch.items.length,
+            exceptionCount,
             duplicate: false
           }
         });

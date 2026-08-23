@@ -27,6 +27,8 @@ async function main() {
       assert(await operations.locator(".route-item").count() === 4, "Operations page did not load four route stops");
       assert(await operations.locator(".module-item").count() === 12, "Operations page did not load module health rows");
       assert(await operations.locator("#capture-list").textContent().then((text) => text.includes("No technician records") || operations.locator(".capture-item").count() > 0), "Operations page did not load field evidence panel");
+      assert(await operations.locator("#notification-state").textContent().then((text) => text.includes("due")), "Operations page did not load notification delivery state");
+      assert(await operations.locator("#notification-list").textContent().then((text) => text.includes("No outbound notifications") || operations.locator(".notification-item").count() > 0), "Operations page did not load notification queue");
       assert(!operationsErrors.length, `Operations page errors: ${operationsErrors.join(" | ")}`);
       const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const mobileErrors = []; mobile.on("console", (message) => { if (message.type() === "error") mobileErrors.push(message.text()); }); mobile.on("pageerror", (error) => mobileErrors.push(error.message));

@@ -106,6 +106,7 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("proof.snapshot.retention"), "FM lead auth policy did not expose evidence snapshot retention permission");
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("notifications.read"), "FM lead auth policy did not expose notification read permission");
 
   const clientFieldCaptures = await fetchJson(`${baseUrl}api/mobile/capture-batches`, { headers: principalHeaders("client-show-suite") });
   assert(clientFieldCaptures.response.ok && Array.isArray(clientFieldCaptures.body.batches), "Client viewer should read scoped field captures");
@@ -120,7 +121,7 @@ async function verifyApi(baseUrl) {
   const deniedMetrics = await fetchJson(`${baseUrl}api/metrics`, { headers: principalHeaders("client-show-suite") });
   assert(deniedMetrics.response.status === 403, "Client viewer should not read platform observability metrics");
   const notifications = await fetchJson(`${baseUrl}api/notifications`, { headers: principalHeaders("fm-lead") });
-  assert(notifications.response.ok && Array.isArray(notifications.body.notifications), "FM lead should read the notification outbox");
+  assert(notifications.response.ok && Array.isArray(notifications.body.notifications) && notifications.body.summary && Number.isInteger(notifications.body.summary.due), "FM lead should read notification records and delivery summary");
   const deniedNotifications = await fetchJson(`${baseUrl}api/notifications`, { headers: principalHeaders("client-show-suite") });
   assert(deniedNotifications.response.status === 403, "Client viewer should not read the notification outbox");
 
@@ -766,6 +767,9 @@ async function verifyApi(baseUrl) {
   assert(duplicateMobileSync.response.ok, "Duplicate mobile sync should return the existing batch");
   assert(duplicateMobileSync.body.duplicate === true, "Duplicate mobile sync should be marked duplicate");
   assert(duplicateMobileSync.body.event === null, "Duplicate mobile sync should not create a second audit event");
+  assert(mobileSync.body.event.payload.exceptionCount === 1, "Mobile sync event did not count exception items");
+  const notificationsAfterMobile = await fetchJson(`${baseUrl}api/notifications`, { headers: principalHeaders("fm-lead") });
+  assert(notificationsAfterMobile.body.notifications.some((item) => item.id === "NTF-CAPTURE-MCB-9001" && item.eventType === "mobile.capture.exception" && item.status === "pending"), "Mobile exception did not enqueue a pending notification");
 
   const mobileBatches = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
     headers: principalHeaders("fm-lead")

@@ -51,6 +51,7 @@ const roleDefinitions = {
       ,"ai.diagnosis.request"
       ,"ai.diagnosis.write"
       ,"observability.read"
+      ,"notifications.read"
     ],
     actionTypes: ["*"]
   },

@@ -38,15 +38,15 @@ Invoke-WebRequest -UseBasicParsing -Headers @{ Authorization = "Bearer $env:DR_F
 
 The endpoint and JSON stdout logs are an application contract. They do not prove that the hosting log sink, alert route, on-call escalation or recovery notification is working. Attach those platform-level delivery and incident artifacts to the production evidence record.
 
-## Alert notification worker
+## Alert and field-exception notification worker
 
-Alert-open events create an idempotent `ops_notification_outbox` record. Run the worker from a scheduler or a long-running job with the production webhook secret:
+Alert-open events and technician capture batches containing exception items create idempotent `ops_notification_outbox` records. The FM Operations page exposes due, retry and failed delivery counts, but the page does not deliver or silently acknowledge notifications. Run the worker from a scheduler or a long-running job with the production webhook secret:
 
 ```powershell
 npm.cmd run notifications:once
 ```
 
-The worker claims due tasks, signs the JSON payload with `DR_FOREST_ALERT_WEBHOOK_SECRET`, marks successful deliveries, and applies exponential backoff until `DR_FOREST_NOTIFICATION_MAX_ATTEMPTS`. A missing webhook intentionally leaves tasks pending and returns `skipped`; it is not a delivery pass.
+The worker claims due tasks, signs the JSON payload with `DR_FOREST_ALERT_WEBHOOK_SECRET`, marks successful deliveries, and applies exponential backoff until `DR_FOREST_NOTIFICATION_MAX_ATTEMPTS`. A missing webhook intentionally leaves tasks pending and returns `skipped`; it is not a delivery pass. Production should attach the webhook to an owned incident/escalation system, monitor failed and retry counts, and retain delivery responses for the release record.
 
 ## Device ingress limits
 

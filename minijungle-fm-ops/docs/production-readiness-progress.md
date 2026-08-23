@@ -551,3 +551,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 42 - Notification Outbox and Field Exception Escalation v1
+
+- Official score remains **65%**. This batch makes the application-layer exception route more complete, but it does not create a live webhook receiver, real on-call acceptance, managed PostgreSQL or off-host restore evidence.
+- Capability added: a technician capture batch containing one or more `exception` items now creates an idempotent `mobile.capture.exception` notification in the outbox after the audit event is stored. The payload keeps client, wall, work-order, technician and batch context for downstream routing.
+- Capability added: the `/api/notifications` contract now returns delivery summary counts and uses the dedicated `notifications.read` permission. FM Lead can read the queue; client viewers remain denied and cannot inspect platform-wide delivery state.
+- Capability added: the Ops Today screen now shows due-delivery count and the latest notification states, including pending, retry, failed and delivered records. It is a visibility surface only; it does not falsely mark a notification as delivered.
+- Evidence added: API smoke verifies exception count in the mobile audit event, pending exception notification creation, summary counts and permission denial. UI smoke verifies the delivery queue panel. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: the local smoke uses pilot data, no external webhook was accepted, no real on-call escalation was measured, and the notification worker still needs a production scheduler, secret manager, incident endpoint and delivery evidence.
+- Target effect: workflow completeness, operational UI and reliability scaffold improve; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 42
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
