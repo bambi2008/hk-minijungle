@@ -57,6 +57,8 @@ The service also bounds the in-process rate-limit bucket map to 5,000 active key
 
 `portal.html?role=client` is a pilot-only read-only client view. It displays only the authenticated principal's client-scoped portfolio, assets, proof evidence and open exceptions. `portal.html?role=auditor` additionally displays the data-quality and ESG evidence-gap panel for a principal with the `esg-auditor` permission. The query parameter is not an authentication mechanism: production must remove the demo selector and use OIDC claims, server-side role checks and database row policies. Neither view has write operations.
 
+After the data loads, `Download evidence / 下載證據` creates a role-labelled JSON snapshot in the browser. It is useful for pilot review and partner walkthroughs, but it is not a signed report. A production release must replace or supplement it with an immutable server-side snapshot, a signed download URL, retention controls and a delivery acknowledgement.
+
 ## Backup consistency check
 
 `npm.cmd run backup:runtime` records a `2026-08-23.runtime-backup-v2` manifest with `consistency.method: sqlite-vacuum-into` and a source integrity result. `npm.cmd run backup:smoke` copies the current pilot database into an isolated temporary runtime, creates a backup, verifies checksums and restores the database into staging, then checks SQLite integrity before deleting the temporary files. This proves the local backup contract only. Production still requires a managed PostgreSQL backup, off-host retention, encryption-key custody and a dated restore drill.

@@ -41,11 +41,17 @@ async function main() {
       await clientPortal.goto(`${baseUrl}/portal.html?role=client`); await clientPortal.waitForFunction(() => document.querySelector("#asset-state")?.textContent !== "Loading", null, { timeout: 5000 });
       assert(await clientPortal.locator(".asset-row").count() === 1, "Client portal did not keep the client scope");
       assert(await clientPortal.locator("#auditor-panel").getAttribute("hidden") !== null, "Client portal exposed the auditor panel");
+      assert(await clientPortal.locator("#export").isEnabled(), "Client portal did not enable evidence export");
+      const [clientDownload] = await Promise.all([clientPortal.waitForEvent("download"), clientPortal.locator("#export").click()]);
+      assert(clientDownload.suggestedFilename().includes("evidence-client"), "Client evidence export filename was not role-scoped"); await clientDownload.delete();
       assert(!clientPortalErrors.length, `Client portal errors: ${clientPortalErrors.join(" | ")}`);
       const auditorPortal = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       const auditorPortalErrors = []; auditorPortal.on("console", (message) => { if (message.type() === "error") auditorPortalErrors.push(message.text()); }); auditorPortal.on("pageerror", (error) => auditorPortalErrors.push(error.message));
       await auditorPortal.goto(`${baseUrl}/portal.html?role=auditor`); await auditorPortal.waitForFunction(() => document.querySelector("#quality-status")?.textContent !== "Loading", null, { timeout: 5000 });
       assert(await auditorPortal.locator("#auditor-panel").isVisible(), "Auditor portal did not expose data quality review");
+      assert(await auditorPortal.locator("#export").isEnabled(), "Auditor portal did not enable evidence export");
+      const [auditorDownload] = await Promise.all([auditorPortal.waitForEvent("download"), auditorPortal.locator("#export").click()]);
+      assert(auditorDownload.suggestedFilename().includes("evidence-auditor"), "Auditor evidence export filename was not role-scoped"); await auditorDownload.delete();
       assert(!auditorPortalErrors.length, `Auditor portal errors: ${auditorPortalErrors.join(" | ")}`);
       const admin = await browser.newPage({ viewport: { width: 1280, height: 900 } });
       const adminErrors = []; admin.on("console", (message) => { if (message.type() === "error") adminErrors.push(message.text()); }); admin.on("pageerror", (error) => adminErrors.push(error.message));

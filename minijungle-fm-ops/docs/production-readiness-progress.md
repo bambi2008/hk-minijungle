@@ -401,3 +401,18 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 33 - Scoped Evidence Package Export v1
+
+- Official score remains **65%**. A browser-generated JSON snapshot is not a signed ESG report, external audit acceptance or proof of a managed delivery channel.
+- Capability added: client and auditor portal users can download a read-only `dr-forest-evidence-<role>-<timestamp>.json` package after the scoped API reads complete.
+- Scope boundary: the package contains only the current server-filtered portfolio, assets, proof media objects, active telemetry exceptions and active AI diagnoses. Auditor mode additionally includes the data-quality response; client mode never receives that panel or payload.
+- Evidence added: UI smoke confirms both role-specific download buttons enable after loading and produce role-scoped filenames; full `npm.cmd run check` passes.
+- Honest boundary: the export is generated in-browser and is not cryptographically signed. Production still needs a server-side report ID, immutable evidence snapshot, signed download URL, retention policy and delivery/acknowledgement record.
+- Target effect: architecture scaffold remains approximately **99%**; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 33
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
