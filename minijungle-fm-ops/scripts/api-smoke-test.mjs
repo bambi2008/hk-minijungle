@@ -99,12 +99,19 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["field-tech"].permissions.includes("proof.media.write"), "Auth policy did not expose field proof media write permission");
   assert(authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.read"), "Auth policy did not expose client proof media read permission");
   assert(authPolicy.body.roles["client-viewer"].permissions.includes("proof.snapshot.read"), "Auth policy did not expose client evidence snapshot read permission");
+  assert(authPolicy.body.roles["client-viewer"].permissions.includes("mobile.capture.read"), "Auth policy did not expose client field capture read permission");
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.snapshot.write"), "Client viewer should not receive evidence snapshot write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("proof.snapshot.write"), "FM lead auth policy did not expose evidence snapshot write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("proof.snapshot.verify"), "FM lead auth policy did not expose evidence snapshot verify permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("proof.snapshot.retention"), "FM lead auth policy did not expose evidence snapshot retention permission");
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
+
+  const clientFieldCaptures = await fetchJson(`${baseUrl}api/mobile/capture-batches`, { headers: principalHeaders("client-show-suite") });
+  assert(clientFieldCaptures.response.ok && Array.isArray(clientFieldCaptures.body.batches), "Client viewer should read scoped field captures");
+  assert(clientFieldCaptures.body.batches.every((batch) => batch.clientId === "show-suite"), "Client viewer field captures escaped client scope");
+  const auditorFieldCaptures = await fetchJson(`${baseUrl}api/mobile/capture-batches`, { headers: principalHeaders("esg-auditor") });
+  assert(auditorFieldCaptures.response.ok && Array.isArray(auditorFieldCaptures.body.batches), "ESG auditor should read field captures");
 
   const metrics = await fetchJson(`${baseUrl}api/metrics`, { headers: principalHeaders("fm-lead") });
   assert(metrics.response.ok, "FM lead should read protected observability metrics");
@@ -191,15 +198,19 @@ async function verifyApi(baseUrl) {
   assert(clientEvidenceSnapshot.body.snapshotId.startsWith("EVP-"), "Client evidence snapshot did not expose a stable snapshot ID");
   assert(/^[a-f0-9]{64}$/.test(clientEvidenceSnapshot.body.sha256), "Client evidence snapshot did not expose a SHA-256 fingerprint");
   assert(clientEvidenceSnapshot.body.signatureAlgorithm === "hmac-sha256", "Client evidence snapshot did not expose the signature algorithm");
+  assert(clientEvidenceSnapshot.body.package.schemaVersion === "dr-forest-evidence-package-v3", "Client evidence snapshot did not expose the field-capture package schema");
   assert(clientEvidenceSnapshot.body.signatureStatus === "unsigned", "Pilot evidence snapshot should explicitly report unsigned status");
   assert(clientEvidenceSnapshot.body.signature === null, "Unsigned pilot evidence snapshot should not expose a signature");
   assert(clientEvidenceSnapshot.body.package.assets.length === 1, "Client evidence snapshot did not keep client scope");
+  assert(Array.isArray(clientEvidenceSnapshot.body.package.fieldCaptures), "Client evidence snapshot did not include field captures");
+  assert(clientEvidenceSnapshot.body.package.fieldCaptures.every((batch) => batch.clientId === "show-suite"), "Client evidence snapshot field captures escaped scope");
   assert(!Object.prototype.hasOwnProperty.call(clientEvidenceSnapshot.body.package, "dataQuality"), "Client evidence snapshot leaked auditor data quality");
   const auditorEvidenceSnapshot = await fetchJson(`${baseUrl}api/proof/evidence-snapshot`, {
     headers: principalHeaders("esg-auditor")
   });
   assert(auditorEvidenceSnapshot.response.ok, "Auditor evidence snapshot endpoint failed");
   assert(auditorEvidenceSnapshot.body.package.assets.length === 4, "Auditor evidence snapshot did not expose the review portfolio");
+  assert(Array.isArray(auditorEvidenceSnapshot.body.package.fieldCaptures), "Auditor evidence snapshot did not include field captures");
   assert(auditorEvidenceSnapshot.body.package.dataQuality?.status === "pass-with-warnings", "Auditor evidence snapshot did not include data quality");
 
   const clientEvidenceWriteDenied = await fetchJson(`${baseUrl}api/proof/evidence-snapshots`, {
@@ -763,10 +774,17 @@ async function verifyApi(baseUrl) {
   assert(mobileBatches.body.batches.length === 1, "Mobile capture listing should include exactly one synced batch");
   assert(mobileBatches.body.batches[0].items.length === 5, "Mobile capture listing did not include captured items");
 
-  const viewerDeniedMobileList = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
+  const viewerMobileList = await fetchJson(`${baseUrl}api/mobile/capture-batches`, {
     headers: principalHeaders("client-show-suite")
   });
-  assert(viewerDeniedMobileList.response.status === 403, "Client viewer should not list technician mobile capture batches");
+  assert(viewerMobileList.response.ok, "Client viewer should list scoped technician mobile capture batches");
+  assert(viewerMobileList.body.batches.length === 1, "Client viewer should see the synced show-suite capture");
+  assert(viewerMobileList.body.batches[0].clientId === "show-suite", "Client viewer mobile capture listing escaped client scope");
+  assert(viewerMobileList.body.batches[0].items.length === 5, "Client viewer mobile capture listing did not include captured items");
+  const clientEvidenceAfterMobile = await fetchJson(`${baseUrl}api/proof/evidence-snapshot`, { headers: principalHeaders("client-show-suite") });
+  assert(clientEvidenceAfterMobile.response.ok, "Client evidence snapshot should remain available after mobile sync");
+  assert(clientEvidenceAfterMobile.body.package.fieldCaptures.length === 1, "Client evidence snapshot did not include the synced field capture");
+  assert(clientEvidenceAfterMobile.body.package.fieldCaptures[0].items.some((item) => item.type === "exception"), "Client evidence snapshot did not retain the field exception item");
 
   const clientEventsAfterMobile = await fetchJson(`${baseUrl}api/ops-events`, {
     headers: principalHeaders("client-show-suite")

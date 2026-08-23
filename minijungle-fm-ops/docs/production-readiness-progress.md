@@ -534,3 +534,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 41 - Field Evidence to Client and Auditor Portal v1
+
+- Official score remains **65%**. This closes an application-layer evidence handoff, but it does not create a live hosted database, external assurance or repeated client operations evidence.
+- Capability added: client viewers and ESG auditors can read technician capture batches through a read-only, client-scoped API permission. They cannot write mobile records.
+- Capability added: portfolio counts now include synced field records, and the evidence snapshot package now includes `fieldCaptures` alongside proof media, active alerts, pending AI tasks and data-quality information where permitted.
+- Capability added: the client/auditor portal now shows a bilingual field-capture service chain with wall/module, work order, technician, capture time, item count, sync status, photo/care completeness and exception review state.
+- Capability added: AI exception text in the portal explicitly says that the provider result is pending; queued work is not presented as a completed diagnosis.
+- Evidence added: API smoke verifies client scope, auditor access, scope filtering after a real pilot mobile sync and evidence-snapshot inclusion of the synced exception capture. UI smoke verifies both client and auditor portal field-capture panels.
+- Honest boundary: the smoke data is generated pilot data, the proof media vault remains local, the evidence snapshot is unsigned in pilot mode, and no external client or auditor has accepted the package.
+- Target effect: client/auditor workflow and evidence-chain application scaffold become more complete; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 41
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

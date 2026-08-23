@@ -97,6 +97,7 @@ const roleDefinitions = {
       "ops.state.read",
       "proof.media.read"
       ,"proof.snapshot.read"
+      ,"mobile.capture.read"
       ,"device.registry.read"
       ,"device.captures.read"
       ,"telemetry.read"
@@ -119,6 +120,7 @@ const roleDefinitions = {
       "auth.policy.read",
       "proof.media.read"
       ,"proof.snapshot.read"
+      ,"mobile.capture.read"
       ,"device.registry.read"
       ,"device.captures.read"
       ,"telemetry.read"

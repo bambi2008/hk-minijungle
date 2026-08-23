@@ -54,6 +54,8 @@ async function main() {
       const clientPortalErrors = []; clientPortal.on("console", (message) => { if (message.type() === "error") clientPortalErrors.push(message.text()); }); clientPortal.on("pageerror", (error) => clientPortalErrors.push(error.message));
       await clientPortal.goto(`${baseUrl}/portal.html?role=client`); await clientPortal.waitForFunction(() => document.querySelector("#asset-state")?.textContent !== "Loading", null, { timeout: 5000 });
       assert(await clientPortal.locator(".asset-row").count() === 1, "Client portal did not keep the client scope");
+      assert(await clientPortal.locator("#capture-count").textContent() !== "--", "Client portal did not load field capture count");
+      assert(await clientPortal.locator("#capture-list").textContent().then((text) => text.includes("No synced field captures") || clientPortal.locator(".capture-row").count() > 0), "Client portal did not render field capture chain");
       assert(await clientPortal.locator("#auditor-panel").getAttribute("hidden") !== null, "Client portal exposed the auditor panel");
       assert(await clientPortal.locator("#export").isEnabled(), "Client portal did not enable evidence export");
       const [clientDownload] = await Promise.all([clientPortal.waitForEvent("download"), clientPortal.locator("#export").click()]);
@@ -63,6 +65,7 @@ async function main() {
       const auditorPortalErrors = []; auditorPortal.on("console", (message) => { if (message.type() === "error") auditorPortalErrors.push(message.text()); }); auditorPortal.on("pageerror", (error) => auditorPortalErrors.push(error.message));
       await auditorPortal.goto(`${baseUrl}/portal.html?role=auditor`); await auditorPortal.waitForFunction(() => document.querySelector("#quality-status")?.textContent !== "Loading", null, { timeout: 5000 });
       assert(await auditorPortal.locator("#auditor-panel").isVisible(), "Auditor portal did not expose data quality review");
+      assert(await auditorPortal.locator("#capture-list").textContent().then((text) => text.includes("No synced field captures") || auditorPortal.locator(".capture-row").count() > 0), "Auditor portal did not render field capture chain");
       assert(await auditorPortal.locator("#export").isEnabled(), "Auditor portal did not enable evidence export");
       const [auditorDownload] = await Promise.all([auditorPortal.waitForEvent("download"), auditorPortal.locator("#export").click()]);
       assert(auditorDownload.suggestedFilename().includes("evidence-auditor"), "Auditor evidence export filename was not role-scoped"); await auditorDownload.delete();

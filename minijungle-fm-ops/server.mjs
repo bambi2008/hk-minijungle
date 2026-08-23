@@ -850,7 +850,7 @@ function openIncidents(incidents) {
 }
 
 async function buildPortfolioSummary(auth) {
-  const [clients, walls, workorders, proofData, sensorData, incidentData, productModel, events, opsState] = await Promise.all([
+  const [clients, walls, workorders, proofData, sensorData, incidentData, productModel, events, opsState, captureBatches] = await Promise.all([
     readJsonData("clients"),
     readJsonData("walls"),
     readJsonData("workorders"),
@@ -859,7 +859,8 @@ async function buildPortfolioSummary(auth) {
     readJsonData("incidents"),
     readJsonData("productModel"),
     readOpsEvents(),
-    readOpsState()
+    readOpsState(),
+    listMobileCaptureBatches()
   ]);
 
   const scopedClients = filterByClientScope(auth, clients, (client) => client.id);
@@ -873,6 +874,7 @@ async function buildPortfolioSummary(auth) {
   const scopedProofRecords = proofRecords.filter((item) => scopedWallIds.has(item.wallId));
   const scopedSensors = sensors.filter((item) => scopedWallIds.has(item.wallId));
   const scopedIncidents = incidents.filter((item) => scopedWallIds.has(item.wallId));
+  const scopedCaptureBatches = filterByClientScope(auth, captureBatches, (batch) => batch.clientId);
   const reportModes = productModel.reportModes || [];
   const resolveEntityClientId = await buildEntityClientResolver();
   const scopedEvents = filterOpsEventsForAuth(events, auth, resolveEntityClientId);
@@ -897,6 +899,7 @@ async function buildPortfolioSummary(auth) {
       workorders: scopedWorkorders.length,
       activeWorkorders: activeWorkorders(scopedWorkorders).length,
       proofRecords: scopedProofRecords.length,
+      mobileCaptureBatches: scopedCaptureBatches.length,
       sensorReadings: scopedSensors.length,
       activeSensorAlerts: scopedSensors.filter((item) => ["alert", "watch", "offline"].includes(item.status)).length,
       incidents: scopedIncidents.length,
@@ -959,23 +962,25 @@ async function buildAssetIndex(auth) {
 
 async function buildEvidenceSnapshot(auth) {
   const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
-  const [portfolio, assets, proofObjects, alerts, diagnoses, quality] = await Promise.all([
+  const [portfolio, assets, proofObjects, alerts, diagnoses, quality, captureBatches] = await Promise.all([
     buildPortfolioSummary(auth),
     buildAssetIndex(auth),
     listProofMediaObjects(),
     listAlerts({ clientIds, statuses: ["open", "acknowledged"], limit: 200 }),
     listVisualDiagnoses({ clientIds, statuses: ["queued", "running"], limit: 200 }),
-    hasPermission(auth, "data.quality.read") ? buildDataQualityReport(dataRoot, await readOpsEvents()) : Promise.resolve(null)
+    hasPermission(auth, "data.quality.read") ? buildDataQualityReport(dataRoot, await readOpsEvents()) : Promise.resolve(null),
+    listMobileCaptureBatches()
   ]);
   const generatedAt = new Date().toISOString();
   const payload = {
-    schemaVersion: "dr-forest-evidence-package-v2",
+    schemaVersion: "dr-forest-evidence-package-v3",
     generatedAt,
     viewerRole: auth.roleId,
     scope: auth.clientScope === "all" ? "server-enforced-all-portfolio" : "server-enforced-client-scope",
     portfolio,
     assets,
     proofMedia: filterByClientScope(auth, proofObjects, (object) => object.clientId),
+    fieldCaptures: filterByClientScope(auth, captureBatches, (batch) => batch.clientId),
     activeAlerts: alerts,
     activeVisualDiagnoses: diagnoses,
     ...(quality ? { dataQuality: quality } : {})
