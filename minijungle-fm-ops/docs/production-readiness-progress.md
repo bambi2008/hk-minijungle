@@ -518,3 +518,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 40 - Operations Exception and Field Evidence Loop v1
+
+- Official score remains **65%**. The operations surface is stronger, but it does not remove the managed PostgreSQL/off-host restore hard cap or create real field evidence by itself.
+- Capability added: the FM lead operations page now reads synced technician capture batches and shows the latest wall/module, work order, technician, capture time, item count, photo presence, exception flag and sync status.
+- Capability added: telemetry alert rows now show metric value/unit, scope, occurrence count and last-seen time, with a direct link back to the matching technician field context plus the existing acknowledge/resolve action.
+- Capability added: queued AI vision records explicitly show that the provider result is pending; the UI does not present a queued task as a diagnosis.
+- Evidence added: the operations UI smoke test verifies the field evidence panel in addition to route and module health loading; full UI/API regression remains part of `npm.cmd run check`.
+- Honest boundary: no real synced technician visit, external AI provider callback, real client user or repeated multi-client operations cycle was added in this workspace; the pilot dataset may therefore show an empty field evidence list.
+- Target effect: operational UI/application scaffold becomes more complete; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 40
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
