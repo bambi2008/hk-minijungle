@@ -192,6 +192,7 @@ import {
   authPolicySummary,
   canAccessClient,
   filterByClientScope,
+  hasPermission,
   requireActionAccess,
   requireClientAccess,
   requireEventWriteAccess,
@@ -909,6 +910,40 @@ async function buildAssetIndex(auth) {
       openIncidents: openIncidents(wallIncidents).length
     };
   });
+}
+
+async function buildEvidenceSnapshot(auth) {
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [portfolio, assets, proofObjects, alerts, diagnoses, quality] = await Promise.all([
+    buildPortfolioSummary(auth),
+    buildAssetIndex(auth),
+    listProofMediaObjects(),
+    listAlerts({ clientIds, statuses: ["open", "acknowledged"], limit: 200 }),
+    listVisualDiagnoses({ clientIds, statuses: ["queued", "running"], limit: 200 }),
+    hasPermission(auth, "data.quality.read") ? buildDataQualityReport(dataRoot, await readOpsEvents()) : Promise.resolve(null)
+  ]);
+  const generatedAt = new Date().toISOString();
+  const payload = {
+    schemaVersion: "dr-forest-evidence-package-v2",
+    generatedAt,
+    viewerRole: auth.roleId,
+    scope: auth.clientScope === "all" ? "server-enforced-all-portfolio" : "server-enforced-client-scope",
+    portfolio,
+    assets,
+    proofMedia: filterByClientScope(auth, proofObjects, (object) => object.clientId),
+    activeAlerts: alerts,
+    activeVisualDiagnoses: diagnoses,
+    ...(quality ? { dataQuality: quality } : {})
+  };
+  const canonical = JSON.stringify(payload);
+  const sha256 = createHash("sha256").update(canonical, "utf8").digest("hex");
+  return {
+    snapshotId: `EVP-${sha256.slice(0, 16)}`,
+    generatedAt,
+    hashAlgorithm: "sha256",
+    sha256,
+    package: payload
+  };
 }
 
 function mobileCaptureSchema() {
@@ -2044,6 +2079,12 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && pathname === "/api/data-quality") {
       requirePermission(auth, "data.quality.read");
       sendJson(res, 200, await buildDataQualityReport(dataRoot, await readOpsEvents()));
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/proof/evidence-snapshot") {
+      requirePermission(auth, "portfolio.read");
+      sendJson(res, 200, await buildEvidenceSnapshot(auth));
       return;
     }
 

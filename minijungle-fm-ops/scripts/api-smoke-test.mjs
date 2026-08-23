@@ -177,6 +177,21 @@ async function verifyApi(baseUrl) {
   assert(clientPortfolio.body.counts.assets === 1, "Client portfolio should expose exactly one asset");
   assert(clientPortfolio.body.auth.clientIds.includes("show-suite"), "Client portfolio did not echo scoped client IDs");
 
+  const clientEvidenceSnapshot = await fetchJson(`${baseUrl}api/proof/evidence-snapshot`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(clientEvidenceSnapshot.response.ok, "Client evidence snapshot endpoint failed");
+  assert(clientEvidenceSnapshot.body.snapshotId.startsWith("EVP-"), "Client evidence snapshot did not expose a stable snapshot ID");
+  assert(/^[a-f0-9]{64}$/.test(clientEvidenceSnapshot.body.sha256), "Client evidence snapshot did not expose a SHA-256 fingerprint");
+  assert(clientEvidenceSnapshot.body.package.assets.length === 1, "Client evidence snapshot did not keep client scope");
+  assert(!Object.prototype.hasOwnProperty.call(clientEvidenceSnapshot.body.package, "dataQuality"), "Client evidence snapshot leaked auditor data quality");
+  const auditorEvidenceSnapshot = await fetchJson(`${baseUrl}api/proof/evidence-snapshot`, {
+    headers: principalHeaders("esg-auditor")
+  });
+  assert(auditorEvidenceSnapshot.response.ok, "Auditor evidence snapshot endpoint failed");
+  assert(auditorEvidenceSnapshot.body.package.assets.length === 4, "Auditor evidence snapshot did not expose the review portfolio");
+  assert(auditorEvidenceSnapshot.body.package.dataQuality?.status === "pass-with-warnings", "Auditor evidence snapshot did not include data quality");
+
   const dataModel = await fetchJson(`${baseUrl}api/data-model`);
   assert(dataModel.response.ok, "Data model endpoint failed");
   assert(dataModel.body.scoreTarget.before === 70, "Data model did not preserve Step 10 readiness baseline");

@@ -59,6 +59,8 @@ The service also bounds the in-process rate-limit bucket map to 5,000 active key
 
 After the data loads, `Download evidence / 下載證據` creates a role-labelled JSON snapshot in the browser. It is useful for pilot review and partner walkthroughs, but it is not a signed report. A production release must replace or supplement it with an immutable server-side snapshot, a signed download URL, retention controls and a delivery acknowledgement.
 
+The portal now calls `GET /api/proof/evidence-snapshot` when exporting. The server assembles the current scoped package and returns `snapshotId`, `hashAlgorithm: sha256` and a 64-character fingerprint. This is a traceability fingerprint, not immutable storage: production still needs a persisted report record, signing key custody, object retention and an external delivery acknowledgement.
+
 ## Backup consistency check
 
 `npm.cmd run backup:runtime` records a `2026-08-23.runtime-backup-v2` manifest with `consistency.method: sqlite-vacuum-into` and a source integrity result. `npm.cmd run backup:smoke` copies the current pilot database into an isolated temporary runtime, creates a backup, verifies checksums and restores the database into staging, then checks SQLite integrity before deleting the temporary files. This proves the local backup contract only. Production still requires a managed PostgreSQL backup, off-host retention, encryption-key custody and a dated restore drill.

@@ -416,3 +416,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 34 - Server-generated Fingerprinted Evidence Snapshot v1
+
+- Official score remains **65%**. Server-side assembly and hashing improve traceability but do not prove immutable storage, signed reporting or external audit acceptance.
+- Capability added: `GET /api/proof/evidence-snapshot` assembles the current scoped portfolio, assets, proof media metadata, active telemetry exceptions and active AI diagnoses on the server, then returns a `snapshotId`, canonical SHA-256 fingerprint and JSON package.
+- Scope boundary: client viewers receive only their server-filtered asset and evidence set. Data-quality content is included only when the principal already has `data.quality.read`, so the client viewer cannot receive the auditor panel through export.
+- UI behavior updated: the portal downloads the server response and shows the returned SHA-256 fingerprint instead of hashing a browser-built copy.
+- Evidence added: API smoke verifies client scope, 64-character SHA-256, client exclusion of `dataQuality`, and auditor inclusion of the quality report; UI smoke verifies both role-specific downloads; full `npm.cmd run check` passes.
+- Honest boundary: the snapshot is recomputed per request and is not yet persisted as an immutable report object, digitally signed, retained, delivered through a managed channel or acknowledged by an external auditor.
+- Target effect: architecture scaffold remains approximately **99%**; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 34
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
