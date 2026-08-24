@@ -170,6 +170,18 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.telemetry.migrationVersion === "2026-08-17.telemetry-history-v2", "Storage endpoint did not expose telemetry history migration");
   assert(initialStorage.body.telemetry.tables.includes("sensor_reading_history"), "Storage endpoint did not expose sensor history table");
   assert(initialStorage.body.telemetry.counts.sensorReadingHistory === 0, "Sensor history should start empty in test mode");
+  const initialOperationsQuality = await fetchJson(`${baseUrl}api/ops/quality`, {
+    headers: principalHeaders("fm-lead")
+  });
+  assert(initialOperationsQuality.response.ok, "Operations quality endpoint failed");
+  assert(initialOperationsQuality.body.summary.modules === 12, "Operations quality did not count all seeded modules");
+  assert(initialOperationsQuality.body.gates.length === 4, "Operations quality did not expose four readiness gates");
+  assert(initialOperationsQuality.body.gates.find((gate) => gate.id === "telemetry")?.status === "blocked", "Operations quality should not call pilot telemetry complete before readings");
+  assert(initialOperationsQuality.body.gates.find((gate) => gate.id === "camera")?.status === "blocked", "Operations quality should not call generated cameras connected");
+  const viewerDeniedOperationsQuality = await fetchJson(`${baseUrl}api/ops/quality`, {
+    headers: principalHeaders("client-show-suite")
+  });
+  assert(viewerDeniedOperationsQuality.response.status === 403, "Client viewer should not read internal operations quality");
 
   const deniedStorage = await fetchJson(`${baseUrl}api/storage`, {
     headers: principalHeaders("client-show-suite")

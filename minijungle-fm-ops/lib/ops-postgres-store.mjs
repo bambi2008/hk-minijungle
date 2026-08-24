@@ -29,6 +29,8 @@ async function initialize(pool) {
     );
     CREATE INDEX IF NOT EXISTS idx_ops_events_entity ON ops_events(entity_type, entity_id);
     CREATE INDEX IF NOT EXISTS idx_ops_events_client ON ops_events(client_id);
+    CREATE INDEX IF NOT EXISTS idx_ops_events_timeline ON ops_events(timestamp DESC, id DESC);
+    CREATE INDEX IF NOT EXISTS idx_ops_events_type_timeline ON ops_events(type, timestamp DESC, id DESC);
     CREATE TABLE IF NOT EXISTS ops_state_snapshots (
       revision INTEGER PRIMARY KEY, version TEXT NOT NULL, updated_at TIMESTAMPTZ,
       last_event_id TEXT, state_json JSONB NOT NULL
@@ -64,6 +66,33 @@ async function insertAction(client, action, event, revision) {
 
 export async function readPostgresOpsEvents() {
   return withDatabase(async (pool) => { await initialize(pool); const result = await pool.query("SELECT * FROM ops_events ORDER BY timestamp ASC, id ASC"); return result.rows.map(eventFromRow); });
+}
+export async function listPostgresOpsEvents(options = {}) {
+  const requestedLimit = Number(options.limit);
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 100, 1), 500);
+  const types = [...new Set((options.types || []).map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 50);
+  const entityType = String(options.entityType || "").trim();
+  const clientIds = Array.isArray(options.clientIds) ? [...new Set(options.clientIds.map((value) => String(value || "").trim()).filter(Boolean))] : null;
+  const before = String(options.before || "").trim();
+  const beforeMs = before ? Date.parse(before) : NaN;
+  const clauses = [];
+  const params = [];
+  const bind = (value) => { params.push(value); return `$${params.length}`; };
+  if (types.length) clauses.push(`type IN (${types.map(bind).join(",")})`);
+  if (entityType) clauses.push(`entity_type = ${bind(entityType)}`);
+  if (clientIds && !clientIds.includes("*")) {
+    if (clientIds.length) clauses.push(`(client_id = ANY(${bind(clientIds)}::text[]) OR client_id IS NULL)`);
+    else clauses.push("client_id IS NULL");
+  }
+  if (Number.isFinite(beforeMs)) {
+    const beforeIso = new Date(beforeMs).toISOString();
+    const beforeValue = bind(beforeIso);
+    const beforeId = bind(String(options.beforeId || ""));
+    clauses.push(`(timestamp < ${beforeValue} OR (timestamp = ${beforeValue} AND id < ${beforeId}))`);
+  }
+  const limitValue = bind(limit);
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  return withDatabase(async (pool) => { await initialize(pool); const result = await pool.query(`SELECT * FROM ops_events ${where} ORDER BY timestamp DESC, id DESC LIMIT ${limitValue}`, params); return result.rows.map(eventFromRow); });
 }
 export async function appendPostgresOpsEvent(event) {
   return withDatabase(async (pool) => { await initialize(pool); await pool.query("INSERT INTO ops_events (id, timestamp, type, actor, entity_type, entity_id, client_id, wall_id, source, note, payload_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)", [event.id, event.timestamp, event.type, event.actor, event.entityType, event.entityId, event.clientId, event.wallId, event.source, event.note || "", JSON.stringify(event.payload || {})]); return event; });

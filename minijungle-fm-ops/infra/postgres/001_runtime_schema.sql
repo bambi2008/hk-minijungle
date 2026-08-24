@@ -20,6 +20,8 @@ CREATE TABLE IF NOT EXISTS ops_events (
 );
 CREATE INDEX IF NOT EXISTS idx_ops_events_entity ON ops_events(entity_type, entity_id);
 CREATE INDEX IF NOT EXISTS idx_ops_events_client ON ops_events(client_id);
+CREATE INDEX IF NOT EXISTS idx_ops_events_timeline ON ops_events(timestamp DESC, id DESC);
+CREATE INDEX IF NOT EXISTS idx_ops_events_type_timeline ON ops_events(type, timestamp DESC, id DESC);
 
 CREATE TABLE IF NOT EXISTS ops_state_snapshots (
   revision INTEGER PRIMARY KEY,

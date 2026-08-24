@@ -12,6 +12,7 @@ import { summarizeOpsState } from "./lib/ops-state-store.mjs";
 import {
   appendSqliteOpsEvent,
   applySqliteOpsStateAction,
+  listSqliteOpsEvents,
   readSqliteOpsEvents,
   readSqliteOpsState,
   readSqliteOpsStorageHealth,
@@ -21,6 +22,7 @@ import {
   appendPostgresOpsEvent,
   applyPostgresOpsStateAction,
   closePostgresPools,
+  listPostgresOpsEvents,
   readPostgresOpsEvents,
   readPostgresOpsState,
   readPostgresOpsStorageHealth,
@@ -684,6 +686,10 @@ async function readOpsEvents() {
   return productionConfigReport().production ? readPostgresOpsEvents() : readSqliteOpsEvents(runtimeDbPath);
 }
 
+async function listOpsEvents(options = {}) {
+  return productionConfigReport().production ? listPostgresOpsEvents(options) : listSqliteOpsEvents(runtimeDbPath, options);
+}
+
 async function appendOpsEvent(event) {
   recordOperationalEvent(event?.type);
   const result = productionConfigReport().production ? await appendPostgresOpsEvent(event) : await appendSqliteOpsEvent(runtimeDbPath, event);
@@ -785,7 +791,16 @@ async function buildOpsTimeline(auth, options = {}) {
   const before = String(options.before || "").trim();
   const beforeId = String(options.beforeId || "").trim();
   const beforeMs = before ? Date.parse(before) : NaN;
-  const visible = filterOpsEventsForAuth(await readOpsEvents(), auth, resolveEntityClientId)
+  const candidateLimit = Math.min(Math.max(limit * 10, 100), 500);
+  const candidateEvents = await listOpsEvents({
+    limit: candidateLimit,
+    types: [...types],
+    entityType,
+    before,
+    beforeId,
+    clientIds: clientId ? [clientId] : auth.clientScope === "all" ? null : auth.clientIds
+  });
+  const visible = filterOpsEventsForAuth(candidateEvents, auth, resolveEntityClientId)
     .filter((event) => !types.size || types.has(event.type))
     .filter((event) => !entityType || event.entityType === entityType)
     .filter((event) => !clientId || (event.clientId || resolveEntityClientId(event.entityType, event.entityId)) === clientId)
@@ -803,9 +818,65 @@ async function buildOpsTimeline(auth, options = {}) {
     filters: { limit, types: [...types], entityType: entityType || null, clientId: clientId || null, before: before || null, beforeId: beforeId || null },
     total: visible.length,
     counts,
-    hasMore: visible.length > limit,
+    hasMore: visible.length > limit || candidateEvents.length >= candidateLimit,
     nextCursor: last ? { before: last.timestamp, beforeId: last.id } : null,
     events
+  };
+}
+
+function qualityGateStatus(current, total) {
+  if (!total) return "no-data";
+  if (current >= total) return "ready";
+  return current > 0 ? "partial" : "blocked";
+}
+
+async function buildOperationsQuality(auth) {
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [modules, alerts, diagnoses, captures, portfolio, proofStorage, evidenceStorage] = await Promise.all([
+    listModules({ clientIds }),
+    listAlerts({ clientIds, statuses: ["open", "acknowledged"], limit: 500 }),
+    listVisualDiagnoses({ clientIds, statuses: ["queued", "running"], limit: 500 }),
+    listMobileCaptureBatches(),
+    buildPortfolioSummary(auth),
+    readProofMediaStorageHealth(),
+    readEvidenceSnapshotStorageHealth()
+  ]);
+  const scopedCaptures = filterByClientScope(auth, captures, (batch) => batch.clientId);
+  const latestReadings = await listLatestReadingsByModules(modules.map((module) => module.id));
+  const readingsByModule = new Map();
+  for (const reading of latestReadings) {
+    const metric = String(reading.metric || reading.type || "").trim().toLowerCase();
+    const moduleReadings = readingsByModule.get(reading.moduleId) || new Set();
+    if (metric) moduleReadings.add(metric);
+    readingsByModule.set(reading.moduleId, moduleReadings);
+  }
+  const requiredMetrics = ["temperature", "humidity", "co2", "mc"];
+  const telemetryAny = modules.filter((module) => (readingsByModule.get(module.id)?.size || 0) > 0).length;
+  const telemetryComplete = modules.filter((module) => requiredMetrics.every((metric) => readingsByModule.get(module.id)?.has(metric))).length;
+  const cameraConnected = modules.filter((module) => ["connected", "online", "verified", "active"].includes(String(module.monitoringDevices?.camera?.state || "").toLowerCase())).length;
+  const activeExceptions = alerts.length + diagnoses.length + Number(portfolio.counts.openIncidents || 0);
+  const evidenceItems = Number(scopedCaptures.length > 0) + Number(Number(proofStorage.counts?.verified || 0) > 0) + Number(Number(evidenceStorage.counts?.snapshots || 0) > 0);
+  const gates = [
+    { id: "telemetry", label: "Sensor telemetry", status: qualityGateStatus(telemetryComplete, modules.length), current: telemetryComplete, total: modules.length, detail: `${telemetryAny}/${modules.length} modules have any latest reading; ${telemetryComplete}/${modules.length} have temperature, humidity, CO2 and MC.` },
+    { id: "camera", label: "Camera connectivity", status: qualityGateStatus(cameraConnected, modules.length), current: cameraConnected, total: modules.length, detail: `${cameraConnected}/${modules.length} modules report a connected camera endpoint.` },
+    { id: "evidence", label: "Service evidence chain", status: evidenceItems >= 3 ? "ready" : evidenceItems > 0 ? "partial" : "blocked", current: evidenceItems, total: 3, detail: `${scopedCaptures.length} field batches · ${Number(proofStorage.counts?.verified || 0)} verified media · ${Number(evidenceStorage.counts?.snapshots || 0)} persisted snapshots.` },
+    { id: "exceptions", label: "Exception closure", status: activeExceptions > 0 ? "attention" : "clear", current: activeExceptions, total: null, detail: `${alerts.length} sensor alerts · ${diagnoses.length} AI reviews pending · ${Number(portfolio.counts.openIncidents || 0)} open incidents.` }
+  ];
+  return {
+    generatedAt: new Date().toISOString(),
+    scope: auth.clientScope === "all" ? "all" : "client-scoped",
+    summary: {
+      modules: modules.length,
+      telemetryAny,
+      telemetryComplete,
+      cameraConnected,
+      fieldEvidenceBatches: scopedCaptures.length,
+      activeExceptions,
+      verifiedMedia: Number(proofStorage.counts?.verified || 0),
+      persistedSnapshots: Number(evidenceStorage.counts?.snapshots || 0)
+    },
+    gates,
+    warnings: gates.filter((gate) => ["blocked", "partial", "attention"].includes(gate.status)).map((gate) => `${gate.label}: ${gate.detail}`)
   };
 }
 
@@ -2224,6 +2295,12 @@ async function handleApi(req, res, pathname) {
           beforeId: url.searchParams.get("beforeId")
         }))
       });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/ops/quality") {
+      requirePermission(auth, "storage.read");
+      sendJson(res, 200, await buildOperationsQuality(auth));
       return;
     }
 

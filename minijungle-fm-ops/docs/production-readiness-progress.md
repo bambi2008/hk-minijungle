@@ -634,3 +634,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 47 - DB-First Operations Quality Gates v1
+
+- Official score remains **65%**. This batch makes high-volume reads and operational readiness visibility more honest, but it does not prove a managed production deployment or live device operations.
+- Capability added: SQLite and PostgreSQL Ops event stores now expose bounded, database-side listing with type, entity, client-scope and timestamp/id cursor filters. The timeline asks the database for a bounded candidate page before applying entity ownership and principal scope projection; it no longer requires loading the entire event history for each page request.
+- Capability added: `GET /api/ops/quality` is an internal FM Lead/Platform Admin endpoint that reports four explicit gates: complete telemetry, camera connectivity, service-evidence chain and active exception closure. It returns observations and warnings, not a composite production score.
+- Capability added: Ops Today now shows the four quality gates in a compact panel, so an operator can see whether a portfolio is blocked by missing readings, camera endpoints, evidence records or unresolved exceptions before treating the page as operationally healthy.
+- Evidence added: API smoke verifies seeded module coverage, blocked pilot telemetry/camera gates and client permission denial. Playwright UI smoke verifies all four gates render. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: pilot data still has no live sensor/camera fleet, no managed PostgreSQL, no off-host backup/restore drill, no OIDC user acceptance and no external AI provider. The timeline candidate page is bounded but still needs production index/retention review; `total` is a bounded projection count when the candidate window is saturated, not a warehouse-grade exact count.
+- Target effect: large-portfolio read behavior and operator decision clarity improve; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 47
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

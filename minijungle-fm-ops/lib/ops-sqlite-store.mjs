@@ -86,6 +86,12 @@ function initializeOpsDatabase(db) {
     CREATE INDEX IF NOT EXISTS idx_ops_events_client
       ON ops_events(client_id);
 
+    CREATE INDEX IF NOT EXISTS idx_ops_events_timeline
+      ON ops_events(timestamp DESC, id DESC);
+
+    CREATE INDEX IF NOT EXISTS idx_ops_events_type_timeline
+      ON ops_events(type, timestamp DESC, id DESC);
+
     CREATE TABLE IF NOT EXISTS ops_state_snapshots (
       revision INTEGER PRIMARY KEY,
       version TEXT NOT NULL,
@@ -181,6 +187,47 @@ export async function readSqliteOpsEvents(dbPath) {
     FROM ops_events
     ORDER BY timestamp ASC, id ASC
   `).all().map(eventFromRow));
+}
+
+export async function listSqliteOpsEvents(dbPath, options = {}) {
+  const requestedLimit = Number(options.limit);
+  const limit = Math.min(Math.max(Number.isFinite(requestedLimit) && requestedLimit > 0 ? Math.floor(requestedLimit) : 100, 1), 500);
+  const types = [...new Set((options.types || []).map((value) => String(value || "").trim()).filter(Boolean))].slice(0, 50);
+  const entityType = String(options.entityType || "").trim();
+  const clientIds = Array.isArray(options.clientIds) ? [...new Set(options.clientIds.map((value) => String(value || "").trim()).filter(Boolean))] : null;
+  const before = String(options.before || "").trim();
+  const beforeMs = before ? Date.parse(before) : NaN;
+  const clauses = [];
+  const params = [];
+  if (types.length) {
+    clauses.push(`type IN (${types.map(() => "?").join(",")})`);
+    params.push(...types);
+  }
+  if (entityType) {
+    clauses.push("entity_type = ?");
+    params.push(entityType);
+  }
+  if (clientIds && !clientIds.includes("*")) {
+    if (clientIds.length) {
+      clauses.push(`(client_id IN (${clientIds.map(() => "?").join(",")}) OR client_id IS NULL)`);
+      params.push(...clientIds);
+    } else {
+      clauses.push("client_id IS NULL");
+    }
+  }
+  if (Number.isFinite(beforeMs)) {
+    const beforeIso = new Date(beforeMs).toISOString();
+    clauses.push("(timestamp < ? OR (timestamp = ? AND id < ?))");
+    params.push(beforeIso, beforeIso, String(options.beforeId || ""));
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  return withDatabase(dbPath, (db) => db.prepare(`
+    SELECT id, timestamp, type, actor, entity_type, entity_id, client_id, wall_id, source, note, payload_json
+    FROM ops_events
+    ${where}
+    ORDER BY timestamp DESC, id DESC
+    LIMIT ?
+  `).all(...params, limit).map(eventFromRow));
 }
 
 export async function appendSqliteOpsEvent(dbPath, event) {

@@ -38,10 +38,15 @@ function renderTimeline(timeline = {}) {
   $("#timeline-state").textContent = `${Number(timeline.total || 0)} events · ${timeline.hasMore ? "more available" : "latest"}`;
   $("#timeline-list").innerHTML = events.length ? events.map((event) => `<article class="timeline-item"><span class="timeline-marker" aria-hidden="true"></span><div><strong>${escapeHtml(event.type)}</strong><span>${escapeHtml(event.entityType)} · ${escapeHtml(event.entityId)} · ${escapeHtml(event.actor)}</span><small>${escapeHtml(event.note || event.source)} · ${escapeHtml(formatTime(event.timestamp))}</small></div></article>`).join("") : "<p class=\"empty\">No operations events yet.</p>";
 }
+function renderQuality(quality = {}) {
+  const gates = quality.gates || [];
+  $("#quality-state").textContent = `${Number(quality.summary?.modules || 0)} modules · ${Number(quality.warnings?.length || 0)} attention items`;
+  $("#quality-list").innerHTML = gates.length ? gates.map((gate) => `<article class="quality-gate ${escapeHtml(gate.status)}"><div><strong>${escapeHtml(gate.label)}</strong><span>${escapeHtml(gate.detail)}</span></div><b>${escapeHtml(gate.status)}</b></article>`).join("") : "<p class=\"empty\">No quality signals available.</p>";
+}
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 async function load() {
   $("#notice").textContent = "";
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, storage] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/storage")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -59,6 +64,7 @@ async function load() {
   renderCaptures(captures.batches || []);
   renderNotifications(notifications.notifications || [], notifications.summary || {});
   renderTimeline(timeline);
+  renderQuality(quality);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
 }
