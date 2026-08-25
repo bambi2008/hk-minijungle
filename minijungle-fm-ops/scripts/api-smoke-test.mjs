@@ -175,6 +175,12 @@ async function verifyApi(baseUrl) {
   });
   assert(initialOperationsQuality.response.ok, "Operations quality endpoint failed");
   assert(initialOperationsQuality.body.summary.modules === 12, "Operations quality did not count all seeded modules");
+  assert(initialOperationsQuality.body.thresholds.telemetryStaleMinutes === 180, "Operations quality did not expose the pilot telemetry freshness threshold");
+  assert(initialOperationsQuality.body.thresholds.cameraStaleMinutes === 1440, "Operations quality did not expose the pilot camera freshness threshold");
+  assert(initialOperationsQuality.body.summary.telemetryIncomplete === 12, "Operations quality did not separate missing telemetry from stale telemetry");
+  assert(initialOperationsQuality.body.summary.telemetryStale === 0, "Operations quality should not label missing telemetry as stale");
+  assert(initialOperationsQuality.body.summary.telemetryFresh === 0, "Operations quality should not count missing pilot telemetry as fresh");
+  assert(initialOperationsQuality.body.summary.cameraFresh === 0, "Operations quality should not count pending pilot cameras as fresh");
   assert(initialOperationsQuality.body.gates.length === 4, "Operations quality did not expose four readiness gates");
   assert(initialOperationsQuality.body.gates.find((gate) => gate.id === "telemetry")?.status === "blocked", "Operations quality should not call pilot telemetry complete before readings");
   assert(initialOperationsQuality.body.gates.find((gate) => gate.id === "camera")?.status === "blocked", "Operations quality should not call generated cameras connected");

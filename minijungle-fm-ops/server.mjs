@@ -830,10 +830,30 @@ function qualityGateStatus(current, total) {
   return current > 0 ? "partial" : "blocked";
 }
 
+function qualityThresholds() {
+  const numberFromEnv = (name, fallback, minimum, maximum) => {
+    const value = Number(process.env[name]);
+    return Number.isFinite(value) && value >= minimum && value <= maximum ? value : fallback;
+  };
+  return {
+    telemetryStaleMinutes: numberFromEnv("DR_FOREST_TELEMETRY_STALE_MINUTES", 180, 5, 10080),
+    cameraStaleMinutes: numberFromEnv("DR_FOREST_CAMERA_STALE_MINUTES", 1440, 15, 43200),
+    exceptionSlaHours: numberFromEnv("DR_FOREST_EXCEPTION_SLA_HOURS", 24, 1, 720)
+  };
+}
+
+function ageMinutes(value, nowMs = Date.now()) {
+  const timestamp = Date.parse(value || "");
+  if (!Number.isFinite(timestamp)) return null;
+  return Math.max(0, (nowMs - timestamp) / 60000);
+}
+
 async function buildOperationsQuality(auth) {
   const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
-  const [modules, alerts, diagnoses, captures, portfolio, proofStorage, evidenceStorage] = await Promise.all([
+  const thresholds = qualityThresholds();
+  const [modules, devices, alerts, diagnoses, captures, portfolio, proofStorage, evidenceStorage] = await Promise.all([
     listModules({ clientIds }),
+    listDevices({ clientIds }),
     listAlerts({ clientIds, statuses: ["open", "acknowledged"], limit: 500 }),
     listVisualDiagnoses({ clientIds, statuses: ["queued", "running"], limit: 500 }),
     listMobileCaptureBatches(),
@@ -846,37 +866,70 @@ async function buildOperationsQuality(auth) {
   const readingsByModule = new Map();
   for (const reading of latestReadings) {
     const metric = String(reading.metric || reading.type || "").trim().toLowerCase();
-    const moduleReadings = readingsByModule.get(reading.moduleId) || new Set();
-    if (metric) moduleReadings.add(metric);
+    const moduleReadings = readingsByModule.get(reading.moduleId) || new Map();
+    if (metric) moduleReadings.set(metric, reading);
     readingsByModule.set(reading.moduleId, moduleReadings);
   }
   const requiredMetrics = ["temperature", "humidity", "co2", "mc"];
+  const nowMs = Date.now();
   const telemetryAny = modules.filter((module) => (readingsByModule.get(module.id)?.size || 0) > 0).length;
   const telemetryComplete = modules.filter((module) => requiredMetrics.every((metric) => readingsByModule.get(module.id)?.has(metric))).length;
-  const cameraConnected = modules.filter((module) => ["connected", "online", "verified", "active"].includes(String(module.monitoringDevices?.camera?.state || "").toLowerCase())).length;
+  const telemetryIncomplete = modules.filter((module) => !requiredMetrics.every((metric) => readingsByModule.get(module.id)?.has(metric))).length;
+  const telemetryFresh = modules.filter((module) => requiredMetrics.every((metric) => ageMinutes(readingsByModule.get(module.id)?.get(metric)?.observedAt, nowMs) !== null && ageMinutes(readingsByModule.get(module.id)?.get(metric)?.observedAt, nowMs) <= thresholds.telemetryStaleMinutes)).length;
+  const telemetryStale = modules.filter((module) => {
+    const readings = readingsByModule.get(module.id);
+    if (!requiredMetrics.every((metric) => readings?.has(metric))) return false;
+    return requiredMetrics.some((metric) => {
+      const age = ageMinutes(readings.get(metric)?.observedAt, nowMs);
+      return age === null || age > thresholds.telemetryStaleMinutes;
+    });
+  }).length;
+  const cameraDevicesByModule = new Map(devices.filter((device) => device.type === "camera").map((device) => [device.moduleId, device]));
+  const connectedStates = new Set(["connected", "online", "verified", "active"]);
+  const cameraFresh = modules.filter((module) => {
+    const device = cameraDevicesByModule.get(module.id);
+    const age = ageMinutes(device?.lastSeenAt, nowMs);
+    return connectedStates.has(String(device?.status || "").toLowerCase()) && age !== null && age <= thresholds.cameraStaleMinutes;
+  }).length;
+  const cameraStale = modules.filter((module) => {
+    const device = cameraDevicesByModule.get(module.id);
+    const age = ageMinutes(device?.lastSeenAt, nowMs);
+    return !device || !connectedStates.has(String(device.status || "").toLowerCase()) || age === null || age > thresholds.cameraStaleMinutes;
+  }).length;
   const activeExceptions = alerts.length + diagnoses.length + Number(portfolio.counts.openIncidents || 0);
+  const exceptionSlaMinutes = thresholds.exceptionSlaHours * 60;
+  const overdueExceptions = [...alerts.map((item) => item.lastSeenAt || item.observedAt), ...diagnoses.map((item) => item.updatedAt || item.createdAt)].filter((value) => {
+    const age = ageMinutes(value, nowMs);
+    return age !== null && age > exceptionSlaMinutes;
+  }).length;
   const evidenceItems = Number(scopedCaptures.length > 0) + Number(Number(proofStorage.counts?.verified || 0) > 0) + Number(Number(evidenceStorage.counts?.snapshots || 0) > 0);
   const gates = [
-    { id: "telemetry", label: "Sensor telemetry", status: qualityGateStatus(telemetryComplete, modules.length), current: telemetryComplete, total: modules.length, detail: `${telemetryAny}/${modules.length} modules have any latest reading; ${telemetryComplete}/${modules.length} have temperature, humidity, CO2 and MC.` },
-    { id: "camera", label: "Camera connectivity", status: qualityGateStatus(cameraConnected, modules.length), current: cameraConnected, total: modules.length, detail: `${cameraConnected}/${modules.length} modules report a connected camera endpoint.` },
+    { id: "telemetry", label: "Sensor telemetry", status: qualityGateStatus(telemetryFresh, modules.length), current: telemetryFresh, total: modules.length, detail: `${telemetryAny}/${modules.length} modules have any latest reading; ${telemetryFresh}/${modules.length} have all four metrics within ${thresholds.telemetryStaleMinutes} min; ${telemetryIncomplete} are incomplete and ${telemetryStale} are stale.` },
+    { id: "camera", label: "Camera connectivity", status: qualityGateStatus(cameraFresh, modules.length), current: cameraFresh, total: modules.length, detail: `${cameraFresh}/${modules.length} modules report an active camera seen within ${thresholds.cameraStaleMinutes} min; ${cameraStale} are stale or missing.` },
     { id: "evidence", label: "Service evidence chain", status: evidenceItems >= 3 ? "ready" : evidenceItems > 0 ? "partial" : "blocked", current: evidenceItems, total: 3, detail: `${scopedCaptures.length} field batches · ${Number(proofStorage.counts?.verified || 0)} verified media · ${Number(evidenceStorage.counts?.snapshots || 0)} persisted snapshots.` },
-    { id: "exceptions", label: "Exception closure", status: activeExceptions > 0 ? "attention" : "clear", current: activeExceptions, total: null, detail: `${alerts.length} sensor alerts · ${diagnoses.length} AI reviews pending · ${Number(portfolio.counts.openIncidents || 0)} open incidents.` }
+    { id: "exceptions", label: "Exception closure", status: overdueExceptions > 0 ? "overdue" : activeExceptions > 0 ? "attention" : "clear", current: activeExceptions, total: null, detail: `${alerts.length} sensor alerts · ${diagnoses.length} AI reviews pending · ${Number(portfolio.counts.openIncidents || 0)} open incidents · ${overdueExceptions} past the ${thresholds.exceptionSlaHours}h review SLA.` }
   ];
   return {
     generatedAt: new Date().toISOString(),
     scope: auth.clientScope === "all" ? "all" : "client-scoped",
+    thresholds,
     summary: {
       modules: modules.length,
       telemetryAny,
       telemetryComplete,
-      cameraConnected,
+      telemetryIncomplete,
+      telemetryFresh,
+      telemetryStale,
+      cameraFresh,
+      cameraStale,
       fieldEvidenceBatches: scopedCaptures.length,
       activeExceptions,
+      overdueExceptions,
       verifiedMedia: Number(proofStorage.counts?.verified || 0),
       persistedSnapshots: Number(evidenceStorage.counts?.snapshots || 0)
     },
     gates,
-    warnings: gates.filter((gate) => ["blocked", "partial", "attention"].includes(gate.status)).map((gate) => `${gate.label}: ${gate.detail}`)
+    warnings: gates.filter((gate) => ["blocked", "partial", "attention", "overdue"].includes(gate.status)).map((gate) => `${gate.label}: ${gate.detail}`)
   };
 }
 

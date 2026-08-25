@@ -650,3 +650,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 48 - Data Freshness and Exception Age v1
+
+- Official score remains **65%**. Freshness logic improves operational truthfulness, but configured thresholds and pilot timestamps are not evidence of a live device fleet, approved SLA or production monitoring.
+- Capability added: `/api/ops/quality` now requires all four module metrics (`temperature`, `humidity`, `co2`, `mc`) to be present and observed inside `DR_FOREST_TELEMETRY_STALE_MINUTES` before counting a module as telemetry-fresh. Missing metrics are reported as `incomplete`; complete-but-old observations are reported as `stale`.
+- Capability added: camera readiness now reads the device registry. A camera counts as fresh only when its registered device is in an active/connected state and has a recent `lastSeenAt` inside `DR_FOREST_CAMERA_STALE_MINUTES`; generated module metadata or a static camera label cannot satisfy the gate.
+- Capability added: open sensor alerts and queued/running AI tasks are age-checked against `DR_FOREST_EXCEPTION_SLA_HOURS`. Records beyond the window are labelled `overdue` in the API and Ops Today instead of being mixed into a generic attention count.
+- Capability added: deployment configuration now documents the three optional freshness/SLA variables, with pilot defaults of 180 minutes telemetry, 1440 minutes camera and 24 hours exception review. Production must approve contract-specific values and record them.
+- Evidence added: API smoke verifies thresholds and that seeded missing/pending records remain not fresh; Playwright UI smoke verifies the telemetry freshness window is visible. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: no real device heartbeat, camera fleet, clock-skew test, SLA acceptance, monitoring sink or external AI provider is connected in this workspace. Freshness status is a current application observation, not a certification.
+- Target effect: the platform can distinguish missing, stale and current operational data before an operator acts; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 48
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
