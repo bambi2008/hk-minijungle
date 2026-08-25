@@ -3,6 +3,7 @@ const headers = { "x-dr-forest-principal": principal };
 const $ = (selector) => document.querySelector(selector);
 const aiReviewState = { diagnoses: [] };
 const evidenceControlState = { latestId: null };
+const remediationState = { moduleItems: [], task: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -44,9 +45,14 @@ function renderQuality(quality = {}) {
   $("#quality-state").textContent = `${Number(quality.summary?.modules || 0)} modules · ${Number(quality.warnings?.length || 0)} attention items · telemetry ${Number(thresholds.telemetryStaleMinutes || 0)}m · camera ${Number(thresholds.cameraStaleMinutes || 0)}m`;
   $("#quality-list").innerHTML = gates.length ? gates.map((gate) => `<article class="quality-gate ${escapeHtml(gate.status)}"><div><strong>${escapeHtml(gate.label)}</strong><span>${escapeHtml(gate.detail)}</span></div><b>${escapeHtml(gate.status)}</b></article>`).join("") : "<p class=\"empty\">No quality signals available.</p>";
   const moduleItems = quality.moduleReadiness || [];
+  remediationState.moduleItems = moduleItems;
   const unready = Number(quality.summary?.moduleUnready || 0);
   $("#module-quality-state").textContent = unready ? `${unready} need action · showing ${moduleItems.length}` : "All modules pass";
-  $("#module-quality-list").innerHTML = moduleItems.length ? moduleItems.map((item) => `<article class="module-quality-item"><div><strong>${escapeHtml(item.moduleId)} · ${escapeHtml(item.label)}</strong><span>${escapeHtml(item.reasons.join(" · "))}</span><small>Telemetry ${escapeHtml(formatTime(item.lastTelemetryAt || "No reading"))} · Camera ${escapeHtml(formatTime(item.cameraLastSeenAt || "No heartbeat"))}</small></div><b>${escapeHtml(item.status.replaceAll("-", " "))}</b></article>`).join("") : "<p class=\"empty\">No module-level action items.</p>";
+  $("#module-quality-list").innerHTML = moduleItems.length ? moduleItems.map((item) => {
+    const task = item.remediationTask;
+    const action = task ? `<div class="module-quality-actions"><span class="module-task-state ${task.status === "in_progress" ? "active" : ""}">${escapeHtml(task.status.replaceAll("_", " "))}</span><button data-remediation-edit="${escapeHtml(task.id)}" data-remediation-module="${escapeHtml(item.moduleId)}" type="button">Update</button></div>` : `<div class="module-quality-actions"><span class="module-task-state">No task</span><button data-remediation-create="${escapeHtml(item.moduleId)}" type="button">Create task</button></div>`;
+    return `<article class="module-quality-item"><div><strong>${escapeHtml(item.moduleId)} · ${escapeHtml(item.label)}</strong><span>${escapeHtml(item.reasons.join(" · "))}</span><small>Telemetry ${escapeHtml(formatTime(item.lastTelemetryAt || "No reading"))} · Camera ${escapeHtml(formatTime(item.cameraLastSeenAt || "No heartbeat"))}</small></div><div class="module-quality-right"><b>${escapeHtml(item.status.replaceAll("-", " "))}</b>${action}</div></article>`;
+  }).join("") : "<p class=\"empty\">No module-level action items.</p>";
 }
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 async function load() {
@@ -74,13 +80,63 @@ async function load() {
   renderEvidenceControl(storage, latest);
 }
 const aiReviewDialog = $("#ai-review-dialog");
+const remediationDialog = $("#remediation-dialog");
+function remediationTimeInput(value) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return ""; const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
+function openRemediationCreate(item) {
+  remediationState.task = null;
+  $("#remediation-title").textContent = "Create remediation task";
+  $("#remediation-context").textContent = `${item.moduleId} · ${item.label} · ${item.reasons.join(" · ")}`;
+  $("#remediation-id").value = "";
+  $("#remediation-module-id").value = item.moduleId;
+  $("#remediation-source-key").value = item.status;
+  $("#remediation-status").value = "open";
+  $("#remediation-priority").value = "high";
+  $("#remediation-assigned-to").value = "";
+  $("#remediation-due-at").value = "";
+  $("#remediation-resolution-note").value = "";
+  $("#remediation-evidence-ref").value = "";
+  $("#remediation-error").textContent = "";
+  remediationDialog.showModal();
+}
+function openRemediationEdit(item, task) {
+  remediationState.task = task;
+  $("#remediation-title").textContent = "Update remediation task";
+  $("#remediation-context").textContent = `${item.moduleId} · ${item.label} · ${item.reasons.join(" · ")}`;
+  $("#remediation-id").value = task.id;
+  $("#remediation-module-id").value = item.moduleId;
+  $("#remediation-source-key").value = item.status;
+  $("#remediation-status").value = task.status;
+  $("#remediation-priority").value = task.priority || "normal";
+  $("#remediation-assigned-to").value = task.assignedTo || "";
+  $("#remediation-due-at").value = remediationTimeInput(task.dueAt);
+  $("#remediation-resolution-note").value = task.resolutionNote || "";
+  $("#remediation-evidence-ref").value = task.evidenceRef || "";
+  $("#remediation-error").textContent = "";
+  remediationDialog.showModal();
+}
+async function saveRemediation(event) {
+  event.preventDefault();
+  const moduleId = $("#remediation-module-id").value;
+  const assignedTo = $("#remediation-assigned-to").value.trim();
+  const dueAt = $("#remediation-due-at").value;
+  const body = { status: $("#remediation-status").value, priority: $("#remediation-priority").value, assignedTo: assignedTo || null, dueAt: dueAt ? new Date(dueAt).toISOString() : null, resolutionNote: $("#remediation-resolution-note").value.trim() || null, evidenceRef: $("#remediation-evidence-ref").value.trim() || null };
+  if (!moduleId) return;
+  const taskId = $("#remediation-id").value;
+  if (!taskId) Object.assign(body, { moduleId, sourceKey: $("#remediation-source-key").value, reasons: remediationState.moduleItems.find((item) => item.moduleId === moduleId)?.reasons || [] });
+  const submit = $("#remediation-submit"); submit.disabled = true; $("#remediation-error").textContent = "";
+  try {
+    await api(taskId ? `/api/remediation/tasks/${encodeURIComponent(taskId)}` : "/api/remediation/tasks", { method: taskId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    remediationDialog.close(); await load();
+  } catch (error) { $("#remediation-error").textContent = error.message; } finally { submit.disabled = false; }
+}
 function openAiReview(diagnosis) { aiReviewState.diagnosis = diagnosis; $("#ai-review-id").value = diagnosis.id; $("#ai-review-context").textContent = `${diagnosis.moduleId} · capture ${diagnosis.captureId} · current status ${diagnosis.status}. Manual review is recorded separately from an external provider result.`; $("#ai-review-status").value = "completed"; $("#ai-review-confidence").value = ""; $("#ai-review-provider").value = diagnosis.provider || ""; $("#ai-review-model").value = diagnosis.model || ""; $("#ai-review-note").value = ""; $("#ai-review-error").textContent = ""; aiReviewDialog.showModal(); }
 async function startAiDiagnosis(id) { await api(`/api/ai/visual-diagnoses/${encodeURIComponent(id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "running", provider: "pending-provider", model: "awaiting-callback", result: { stage: "running", evidenceBasis: "Awaiting external AI provider callback." } }) }); await load(); }
 async function saveAiReview(event) { event.preventDefault(); const status = $("#ai-review-status").value; const note = $("#ai-review-note").value.trim(); const confidenceText = $("#ai-review-confidence").value.trim(); const confidence = confidenceText === "" ? null : Number(confidenceText); if (!note) { $("#ai-review-error").textContent = "A result or failure note is required."; return; } if (status === "completed" && (confidence === null || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)) { $("#ai-review-error").textContent = "Completed reviews require confidence from 0 to 1."; return; } const result = { summary: note, reviewedBy: principal, reviewMode: "human-assisted", evidenceBasis: "Provider output or operator review; not an automatic horticulture claim." }; await api(`/api/ai/visual-diagnoses/${encodeURIComponent($("#ai-review-id").value)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, confidence: status === "completed" ? confidence : null, provider: $("#ai-review-provider").value.trim() || "operator-review", model: $("#ai-review-model").value.trim() || "operator-review", result, errorCode: status === "failed" ? "AI_REVIEW_FAILED" : null }) }); aiReviewDialog.close(); await load(); }
 $("#refresh").onclick = () => load().catch((error) => { $("#notice").textContent = error.message; });
 $("#ai-review-cancel").onclick = () => aiReviewDialog.close(); $("#ai-review-form").onsubmit = saveAiReview;
+$("#remediation-cancel").onclick = () => remediationDialog.close(); $("#remediation-form").onsubmit = saveRemediation;
 $("#persist-snapshot").onclick = async () => { const button = $("#persist-snapshot"); button.disabled = true; $("#snapshot-notice").textContent = "Persisting current evidence package…"; try { const result = await api("/api/proof/evidence-snapshots", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); $("#snapshot-notice").textContent = `${result.snapshotId} persisted · ${result.signatureStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#verify-snapshot").onclick = async () => { const button = $("#verify-snapshot"); if (!evidenceControlState.latestId) return; button.disabled = true; $("#snapshot-notice").textContent = "Verifying latest snapshot…"; try { const result = await api(`/api/proof/evidence-snapshots/${encodeURIComponent(evidenceControlState.latestId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "Reviewed from FM Lead evidence control." }) }); $("#snapshot-notice").textContent = `${result.snapshotId} verification: ${result.verificationStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = !evidenceControlState.latestId; } };
 $("#sweep-snapshots").onclick = async () => { const button = $("#sweep-snapshots"); button.disabled = true; $("#snapshot-notice").textContent = "Running retention sweep…"; try { const result = await api("/api/proof/evidence-snapshots/retention-sweep", { method: "POST" }); $("#snapshot-notice").textContent = `Retention sweep complete · ${Number(result.expiredCount || 0)} expired`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
-document.addEventListener("click", async (event) => { const aiStart = event.target.closest("[data-ai-start]"); const aiReview = event.target.closest("[data-ai-review]"); if (aiStart) { aiStart.disabled = true; try { await startAiDiagnosis(aiStart.dataset.aiStart); } catch (error) { $("#notice").textContent = error.message; aiStart.disabled = false; } return; } if (aiReview) { const diagnosis = aiReviewState.diagnoses.find((item) => item.id === aiReview.dataset.aiReview); if (diagnosis) openAiReview(diagnosis); return; } const button = event.target.closest("[data-alert-status]"); if (!button) return; button.disabled = true; try { await api(`/api/telemetry/alerts/${encodeURIComponent(button.dataset.alertStatus)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: button.dataset.nextStatus, resolutionNote: "Handled from Today operations queue." }) }); await load(); } catch (error) { $("#notice").textContent = error.message; button.disabled = false; } });
+document.addEventListener("click", async (event) => { const aiStart = event.target.closest("[data-ai-start]"); const aiReview = event.target.closest("[data-ai-review]"); const remediationCreate = event.target.closest("[data-remediation-create]"); const remediationEdit = event.target.closest("[data-remediation-edit]"); if (aiStart) { aiStart.disabled = true; try { await startAiDiagnosis(aiStart.dataset.aiStart); } catch (error) { $("#notice").textContent = error.message; aiStart.disabled = false; } return; } if (aiReview) { const diagnosis = aiReviewState.diagnoses.find((item) => item.id === aiReview.dataset.aiReview); if (diagnosis) openAiReview(diagnosis); return; } if (remediationCreate) { const item = remediationState.moduleItems.find((candidate) => candidate.moduleId === remediationCreate.dataset.remediationCreate); if (item) openRemediationCreate(item); return; } if (remediationEdit) { const item = remediationState.moduleItems.find((candidate) => candidate.moduleId === remediationEdit.dataset.remediationModule); if (item?.remediationTask) openRemediationEdit(item, item.remediationTask); return; } const button = event.target.closest("[data-alert-status]"); if (!button) return; button.disabled = true; try { await api(`/api/telemetry/alerts/${encodeURIComponent(button.dataset.alertStatus)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: button.dataset.nextStatus, resolutionNote: "Handled from Today operations queue." }) }); await load(); } catch (error) { $("#notice").textContent = error.message; button.disabled = false; } });
 load().catch((error) => { $("#notice").textContent = error.message; });

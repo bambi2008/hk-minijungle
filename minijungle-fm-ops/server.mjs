@@ -153,6 +153,20 @@ import {
   savePostgresReminderAction
 } from "./lib/ops-postgres-reminder-store.mjs";
 import {
+  createPostgresRemediationTask,
+  listPostgresRemediationTasks,
+  readPostgresRemediationTask,
+  readPostgresRemediationStorageHealth,
+  updatePostgresRemediationTask
+} from "./lib/ops-postgres-remediation-store.mjs";
+import {
+  createSqliteRemediationTask,
+  listSqliteRemediationTasks,
+  readSqliteRemediationTask,
+  readSqliteRemediationStorageHealth,
+  updateSqliteRemediationTask
+} from "./lib/ops-remediation-store.mjs";
+import {
   enqueueSqliteNotification,
   listSqliteNotifications,
   readSqliteNotificationStorageHealth
@@ -554,6 +568,36 @@ async function readReminderStorageHealth() {
     : readSqliteReminderStorageHealth(runtimeDbPath);
 }
 
+async function createRemediationTask(input) {
+  return productionMasterDataEnabled()
+    ? createPostgresRemediationTask(runtimeDbPath, input)
+    : createSqliteRemediationTask(runtimeDbPath, input);
+}
+
+async function listRemediationTasks(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresRemediationTasks(runtimeDbPath, options)
+    : listSqliteRemediationTasks(runtimeDbPath, options);
+}
+
+async function updateRemediationTask(id, input) {
+  return productionMasterDataEnabled()
+    ? updatePostgresRemediationTask(runtimeDbPath, id, input)
+    : updateSqliteRemediationTask(runtimeDbPath, id, input);
+}
+
+async function readRemediationTask(id) {
+  return productionMasterDataEnabled()
+    ? readPostgresRemediationTask(runtimeDbPath, id)
+    : readSqliteRemediationTask(runtimeDbPath, id);
+}
+
+async function readRemediationStorageHealth() {
+  return productionMasterDataEnabled()
+    ? readPostgresRemediationStorageHealth(runtimeDbPath)
+    : readSqliteRemediationStorageHealth(runtimeDbPath);
+}
+
 async function enqueueNotification(input) {
   return productionMasterDataEnabled()
     ? enqueuePostgresNotification(runtimeDbPath, input)
@@ -851,12 +895,13 @@ function ageMinutes(value, nowMs = Date.now()) {
 async function buildOperationsQuality(auth) {
   const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
   const thresholds = qualityThresholds();
-  const [modules, devices, alerts, diagnoses, captures, portfolio, proofStorage, evidenceStorage] = await Promise.all([
+  const [modules, devices, alerts, diagnoses, captures, remediationTasks, portfolio, proofStorage, evidenceStorage] = await Promise.all([
     listModules({ clientIds }),
     listDevices({ clientIds }),
     listAlerts({ clientIds, statuses: ["open", "acknowledged"], limit: 500 }),
     listVisualDiagnoses({ clientIds, statuses: ["queued", "running"], limit: 500 }),
     listMobileCaptureBatches(),
+    listRemediationTasks({ clientIds, statuses: ["open", "assigned", "in_progress"], limit: 500 }),
     buildPortfolioSummary(auth),
     readProofMediaStorageHealth(),
     readEvidenceSnapshotStorageHealth()
@@ -896,6 +941,7 @@ async function buildOperationsQuality(auth) {
     const age = ageMinutes(device?.lastSeenAt, nowMs);
     return !device || !connectedStates.has(String(device.status || "").toLowerCase()) || age === null || age > thresholds.cameraStaleMinutes;
   }).length;
+  const remediationByModuleKey = new Map(remediationTasks.map((task) => [`${task.moduleId}:${task.sourceKey}`, task]));
   const moduleReadinessDetails = modules.map((module) => {
     const readings = readingsByModule.get(module.id) || new Map();
     const missingMetrics = requiredMetrics.filter((metric) => !readings.has(metric));
@@ -916,6 +962,7 @@ async function buildOperationsQuality(auth) {
     else if (cameraAge > thresholds.cameraStaleMinutes) reasons.push(`Camera heartbeat ${Math.round(cameraAge)} min old`);
     const latestTelemetryAt = [...readings.values()].map((reading) => reading.observedAt).filter((value) => Number.isFinite(Date.parse(value || ""))).sort().at(-1) || null;
     const status = missingMetrics.length ? "telemetry-incomplete" : staleMetrics.length ? "telemetry-stale" : cameraReady ? "ready" : cameraDevice && cameraAge !== null && cameraAge > thresholds.cameraStaleMinutes ? "camera-stale" : "camera-missing";
+    const remediationTask = remediationByModuleKey.get(`${module.id}:${status}`) || null;
     return {
       moduleId: module.id,
       label: module.label,
@@ -925,7 +972,8 @@ async function buildOperationsQuality(auth) {
       reasons,
       lastTelemetryAt: latestTelemetryAt,
       cameraLastSeenAt: cameraDevice?.lastSeenAt || null,
-      cameraStatus: cameraStatus || null
+      cameraStatus: cameraStatus || null,
+      remediationTask: remediationTask ? { id: remediationTask.id, status: remediationTask.status, priority: remediationTask.priority, assignedTo: remediationTask.assignedTo, dueAt: remediationTask.dueAt } : null
     };
   });
   const moduleReadiness = moduleReadinessDetails.filter((item) => item.status !== "ready").sort((left, right) => {
@@ -962,6 +1010,8 @@ async function buildOperationsQuality(auth) {
       moduleReady,
       moduleUnready: moduleReadinessDetails.length - moduleReady,
       moduleReadinessReturned: Math.min(moduleReadiness.length, 20),
+      openRemediationTasks: remediationTasks.length,
+      unassignedRemediationTasks: remediationTasks.filter((task) => !task.assignedTo).length,
       fieldEvidenceBatches: scopedCaptures.length,
       activeExceptions,
       overdueExceptions,
@@ -2322,7 +2372,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -2330,6 +2380,7 @@ async function handleApi(req, res, pathname) {
         readTelemetryStorageHealth(),
         readModuleStorageHealth(),
         readReminderStorageHealth(),
+        readRemediationStorageHealth(),
         readDeviceStorageHealth(),
         readAlertStorageHealth(),
         readAiVisionStorageHealth(),
@@ -2345,6 +2396,7 @@ async function handleApi(req, res, pathname) {
         telemetry: telemetryStorage,
         modules: moduleStorage,
         reminders: reminderStorage,
+        remediation: remediationStorage,
         devices: deviceStorage,
         alerts: alertStorage,
         aiVision: aiVisionStorage,
@@ -2395,6 +2447,52 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && pathname === "/api/ops/quality") {
       requirePermission(auth, "storage.read");
       sendJson(res, 200, await buildOperationsQuality(auth));
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/remediation/tasks") {
+      requirePermission(auth, "ops.remediation.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const clientId = url.searchParams.get("clientId") || "";
+      if (clientId) requireClientAccess(auth, clientId, "remediation task filter");
+      const tasks = await listRemediationTasks({
+        clientIds: clientId ? [clientId] : auth.clientScope === "all" ? null : auth.clientIds,
+        statuses: url.searchParams.get("statuses")?.split(",") || null,
+        moduleId: url.searchParams.get("moduleId") || null,
+        limit: url.searchParams.get("limit") || 100
+      });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), tasks });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/remediation/tasks") {
+      requirePermission(auth, "ops.remediation.write");
+      const input = await readJsonBody(req);
+      const modules = await listModules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+      const module = modules.find((item) => item.id === String(input?.moduleId || "").trim());
+      if (!module) throw apiError(404, "module not found in the current client scope", "REMEDIATION_MODULE_NOT_FOUND");
+      requireClientAccess(auth, module.clientId, "remediation task create");
+      const result = await createRemediationTask({ ...input, clientId: module.clientId, wallId: module.assetId, moduleId: module.id, createdBy: auth.id });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, reasons: result.task.reasons } });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
+      return;
+    }
+
+    const remediationTaskMatch = pathname.match(/^\/api\/remediation\/tasks\/([^/]+)$/);
+    if (req.method === "PATCH" && remediationTaskMatch) {
+      requirePermission(auth, "ops.remediation.update");
+      const taskId = decodeURIComponent(remediationTaskMatch[1]);
+      const existing = await readRemediationTask(taskId);
+      if (!existing) throw apiError(404, "remediation task not found", "REMEDIATION_TASK_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "remediation task update");
+      if (auth.roleId === "field-tech" && existing.assignedTo && existing.assignedTo !== auth.id) throw apiError(403, "field technician is not assigned to this remediation task", "REMEDIATION_ASSIGNMENT_DENIED");
+      const input = await readJsonBody(req);
+      const updateInput = { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? (input.assignedTo || existing.assignedTo || auth.id) : input.assignedTo };
+      const result = await updateRemediationTask(taskId, updateInput);
+      const event = normalizeOpsEvent({ type: `remediation.task.${result.task.status}`, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status}.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, evidenceRef: result.task.evidenceRef } });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { ...result, event });
       return;
     }
 

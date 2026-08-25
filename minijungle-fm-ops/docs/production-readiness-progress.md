@@ -683,3 +683,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 50 - Remediation Task Workflow v1
+
+- Official score remains **65%**. A persisted task lifecycle proves application behavior, not that a real FM team has accepted, executed and independently verified work across a live estate.
+- Capability added: `ops_remediation_tasks` is now a first-class SQLite table with the matching PostgreSQL migration `2026-08-25.postgres-remediation-tasks-v1`. Active duplicate creation is idempotent per module and source key.
+- Capability added: `POST /api/remediation/tasks` creates a scoped task; `PATCH /api/remediation/tasks/:id` supports `open`, `assigned`, `in_progress`, `resolved` and `cancelled` with transition validation, owner assignment and due time.
+- Capability added: an `assigned` or `in_progress` task must have an assignee, and a `resolved` task must retain a resolution note or evidence reference. Every create/update emits a scoped operations timeline event.
+- Capability added: Ops Today now exposes a shortest-path remediation dialog from each unready module: create, assign, set due time, update status and close with evidence. Field technicians can only update tasks assigned to them; client viewers have no remediation permission.
+- Evidence added: API smoke covers idempotent create, assignment, technician start, evidence-backed resolution, client denial and quality-queue removal. Playwright UI smoke covers the same create-to-resolve path from the module queue. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: no real technician identity provider, mobile acknowledgement, device fleet, work-order dispatch, managed PostgreSQL, object storage or off-host restore drill is connected in this workspace. Task records are operational controls and audit inputs, not proof that service occurred.
+- Target effect: an operator can move from a quality exception to an owned, time-bound and auditable remediation record without leaving Ops Today; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 50
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

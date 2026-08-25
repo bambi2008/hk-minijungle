@@ -159,6 +159,8 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.modules.counts.modules === 12, "Module master table should seed addressable modules from wall module counts");
   assert(initialStorage.body.modules.relationshipIntegrity.foreignKeyIssues === 0, "Module master table should have no foreign-key issues");
   assert(initialStorage.body.reminders.counts.actions === 0, "Reminder action table should start empty in test mode");
+  assert(initialStorage.body.remediation.migrationVersion === "2026-08-25.remediation-tasks-v1", "Storage endpoint did not expose remediation task migration");
+  assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_objects"), "Storage endpoint did not expose proof media objects table");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_links"), "Storage endpoint did not expose proof media links table");
@@ -1102,6 +1104,46 @@ async function verifyApi(baseUrl) {
   assert(storageAfterProofMedia.body.proofMedia.counts.verified === 1, "Proof media verified count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.hashCoverage.mediaObjectsWithSha256 === 1, "Proof media hash coverage did not persist");
   assert(storageAfterProofMedia.body.proofMedia.relationshipIntegrity.foreignKeyIssues === 0, "Proof media FK check found issues");
+
+  const remediationSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite") || initialOperationsQuality.body.moduleReadiness[0];
+  const createdRemediation = await fetchJson(`${baseUrl}api/remediation/tasks`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ moduleId: remediationSeed.moduleId, sourceKey: remediationSeed.status, reasons: remediationSeed.reasons, priority: "high", assignedTo: "field-tech-show-suite" })
+  });
+  assert(createdRemediation.response.status === 201, "FM lead should create a remediation task");
+  assert(createdRemediation.body.task.status === "open" && createdRemediation.body.task.assignedTo === "field-tech-show-suite", "Created remediation task did not retain assignment");
+  const duplicateRemediation = await fetchJson(`${baseUrl}api/remediation/tasks`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ moduleId: remediationSeed.moduleId, sourceKey: remediationSeed.status, reasons: remediationSeed.reasons })
+  });
+  assert(duplicateRemediation.response.ok && duplicateRemediation.body.duplicate === true, "Active remediation task creation should be idempotent");
+  const fieldRemediationList = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
+  assert(fieldRemediationList.response.ok && fieldRemediationList.body.tasks.length === 1, "Field technician should read one scoped remediation task");
+  const assignedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ status: "assigned", assignedTo: "field-tech-show-suite" })
+  });
+  assert(assignedRemediation.response.ok && assignedRemediation.body.task.status === "assigned", "FM lead should assign a remediation task");
+  const startedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({ status: "in_progress" })
+  });
+  assert(startedRemediation.response.ok && startedRemediation.body.task.status === "in_progress", "Assigned field technician should start a remediation task");
+  const resolvedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({ status: "resolved", resolutionNote: "Field review completed; follow-up capture recorded.", evidenceRef: "CAP-UI-001" })
+  });
+  assert(resolvedRemediation.response.ok && resolvedRemediation.body.task.status === "resolved", "Assigned field technician should resolve a remediation task with evidence reference");
+  assert(resolvedRemediation.body.event.type === "remediation.task.resolved", "Remediation resolution did not append an audit event");
+  const clientRemediationDenied = await fetchJson(`${baseUrl}api/remediation/tasks`, { headers: principalHeaders("client-show-suite") });
+  assert(clientRemediationDenied.response.status === 403, "Client viewer should not read internal remediation tasks");
+  const qualityAfterRemediation = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
+  assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "Resolved remediation task should leave no active task in the quality summary");
 }
 
 async function main() {

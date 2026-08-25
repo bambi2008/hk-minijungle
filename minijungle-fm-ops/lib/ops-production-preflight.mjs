@@ -24,6 +24,7 @@ const requiredTables = [
   "proof_media_objects",
   "proof_media_links",
   "ops_notification_outbox",
+  "ops_remediation_tasks",
   "evidence_snapshots"
 ];
 
@@ -39,7 +40,8 @@ const requiredMigrations = [
   "2026-08-19.postgres-proof-media-v1",
   "2026-08-19.postgres-mobile-reminder-actions-v1",
   "2026-08-23.postgres-notification-outbox-v1",
-  "2026-08-23.postgres-evidence-snapshot-v3"
+  "2026-08-23.postgres-evidence-snapshot-v3",
+  "2026-08-25.postgres-remediation-tasks-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
