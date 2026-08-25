@@ -896,6 +896,43 @@ async function buildOperationsQuality(auth) {
     const age = ageMinutes(device?.lastSeenAt, nowMs);
     return !device || !connectedStates.has(String(device.status || "").toLowerCase()) || age === null || age > thresholds.cameraStaleMinutes;
   }).length;
+  const moduleReadinessDetails = modules.map((module) => {
+    const readings = readingsByModule.get(module.id) || new Map();
+    const missingMetrics = requiredMetrics.filter((metric) => !readings.has(metric));
+    const staleMetrics = missingMetrics.length ? [] : requiredMetrics.filter((metric) => {
+      const age = ageMinutes(readings.get(metric)?.observedAt, nowMs);
+      return age === null || age > thresholds.telemetryStaleMinutes;
+    });
+    const cameraDevice = cameraDevicesByModule.get(module.id);
+    const cameraStatus = String(cameraDevice?.status || "").toLowerCase();
+    const cameraAge = ageMinutes(cameraDevice?.lastSeenAt, nowMs);
+    const cameraReady = Boolean(cameraDevice && connectedStates.has(cameraStatus) && cameraAge !== null && cameraAge <= thresholds.cameraStaleMinutes);
+    const reasons = [];
+    if (missingMetrics.length) reasons.push(`Telemetry incomplete: ${missingMetrics.join(", ")}`);
+    if (staleMetrics.length) reasons.push(`Telemetry stale: ${staleMetrics.join(", ")}`);
+    if (!cameraDevice) reasons.push("Camera not registered");
+    else if (!connectedStates.has(cameraStatus)) reasons.push(`Camera status: ${cameraStatus || "unknown"}`);
+    else if (cameraAge === null) reasons.push("Camera has no heartbeat");
+    else if (cameraAge > thresholds.cameraStaleMinutes) reasons.push(`Camera heartbeat ${Math.round(cameraAge)} min old`);
+    const latestTelemetryAt = [...readings.values()].map((reading) => reading.observedAt).filter((value) => Number.isFinite(Date.parse(value || ""))).sort().at(-1) || null;
+    const status = missingMetrics.length ? "telemetry-incomplete" : staleMetrics.length ? "telemetry-stale" : cameraReady ? "ready" : cameraDevice && cameraAge !== null && cameraAge > thresholds.cameraStaleMinutes ? "camera-stale" : "camera-missing";
+    return {
+      moduleId: module.id,
+      label: module.label,
+      clientId: module.clientId,
+      assetId: module.assetId,
+      status,
+      reasons,
+      lastTelemetryAt: latestTelemetryAt,
+      cameraLastSeenAt: cameraDevice?.lastSeenAt || null,
+      cameraStatus: cameraStatus || null
+    };
+  });
+  const moduleReadiness = moduleReadinessDetails.filter((item) => item.status !== "ready").sort((left, right) => {
+    const statusOrder = { "telemetry-incomplete": 1, "telemetry-stale": 2, "camera-missing": 3, "camera-stale": 4 };
+    return (statusOrder[left.status] || 9) - (statusOrder[right.status] || 9) || left.moduleId.localeCompare(right.moduleId);
+  });
+  const moduleReady = moduleReadinessDetails.filter((item) => item.status === "ready").length;
   const activeExceptions = alerts.length + diagnoses.length + Number(portfolio.counts.openIncidents || 0);
   const exceptionSlaMinutes = thresholds.exceptionSlaHours * 60;
   const overdueExceptions = [...alerts.map((item) => item.lastSeenAt || item.observedAt), ...diagnoses.map((item) => item.updatedAt || item.createdAt)].filter((value) => {
@@ -922,6 +959,9 @@ async function buildOperationsQuality(auth) {
       telemetryStale,
       cameraFresh,
       cameraStale,
+      moduleReady,
+      moduleUnready: moduleReadinessDetails.length - moduleReady,
+      moduleReadinessReturned: Math.min(moduleReadiness.length, 20),
       fieldEvidenceBatches: scopedCaptures.length,
       activeExceptions,
       overdueExceptions,
@@ -929,6 +969,7 @@ async function buildOperationsQuality(auth) {
       persistedSnapshots: Number(evidenceStorage.counts?.snapshots || 0)
     },
     gates,
+    moduleReadiness: moduleReadiness.slice(0, 20),
     warnings: gates.filter((gate) => ["blocked", "partial", "attention", "overdue"].includes(gate.status)).map((gate) => `${gate.label}: ${gate.detail}`)
   };
 }

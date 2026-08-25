@@ -667,3 +667,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 49 - Module-Level Operations Action Queue v1
+
+- Official score remains **65%**. This batch turns aggregate quality warnings into a bounded operator queue, but it does not prove that a technician, device owner or FM partner has closed those items in a real portfolio.
+- Capability added: `/api/ops/quality` now returns `moduleReadiness` for up to 20 unready modules, ordered by incomplete telemetry, stale telemetry, missing camera registration and stale camera heartbeat. Each item includes module identity, reasons, last telemetry time and camera heartbeat time.
+- Capability added: the Ops Today quality panel shows the total number of unready modules and the next modules to fix. It distinguishes the action reason instead of forcing the operator to inspect every module row manually.
+- Scope boundary added: the queue is deliberately bounded for the console and remains internal to FM Lead/Platform Admin. It is not a bulk export, not a work-order assignment system and not proof of closure; production still needs paginated remediation ownership and resolution evidence.
+- Evidence added: API smoke verifies the 12 seeded modules are returned as incomplete telemetry with an explicit reason; Playwright UI smoke verifies the module action queue renders. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: the pilot has no real module heartbeat, no technician assignment acceptance, no device owner SLA and no production closure evidence. Official production operations readiness remains **65%**.
+- Target effect: an operator can move from portfolio-level warning to a prioritized module-level action list; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 49
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

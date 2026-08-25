@@ -182,6 +182,10 @@ async function verifyApi(baseUrl) {
   assert(initialOperationsQuality.body.summary.telemetryFresh === 0, "Operations quality should not count missing pilot telemetry as fresh");
   assert(initialOperationsQuality.body.summary.cameraFresh === 0, "Operations quality should not count pending pilot cameras as fresh");
   assert(initialOperationsQuality.body.gates.length === 4, "Operations quality did not expose four readiness gates");
+  assert(initialOperationsQuality.body.summary.moduleUnready === 12, "Operations quality did not expose all unready pilot modules");
+  assert(initialOperationsQuality.body.moduleReadiness.length === 12, "Operations quality did not return the bounded module action queue");
+  assert(initialOperationsQuality.body.moduleReadiness[0]?.status === "telemetry-incomplete", "Module action queue did not prioritize incomplete telemetry");
+  assert(initialOperationsQuality.body.moduleReadiness[0]?.reasons.some((reason) => reason.includes("Telemetry incomplete")), "Module action queue did not explain the blocking reason");
   assert(initialOperationsQuality.body.gates.find((gate) => gate.id === "telemetry")?.status === "blocked", "Operations quality should not call pilot telemetry complete before readings");
   assert(initialOperationsQuality.body.gates.find((gate) => gate.id === "camera")?.status === "blocked", "Operations quality should not call generated cameras connected");
   const viewerDeniedOperationsQuality = await fetchJson(`${baseUrl}api/ops/quality`, {

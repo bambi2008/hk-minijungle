@@ -34,6 +34,8 @@ async function main() {
       assert(await operations.locator(".quality-gate").count() === 4, "Operations page did not render four quality gates");
       assert((await operations.locator("#quality-list").textContent()).includes("Sensor telemetry"), "Operations quality panel did not render telemetry gate");
       assert((await operations.locator("#quality-list").textContent()).includes("within 180 min"), "Operations quality panel did not render telemetry freshness threshold");
+      assert(await operations.locator(".module-quality-item").count() === 12, "Operations page did not render the module action queue");
+      assert((await operations.locator("#module-quality-list").textContent()).includes("telemetry incomplete"), "Operations page did not explain the module action reason");
       assert(await operations.locator("#capture-list").textContent().then((text) => text.includes("No technician records") || operations.locator(".capture-item").count() > 0), "Operations page did not load field evidence panel");
       assert(await operations.locator("#notification-state").textContent().then((text) => text.includes("due")), "Operations page did not load notification delivery state");
       assert(await operations.locator("#notification-list").textContent().then((text) => text.includes("No outbound notifications") || operations.locator(".notification-item").count() > 0), "Operations page did not load notification queue");
