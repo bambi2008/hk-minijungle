@@ -4,8 +4,10 @@ const routeSnapshotKey = "dr-forest.field-route.snapshot.v1";
 const queueLimit = 20;
 let route = [];
 let reminders = [];
+let remediationTasks = [];
 let selected = null;
 let activeReminder = null;
+let activeRemediationTask = null;
 let selectedModule = null;
 
 const $ = (selector) => document.querySelector(selector);
@@ -27,12 +29,12 @@ function saveQueue(items) {
 function routeSnapshot() {
   try {
     const value = JSON.parse(localStorage.getItem(routeSnapshotKey) || "null");
-    return value && Array.isArray(value.route) && Array.isArray(value.reminders) ? value : null;
+    return value && Array.isArray(value.route) && Array.isArray(value.reminders) ? { ...value, remediationTasks: Array.isArray(value.remediationTasks) ? value.remediationTasks : [] } : null;
   } catch { return null; }
 }
-function saveRouteSnapshot(nextRoute, nextReminders, counts) {
+function saveRouteSnapshot(nextRoute, nextReminders, counts, nextRemediationTasks = []) {
   try {
-    localStorage.setItem(routeSnapshotKey, JSON.stringify({ savedAt: new Date().toISOString(), route: nextRoute, reminders: nextReminders, counts }));
+    localStorage.setItem(routeSnapshotKey, JSON.stringify({ savedAt: new Date().toISOString(), route: nextRoute, reminders: nextReminders, remediationTasks: nextRemediationTasks, counts }));
   } catch { /* Route cache is a convenience; the capture queue remains the durable local workflow. */ }
 }
 function enqueue(item, lastError = null) {
@@ -68,15 +70,18 @@ async function load() {
   setState(navigator.onLine ? "Loading" : "Offline · cached route");
   let liveRoute = true;
   try {
-    const [routeBody, reminderBody] = await Promise.all([
+    const [routeBody, reminderBody, remediationBody] = await Promise.all([
       json(`/api/mobile/route`, { headers }),
-      json(`/api/mobile/reminders`, { headers })
+      json(`/api/mobile/reminders`, { headers }),
+      json(`/api/mobile/remediation-tasks?statuses=open,assigned,in_progress`, { headers })
     ]);
     route = routeBody.route || [];
     reminders = reminderBody.items || [];
-    saveRouteSnapshot(route, reminders, reminderBody.counts || {});
+    remediationTasks = remediationBody.tasks || [];
+    saveRouteSnapshot(route, reminders, reminderBody.counts || {}, remediationTasks);
     renderRoute();
     renderReminders(reminderBody.counts || {});
+    renderRemediationTasks();
     setState(queueItems().length ? `Ready · ${queueItems().length} pending` : "Ready");
   } catch (error) {
     const cached = routeSnapshot();
@@ -84,8 +89,10 @@ async function load() {
     liveRoute = false;
     route = cached.route;
     reminders = cached.reminders;
+    remediationTasks = cached.remediationTasks || [];
     renderRoute();
     renderReminders(cached.counts || {});
+    renderRemediationTasks();
     setState(navigator.onLine ? "Cached route · service unavailable" : "Offline · cached route", "error");
   }
   const workOrderId = query.get("workOrderId");
@@ -95,6 +102,37 @@ async function load() {
     if (stop) selectStop(stop, reminder, false);
   }
   return liveRoute;
+}
+
+function remediationStatusLabel(status) { return String(status || "open").replaceAll("_", " "); }
+function renderRemediationTasks() {
+  $("#remediation-count").textContent = `${remediationTasks.length} open`;
+  const list = $("#remediation-list");
+  list.innerHTML = remediationTasks.length ? remediationTasks.slice(0, 8).map((task) => {
+    const moduleLabel = task.module?.label || task.moduleId;
+    const reason = (task.reasons || []).join(" · ");
+    const action = task.status === "in_progress" ? "Continue" : "Start task";
+    return `<article class="remediation-item ${activeRemediationTask?.id === task.id ? "active" : ""}"><div><strong>${escapeHtml(moduleLabel)}</strong><span>${escapeHtml(reason)}</span><small>${escapeHtml(remediationStatusLabel(task.status))} · ${escapeHtml(task.priority)}${task.dueAt ? ` · due ${escapeHtml(new Date(task.dueAt).toLocaleString())}` : ""}</small></div><button type="button" data-remediation-start="${escapeHtml(task.id)}">${action}</button></article>`;
+  }).join("") : "<p>No assigned module tasks.</p>";
+  list.querySelectorAll("[data-remediation-start]").forEach((button) => button.addEventListener("click", () => {
+    const task = remediationTasks.find((item) => item.id === button.dataset.remediationStart);
+    if (task) startRemediationTask(task).catch((error) => setState(error.message, "error"));
+  }));
+}
+
+async function startRemediationTask(task) {
+  activeRemediationTask = task;
+  if (task.status === "assigned") {
+    const result = await json(`/api/mobile/remediation-tasks/${encodeURIComponent(task.id)}`, { method: "PATCH", headers, body: JSON.stringify({ status: "in_progress" }) });
+    activeRemediationTask = result.task;
+    remediationTasks = remediationTasks.map((item) => item.id === task.id ? result.task : item);
+  }
+  const stop = route.find((item) => item.wallId === task.wallId);
+  if (!stop) throw new Error("No route stop is available for this module task");
+  await selectStop(stop, null, true, true);
+  $("#module").value = task.moduleId;
+  await loadModuleStatus();
+  renderRemediationTasks();
 }
 
 function renderReminders(counts) {
@@ -122,12 +160,13 @@ function renderRoute() {
     const signals = stop.signals || {};
     const signalText = [signals.openIncidents ? `${signals.openIncidents} incident${signals.openIncidents === 1 ? "" : "s"}` : "", signals.activeSensorAlerts ? `${signals.activeSensorAlerts} sensor alert${signals.activeSensorAlerts === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ") || "No open signals";
     button.innerHTML = `<strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.clientName || stop.client?.name || stop.clientId)}</span><span>${escapeHtml(stop.due || "Scheduled")} · ${escapeHtml(stop.priority || "normal")} · ${stop.modules?.length || 0} modules</span><small class="stop-signal ${signalText === "No open signals" ? "quiet" : "attention"}">${escapeHtml(signalText)}</small>`;
-    button.onclick = () => selectStop(stop, reminders.find((item) => item.workorderId === stop.workOrderId && item.sourceType === "workorder"));
+    button.onclick = () => { activeRemediationTask = null; selectStop(stop, reminders.find((item) => item.workorderId === stop.workOrderId && item.sourceType === "workorder")); renderRemediationTasks(); };
     list.append(button);
   });
 }
 
-async function selectStop(stop, reminder = null, scroll = true) {
+async function selectStop(stop, reminder = null, scroll = true, preserveRemediation = false) {
+  if (!preserveRemediation) activeRemediationTask = null;
   selected = stop;
   activeReminder = reminder;
   $("#capture-form").hidden = false;
@@ -183,7 +222,7 @@ function renderQueue() {
   $("#queue-list").innerHTML = items.length ? items.map((item) => {
     const status = item.lastError ? `retry ${item.attempts} · ${item.lastError}` : (item.attempts ? `${item.attempts} retry` : "pending");
     const retry = item.lastError ? `<button type="button" class="secondary queue-retry" data-retry="${escapeHtml(item.id)}">Retry</button>` : "";
-    return `<div class="queue-item"><div><strong>${escapeHtml(item.stop?.assetName || item.stop?.wallId || "Unknown stop")}</strong><br>${escapeHtml(new Date(item.createdAt).toLocaleString())} · ${item.photo ? "photo pending" : "record pending"}${item.exception ? " · exception" : ""}<br><small>${escapeHtml(status)}</small></div>${retry}</div>`;
+    return `<div class="queue-item"><div><strong>${escapeHtml(item.stop?.assetName || item.stop?.wallId || "Unknown stop")}</strong><br>${escapeHtml(new Date(item.createdAt).toLocaleString())} · ${item.photo ? "photo pending" : "record pending"}${item.exception ? " · exception" : ""}${item.remediationTaskId ? " · module task" : ""}<br><small>${escapeHtml(status)}</small></div>${retry}</div>`;
   }).join("") : "<p>Nothing waiting to sync.</p>";
   $("#queue-list").querySelectorAll("[data-retry]").forEach((button) => button.addEventListener("click", () => flushQueue([button.dataset.retry])));
 }
@@ -209,6 +248,7 @@ async function createPayload() {
     health: $("#health").value,
     notes,
     exception,
+    remediationTaskId: activeRemediationTask?.id || null,
     photo: photoFile ? { name: photoFile.name, type: photoFile.type, base64: await toBase64(photoFile) } : null
   };
 }
@@ -233,6 +273,13 @@ async function sync(item) {
     await json(`/api/proof/media-evidence/${encodeURIComponent(mediaId)}/upload`, { method: "POST", headers, body: JSON.stringify({ fileBase64: item.photo.base64, uploadedAt: item.createdAt }) });
   }
   if (item.reminder?.id) await json("/api/mobile/reminder-actions", { method: "POST", headers, body: JSON.stringify({ reminderId: item.reminder.id, status: "completed", actionType: item.reminder.actionType || "visit-record", clientId: item.stop.clientId, wallId: item.stop.wallId, workorderId: item.stop.workOrderId, moduleId: item.moduleId, captureBatchId: item.id, note: "Completed from technician mobile capture." }) });
+  if (item.remediationTaskId) {
+    const result = await json(`/api/mobile/remediation-tasks/${encodeURIComponent(item.remediationTaskId)}`, { method: "PATCH", headers, body: JSON.stringify({ status: "resolved", resolutionNote: item.notes || "Resolved from technician mobile capture.", evidenceRef: item.photo ? mediaId : item.id }) });
+    activeRemediationTask = null;
+    remediationTasks = remediationTasks.filter((task) => task.id !== item.remediationTaskId);
+    renderRemediationTasks();
+    return result;
+  }
 }
 
 async function submit(offlineOnly = false) {

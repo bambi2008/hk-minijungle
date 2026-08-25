@@ -13,7 +13,8 @@ The technician must complete the next service action with the fewest possible de
 3. Start the related work order.
 4. Select the planting module when the task is module-specific.
 5. Review available device readings, add water/nutrient, take a proof photo and record an exception if needed.
-6. Submit once. If offline, save locally and retry automatically.
+6. If the visit is linked to an assigned module remediation task, start it, capture the service evidence and close it from the same submission.
+7. Submit once. If offline, save locally and retry automatically.
 
 The app is an execution surface, not a reporting dashboard. It should never require a technician to understand ESG, portfolio analytics or investor metrics.
 
@@ -100,8 +101,11 @@ Important pilot boundary: generated module records only derive IDs from the exis
 ```http
 GET /api/mobile/route
 GET /api/mobile/reminders
+GET /api/mobile/remediation-tasks?statuses=open,assigned,in_progress
 GET /api/modules?wallId={wallId}
 ```
+
+`GET /api/mobile/remediation-tasks` returns only active tasks inside the technician client scope. A field technician sees tasks assigned to that principal and receives the module label, zone, current status, priority, due time and a mobile action path. `PATCH /api/mobile/remediation-tasks/{taskId}` moves an assigned task to `in_progress` or `resolved`; a field technician cannot update another technician&apos;s task. Resolution requires a note or evidence reference.
 
 `GET /api/mobile/reminders` returns:
 
@@ -133,9 +137,10 @@ POST /api/mobile/capture-batches
 POST /api/proof/media-intents
 POST /api/proof/media-evidence/{mediaId}/upload
 POST /api/mobile/reminder-actions
+PATCH /api/mobile/remediation-tasks/{taskId}
 ```
 
-The capture batch carries `clientId`, `wallId`, `moduleId` (nullable), `workorderId`, `technicianId`, `capturedAt`, and typed items. The photo intent carries the same module context. The reminder action writes `acknowledged` or `completed` status and links the capture batch.
+The capture batch carries `clientId`, `wallId`, `moduleId` (nullable), `workorderId`, `technicianId`, `capturedAt`, and typed items. When the technician starts a remediation task, the offline payload retains `remediationTaskId`; after capture and optional photo upload succeeds, the mobile app resolves that task with the capture batch ID or media ID as evidence reference. The photo intent carries the same module context. The reminder action writes `acknowledged` or `completed` status and links the capture batch. Task transitions append `remediation.task.<status>` events with `source: technician-mobile`.
 
 ### Device ingestion
 
@@ -201,7 +206,7 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 
 ## 6. Permissions and Scope
 
-- `field-tech`: read assigned route, reminders, modules and telemetry; write capture batches, proof media and reminder actions.
+- `field-tech`: read assigned route, reminders, module remediation tasks, modules and telemetry; write capture batches, proof media, reminder actions and assigned-task updates.
 - `fm-lead`: all field permissions plus master data and operational review.
 - `client-viewer` and `esg-auditor`: read-only evidence and telemetry; no field writes.
 - Every mobile write must pass client, wall, work order and optional module scope checks.
@@ -219,6 +224,8 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 - The field Service Worker caches only static application files. It does not cache API responses or intercept non-GET requests, preventing stale tenant data and accidental POST caching.
 - Replaying the same batch does not duplicate records or audit events.
 - Completing a visit marks the linked reminder completed in SQLite.
+- Starting an assigned remediation task from the phone records `in_progress`; a successful capture with a note or proof reference records `resolved` and removes it from the active phone queue.
+- A field technician cannot read or update remediation tasks outside the technician&apos;s client scope or principal assignment.
 - A field technician cannot submit against another client or another wall&apos;s module.
 - The primary mobile page remains usable at 360px width without horizontal scrolling.
 - Operations staff can see open reminders, route stops, module count and device gaps from `/operations.html`.
@@ -239,6 +246,7 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 ## 9. Production Handoff Checklist
 
 - Replace demo principal with production SSO/session identity.
+- Connect remediation task IDs to real work-order IDs, technician acceptance and independent closure review; the pilot task table currently carries module/wall scope but not a production dispatch foreign key.
 - Register real module IDs, device IDs, camera IDs and calibration metadata.
 - Connect a managed time-series ingestion path with device authentication.
 - Move proof bytes from the local vault to managed object storage with malware scanning and retention policy.

@@ -87,7 +87,8 @@ export async function createSqliteRemediationTask(dbPath, input) {
 export async function listSqliteRemediationTasks(dbPath, { clientIds = null, statuses: requestedStatuses = null, moduleId = null, limit = 100 } = {}) {
   return withDatabase(dbPath, (db) => {
     const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
-    const statusList = Array.isArray(requestedStatuses) && requestedStatuses.length ? requestedStatuses.filter((value) => statuses.has(value)) : Array.from(statuses);
+    const requestedStatusList = Array.isArray(requestedStatuses) ? requestedStatuses.filter((value) => statuses.has(value)) : [];
+    const statusList = requestedStatusList.length ? requestedStatusList : Array.from(statuses);
     const clauses = [`status IN (${statusList.map(() => "?").join(",")})`];
     const params = [...statusList];
     if (moduleId) { clauses.push("module_id = ?"); params.push(String(moduleId)); }
@@ -110,6 +111,8 @@ export async function updateSqliteRemediationTask(dbPath, id, input) {
     if (!existing) throw validationError("remediation task not found", 404);
     const status = String(input?.status || existing.status).trim().toLowerCase();
     if (!statuses.has(status) || !transitions[existing.status]?.has(status)) throw validationError(`cannot move remediation task from ${existing.status} to ${status}`);
+    const priority = String(input?.priority || existing.priority).trim().toLowerCase();
+    if (!priorities.has(priority)) throw validationError("priority must be critical, high, normal or low");
     const assignedTo = input?.assignedTo === undefined ? (existing.assigned_to || null) : optional(input.assignedTo);
     if (["assigned", "in_progress"].includes(status) && !assignedTo) throw validationError(`${status} tasks require assignedTo`);
     const resolutionNote = input?.resolutionNote === undefined ? (existing.resolution_note || null) : optional(input.resolutionNote);
@@ -120,7 +123,7 @@ export async function updateSqliteRemediationTask(dbPath, id, input) {
     const acknowledgedAt = existing.acknowledged_at || (status !== "open" ? now : null);
     const startedAt = existing.started_at || (["in_progress", "resolved"].includes(status) ? now : null);
     const resolvedAt = status === "resolved" ? (existing.resolved_at || now) : null;
-    db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, updated_at = ? WHERE id = ?").run(status, String(input?.priority || existing.priority).trim().toLowerCase(), assignedTo, input?.dueAt === undefined ? (existing.due_at || null) : optional(input.dueAt), resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, now, String(id));
+    db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, updated_at = ? WHERE id = ?").run(status, priority, assignedTo, input?.dueAt === undefined ? (existing.due_at || null) : optional(input.dueAt), resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, now, String(id));
     return { task: taskFromRow(db.prepare("SELECT * FROM ops_remediation_tasks WHERE id = ?").get(String(id))) };
   });
 }

@@ -1457,6 +1457,26 @@ async function buildMobileReminders(auth, includeCompleted = false) {
   return { items: visible, counts: { open: reminders.filter((item) => item.status !== "completed").length, completed: reminders.filter((item) => item.status === "completed").length, total: reminders.length } };
 }
 
+async function buildMobileRemediationTasks(auth, requestedStatuses = null) {
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const allowedStatuses = new Set(["open", "assigned", "in_progress", "resolved", "cancelled"]);
+  const normalizedStatuses = Array.isArray(requestedStatuses) ? requestedStatuses.filter((status) => allowedStatuses.has(status)) : null;
+  const [tasks, modules] = await Promise.all([
+    listRemediationTasks({ clientIds, statuses: normalizedStatuses?.length ? normalizedStatuses : null, limit: 200 }),
+    listModules({ clientIds })
+  ]);
+  const moduleById = new Map(modules.map((module) => [module.id, module]));
+  const visibleTasks = auth.roleId === "field-tech" ? tasks.filter((task) => task.assignedTo === auth.id) : tasks;
+  return visibleTasks.map((task) => {
+    const module = moduleById.get(task.moduleId) || null;
+    return {
+      ...task,
+      module: module ? { id: module.id, label: module.label, zone: module.zone || null, assetId: module.assetId, clientId: module.clientId } : null,
+      mobileAction: { path: `/mobile.html?wallId=${encodeURIComponent(task.wallId)}&moduleId=${encodeURIComponent(task.moduleId)}`, label: task.status === "in_progress" ? "Continue" : "Start task" }
+    };
+  });
+}
+
 function validationError(message, code = "VALIDATION_ERROR") {
   const error = new Error(message);
   error.status = 400;
@@ -2202,6 +2222,29 @@ async function handleApi(req, res, pathname) {
       });
       await appendOpsEvent(event);
       sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/mobile/remediation-tasks") {
+      requirePermission(auth, "mobile.remediation.read");
+      const statuses = new URL(req.url, `http://${host}:${port}`).searchParams.get("statuses")?.split(",") || ["open", "assigned", "in_progress"];
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), tasks: await buildMobileRemediationTasks(auth, statuses) });
+      return;
+    }
+
+    const mobileRemediationTaskMatch = pathname.match(/^\/api\/mobile\/remediation-tasks\/([^/]+)$/);
+    if (req.method === "PATCH" && mobileRemediationTaskMatch) {
+      requirePermission(auth, "mobile.remediation.update");
+      const taskId = decodeURIComponent(mobileRemediationTaskMatch[1]);
+      const existing = await readRemediationTask(taskId);
+      if (!existing) throw apiError(404, "remediation task not found", "MOBILE_REMEDIATION_TASK_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "mobile remediation task update");
+      if (auth.roleId === "field-tech" && existing.assignedTo !== auth.id) throw apiError(403, "field technician is not assigned to this remediation task", "MOBILE_REMEDIATION_ASSIGNMENT_DENIED");
+      const input = await readJsonBody(req);
+      const result = await updateRemediationTask(taskId, { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? auth.id : input.assignedTo });
+      const event = normalizeOpsEvent({ type: `remediation.task.${result.task.status}`, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "technician-mobile", note: result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status} from mobile.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, evidenceRef: result.task.evidenceRef, channel: "technician-mobile" } });
+      await appendOpsEvent(event);
+      sendJson(res, 200, { ...result, event });
       return;
     }
 

@@ -107,6 +107,8 @@ async function verifyApi(baseUrl) {
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("notifications.read"), "FM lead auth policy did not expose notification read permission");
+  assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.read"), "Auth policy did not expose field mobile remediation read permission");
+  assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.update"), "Auth policy did not expose field mobile remediation update permission");
 
   const clientFieldCaptures = await fetchJson(`${baseUrl}api/mobile/capture-batches`, { headers: principalHeaders("client-show-suite") });
   assert(clientFieldCaptures.response.ok && Array.isArray(clientFieldCaptures.body.batches), "Client viewer should read scoped field captures");
@@ -1121,19 +1123,27 @@ async function verifyApi(baseUrl) {
   assert(duplicateRemediation.response.ok && duplicateRemediation.body.duplicate === true, "Active remediation task creation should be idempotent");
   const fieldRemediationList = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
   assert(fieldRemediationList.response.ok && fieldRemediationList.body.tasks.length === 1, "Field technician should read one scoped remediation task");
+  const mobileRemediationList = await fetchJson(`${baseUrl}api/mobile/remediation-tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
+  assert(mobileRemediationList.response.ok && mobileRemediationList.body.tasks.length === 1 && mobileRemediationList.body.tasks[0].module.id === remediationSeed.moduleId, "Technician mobile should read the assigned module task with module context");
   const assignedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
     method: "PATCH",
     headers: jsonHeaders("fm-lead"),
     body: JSON.stringify({ status: "assigned", assignedTo: "field-tech-show-suite" })
   });
   assert(assignedRemediation.response.ok && assignedRemediation.body.task.status === "assigned", "FM lead should assign a remediation task");
-  const startedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+  const invalidRemediationPriority = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ priority: "urgent-but-undefined" })
+  });
+  assert(invalidRemediationPriority.response.status === 400, "Invalid remediation priority should return a validation error");
+  const startedRemediation = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
     method: "PATCH",
     headers: jsonHeaders("field-tech-show-suite"),
     body: JSON.stringify({ status: "in_progress" })
   });
   assert(startedRemediation.response.ok && startedRemediation.body.task.status === "in_progress", "Assigned field technician should start a remediation task");
-  const resolvedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+  const resolvedRemediation = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
     method: "PATCH",
     headers: jsonHeaders("field-tech-show-suite"),
     body: JSON.stringify({ status: "resolved", resolutionNote: "Field review completed; follow-up capture recorded.", evidenceRef: "CAP-UI-001" })
@@ -1142,6 +1152,8 @@ async function verifyApi(baseUrl) {
   assert(resolvedRemediation.body.event.type === "remediation.task.resolved", "Remediation resolution did not append an audit event");
   const clientRemediationDenied = await fetchJson(`${baseUrl}api/remediation/tasks`, { headers: principalHeaders("client-show-suite") });
   assert(clientRemediationDenied.response.status === 403, "Client viewer should not read internal remediation tasks");
+  const clientMobileRemediationDenied = await fetchJson(`${baseUrl}api/mobile/remediation-tasks`, { headers: principalHeaders("client-show-suite") });
+  assert(clientMobileRemediationDenied.response.status === 403, "Client viewer should not read technician remediation tasks");
   const qualityAfterRemediation = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
   assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "Resolved remediation task should leave no active task in the quality summary");
 }

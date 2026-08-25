@@ -700,3 +700,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 51 - Technician Mobile Remediation Loop v1
+
+- Official score remains **65%**. The phone can now execute the application workflow, but a pilot browser principal and simulated capture are not evidence of real-device field adoption or a production dispatch system.
+- Capability added: `GET /api/mobile/remediation-tasks` returns active tasks inside client scope; field technicians see only tasks assigned to their principal and receive module context for the mobile action.
+- Capability added: `PATCH /api/mobile/remediation-tasks/:id` lets the assigned technician start and close a task. A successful capture can resolve the task with the capture batch ID or uploaded media ID as `evidenceRef`; the transition is written to the operations timeline with `source: technician-mobile`.
+- Capability added: the technician PWA now shows assigned module tasks above the route, opens the correct wall/module, preserves the task ID through the offline queue and closes the task after capture synchronization. The existing route cache includes the active task list for temporary API outages.
+- Capability added: production evidence reporting includes the remediation storage section when determining whether all observed persistence is PostgreSQL-backed. Invalid task priorities now return explicit validation errors instead of database failures.
+- Evidence added: API smoke covers mobile task scoping, module context, mobile start/resolution, client denial and invalid-priority rejection. Playwright UI smoke covers assigned task start, capture and task removal, while existing offline queue and client/auditor flows continue to pass. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: the task table is still not linked by a foreign key to a production work-order dispatch record; the mobile app still uses the pilot principal, local browser storage and local pilot proof vault. Real device authentication, OIDC/MFA, managed PostgreSQL, off-host restore and repeated field cycles remain open.
+- Target effect: the control loop now reaches the technician&apos;s execution surface and returns evidence to Ops Today without requiring a second task system; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 51
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
