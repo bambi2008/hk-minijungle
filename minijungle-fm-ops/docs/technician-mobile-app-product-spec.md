@@ -13,7 +13,7 @@ The technician must complete the next service action with the fewest possible de
 3. Start the related work order.
 4. Select the planting module when the task is module-specific.
 5. Review available device readings, add water/nutrient, take a proof photo and record an exception if needed.
-6. If the visit is linked to an assigned module remediation task, start it, capture the service evidence and close it from the same submission.
+6. If the visit is linked to an assigned module remediation task, accept it, capture the service evidence and submit it for independent FM review from the same submission.
 7. Submit once. If offline, save locally and retry automatically.
 
 The app is an execution surface, not a reporting dashboard. It should never require a technician to understand ESG, portfolio analytics or investor metrics.
@@ -105,7 +105,7 @@ GET /api/mobile/remediation-tasks?statuses=open,assigned,in_progress
 GET /api/modules?wallId={wallId}
 ```
 
-`GET /api/mobile/remediation-tasks` returns only active tasks inside the technician client scope. A field technician sees tasks assigned to that principal and receives the module label, zone, current status, priority, due time and a mobile action path. `PATCH /api/mobile/remediation-tasks/{taskId}` moves an assigned task to `in_progress` or `resolved`; a field technician cannot update another technician&apos;s task. Resolution requires a note or evidence reference.
+`GET /api/mobile/remediation-tasks` returns only active tasks inside the technician client scope. A field technician sees tasks assigned to that principal and receives the module label, zone, current status, review status, priority, due time and a mobile action path. `PATCH /api/mobile/remediation-tasks/{taskId}` records acceptance when the assigned technician starts work, then accepts `submitForReview: true` with a completion note or evidence reference. A field technician cannot update another technician&apos;s task and cannot set `resolved`; only an independent FM Lead or Platform Admin review may close it.
 
 `GET /api/mobile/reminders` returns:
 
@@ -140,7 +140,7 @@ POST /api/mobile/reminder-actions
 PATCH /api/mobile/remediation-tasks/{taskId}
 ```
 
-The capture batch carries `clientId`, `wallId`, `moduleId` (nullable), `workorderId`, `technicianId`, `capturedAt`, and typed items. When the technician starts a remediation task, the offline payload retains `remediationTaskId`; after capture and optional photo upload succeeds, the mobile app resolves that task with the capture batch ID or media ID as evidence reference. The photo intent carries the same module context. The reminder action writes `acknowledged` or `completed` status and links the capture batch. Task transitions append `remediation.task.<status>` events with `source: technician-mobile`.
+The capture batch carries `clientId`, `wallId`, `moduleId` (nullable), `workorderId`, `technicianId`, `capturedAt`, and typed items. When the technician starts a remediation task, the server persists `acceptedBy` and `acceptedAt`, while the offline payload retains `remediationTaskId`. After capture and optional photo upload succeeds, the mobile app submits the task for review with the capture batch ID or media ID as evidence reference. The task stays active with `reviewStatus: pending` and the phone locks further action until FM approval or rejection. The photo intent carries the same module context. Task events distinguish `review-submitted`, `review-rejected` and `review-approved`.
 
 ### Device ingestion
 
@@ -224,7 +224,9 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 - The field Service Worker caches only static application files. It does not cache API responses or intercept non-GET requests, preventing stale tenant data and accidental POST caching.
 - Replaying the same batch does not duplicate records or audit events.
 - Completing a visit marks the linked reminder completed in SQLite.
-- Starting an assigned remediation task from the phone records `in_progress`; a successful capture with a note or proof reference records `resolved` and removes it from the active phone queue.
+- Starting an assigned remediation task from the phone records `in_progress`, `acceptedBy` and `acceptedAt`; a successful capture with a note or proof reference records `reviewStatus: pending` and remains visible but locked.
+- Only FM Lead or Platform Admin can approve or reject a pending submission. Approval records the reviewer, review time and note before setting `resolved`; rejection returns the task to `assigned` and shows the review note to the technician.
+- A technician attempt to set `resolved` is rejected even when evidence is supplied.
 - A field technician cannot read or update remediation tasks outside the technician&apos;s client scope or principal assignment.
 - A field technician cannot submit against another client or another wall&apos;s module.
 - The primary mobile page remains usable at 360px width without horizontal scrolling.
@@ -246,7 +248,7 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 ## 9. Production Handoff Checklist
 
 - Replace demo principal with production SSO/session identity.
-- Connect the persisted remediation-to-work-order relation to real dispatch acceptance and independent closure review; the pilot now carries a `work_order_id` foreign key, but it does not prove a live dispatch or review process.
+- Connect the persisted work-order, acceptance and FM review fields to the real dispatch identity provider and field pilot; the database workflow is implemented, but it does not prove a live dispatch or review process.
 - Register real module IDs, device IDs, camera IDs and calibration metadata.
 - Connect a managed time-series ingestion path with device authentication.
 - Move proof bytes from the local vault to managed object storage with malware scanning and retention policy.

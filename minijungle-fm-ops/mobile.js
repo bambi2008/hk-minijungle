@@ -105,14 +105,17 @@ async function load() {
 }
 
 function remediationStatusLabel(status) { return String(status || "open").replaceAll("_", " "); }
+function mergeRemediationTask(task, update) { return { ...task, ...update, module: update.module || task.module, mobileAction: update.mobileAction || task.mobileAction }; }
 function renderRemediationTasks() {
   $("#remediation-count").textContent = `${remediationTasks.length} open`;
   const list = $("#remediation-list");
   list.innerHTML = remediationTasks.length ? remediationTasks.slice(0, 8).map((task) => {
     const moduleLabel = task.module?.label || task.moduleId;
     const reason = (task.reasons || []).join(" · ");
-    const action = task.status === "in_progress" ? "Continue" : "Start task";
-    return `<article class="remediation-item ${activeRemediationTask?.id === task.id ? "active" : ""}"><div><strong>${escapeHtml(moduleLabel)}</strong><span>${escapeHtml(reason)}</span><small>${task.workOrderId ? `WO ${escapeHtml(task.workOrderId)} · ` : "No active WO · "}${escapeHtml(remediationStatusLabel(task.status))} · ${escapeHtml(task.priority)}${task.dueAt ? ` · due ${escapeHtml(new Date(task.dueAt).toLocaleString())}` : ""}</small></div><button type="button" data-remediation-start="${escapeHtml(task.id)}">${action}</button></article>`;
+    const awaitingReview = task.reviewStatus === "pending";
+    const action = awaitingReview ? "Awaiting FM review" : task.status === "in_progress" ? "Continue" : task.reviewStatus === "rejected" ? "Resume task" : "Start task";
+    const reviewDetail = awaitingReview ? ` · submitted ${escapeHtml(task.submittedAt ? new Date(task.submittedAt).toLocaleString() : "now")}` : task.reviewStatus === "rejected" ? ` · FM rejected${task.reviewNote ? `: ${escapeHtml(task.reviewNote)}` : ""}` : "";
+    return `<article class="remediation-item ${activeRemediationTask?.id === task.id ? "active" : ""}"><div><strong>${escapeHtml(moduleLabel)}</strong><span>${escapeHtml(reason)}</span><small>${task.workOrderId ? `WO ${escapeHtml(task.workOrderId)} · ` : "No active WO · "}${escapeHtml(remediationStatusLabel(task.status))} · ${escapeHtml(task.priority)}${reviewDetail}${task.dueAt ? ` · due ${escapeHtml(new Date(task.dueAt).toLocaleString())}` : ""}</small></div><button type="button" data-remediation-start="${escapeHtml(task.id)}" ${awaitingReview ? "disabled" : ""}>${action}</button></article>`;
   }).join("") : "<p>No assigned module tasks.</p>";
   list.querySelectorAll("[data-remediation-start]").forEach((button) => button.addEventListener("click", () => {
     const task = remediationTasks.find((item) => item.id === button.dataset.remediationStart);
@@ -121,11 +124,12 @@ function renderRemediationTasks() {
 }
 
 async function startRemediationTask(task) {
+  if (task.reviewStatus === "pending") { setState("Awaiting independent FM review"); return; }
   activeRemediationTask = task;
-  if (task.status === "assigned") {
+  if (["open", "assigned"].includes(task.status)) {
     const result = await json(`/api/mobile/remediation-tasks/${encodeURIComponent(task.id)}`, { method: "PATCH", headers, body: JSON.stringify({ status: "in_progress" }) });
-    activeRemediationTask = result.task;
-    remediationTasks = remediationTasks.map((item) => item.id === task.id ? result.task : item);
+    activeRemediationTask = mergeRemediationTask(task, result.task);
+    remediationTasks = remediationTasks.map((item) => item.id === task.id ? mergeRemediationTask(item, result.task) : item);
   }
   const stop = task.workOrderId ? route.find((item) => item.workOrderId === task.workOrderId) : route.find((item) => item.wallId === task.wallId);
   if (!stop) throw new Error("No route stop is available for this module task");
@@ -274,9 +278,10 @@ async function sync(item) {
   }
   if (item.reminder?.id) await json("/api/mobile/reminder-actions", { method: "POST", headers, body: JSON.stringify({ reminderId: item.reminder.id, status: "completed", actionType: item.reminder.actionType || "visit-record", clientId: item.stop.clientId, wallId: item.stop.wallId, workorderId: item.stop.workOrderId, moduleId: item.moduleId, captureBatchId: item.id, note: "Completed from technician mobile capture." }) });
   if (item.remediationTaskId) {
-    const result = await json(`/api/mobile/remediation-tasks/${encodeURIComponent(item.remediationTaskId)}`, { method: "PATCH", headers, body: JSON.stringify({ status: "resolved", resolutionNote: item.notes || "Resolved from technician mobile capture.", evidenceRef: item.photo ? mediaId : item.id }) });
+    const currentTask = remediationTasks.find((task) => task.id === item.remediationTaskId) || activeRemediationTask || {};
+    const result = await json(`/api/mobile/remediation-tasks/${encodeURIComponent(item.remediationTaskId)}`, { method: "PATCH", headers, body: JSON.stringify({ submitForReview: true, resolutionNote: item.notes || "Completion evidence submitted from technician mobile capture.", evidenceRef: item.photo ? mediaId : item.id }) });
     activeRemediationTask = null;
-    remediationTasks = remediationTasks.filter((task) => task.id !== item.remediationTaskId);
+    remediationTasks = remediationTasks.map((task) => task.id === item.remediationTaskId ? mergeRemediationTask(currentTask, result.task) : task);
     renderRemediationTasks();
     return result;
   }

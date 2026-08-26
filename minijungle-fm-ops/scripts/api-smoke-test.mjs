@@ -161,7 +161,7 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.modules.counts.modules === 12, "Module master table should seed addressable modules from wall module counts");
   assert(initialStorage.body.modules.relationshipIntegrity.foreignKeyIssues === 0, "Module master table should have no foreign-key issues");
   assert(initialStorage.body.reminders.counts.actions === 0, "Reminder action table should start empty in test mode");
-  assert(initialStorage.body.remediation.migrationVersion === "2026-08-26.remediation-work-order-link-v1", "Storage endpoint did not expose remediation work-order migration");
+  assert(initialStorage.body.remediation.migrationVersion === "2026-08-27.remediation-review-loop-v1", "Storage endpoint did not expose remediation review-loop migration");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -1152,19 +1152,49 @@ async function verifyApi(baseUrl) {
     body: JSON.stringify({ status: "in_progress" })
   });
   assert(startedRemediation.response.ok && startedRemediation.body.task.status === "in_progress", "Assigned field technician should start a remediation task");
-  const resolvedRemediation = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+  assert(startedRemediation.body.task.acceptedBy === "field-tech-show-suite" && startedRemediation.body.task.acceptedAt, "Technician acceptance actor and timestamp were not persisted");
+  const directResolutionDenied = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
     method: "PATCH",
     headers: jsonHeaders("field-tech-show-suite"),
     body: JSON.stringify({ status: "resolved", resolutionNote: "Field review completed; follow-up capture recorded.", evidenceRef: "CAP-UI-001" })
   });
-  assert(resolvedRemediation.response.ok && resolvedRemediation.body.task.status === "resolved", "Assigned field technician should resolve a remediation task with evidence reference");
-  assert(resolvedRemediation.body.event.type === "remediation.task.resolved", "Remediation resolution did not append an audit event");
+  assert(directResolutionDenied.response.status === 403 && directResolutionDenied.body.code === "MOBILE_REMEDIATION_REVIEW_REQUIRED", "Technician should not resolve a remediation task without FM review");
+  const submittedRemediation = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("field-tech-show-suite"),
+    body: JSON.stringify({ submitForReview: true, resolutionNote: "Field review completed; follow-up capture recorded.", evidenceRef: "CAP-UI-001" })
+  });
+  assert(submittedRemediation.response.ok && submittedRemediation.body.task.status === "in_progress" && submittedRemediation.body.task.reviewStatus === "pending", "Technician evidence should remain active while awaiting FM review");
+  assert(submittedRemediation.body.task.submittedBy === "field-tech-show-suite" && submittedRemediation.body.task.submittedAt, "Review submission actor and timestamp were not persisted");
+  assert(submittedRemediation.body.event.type === "remediation.task.review-submitted", "Review submission did not append a dedicated audit event");
+  const qualityPendingReview = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
+  assert(qualityPendingReview.body.summary.openRemediationTasks === 1 && qualityPendingReview.body.moduleReadiness.some((item) => item.remediationTask?.reviewStatus === "pending"), "Pending FM review should remain in the operations action queue");
+  const rejectedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ reviewDecision: "rejected", reviewNote: "Retake the fixed-angle photo after reconnecting the gateway." })
+  });
+  assert(rejectedRemediation.response.ok && rejectedRemediation.body.task.status === "assigned" && rejectedRemediation.body.task.reviewStatus === "rejected", "FM rejection should return the task to the assigned technician");
+  assert(rejectedRemediation.body.task.reviewedBy === "fm-lead" && rejectedRemediation.body.task.reviewedAt, "FM rejection reviewer and timestamp were not persisted");
+  assert(rejectedRemediation.body.event.type === "remediation.task.review-rejected", "FM rejection did not append a dedicated audit event");
+  const restartedRemediation = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, { method: "PATCH", headers: jsonHeaders("field-tech-show-suite"), body: JSON.stringify({ status: "in_progress" }) });
+  assert(restartedRemediation.response.ok && restartedRemediation.body.task.reviewStatus === "rejected", "Rejected remediation task should be resumable without losing review history");
+  const resubmittedRemediation = await fetchJson(`${baseUrl}api/mobile/remediation-tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, { method: "PATCH", headers: jsonHeaders("field-tech-show-suite"), body: JSON.stringify({ submitForReview: true, resolutionNote: "Gateway reconnected and fixed-angle evidence retaken.", evidenceRef: "CAP-UI-002" }) });
+  assert(resubmittedRemediation.response.ok && resubmittedRemediation.body.task.reviewStatus === "pending" && resubmittedRemediation.body.task.reviewNote === null, "Resubmission should clear the prior decision while retaining a pending review state");
+  const approvedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
+    method: "PATCH",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ reviewDecision: "approved", reviewNote: "Fixed-angle evidence confirms gateway recovery and current readings." })
+  });
+  assert(approvedRemediation.response.ok && approvedRemediation.body.task.status === "resolved" && approvedRemediation.body.task.reviewStatus === "approved", "FM approval should resolve the remediation task");
+  assert(approvedRemediation.body.task.reviewedBy === "fm-lead" && approvedRemediation.body.task.resolvedAt, "FM approval audit fields were not persisted");
+  assert(approvedRemediation.body.event.type === "remediation.task.review-approved", "FM approval did not append a dedicated audit event");
   const clientRemediationDenied = await fetchJson(`${baseUrl}api/remediation/tasks`, { headers: principalHeaders("client-show-suite") });
   assert(clientRemediationDenied.response.status === 403, "Client viewer should not read internal remediation tasks");
   const clientMobileRemediationDenied = await fetchJson(`${baseUrl}api/mobile/remediation-tasks`, { headers: principalHeaders("client-show-suite") });
   assert(clientMobileRemediationDenied.response.status === 403, "Client viewer should not read technician remediation tasks");
   const qualityAfterRemediation = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
-  assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "Resolved remediation task should leave no active task in the quality summary");
+  assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "FM-approved remediation task should leave no active task in the quality summary");
 }
 
 async function main() {

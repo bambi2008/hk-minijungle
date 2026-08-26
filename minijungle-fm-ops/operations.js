@@ -50,7 +50,8 @@ function renderQuality(quality = {}) {
   $("#module-quality-state").textContent = unready ? `${unready} need action · showing ${moduleItems.length}` : "All modules pass";
   $("#module-quality-list").innerHTML = moduleItems.length ? moduleItems.map((item) => {
     const task = item.remediationTask;
-    const action = task ? `<div class="module-quality-actions"><span class="module-task-state ${task.status === "in_progress" ? "active" : ""}">${escapeHtml(task.status.replaceAll("_", " "))}</span><button data-remediation-edit="${escapeHtml(task.id)}" data-remediation-module="${escapeHtml(item.moduleId)}" type="button">Update</button></div>` : `<div class="module-quality-actions"><span class="module-task-state">No task</span><button data-remediation-create="${escapeHtml(item.moduleId)}" type="button">Create task</button></div>`;
+    const taskLabel = task?.reviewStatus === "pending" ? "FM review pending" : task?.reviewStatus === "rejected" ? "Returned to technician" : task?.status?.replaceAll("_", " ");
+    const action = task ? `<div class="module-quality-actions"><span class="module-task-state ${task.status === "in_progress" ? "active" : ""}">${escapeHtml(taskLabel)}</span><button data-remediation-edit="${escapeHtml(task.id)}" data-remediation-module="${escapeHtml(item.moduleId)}" type="button">${task.reviewStatus === "pending" ? "Review" : "Update"}</button></div>` : `<div class="module-quality-actions"><span class="module-task-state">No task</span><button data-remediation-create="${escapeHtml(item.moduleId)}" type="button">Create task</button></div>`;
     return `<article class="module-quality-item"><div><strong>${escapeHtml(item.moduleId)} · ${escapeHtml(item.label)}</strong><span>${escapeHtml(item.reasons.join(" · "))}</span><small>${item.workOrderId ? `WO ${escapeHtml(item.workOrderId)} · ` : "No active WO · "}Telemetry ${escapeHtml(formatTime(item.lastTelemetryAt || "No reading"))} · Camera ${escapeHtml(formatTime(item.cameraLastSeenAt || "No heartbeat"))}</small></div><div class="module-quality-right"><b>${escapeHtml(item.status.replaceAll("-", " "))}</b>${action}</div></article>`;
   }).join("") : "<p class=\"empty\">No module-level action items.</p>";
 }
@@ -82,6 +83,16 @@ async function load() {
 const aiReviewDialog = $("#ai-review-dialog");
 const remediationDialog = $("#remediation-dialog");
 function remediationTimeInput(value) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return ""; const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
+function configureRemediationReview(task = null) {
+  const pending = task?.reviewStatus === "pending";
+  $("#remediation-review-fields").hidden = !pending;
+  $("#remediation-review-decision").value = "";
+  $("#remediation-review-note").value = "";
+  $("#remediation-review-state").textContent = pending ? `Submitted by ${task.submittedBy || "technician"} · ${formatTime(task.submittedAt)} · evidence ${task.evidenceRef || "completion note"}` : "";
+  ["#remediation-status", "#remediation-priority", "#remediation-assigned-to", "#remediation-due-at"].forEach((selector) => { $(selector).disabled = pending; });
+  ["#remediation-resolution-note", "#remediation-evidence-ref"].forEach((selector) => { $(selector).readOnly = pending; });
+  $("#remediation-submit").textContent = pending ? "Record FM decision" : "Save task";
+}
 function openRemediationCreate(item) {
   remediationState.task = null;
   $("#remediation-title").textContent = "Create remediation task";
@@ -97,6 +108,7 @@ function openRemediationCreate(item) {
   $("#remediation-resolution-note").value = "";
   $("#remediation-evidence-ref").value = "";
   $("#remediation-error").textContent = "";
+  configureRemediationReview();
   remediationDialog.showModal();
 }
 function openRemediationEdit(item, task) {
@@ -114,16 +126,26 @@ function openRemediationEdit(item, task) {
   $("#remediation-resolution-note").value = task.resolutionNote || "";
   $("#remediation-evidence-ref").value = task.evidenceRef || "";
   $("#remediation-error").textContent = "";
+  configureRemediationReview(task);
   remediationDialog.showModal();
 }
 async function saveRemediation(event) {
   event.preventDefault();
   const moduleId = $("#remediation-module-id").value;
+  const taskId = $("#remediation-id").value;
+  if (taskId && remediationState.task?.reviewStatus === "pending") {
+    const reviewDecision = $("#remediation-review-decision").value;
+    const reviewNote = $("#remediation-review-note").value.trim();
+    if (!reviewDecision || !reviewNote) { $("#remediation-error").textContent = "Select approve or reject and enter an audit note."; return; }
+    const submit = $("#remediation-submit"); submit.disabled = true; $("#remediation-error").textContent = "";
+    try { await api(`/api/remediation/tasks/${encodeURIComponent(taskId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewDecision, reviewNote }) }); remediationDialog.close(); await load(); }
+    catch (error) { $("#remediation-error").textContent = error.message; } finally { submit.disabled = false; }
+    return;
+  }
   const assignedTo = $("#remediation-assigned-to").value.trim();
   const dueAt = $("#remediation-due-at").value;
   const body = { status: $("#remediation-status").value, priority: $("#remediation-priority").value, assignedTo: assignedTo || null, dueAt: dueAt ? new Date(dueAt).toISOString() : null, resolutionNote: $("#remediation-resolution-note").value.trim() || null, evidenceRef: $("#remediation-evidence-ref").value.trim() || null };
   if (!moduleId) return;
-  const taskId = $("#remediation-id").value;
   if (!taskId) Object.assign(body, { moduleId, workOrderId: $("#remediation-work-order-id").value.trim() || null, sourceKey: $("#remediation-source-key").value, reasons: remediationState.moduleItems.find((item) => item.moduleId === moduleId)?.reasons || [] });
   const submit = $("#remediation-submit"); submit.disabled = true; $("#remediation-error").textContent = "";
   try {

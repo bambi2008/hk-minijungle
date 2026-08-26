@@ -733,3 +733,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 53 - Technician Acceptance and Independent FM Review v1
+
+- Official score remains **65%**. This batch removes a workflow-control weakness, but automated tests and pilot principals do not prove adoption, response time or closure quality in live Hong Kong FM operations.
+- Capability added: remediation records now persist `accepted_at`, `accepted_by`, `review_status`, submission actor/time, reviewer actor/time and review note. SQLite migration is `2026-08-27.remediation-review-loop-v1`; PostgreSQL uses `2026-08-27.postgres-remediation-review-loop-v1` and `infra/postgres/005_remediation_review_loop.sql`.
+- Capability added: technicians can accept assigned work and submit completion evidence, but cannot resolve it. A submission remains active as `pending`; FM Lead or Platform Admin must approve with an audit note to resolve it, or reject it back to the assigned technician.
+- Capability added: Ops Today exposes a dedicated independent review decision instead of a direct resolved status. The technician PWA shows pending work as locked and rejected work with the FM note, preserving the shortest practical execution path.
+- Evidence added: API smoke covers acceptance attribution, direct-resolution denial, pending queue retention, rejection, resumption, resubmission and approval. Playwright covers desktop FM approval and the 390px technician submit/lock/approval flow.
+- Honest boundary: OIDC/MFA identities, managed PostgreSQL, production dispatch integration, external object storage, off-host restore and repeated live-site FM review cycles are not evidenced. The workflow is ready for controlled pilot use, not certified production operation at 1,000+ modules.
+- Target effect: technician execution and FM closure now have explicit separation of duties and attributable evidence; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 53
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

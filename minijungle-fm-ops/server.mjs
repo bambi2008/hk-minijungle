@@ -975,7 +975,7 @@ async function buildOperationsQuality(auth) {
       lastTelemetryAt: latestTelemetryAt,
       cameraLastSeenAt: cameraDevice?.lastSeenAt || null,
       cameraStatus: cameraStatus || null,
-      remediationTask: remediationTask ? { id: remediationTask.id, status: remediationTask.status, priority: remediationTask.priority, assignedTo: remediationTask.assignedTo, dueAt: remediationTask.dueAt, workOrderId: remediationTask.workOrderId || null } : null
+      remediationTask: remediationTask ? { id: remediationTask.id, status: remediationTask.status, priority: remediationTask.priority, assignedTo: remediationTask.assignedTo, dueAt: remediationTask.dueAt, workOrderId: remediationTask.workOrderId || null, acceptedAt: remediationTask.acceptedAt, acceptedBy: remediationTask.acceptedBy, reviewStatus: remediationTask.reviewStatus, submittedAt: remediationTask.submittedAt, submittedBy: remediationTask.submittedBy, reviewedAt: remediationTask.reviewedAt, reviewedBy: remediationTask.reviewedBy, reviewNote: remediationTask.reviewNote, resolutionNote: remediationTask.resolutionNote, evidenceRef: remediationTask.evidenceRef } : null
     };
   });
   const moduleReadiness = moduleReadinessDetails.filter((item) => item.status !== "ready").sort((left, right) => {
@@ -1480,7 +1480,7 @@ async function buildMobileRemediationTasks(auth, requestedStatuses = null) {
     return {
       ...task,
       module: module ? { id: module.id, label: module.label, zone: module.zone || null, assetId: module.assetId, clientId: module.clientId } : null,
-      mobileAction: { path: `/mobile.html?${task.workOrderId ? `workOrderId=${encodeURIComponent(task.workOrderId)}&` : ""}wallId=${encodeURIComponent(task.wallId)}&moduleId=${encodeURIComponent(task.moduleId)}`, label: task.status === "in_progress" ? "Continue" : "Start task", workOrderId: task.workOrderId || null }
+      mobileAction: { path: `/mobile.html?${task.workOrderId ? `workOrderId=${encodeURIComponent(task.workOrderId)}&` : ""}wallId=${encodeURIComponent(task.wallId)}&moduleId=${encodeURIComponent(task.moduleId)}`, label: task.reviewStatus === "pending" ? "Awaiting FM review" : task.status === "in_progress" ? "Continue" : task.reviewStatus === "rejected" ? "Resume task" : "Start task", workOrderId: task.workOrderId || null }
     };
   });
 }
@@ -2264,8 +2264,10 @@ async function handleApi(req, res, pathname) {
       requireClientAccess(auth, existing.clientId, "mobile remediation task update");
       if (auth.roleId === "field-tech" && existing.assignedTo !== auth.id) throw apiError(403, "field technician is not assigned to this remediation task", "MOBILE_REMEDIATION_ASSIGNMENT_DENIED");
       const input = await readJsonBody(req);
-      const result = await updateRemediationTask(taskId, { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? auth.id : input.assignedTo });
-      const event = normalizeOpsEvent({ type: `remediation.task.${result.task.status}`, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "technician-mobile", note: result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status} from mobile.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, evidenceRef: result.task.evidenceRef, channel: "technician-mobile" } });
+      if (input.status === "resolved" || input.reviewDecision) throw apiError(403, "technicians must submit completion evidence for independent FM review", "MOBILE_REMEDIATION_REVIEW_REQUIRED");
+      const result = await updateRemediationTask(taskId, { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? auth.id : input.assignedTo, acceptedBy: input.status === "in_progress" ? auth.id : undefined, submittedBy: input.submitForReview === true ? auth.id : undefined });
+      const eventType = input.submitForReview === true ? "remediation.task.review-submitted" : `remediation.task.${result.task.status}`;
+      const event = normalizeOpsEvent({ type: eventType, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "technician-mobile", note: result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status} from mobile.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, reviewStatus: result.task.reviewStatus, assignedTo: result.task.assignedTo, acceptedBy: result.task.acceptedBy, submittedBy: result.task.submittedBy, evidenceRef: result.task.evidenceRef, channel: "technician-mobile" } });
       await appendOpsEvent(event);
       sendJson(res, 200, { ...result, event });
       return;
@@ -2555,9 +2557,13 @@ async function handleApi(req, res, pathname) {
       requireClientAccess(auth, existing.clientId, "remediation task update");
       if (auth.roleId === "field-tech" && existing.assignedTo && existing.assignedTo !== auth.id) throw apiError(403, "field technician is not assigned to this remediation task", "REMEDIATION_ASSIGNMENT_DENIED");
       const input = await readJsonBody(req);
-      const updateInput = { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? (input.assignedTo || existing.assignedTo || auth.id) : input.assignedTo };
+      const reviewerRoles = new Set(["fm-lead", "platform-admin"]);
+      if (input.reviewDecision && !reviewerRoles.has(auth.roleId)) throw apiError(403, "only FM Lead or Platform Admin can review remediation evidence", "REMEDIATION_REVIEW_ROLE_DENIED");
+      if (auth.roleId === "field-tech" && (input.status === "resolved" || input.reviewDecision)) throw apiError(403, "technicians must submit completion evidence for independent FM review", "REMEDIATION_REVIEW_REQUIRED");
+      const updateInput = { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? (input.assignedTo || existing.assignedTo || auth.id) : input.assignedTo, acceptedBy: input.status === "in_progress" && auth.roleId === "field-tech" ? auth.id : undefined, submittedBy: input.submitForReview === true ? auth.id : undefined, reviewedBy: input.reviewDecision ? auth.id : undefined };
       const result = await updateRemediationTask(taskId, updateInput);
-      const event = normalizeOpsEvent({ type: `remediation.task.${result.task.status}`, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status}.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, evidenceRef: result.task.evidenceRef } });
+      const eventType = input.submitForReview === true ? "remediation.task.review-submitted" : input.reviewDecision ? `remediation.task.review-${input.reviewDecision}` : `remediation.task.${result.task.status}`;
+      const event = normalizeOpsEvent({ type: eventType, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: result.task.reviewNote || result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status}.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, reviewStatus: result.task.reviewStatus, assignedTo: result.task.assignedTo, acceptedBy: result.task.acceptedBy, submittedBy: result.task.submittedBy, reviewedBy: result.task.reviewedBy, evidenceRef: result.task.evidenceRef } });
       await appendOpsEvent(event);
       sendJson(res, 200, { ...result, event });
       return;
