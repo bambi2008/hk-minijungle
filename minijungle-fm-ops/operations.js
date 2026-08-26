@@ -4,6 +4,7 @@ const $ = (selector) => document.querySelector(selector);
 const aiReviewState = { diagnoses: [] };
 const evidenceControlState = { latestId: null };
 const remediationState = { moduleItems: [], task: null };
+const dispatchState = { tasks: [], selected: new Set(), nextCursor: null, summary: {} };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -27,12 +28,36 @@ function renderCaptures(batches) {
     return `<article class="capture-item"><div><strong>${escapeHtml(batch.wallId)}${escapeHtml(moduleLabel)}</strong><span>${escapeHtml(batch.workorderId)} · ${escapeHtml(batch.technicianId)} · ${escapeHtml(formatTime(batch.capturedAt))}</span><small>${items.length} capture items · ${hasPhoto ? "photo" : "no photo"}${hasException ? " · exception" : ""}</small></div><span class="module-state ${hasException ? "warn" : ""}">${escapeHtml(batch.syncStatus || "synced")}</span></article>`;
   }).join("") : "<p class=\"empty\">No technician records synced yet.</p>";
 }
-function notificationLabel(item) { return item.eventType === "mobile.capture.exception" ? "Field exception" : item.eventType === "telemetry.alert.opened" ? "Sensor alert" : item.eventType; }
+function notificationLabel(item) { return item.eventType === "mobile.capture.exception" ? "Field exception" : item.eventType === "telemetry.alert.opened" ? "Sensor alert" : item.eventType === "remediation.task.sla-escalated" ? "Remediation SLA" : item.eventType; }
 function renderNotifications(notifications, summary = {}) {
   const due = Number(summary.due || 0);
   $("#notification-count").textContent = due;
   $("#notification-state").textContent = `${due} due · ${Number(summary.failed || 0)} failed`;
   $("#notification-list").innerHTML = notifications.length ? notifications.slice(0, 8).map((item) => `<article class="notification-item"><div><strong>${escapeHtml(notificationLabel(item))} · ${escapeHtml(item.wallId || item.clientId || "platform")}</strong><span>${escapeHtml(item.status)} · ${escapeHtml(item.severity)} · ${escapeHtml(item.attempts)} attempt${item.attempts === 1 ? "" : "s"}</span><small>${escapeHtml(item.lastError ? `Last error: ${item.lastError}` : item.deliveredAt ? `Delivered ${formatTime(item.deliveredAt)}` : `Next attempt ${formatTime(item.nextAttemptAt)}`)}</small></div><span class="module-state ${["failed", "retry"].includes(item.status) ? "warn" : ""}">${escapeHtml(item.status)}</span></article>`).join("") : "<p class=\"empty\">No outbound notifications yet.</p>";
+}
+function dispatchSlaLabel(task) { return task.sla?.level ? `SLA L${task.sla.level} · ${Number(task.sla.overdueHours || 0).toFixed(1)}h overdue` : task.sla?.state === "due_soon" ? `Due in ${Number(task.sla.dueInHours || 0).toFixed(1)}h` : task.sla?.state === "scheduled" ? "Scheduled" : "No due time"; }
+function renderDispatchTasks() {
+  const filter = $("#dispatch-filter").value;
+  const tasks = dispatchState.tasks.filter((task) => filter === "overdue" ? task.sla?.level > 0 : filter === "pending" ? task.reviewStatus === "pending" : filter === "unassigned" ? !task.assignedTo : true);
+  $("#dispatch-list").innerHTML = tasks.length ? tasks.map((task) => `<article class="dispatch-item"><input type="checkbox" data-dispatch-select="${escapeHtml(task.id)}" aria-label="Select ${escapeHtml(task.id)}" ${dispatchState.selected.has(task.id) ? "checked" : ""}><div><strong>${escapeHtml(task.moduleId)} · ${escapeHtml(task.workOrderId || "No work order")}</strong><span>${escapeHtml(task.status.replaceAll("_", " "))} · ${escapeHtml(task.priority)} · review ${escapeHtml(task.reviewStatus.replaceAll("_", " "))}</span><small>${escapeHtml((task.reasons || []).join(" · "))}</small></div><div class="dispatch-owner"><strong>${escapeHtml(task.assignedTo || "Unassigned")}</strong><span>${task.dueAt ? `Due ${escapeHtml(formatTime(task.dueAt))}` : "No due time"}</span><small>${task.escalationReason ? escapeHtml(task.escalationReason) : `Updated ${escapeHtml(formatTime(task.updatedAt))}`}</small></div><b class="sla-state ${task.sla?.level ? "overdue" : ""}">${escapeHtml(dispatchSlaLabel(task))}</b></article>`).join("") : "<p class=\"empty\">No tasks match this view.</p>";
+  $("#dispatch-list").querySelectorAll("[data-dispatch-select]").forEach((checkbox) => checkbox.addEventListener("change", () => { if (checkbox.checked) dispatchState.selected.add(checkbox.dataset.dispatchSelect); else dispatchState.selected.delete(checkbox.dataset.dispatchSelect); $("#dispatch-select-all").checked = tasks.length > 0 && tasks.every((task) => dispatchState.selected.has(task.id)); }));
+  $("#dispatch-select-all").checked = tasks.length > 0 && tasks.every((task) => dispatchState.selected.has(task.id));
+}
+function renderDispatchQueue(payload, append = false) {
+  const incoming = payload.tasks || [];
+  dispatchState.tasks = append ? [...dispatchState.tasks, ...incoming.filter((task) => !dispatchState.tasks.some((existing) => existing.id === task.id))] : incoming;
+  if (!append) dispatchState.selected = new Set([...dispatchState.selected].filter((id) => dispatchState.tasks.some((task) => task.id === id)));
+  dispatchState.nextCursor = payload.page?.nextCursor || null;
+  dispatchState.summary = payload.summary || dispatchState.summary;
+  $("#dispatch-state").textContent = `${Number(dispatchState.summary.active || 0)} active · ${Number(dispatchState.summary.unassigned || 0)} unassigned · ${Number(dispatchState.summary.pendingReview || 0)} review`;
+  $("#remediation-overdue-count").textContent = Number(dispatchState.summary.overdue || 0);
+  $("#dispatch-load-more").hidden = !dispatchState.nextCursor;
+  renderDispatchTasks();
+}
+async function loadMoreDispatch() {
+  if (!dispatchState.nextCursor) return;
+  const result = await api(`/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50&cursor=${encodeURIComponent(dispatchState.nextCursor)}`);
+  renderDispatchQueue(result, true);
 }
 function renderTimeline(timeline = {}) {
   const events = timeline.events || [];
@@ -58,7 +83,7 @@ function renderQuality(quality = {}) {
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 async function load() {
   $("#notice").textContent = "";
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -77,6 +102,7 @@ async function load() {
   renderNotifications(notifications.notifications || [], notifications.summary || {});
   renderTimeline(timeline);
   renderQuality(quality);
+  renderDispatchQueue(dispatch);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
 }
@@ -159,6 +185,11 @@ async function saveAiReview(event) { event.preventDefault(); const status = $("#
 $("#refresh").onclick = () => load().catch((error) => { $("#notice").textContent = error.message; });
 $("#ai-review-cancel").onclick = () => aiReviewDialog.close(); $("#ai-review-form").onsubmit = saveAiReview;
 $("#remediation-cancel").onclick = () => remediationDialog.close(); $("#remediation-form").onsubmit = saveRemediation;
+$("#dispatch-filter").onchange = renderDispatchTasks;
+$("#dispatch-select-all").onchange = () => { const visible = dispatchState.tasks.filter((task) => $("#dispatch-filter").value === "overdue" ? task.sla?.level > 0 : $("#dispatch-filter").value === "pending" ? task.reviewStatus === "pending" : $("#dispatch-filter").value === "unassigned" ? !task.assignedTo : true); for (const task of visible) { if ($("#dispatch-select-all").checked) dispatchState.selected.add(task.id); else dispatchState.selected.delete(task.id); } renderDispatchTasks(); };
+$("#dispatch-load-more").onclick = () => loadMoreDispatch().catch((error) => { $("#dispatch-notice").textContent = error.message; });
+$("#dispatch-sla-scan").onclick = async () => { const button = $("#dispatch-sla-scan"); button.disabled = true; $("#dispatch-notice").textContent = "Scanning active SLA deadlines…"; try { const result = await api("/api/remediation/sla-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); await load(); $("#dispatch-notice").textContent = `${result.scanned} scanned · ${result.escalated} newly escalated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
+$("#dispatch-bulk-form").onsubmit = async (event) => { event.preventDefault(); const taskIds = [...dispatchState.selected]; if (!taskIds.length) { $("#dispatch-notice").textContent = "Select at least one task."; return; } const body = { taskIds }; const assignedTo = $("#dispatch-assigned-to").value.trim(); const dueAt = $("#dispatch-due-at").value; const priority = $("#dispatch-priority").value; const status = $("#dispatch-status").value; if (assignedTo) body.assignedTo = assignedTo; if (dueAt) body.dueAt = new Date(dueAt).toISOString(); if (priority) body.priority = priority; if (status) body.status = status; if (Object.keys(body).length === 1) { $("#dispatch-notice").textContent = "Choose an assignment, due time, priority or status."; return; } const button = $("#dispatch-apply"); button.disabled = true; $("#dispatch-notice").textContent = "Applying dispatch update…"; try { const result = await api("/api/remediation/tasks/bulk", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }); dispatchState.selected.clear(); await load(); $("#dispatch-notice").textContent = `${result.updated} task${result.updated === 1 ? "" : "s"} updated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#persist-snapshot").onclick = async () => { const button = $("#persist-snapshot"); button.disabled = true; $("#snapshot-notice").textContent = "Persisting current evidence package…"; try { const result = await api("/api/proof/evidence-snapshots", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); $("#snapshot-notice").textContent = `${result.snapshotId} persisted · ${result.signatureStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#verify-snapshot").onclick = async () => { const button = $("#verify-snapshot"); if (!evidenceControlState.latestId) return; button.disabled = true; $("#snapshot-notice").textContent = "Verifying latest snapshot…"; try { const result = await api(`/api/proof/evidence-snapshots/${encodeURIComponent(evidenceControlState.latestId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "Reviewed from FM Lead evidence control." }) }); $("#snapshot-notice").textContent = `${result.snapshotId} verification: ${result.verificationStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = !evidenceControlState.latestId; } };
 $("#sweep-snapshots").onclick = async () => { const button = $("#sweep-snapshots"); button.disabled = true; $("#snapshot-notice").textContent = "Running retention sweep…"; try { const result = await api("/api/proof/evidence-snapshots/retention-sweep", { method: "POST" }); $("#snapshot-notice").textContent = `Retention sweep complete · ${Number(result.expiredCount || 0)} expired`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };

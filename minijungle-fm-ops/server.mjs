@@ -155,6 +155,8 @@ import {
 import {
   createPostgresRemediationTask,
   listPostgresRemediationTasks,
+  markPostgresRemediationEscalation,
+  readPostgresRemediationDispatchSummary,
   readPostgresRemediationTask,
   readPostgresRemediationStorageHealth,
   updatePostgresRemediationTask
@@ -162,6 +164,8 @@ import {
 import {
   createSqliteRemediationTask,
   listSqliteRemediationTasks,
+  markSqliteRemediationEscalation,
+  readSqliteRemediationDispatchSummary,
   readSqliteRemediationTask,
   readSqliteRemediationStorageHealth,
   updateSqliteRemediationTask
@@ -586,6 +590,18 @@ async function updateRemediationTask(id, input) {
     : updateSqliteRemediationTask(runtimeDbPath, id, input);
 }
 
+async function markRemediationEscalation(id, input) {
+  return productionMasterDataEnabled()
+    ? markPostgresRemediationEscalation(runtimeDbPath, id, input)
+    : markSqliteRemediationEscalation(runtimeDbPath, id, input);
+}
+
+async function readRemediationDispatchSummary(options = {}) {
+  return productionMasterDataEnabled()
+    ? readPostgresRemediationDispatchSummary(runtimeDbPath, options)
+    : readSqliteRemediationDispatchSummary(runtimeDbPath, options);
+}
+
 async function readRemediationTask(id) {
   return productionMasterDataEnabled()
     ? readPostgresRemediationTask(runtimeDbPath, id)
@@ -890,6 +906,35 @@ function ageMinutes(value, nowMs = Date.now()) {
   const timestamp = Date.parse(value || "");
   if (!Number.isFinite(timestamp)) return null;
   return Math.max(0, (nowMs - timestamp) / 60000);
+}
+
+function remediationSlaThresholds() {
+  const configured = String(process.env.DR_FOREST_REMEDIATION_ESCALATION_HOURS || "0,4,24").split(",").map(Number);
+  const values = configured.length === 3 && configured.every((value, index) => Number.isFinite(value) && value >= 0 && (index === 0 || value > configured[index - 1])) ? configured : [0, 4, 24];
+  return { level1Hours: values[0], level2Hours: values[1], level3Hours: values[2] };
+}
+
+function remediationSla(task, nowMs = Date.now()) {
+  const dueMs = Date.parse(task?.dueAt || "");
+  if (!Number.isFinite(dueMs)) return { state: "unscheduled", level: 0, overdueHours: 0, dueInHours: null };
+  const deltaHours = (nowMs - dueMs) / 3_600_000;
+  if (deltaHours < 0) return { state: deltaHours >= -2 ? "due_soon" : "scheduled", level: 0, overdueHours: 0, dueInHours: Math.max(0, -deltaHours) };
+  const thresholds = remediationSlaThresholds();
+  const level = deltaHours >= thresholds.level3Hours ? 3 : deltaHours >= thresholds.level2Hours ? 2 : 1;
+  return { state: `overdue_l${level}`, level, overdueHours: deltaHours, dueInHours: 0 };
+}
+
+function encodeRemediationCursor(task) {
+  return Buffer.from(JSON.stringify({ before: task.updatedAt, beforeId: task.id }), "utf8").toString("base64url");
+}
+
+function decodeRemediationCursor(value) {
+  if (!value) return { before: null, beforeId: null };
+  try {
+    const parsed = JSON.parse(Buffer.from(String(value), "base64url").toString("utf8"));
+    if (!parsed.before || !parsed.beforeId || !Number.isFinite(Date.parse(parsed.before))) throw new Error("invalid cursor");
+    return { before: String(parsed.before), beforeId: String(parsed.beforeId) };
+  } catch { throw validationError("cursor is invalid", "REMEDIATION_CURSOR_INVALID"); }
 }
 
 async function buildOperationsQuality(auth) {
@@ -2523,13 +2568,92 @@ async function handleApi(req, res, pathname) {
       const url = new URL(req.url, `http://${host}:${port}`);
       const clientId = url.searchParams.get("clientId") || "";
       if (clientId) requireClientAccess(auth, clientId, "remediation task filter");
-      const tasks = await listRemediationTasks({
-        clientIds: clientId ? [clientId] : auth.clientScope === "all" ? null : auth.clientIds,
+      const limit = Math.min(Math.max(Number(url.searchParams.get("limit")) || 50, 1), 100);
+      const cursor = decodeRemediationCursor(url.searchParams.get("cursor"));
+      const scopeClientIds = clientId ? [clientId] : auth.clientScope === "all" ? null : auth.clientIds;
+      const [candidates, dispatchSummary] = await Promise.all([listRemediationTasks({
+        clientIds: scopeClientIds,
         statuses: url.searchParams.get("statuses")?.split(",") || null,
         moduleId: url.searchParams.get("moduleId") || null,
-        limit: url.searchParams.get("limit") || 100
-      });
-      sendJson(res, 200, { generatedAt: new Date().toISOString(), tasks });
+        assignedTo: auth.roleId === "field-tech" ? auth.id : (url.searchParams.get("assignedTo") || null),
+        reviewStatuses: url.searchParams.get("reviewStatuses")?.split(",") || null,
+        priorities: url.searchParams.get("priorities")?.split(",") || null,
+        dueBefore: url.searchParams.get("dueBefore") || null,
+        before: cursor.before,
+        beforeId: cursor.beforeId,
+        orderBy: "updated",
+        limit: limit + 1
+      }), readRemediationDispatchSummary({ clientIds: scopeClientIds, assignedTo: auth.roleId === "field-tech" ? auth.id : null })]);
+      const hasMore = candidates.length > limit;
+      const tasks = candidates.slice(0, limit).map((task) => ({ ...task, sla: remediationSla(task) }));
+      const last = tasks.at(-1);
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), tasks, page: { limit, hasMore, nextCursor: hasMore && last ? encodeRemediationCursor(last) : null }, summary: { ...dispatchSummary, returned: tasks.length }, slaThresholds: remediationSlaThresholds() });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/remediation/tasks/bulk") {
+      requirePermission(auth, "ops.remediation.update");
+      if (!["fm-lead", "platform-admin"].includes(auth.roleId)) throw apiError(403, "only FM Lead or Platform Admin can bulk-dispatch remediation tasks", "REMEDIATION_BULK_ROLE_DENIED");
+      const input = await readJsonBody(req);
+      const taskIds = [...new Set(Array.isArray(input.taskIds) ? input.taskIds.map((id) => String(id || "").trim()).filter(Boolean) : [])];
+      if (!taskIds.length || taskIds.length > 100) throw validationError("taskIds must contain 1 to 100 unique task IDs", "REMEDIATION_BULK_SIZE_INVALID");
+      const hasAssignedTo = Object.prototype.hasOwnProperty.call(input, "assignedTo");
+      const hasDueAt = Object.prototype.hasOwnProperty.call(input, "dueAt");
+      const hasPriority = Object.prototype.hasOwnProperty.call(input, "priority");
+      const hasStatus = Object.prototype.hasOwnProperty.call(input, "status");
+      if (![hasAssignedTo, hasDueAt, hasPriority, hasStatus].some(Boolean)) throw validationError("bulk update requires assignedTo, dueAt, priority or status", "REMEDIATION_BULK_EMPTY");
+      if (hasStatus && !["assigned", "cancelled"].includes(String(input.status))) throw validationError("bulk status must be assigned or cancelled", "REMEDIATION_BULK_STATUS_INVALID");
+      if (hasPriority && !["critical", "high", "normal", "low"].includes(String(input.priority))) throw validationError("bulk priority is invalid", "REMEDIATION_BULK_PRIORITY_INVALID");
+      if (hasDueAt && input.dueAt && !Number.isFinite(Date.parse(input.dueAt))) throw validationError("bulk dueAt must be a valid date-time", "REMEDIATION_BULK_DUE_INVALID");
+      const dueAt = hasDueAt && input.dueAt ? new Date(input.dueAt).toISOString() : hasDueAt ? null : undefined;
+      const existingTasks = [];
+      for (const taskId of taskIds) {
+        const task = await readRemediationTask(taskId);
+        if (!task) throw apiError(404, `remediation task ${taskId} not found`, "REMEDIATION_TASK_NOT_FOUND");
+        requireClientAccess(auth, task.clientId, "remediation bulk dispatch");
+        if (["resolved", "cancelled"].includes(task.status)) throw validationError(`task ${taskId} is already terminal`, "REMEDIATION_BULK_TERMINAL_TASK");
+        if (task.reviewStatus === "pending" && (hasAssignedTo || hasStatus)) throw validationError(`task ${taskId} is awaiting independent FM review`, "REMEDIATION_BULK_REVIEW_PENDING");
+        existingTasks.push(task);
+      }
+      const tasks = [];
+      for (const existing of existingTasks) {
+        const assignedTo = hasAssignedTo ? (String(input.assignedTo || "").trim() || null) : existing.assignedTo;
+        const status = hasStatus ? String(input.status) : hasAssignedTo && assignedTo && existing.status === "open" ? "assigned" : existing.status;
+        if (status === "assigned" && !assignedTo) throw validationError(`task ${existing.id} requires an assignee`, "REMEDIATION_BULK_ASSIGNEE_REQUIRED");
+        const result = await updateRemediationTask(existing.id, { status, assignedTo, dueAt, priority: hasPriority ? input.priority : existing.priority, updatedBy: auth.id });
+        const event = normalizeOpsEvent({ type: "remediation.task.bulk-dispatched", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Bulk dispatch updated ${result.task.id}.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, dueAt: result.task.dueAt, priority: result.task.priority } });
+        await appendOpsEvent(event);
+        tasks.push({ ...result.task, sla: remediationSla(result.task) });
+      }
+      sendJson(res, 200, { updated: tasks.length, taskIds: tasks.map((task) => task.id), tasks });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/remediation/sla-scan") {
+      requirePermission(auth, "ops.remediation.update");
+      if (!["fm-lead", "platform-admin"].includes(auth.roleId)) throw apiError(403, "only FM Lead or Platform Admin can run remediation SLA escalation", "REMEDIATION_SLA_ROLE_DENIED");
+      const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+      let before = null; let beforeId = null; let scanned = 0; const escalated = [];
+      while (true) {
+        const page = await listRemediationTasks({ clientIds, statuses: ["open", "assigned", "in_progress"], before, beforeId, orderBy: "updated", limit: 500 });
+        if (!page.length) break;
+        const cursorTask = page.at(-1);
+        scanned += page.length;
+        for (const task of page) {
+          const sla = remediationSla(task);
+          if (!sla.level || sla.level <= Number(task.escalationLevel || 0)) continue;
+          const reason = `${sla.overdueHours.toFixed(1)} hours overdue; escalated to level ${sla.level}.`;
+          const escalatedTask = await markRemediationEscalation(task.id, { level: sla.level, reason, updatedBy: `system:sla:${auth.id}` });
+          if (!escalatedTask) continue;
+          const notification = await enqueueNotification({ id: `NTF-RMT-${task.id}-L${sla.level}`, channel: "webhook", eventType: "remediation.task.sla-escalated", severity: sla.level >= 3 ? "critical" : sla.level === 2 ? "high" : "warning", clientId: task.clientId, wallId: task.wallId, alertId: task.id, payload: { taskId: task.id, moduleId: task.moduleId, workOrderId: task.workOrderId, assignedTo: task.assignedTo, dueAt: task.dueAt, escalationLevel: sla.level, overdueHours: Number(sla.overdueHours.toFixed(1)), reason } });
+          const event = normalizeOpsEvent({ type: "remediation.task.sla-escalated", actor: auth.name, entityType: "remediation-task", entityId: task.id, clientId: task.clientId, wallId: task.wallId, source: "ops-remediation-sla", note: reason, payload: { principalId: auth.id, level: sla.level, overdueHours: Number(sla.overdueHours.toFixed(1)), notificationId: notification.notification.id, assignedTo: task.assignedTo, dueAt: task.dueAt } });
+          await appendOpsEvent(event);
+          escalated.push({ ...escalatedTask, sla });
+        }
+        if (page.length < 500) break;
+        before = cursorTask.updatedAt; beforeId = cursorTask.id;
+      }
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), scanned, escalated: escalated.length, tasks: escalated, thresholds: remediationSlaThresholds() });
       return;
     }
 

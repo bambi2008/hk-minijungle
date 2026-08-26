@@ -3,9 +3,10 @@ import { mkdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
 
-export const remediationMigrationVersion = "2026-08-27.remediation-review-loop-v1";
+export const remediationMigrationVersion = "2026-08-28.remediation-dispatch-sla-v1";
 const statuses = new Set(["open", "assigned", "in_progress", "resolved", "cancelled"]);
 const priorities = new Set(["critical", "high", "normal", "low"]);
+const reviewStatuses = new Set(["not_submitted", "pending", "approved", "rejected"]);
 const transitions = {
   open: new Set(["open", "assigned", "in_progress", "resolved", "cancelled"]),
   assigned: new Set(["assigned", "in_progress", "resolved", "cancelled"]),
@@ -52,6 +53,9 @@ function initialize(db) {
       reviewed_at TEXT,
       reviewed_by TEXT,
       review_note TEXT,
+      escalation_level INTEGER NOT NULL DEFAULT 0 CHECK (escalation_level BETWEEN 0 AND 3),
+      escalated_at TEXT,
+      escalation_reason TEXT,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL,
       FOREIGN KEY (client_id) REFERENCES clients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
@@ -75,11 +79,15 @@ function initialize(db) {
   if (!columns.has("reviewed_at")) db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN reviewed_at TEXT");
   if (!columns.has("reviewed_by")) db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN reviewed_by TEXT");
   if (!columns.has("review_note")) db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN review_note TEXT");
+  if (!columns.has("escalation_level")) db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN escalation_level INTEGER NOT NULL DEFAULT 0 CHECK (escalation_level BETWEEN 0 AND 3)");
+  if (!columns.has("escalated_at")) db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN escalated_at TEXT");
+  if (!columns.has("escalation_reason")) db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN escalation_reason TEXT");
   db.exec("CREATE INDEX IF NOT EXISTS idx_remediation_work_order ON ops_remediation_tasks(work_order_id)");
   db.exec("CREATE INDEX IF NOT EXISTS idx_remediation_review ON ops_remediation_tasks(review_status, updated_at DESC)");
+  db.exec("CREATE INDEX IF NOT EXISTS idx_remediation_dispatch ON ops_remediation_tasks(status, assigned_to, due_at, escalation_level)");
   db.prepare("INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(remediationMigrationVersion, new Date().toISOString());
 }
-function taskFromRow(row) { return { id: row.id, clientId: row.client_id, wallId: row.wall_id, workOrderId: row.work_order_id || null, moduleId: row.module_id, source: row.source, sourceKey: row.source_key, status: row.status, priority: row.priority, assignedTo: row.assigned_to || null, dueAt: row.due_at || null, reasons: parseJson(row.reason_json, []), resolutionNote: row.resolution_note || null, evidenceRef: row.evidence_ref || null, createdBy: row.created_by, updatedBy: row.updated_by, acknowledgedAt: row.acknowledged_at || null, startedAt: row.started_at || null, resolvedAt: row.resolved_at || null, acceptedAt: row.accepted_at || null, acceptedBy: row.accepted_by || null, reviewStatus: row.review_status || "not_submitted", submittedAt: row.submitted_at || null, submittedBy: row.submitted_by || null, reviewedAt: row.reviewed_at || null, reviewedBy: row.reviewed_by || null, reviewNote: row.review_note || null, createdAt: row.created_at, updatedAt: row.updated_at }; }
+function taskFromRow(row) { return { id: row.id, clientId: row.client_id, wallId: row.wall_id, workOrderId: row.work_order_id || null, moduleId: row.module_id, source: row.source, sourceKey: row.source_key, status: row.status, priority: row.priority, assignedTo: row.assigned_to || null, dueAt: row.due_at || null, reasons: parseJson(row.reason_json, []), resolutionNote: row.resolution_note || null, evidenceRef: row.evidence_ref || null, createdBy: row.created_by, updatedBy: row.updated_by, acknowledgedAt: row.acknowledged_at || null, startedAt: row.started_at || null, resolvedAt: row.resolved_at || null, acceptedAt: row.accepted_at || null, acceptedBy: row.accepted_by || null, reviewStatus: row.review_status || "not_submitted", submittedAt: row.submitted_at || null, submittedBy: row.submitted_by || null, reviewedAt: row.reviewed_at || null, reviewedBy: row.reviewed_by || null, reviewNote: row.review_note || null, escalationLevel: Number(row.escalation_level || 0), escalatedAt: row.escalated_at || null, escalationReason: row.escalation_reason || null, createdAt: row.created_at, updatedAt: row.updated_at }; }
 function normalizedReasons(input) { const values = Array.isArray(input) ? input : [input]; const reasons = values.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 20); if (!reasons.length) throw validationError("reasons must contain at least one explanation"); return reasons; }
 
 export async function createSqliteRemediationTask(dbPath, input) {
@@ -97,9 +105,9 @@ export async function createSqliteRemediationTask(dbPath, input) {
     const now = new Date().toISOString();
     const id = String(input?.id || `RMT-${Date.now()}-${randomUUID().slice(0, 8)}`).trim();
     const createdBy = required(input?.createdBy, "createdBy");
-    const record = { id, clientId, wallId, workOrderId: optional(input?.workOrderId), moduleId, source, sourceKey, status: "open", priority, assignedTo: optional(input?.assignedTo), dueAt: optional(input?.dueAt), reasons, resolutionNote: null, evidenceRef: optional(input?.evidenceRef), createdBy, updatedBy: createdBy, acknowledgedAt: null, startedAt: null, resolvedAt: null, acceptedAt: null, acceptedBy: null, reviewStatus: "not_submitted", submittedAt: null, submittedBy: null, reviewedAt: null, reviewedBy: null, reviewNote: null, createdAt: now, updatedAt: now };
+    const record = { id, clientId, wallId, workOrderId: optional(input?.workOrderId), moduleId, source, sourceKey, status: "open", priority, assignedTo: optional(input?.assignedTo), dueAt: optional(input?.dueAt), reasons, resolutionNote: null, evidenceRef: optional(input?.evidenceRef), createdBy, updatedBy: createdBy, acknowledgedAt: null, startedAt: null, resolvedAt: null, acceptedAt: null, acceptedBy: null, reviewStatus: "not_submitted", submittedAt: null, submittedBy: null, reviewedAt: null, reviewedBy: null, reviewNote: null, escalationLevel: 0, escalatedAt: null, escalationReason: null, createdAt: now, updatedAt: now };
     try {
-      db.prepare(`INSERT INTO ops_remediation_tasks (id,client_id,wall_id,work_order_id,module_id,source,source_key,status,priority,assigned_to,due_at,reason_json,resolution_note,evidence_ref,created_by,updated_by,acknowledged_at,started_at,resolved_at,accepted_at,accepted_by,review_status,submitted_at,submitted_by,reviewed_at,reviewed_by,review_note,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(record.id, record.clientId, record.wallId, record.workOrderId, record.moduleId, record.source, record.sourceKey, record.status, record.priority, record.assignedTo, record.dueAt, JSON.stringify(record.reasons), record.resolutionNote, record.evidenceRef, record.createdBy, record.updatedBy, record.acknowledgedAt, record.startedAt, record.resolvedAt, record.acceptedAt, record.acceptedBy, record.reviewStatus, record.submittedAt, record.submittedBy, record.reviewedAt, record.reviewedBy, record.reviewNote, record.createdAt, record.updatedAt);
+      db.prepare(`INSERT INTO ops_remediation_tasks (id,client_id,wall_id,work_order_id,module_id,source,source_key,status,priority,assigned_to,due_at,reason_json,resolution_note,evidence_ref,created_by,updated_by,acknowledged_at,started_at,resolved_at,accepted_at,accepted_by,review_status,submitted_at,submitted_by,reviewed_at,reviewed_by,review_note,escalation_level,escalated_at,escalation_reason,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(record.id, record.clientId, record.wallId, record.workOrderId, record.moduleId, record.source, record.sourceKey, record.status, record.priority, record.assignedTo, record.dueAt, JSON.stringify(record.reasons), record.resolutionNote, record.evidenceRef, record.createdBy, record.updatedBy, record.acknowledgedAt, record.startedAt, record.resolvedAt, record.acceptedAt, record.acceptedBy, record.reviewStatus, record.submittedAt, record.submittedBy, record.reviewedAt, record.reviewedBy, record.reviewNote, record.escalationLevel, record.escalatedAt, record.escalationReason, record.createdAt, record.updatedAt);
     } catch (error) {
       if (String(error?.message || "").includes("constraint failed")) throw validationError("remediation task references an unknown client, wall, work order or module");
       throw error;
@@ -108,7 +116,7 @@ export async function createSqliteRemediationTask(dbPath, input) {
   });
 }
 
-export async function listSqliteRemediationTasks(dbPath, { clientIds = null, statuses: requestedStatuses = null, moduleId = null, limit = 100 } = {}) {
+export async function listSqliteRemediationTasks(dbPath, { clientIds = null, statuses: requestedStatuses = null, moduleId = null, assignedTo = null, reviewStatuses: requestedReviewStatuses = null, priorities: requestedPriorities = null, dueBefore = null, before = null, beforeId = null, orderBy = "priority", limit = 100 } = {}) {
   return withDatabase(dbPath, (db) => {
     const safeLimit = Math.min(Math.max(Number(limit) || 100, 1), 500);
     const requestedStatusList = Array.isArray(requestedStatuses) ? requestedStatuses.filter((value) => statuses.has(value)) : [];
@@ -116,9 +124,39 @@ export async function listSqliteRemediationTasks(dbPath, { clientIds = null, sta
     const clauses = [`status IN (${statusList.map(() => "?").join(",")})`];
     const params = [...statusList];
     if (moduleId) { clauses.push("module_id = ?"); params.push(String(moduleId)); }
+    if (assignedTo === "__unassigned__") clauses.push("assigned_to IS NULL");
+    else if (assignedTo) { clauses.push("assigned_to = ?"); params.push(String(assignedTo)); }
+    const reviewStatusList = Array.isArray(requestedReviewStatuses) ? requestedReviewStatuses.filter((value) => reviewStatuses.has(value)) : [];
+    if (reviewStatusList.length) { clauses.push(`review_status IN (${reviewStatusList.map(() => "?").join(",")})`); params.push(...reviewStatusList); }
+    const priorityList = Array.isArray(requestedPriorities) ? requestedPriorities.filter((value) => priorities.has(value)) : [];
+    if (priorityList.length) { clauses.push(`priority IN (${priorityList.map(() => "?").join(",")})`); params.push(...priorityList); }
+    if (dueBefore) { clauses.push("due_at IS NOT NULL AND due_at <= ?"); params.push(String(dueBefore)); }
     if (clientIds && !clientIds.includes("*")) { if (clientIds.length) { clauses.push(`client_id IN (${clientIds.map(() => "?").join(",")})`); params.push(...clientIds); } else clauses.push("1 = 0"); }
+    if (orderBy === "updated" && before && beforeId) { clauses.push("(updated_at < ? OR (updated_at = ? AND id > ?))"); params.push(String(before), String(before), String(beforeId)); }
     params.push(safeLimit);
-    return db.prepare(`SELECT * FROM ops_remediation_tasks WHERE ${clauses.join(" AND ")} ORDER BY CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END, updated_at DESC, id ASC LIMIT ?`).all(...params).map(taskFromRow);
+    const ordering = orderBy === "updated" ? "updated_at DESC, id ASC" : "CASE priority WHEN 'critical' THEN 1 WHEN 'high' THEN 2 WHEN 'normal' THEN 3 ELSE 4 END, updated_at DESC, id ASC";
+    return db.prepare(`SELECT * FROM ops_remediation_tasks WHERE ${clauses.join(" AND ")} ORDER BY ${ordering} LIMIT ?`).all(...params).map(taskFromRow);
+  });
+}
+
+export async function markSqliteRemediationEscalation(dbPath, id, { level, reason, escalatedAt = new Date().toISOString(), updatedBy = "system:sla" } = {}) {
+  return withDatabase(dbPath, (db) => {
+    const safeLevel = Number(level);
+    if (!Number.isInteger(safeLevel) || safeLevel < 1 || safeLevel > 3) throw validationError("escalation level must be 1, 2 or 3");
+    const result = db.prepare("UPDATE ops_remediation_tasks SET escalation_level = ?, escalated_at = ?, escalation_reason = ?, updated_by = ?, updated_at = ? WHERE id = ? AND status IN ('open','assigned','in_progress') AND escalation_level < ?").run(safeLevel, required(escalatedAt, "escalatedAt"), required(reason, "reason"), required(updatedBy, "updatedBy"), required(escalatedAt, "escalatedAt"), String(id), safeLevel);
+    if (!result.changes) return null;
+    return taskFromRow(db.prepare("SELECT * FROM ops_remediation_tasks WHERE id = ?").get(String(id)));
+  });
+}
+
+export async function readSqliteRemediationDispatchSummary(dbPath, { clientIds = null, assignedTo = null, now = new Date().toISOString() } = {}) {
+  return withDatabase(dbPath, (db) => {
+    const clauses = ["status IN ('open','assigned','in_progress')"];
+    const params = [String(now)];
+    if (assignedTo) { clauses.push("assigned_to = ?"); params.push(String(assignedTo)); }
+    if (clientIds && !clientIds.includes("*")) { if (clientIds.length) { clauses.push(`client_id IN (${clientIds.map(() => "?").join(",")})`); params.push(...clientIds); } else clauses.push("1 = 0"); }
+    const row = db.prepare(`SELECT COUNT(*) AS active, SUM(CASE WHEN assigned_to IS NULL THEN 1 ELSE 0 END) AS unassigned, SUM(CASE WHEN review_status='pending' THEN 1 ELSE 0 END) AS pending_review, SUM(CASE WHEN due_at IS NOT NULL AND due_at <= ? THEN 1 ELSE 0 END) AS overdue, SUM(CASE WHEN escalation_level > 0 THEN 1 ELSE 0 END) AS escalated FROM ops_remediation_tasks WHERE ${clauses.join(" AND ")}`).get(...params);
+    return { active: Number(row.active || 0), unassigned: Number(row.unassigned || 0), pendingReview: Number(row.pending_review || 0), overdue: Number(row.overdue || 0), escalated: Number(row.escalated || 0) };
   });
 }
 
@@ -153,6 +191,8 @@ export async function updateSqliteRemediationTask(dbPath, id, input) {
     if (status === "resolved" && reviewDecision !== "approved" && existing.review_status !== "approved") throw validationError("remediation tasks can only be resolved by an approved FM review");
     const updatedBy = required(input?.updatedBy, "updatedBy");
     const now = new Date().toISOString();
+    const dueAt = input?.dueAt === undefined ? (existing.due_at || null) : optional(input.dueAt);
+    const dueChanged = input?.dueAt !== undefined && dueAt !== (existing.due_at || null);
     const acknowledgedAt = existing.acknowledged_at || (status !== "open" ? now : null);
     const startedAt = existing.started_at || (["in_progress", "resolved"].includes(status) ? now : null);
     const resolvedAt = status === "resolved" ? (existing.resolved_at || now) : null;
@@ -178,7 +218,7 @@ export async function updateSqliteRemediationTask(dbPath, id, input) {
       reviewStatus = reviewDecision;
       reviewedAt = now;
     }
-    db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, accepted_at = ?, accepted_by = ?, review_status = ?, submitted_at = ?, submitted_by = ?, reviewed_at = ?, reviewed_by = ?, review_note = ?, updated_at = ? WHERE id = ?").run(status, priority, assignedTo, input?.dueAt === undefined ? (existing.due_at || null) : optional(input.dueAt), resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, acceptedAt, acceptedBy, reviewStatus, submittedAt, submittedBy, reviewedAt, reviewedBy, reviewNote, now, String(id));
+    db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, accepted_at = ?, accepted_by = ?, review_status = ?, submitted_at = ?, submitted_by = ?, reviewed_at = ?, reviewed_by = ?, review_note = ?, escalation_level = ?, escalated_at = ?, escalation_reason = ?, updated_at = ? WHERE id = ?").run(status, priority, assignedTo, dueAt, resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, acceptedAt, acceptedBy, reviewStatus, submittedAt, submittedBy, reviewedAt, reviewedBy, reviewNote, dueChanged ? 0 : Number(existing.escalation_level || 0), dueChanged ? null : (existing.escalated_at || null), dueChanged ? null : (existing.escalation_reason || null), now, String(id));
     return { task: taskFromRow(db.prepare("SELECT * FROM ops_remediation_tasks WHERE id = ?").get(String(id))) };
   });
 }

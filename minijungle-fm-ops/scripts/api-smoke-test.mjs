@@ -161,7 +161,7 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.modules.counts.modules === 12, "Module master table should seed addressable modules from wall module counts");
   assert(initialStorage.body.modules.relationshipIntegrity.foreignKeyIssues === 0, "Module master table should have no foreign-key issues");
   assert(initialStorage.body.reminders.counts.actions === 0, "Reminder action table should start empty in test mode");
-  assert(initialStorage.body.remediation.migrationVersion === "2026-08-27.remediation-review-loop-v1", "Storage endpoint did not expose remediation review-loop migration");
+  assert(initialStorage.body.remediation.migrationVersion === "2026-08-28.remediation-dispatch-sla-v1", "Storage endpoint did not expose remediation dispatch/SLA migration");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -1107,6 +1107,37 @@ async function verifyApi(baseUrl) {
   assert(storageAfterProofMedia.body.proofMedia.counts.verified === 1, "Proof media verified count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.hashCoverage.mediaObjectsWithSha256 === 1, "Proof media hash coverage did not persist");
   assert(storageAfterProofMedia.body.proofMedia.relationshipIntegrity.foreignKeyIssues === 0, "Proof media FK check found issues");
+
+  const showSuiteBulkSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite");
+  const bulkSeeds = [showSuiteBulkSeed, initialOperationsQuality.body.moduleReadiness.find((item) => item.moduleId !== showSuiteBulkSeed?.moduleId)].filter(Boolean);
+  assert(bulkSeeds.length === 2, "Remediation bulk test requires two module action items");
+  const bulkTaskIds = [];
+  for (const [index, seed] of bulkSeeds.entries()) {
+    const created = await fetchJson(`${baseUrl}api/remediation/tasks`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ moduleId: seed.moduleId, sourceKey: `bulk-sla-${index}`, reasons: ["Bulk dispatch and SLA escalation test."], priority: "normal" }) });
+    assert(created.response.status === 201, "FM lead should create remediation tasks for bulk dispatch");
+    bulkTaskIds.push(created.body.task.id);
+  }
+  const firstRemediationPage = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress&limit=1`, { headers: principalHeaders("fm-lead") });
+  assert(firstRemediationPage.response.ok && firstRemediationPage.body.tasks.length === 1 && firstRemediationPage.body.page.hasMore && firstRemediationPage.body.page.nextCursor, "Remediation queue did not return a bounded cursor page");
+  const secondRemediationPage = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress&limit=1&cursor=${encodeURIComponent(firstRemediationPage.body.page.nextCursor)}`, { headers: principalHeaders("fm-lead") });
+  assert(secondRemediationPage.response.ok && secondRemediationPage.body.tasks.length === 1 && secondRemediationPage.body.tasks[0].id !== firstRemediationPage.body.tasks[0].id, "Remediation cursor did not advance to the next task");
+  const invalidRemediationCursor = await fetchJson(`${baseUrl}api/remediation/tasks?cursor=not-a-cursor`, { headers: principalHeaders("fm-lead") });
+  assert(invalidRemediationCursor.response.status === 400 && invalidRemediationCursor.body.code === "REMEDIATION_CURSOR_INVALID", "Invalid remediation cursor should return an explicit validation error");
+  const overdueAt = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const bulkDispatched = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ taskIds: bulkTaskIds, assignedTo: "field-tech-bulk", dueAt: overdueAt, priority: "high" }) });
+  assert(bulkDispatched.response.ok && bulkDispatched.body.updated === 2 && bulkDispatched.body.tasks.every((task) => task.status === "assigned" && task.assignedTo === "field-tech-bulk" && task.escalationLevel === 0), "Bulk dispatch did not assign, schedule and prioritize every selected task");
+  const unrelatedFieldQueue = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
+  assert(unrelatedFieldQueue.response.ok && unrelatedFieldQueue.body.tasks.length === 0 && unrelatedFieldQueue.body.summary.active === 0, "Field technician generic task query and summary should exclude another technician's assignment in the same client scope");
+  const clientBulkDenied = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("client-show-suite"), body: JSON.stringify({ taskIds: bulkTaskIds, priority: "low" }) });
+  assert(clientBulkDenied.response.status === 403, "Client viewer should not bulk-dispatch remediation tasks");
+  const firstSlaScan = await fetchJson(`${baseUrl}api/remediation/sla-scan`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
+  assert(firstSlaScan.response.ok && firstSlaScan.body.escalated === 2 && firstSlaScan.body.tasks.every((task) => task.escalationLevel === 2 && task.sla.state === "overdue_l2"), "SLA scan did not persist level-two escalation for six-hour overdue tasks");
+  const secondSlaScan = await fetchJson(`${baseUrl}api/remediation/sla-scan`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
+  assert(secondSlaScan.response.ok && secondSlaScan.body.escalated === 0, "Repeated SLA scan should not duplicate an existing escalation level");
+  const remediationNotifications = await fetchJson(`${baseUrl}api/notifications?limit=50`, { headers: principalHeaders("fm-lead") });
+  assert(remediationNotifications.body.notifications.filter((item) => item.eventType === "remediation.task.sla-escalated").length === 2, "SLA escalation did not create one idempotent notification per task and level");
+  const bulkCancelled = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ taskIds: bulkTaskIds, status: "cancelled" }) });
+  assert(bulkCancelled.response.ok && bulkCancelled.body.tasks.every((task) => task.status === "cancelled"), "Bulk cancellation did not close the test dispatch tasks");
 
   const remediationSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite") || initialOperationsQuality.body.moduleReadiness[0];
   const crossWorkOrderRemediation = await fetchJson(`${baseUrl}api/remediation/tasks`, {

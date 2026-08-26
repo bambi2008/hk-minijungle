@@ -43,7 +43,8 @@ const requiredMigrations = [
   "2026-08-23.postgres-evidence-snapshot-v3",
   "2026-08-25.postgres-remediation-tasks-v1",
   "2026-08-26.postgres-remediation-work-order-link-v1",
-  "2026-08-27.postgres-remediation-review-loop-v1"
+  "2026-08-27.postgres-remediation-review-loop-v1",
+  "2026-08-28.postgres-remediation-dispatch-sla-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }

@@ -749,3 +749,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 54 - Bulk Dispatch and Remediation SLA Escalation v1
+
+- Official score remains **65%**. The queue is materially more usable at scale, but local automation does not prove real FM staffing, contracted response times, hosted scheduler delivery or sustained operation across 1,000+ modules.
+- Capability added: remediation tasks persist `escalation_level`, `escalated_at` and `escalation_reason`. SQLite migration is `2026-08-28.remediation-dispatch-sla-v1`; PostgreSQL uses `2026-08-28.postgres-remediation-dispatch-sla-v1` and `infra/postgres/006_remediation_dispatch_sla.sql`.
+- Capability added: `GET /api/remediation/tasks` now uses opaque keyset pagination and database-level owner, review, priority and deadline filters. It returns an exact client-scoped summary for active, unassigned, pending-review, overdue and escalated tasks rather than treating the first UI page as the portfolio total.
+- Capability added: FM Lead/Platform Admin can validate and update 1-100 selected tasks through `POST /api/remediation/tasks/bulk`, including assignment, due time, priority and controlled status. Each affected task retains its own audit event; pending-review and terminal-task safeguards remain active.
+- Capability added: `POST /api/remediation/sla-scan` applies configurable `0,4,24` hour escalation thresholds, persists only upward transitions and creates idempotent outbox notifications. A due-time change resets the escalation state against the new commitment.
+- Capability added: Ops Today has a compact dispatch queue with exact headline counts, filters, page selection, batch controls, load-more cursor and manual SLA scan. It exposes overdue level, owner, work order, review status and current deadline without opening each task.
+- Evidence added: API smoke covers keyset pagination, invalid cursor rejection, two-task batch dispatch, role denial, level-two escalation, repeat-scan idempotency, notification count and bulk cancellation. Playwright covers page selection, batch assignment, deadline/priority update, SLA scan and visible overdue state before the existing technician/FM review loop.
+- Honest boundary: the batch endpoint is validation-first application orchestration, not a measured dispatch transaction under concurrent production load. Scheduler uptime, webhook delivery, OIDC identities, managed PostgreSQL, off-host restore and live SLA acceptance remain unevidenced; production status stays blocked.
+- Target effect: an FM operator can control a materially larger task queue with fewer clicks and explicit overdue ownership; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 54
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
