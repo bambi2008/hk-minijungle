@@ -162,6 +162,8 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.modules.relationshipIntegrity.foreignKeyIssues === 0, "Module master table should have no foreign-key issues");
   assert(initialStorage.body.reminders.counts.actions === 0, "Reminder action table should start empty in test mode");
   assert(initialStorage.body.remediation.migrationVersion === "2026-08-28.remediation-dispatch-sla-v1", "Storage endpoint did not expose remediation dispatch/SLA migration");
+  assert(initialStorage.body.integrations.migrationVersion === "2026-08-29.ops-control-import-v1", "Storage endpoint did not expose operations control/import migration");
+  assert(initialStorage.body.integrations.tables.includes("ops_job_leases") && initialStorage.body.integrations.tables.includes("ops_idempotency_commands") && initialStorage.body.integrations.tables.includes("ops_maintenance_imports"), "Storage endpoint did not expose operations lease, idempotency and maintenance import tables");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -1108,15 +1110,36 @@ async function verifyApi(baseUrl) {
   assert(storageAfterProofMedia.body.proofMedia.hashCoverage.mediaObjectsWithSha256 === 1, "Proof media hash coverage did not persist");
   assert(storageAfterProofMedia.body.proofMedia.relationshipIntegrity.foreignKeyIssues === 0, "Proof media FK check found issues");
 
+  const maintenanceTemplate = await fetch(`${baseUrl}api/admin/imports/maintenance/template.csv`, { headers: principalHeaders("fm-lead") });
+  assert(maintenanceTemplate.ok && (await maintenanceTemplate.text()).startsWith("record_id,wall_id,service_date"), "Maintenance import template endpoint did not return the Airtable CSV contract");
+  const invalidMaintenancePreview = await fetchJson(`${baseUrl}api/admin/imports/maintenance/preview`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ filename: "airtable-invalid.csv", csv: "record_id,wall_id,service_date,status,priority\nrec-bad,UNKNOWN-WALL,not-a-date,Unknown,urgent\n" }) });
+  assert(invalidMaintenancePreview.response.status === 201 && invalidMaintenancePreview.body.batch.invalidCount === 1 && invalidMaintenancePreview.body.batch.validCount === 0, "Maintenance import preview did not retain invalid Airtable rows without applying them");
+  const invalidMaintenanceApply = await fetchJson(`${baseUrl}api/admin/imports/maintenance/${encodeURIComponent(invalidMaintenancePreview.body.batch.id)}/apply`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
+  assert(invalidMaintenanceApply.response.status === 409 && invalidMaintenanceApply.body.code === "MAINTENANCE_IMPORT_HAS_ERRORS", "Maintenance import with invalid rows should be blocked from apply");
+  const maintenanceCsv = "record_id,wall_id,service_date,status,priority,technician_id,tasks,notes,updated_at\nrec-good-001,MJ-HK-021,2026-08-29,Completed,medium,field-tech-show-suite,Water check;Photo capture,\"Imported, from Airtable\",2026-08-29T09:00:00+08:00\n";
+  const maintenancePreview = await fetchJson(`${baseUrl}api/admin/imports/maintenance/preview`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ filename: "airtable-maintenance.csv", csv: maintenanceCsv }) });
+  assert(maintenancePreview.response.status === 201 && maintenancePreview.body.batch.validCount === 1 && maintenancePreview.body.batch.invalidCount === 0, "Valid Airtable maintenance CSV did not produce an applicable preview");
+  const duplicateMaintenancePreview = await fetchJson(`${baseUrl}api/admin/imports/maintenance/preview`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ filename: "airtable-maintenance-copy.csv", csv: maintenanceCsv }) });
+  assert(duplicateMaintenancePreview.response.ok && duplicateMaintenancePreview.body.duplicate === true && duplicateMaintenancePreview.body.batch.id === maintenancePreview.body.batch.id, "Exact Airtable CSV preview should be checksum-idempotent");
+  const maintenanceApplied = await fetchJson(`${baseUrl}api/admin/imports/maintenance/${encodeURIComponent(maintenancePreview.body.batch.id)}/apply`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
+  assert(maintenanceApplied.response.ok && maintenanceApplied.body.imported === 1 && maintenanceApplied.body.workOrderIds[0].startsWith("AIR-rec-good-001-"), "Validated Airtable maintenance batch did not import a stable work order");
+  const maintenanceAppliedAgain = await fetchJson(`${baseUrl}api/admin/imports/maintenance/${encodeURIComponent(maintenancePreview.body.batch.id)}/apply`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
+  assert(maintenanceAppliedAgain.response.ok && maintenanceAppliedAgain.body.duplicate === true && maintenanceAppliedAgain.body.imported === 1, "Repeated maintenance apply should return the persisted result without duplicate work");
+  const maintenancePortfolio = await fetchJson(`${baseUrl}api/portfolio`, { headers: principalHeaders("fm-lead") });
+  assert(maintenancePortfolio.body.counts.workorders === 5, "Applied Airtable maintenance row did not persist as one work order");
+  const clientMaintenanceDenied = await fetchJson(`${baseUrl}api/admin/imports/maintenance`, { headers: principalHeaders("client-show-suite") });
+  assert(clientMaintenanceDenied.response.status === 403, "Client viewer should not read maintenance import batches");
+
   const showSuiteBulkSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite");
   const bulkSeeds = [showSuiteBulkSeed, initialOperationsQuality.body.moduleReadiness.find((item) => item.moduleId !== showSuiteBulkSeed?.moduleId)].filter(Boolean);
   assert(bulkSeeds.length === 2, "Remediation bulk test requires two module action items");
-  const bulkTaskIds = [];
+  const bulkTasks = [];
   for (const [index, seed] of bulkSeeds.entries()) {
     const created = await fetchJson(`${baseUrl}api/remediation/tasks`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ moduleId: seed.moduleId, sourceKey: `bulk-sla-${index}`, reasons: ["Bulk dispatch and SLA escalation test."], priority: "normal" }) });
     assert(created.response.status === 201, "FM lead should create remediation tasks for bulk dispatch");
-    bulkTaskIds.push(created.body.task.id);
+    bulkTasks.push(created.body.task);
   }
+  const bulkTaskIds = bulkTasks.map((task) => task.id);
   const firstRemediationPage = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress&limit=1`, { headers: principalHeaders("fm-lead") });
   assert(firstRemediationPage.response.ok && firstRemediationPage.body.tasks.length === 1 && firstRemediationPage.body.page.hasMore && firstRemediationPage.body.page.nextCursor, "Remediation queue did not return a bounded cursor page");
   const secondRemediationPage = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress&limit=1&cursor=${encodeURIComponent(firstRemediationPage.body.page.nextCursor)}`, { headers: principalHeaders("fm-lead") });
@@ -1124,8 +1147,18 @@ async function verifyApi(baseUrl) {
   const invalidRemediationCursor = await fetchJson(`${baseUrl}api/remediation/tasks?cursor=not-a-cursor`, { headers: principalHeaders("fm-lead") });
   assert(invalidRemediationCursor.response.status === 400 && invalidRemediationCursor.body.code === "REMEDIATION_CURSOR_INVALID", "Invalid remediation cursor should return an explicit validation error");
   const overdueAt = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
-  const bulkDispatched = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ taskIds: bulkTaskIds, assignedTo: "field-tech-bulk", dueAt: overdueAt, priority: "high" }) });
+  const missingBulkIdempotency = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ taskIds: bulkTaskIds, expectedUpdatedAtById: Object.fromEntries(bulkTasks.map((task) => [task.id, task.updatedAt])), priority: "high" }) });
+  assert(missingBulkIdempotency.response.status === 428 && missingBulkIdempotency.body.code === "IDEMPOTENCY_KEY_REQUIRED", "Bulk dispatch should require an Idempotency-Key");
+  const bulkDispatchHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "bulk-dispatch-api-smoke-001" };
+  const bulkDispatchBody = { taskIds: bulkTaskIds, expectedUpdatedAtById: Object.fromEntries(bulkTasks.map((task) => [task.id, task.updatedAt])), assignedTo: "field-tech-bulk", dueAt: overdueAt, priority: "high" };
+  const bulkDispatched = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: bulkDispatchHeaders, body: JSON.stringify(bulkDispatchBody) });
   assert(bulkDispatched.response.ok && bulkDispatched.body.updated === 2 && bulkDispatched.body.tasks.every((task) => task.status === "assigned" && task.assignedTo === "field-tech-bulk" && task.escalationLevel === 0), "Bulk dispatch did not assign, schedule and prioritize every selected task");
+  const replayedBulkDispatch = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: bulkDispatchHeaders, body: JSON.stringify(bulkDispatchBody) });
+  assert(replayedBulkDispatch.response.ok && replayedBulkDispatch.body.duplicate === true && replayedBulkDispatch.body.updated === 2, "Repeated bulk dispatch did not return its persisted idempotent response");
+  const reusedBulkKey = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: bulkDispatchHeaders, body: JSON.stringify({ ...bulkDispatchBody, priority: "low", expectedUpdatedAtById: Object.fromEntries(bulkDispatched.body.tasks.map((task) => [task.id, task.updatedAt])) }) });
+  assert(reusedBulkKey.response.status === 409 && reusedBulkKey.body.code === "IDEMPOTENCY_KEY_REUSED", "Reusing a bulk dispatch key with a different request should be rejected");
+  const staleBulkUpdate = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "bulk-dispatch-api-smoke-stale" }, body: JSON.stringify({ taskIds: bulkTaskIds, expectedUpdatedAtById: Object.fromEntries(bulkTasks.map((task) => [task.id, task.updatedAt])), priority: "low" }) });
+  assert(staleBulkUpdate.response.status === 409 && staleBulkUpdate.body.code === "REMEDIATION_BULK_VERSION_CONFLICT", "Bulk dispatch should reject stale task versions instead of overwriting newer state");
   const unrelatedFieldQueue = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
   assert(unrelatedFieldQueue.response.ok && unrelatedFieldQueue.body.tasks.length === 0 && unrelatedFieldQueue.body.summary.active === 0, "Field technician generic task query and summary should exclude another technician's assignment in the same client scope");
   const clientBulkDenied = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("client-show-suite"), body: JSON.stringify({ taskIds: bulkTaskIds, priority: "low" }) });
@@ -1136,7 +1169,7 @@ async function verifyApi(baseUrl) {
   assert(secondSlaScan.response.ok && secondSlaScan.body.escalated === 0, "Repeated SLA scan should not duplicate an existing escalation level");
   const remediationNotifications = await fetchJson(`${baseUrl}api/notifications?limit=50`, { headers: principalHeaders("fm-lead") });
   assert(remediationNotifications.body.notifications.filter((item) => item.eventType === "remediation.task.sla-escalated").length === 2, "SLA escalation did not create one idempotent notification per task and level");
-  const bulkCancelled = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ taskIds: bulkTaskIds, status: "cancelled" }) });
+  const bulkCancelled = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "bulk-dispatch-api-smoke-cancel" }, body: JSON.stringify({ taskIds: bulkTaskIds, expectedUpdatedAtById: Object.fromEntries(firstSlaScan.body.tasks.map((task) => [task.id, task.updatedAt])), status: "cancelled" }) });
   assert(bulkCancelled.response.ok && bulkCancelled.body.tasks.every((task) => task.status === "cancelled"), "Bulk cancellation did not close the test dispatch tasks");
 
   const remediationSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite") || initialOperationsQuality.body.moduleReadiness[0];

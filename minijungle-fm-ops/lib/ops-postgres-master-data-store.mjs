@@ -150,7 +150,7 @@ export async function upsertPostgresLivingAsset(dbPath, dataRoot, input) {
 }
 export async function upsertPostgresWorkOrder(dbPath, dataRoot, input) {
   const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot);
-  const order = { id: required(input.id, "workorder.id"), wallId: required(input.wallId, "workorder.wallId"), type: required(input.type, "workorder.type"), due: input.due || null, status: input.status || "Scheduled", priority: input.priority || "medium", tasks: Array.isArray(input.tasks) ? input.tasks : [] };
+  const order = { id: required(input.id, "workorder.id"), wallId: required(input.wallId, "workorder.wallId"), type: required(input.type, "workorder.type"), due: input.due || null, status: input.status || "Scheduled", priority: input.priority || "medium", tasks: Array.isArray(input.tasks) ? input.tasks : [], externalSource: input.externalSource || null, externalRecordId: input.externalRecordId || null, technicianId: input.technicianId || null, serviceNote: input.serviceNote || null, sourceUpdatedAt: input.sourceUpdatedAt || null };
   const result = await pool.query("INSERT INTO work_orders (id,wall_id,type,due,status,priority,tasks_json,raw_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO UPDATE SET wall_id=EXCLUDED.wall_id,type=EXCLUDED.type,due=EXCLUDED.due,status=EXCLUDED.status,priority=EXCLUDED.priority,tasks_json=EXCLUDED.tasks_json,raw_json=EXCLUDED.raw_json RETURNING *", [order.id, order.wallId, order.type, order.due, order.status, order.priority, JSON.stringify(order.tasks), JSON.stringify(order)]);
   return workorderFromRow(result.rows[0]);
 }

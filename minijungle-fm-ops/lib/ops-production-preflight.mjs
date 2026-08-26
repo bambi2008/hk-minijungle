@@ -25,6 +25,9 @@ const requiredTables = [
   "proof_media_links",
   "ops_notification_outbox",
   "ops_remediation_tasks",
+  "ops_job_leases",
+  "ops_idempotency_commands",
+  "ops_maintenance_imports",
   "evidence_snapshots"
 ];
 
@@ -44,7 +47,8 @@ const requiredMigrations = [
   "2026-08-25.postgres-remediation-tasks-v1",
   "2026-08-26.postgres-remediation-work-order-link-v1",
   "2026-08-27.postgres-remediation-review-loop-v1",
-  "2026-08-28.postgres-remediation-dispatch-sla-v1"
+  "2026-08-28.postgres-remediation-dispatch-sla-v1",
+  "2026-08-29.postgres-ops-control-import-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
@@ -135,7 +139,8 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.alerts?.backend,
     storage.body?.aiVision?.backend,
     storage.body?.notifications?.backend,
-    storage.body?.evidenceSnapshots?.backend
+    storage.body?.evidenceSnapshots?.backend,
+    storage.body?.integrations?.backend
   ].filter(Boolean);
   const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend));
   const status = ready.status === 200 && storage.status === 200 && ready.body?.status === "ready" && postgresStorage ? "verified" : "failed";

@@ -38,6 +38,15 @@ async function main() {
       assert((await operations.locator("#dispatch-state").textContent()).includes("active"), "Operations page did not load the remediation dispatch queue");
       assert((await operations.locator("#module-quality-list").textContent()).includes("telemetry incomplete"), "Operations page did not explain the module action reason");
       assert(await operations.locator("[data-remediation-create]").count() === 12, "Operations page did not expose remediation create actions");
+      assert((await operations.locator("#import-state").textContent()).includes("No preview"), "Operations page did not load the maintenance import control");
+      const maintenanceCsv = "record_id,wall_id,service_date,status,priority,technician_id,tasks,notes,updated_at\nui-maint-001,MJ-HK-021,2026-08-29,Completed,medium,field-tech-show-suite,Water check;Photo capture,UI import smoke,2026-08-29T09:00:00+08:00\n";
+      await operations.locator("#maintenance-import-file").setInputFiles({ name: "airtable-ui-smoke.csv", mimeType: "text/csv", buffer: Buffer.from(maintenanceCsv) });
+      await operations.locator("#maintenance-import-preview").click();
+      await operations.waitForFunction(() => document.querySelector("#import-state")?.textContent.includes("1 valid"), null, { timeout: 10000 });
+      assert(await operations.locator("#maintenance-import-apply").isEnabled(), "Valid maintenance preview did not enable apply");
+      await operations.locator("#maintenance-import-apply").click();
+      await operations.waitForFunction(() => document.querySelector("#maintenance-import-notice")?.textContent.includes("1 maintenance row imported"), null, { timeout: 10000 });
+      assert((await operations.locator("#maintenance-import-history").textContent()).includes("applied"), "Applied maintenance import did not appear in recent history");
       const operationsQualityResponse = await fetch(`${baseUrl}/api/ops/quality`, { headers: { "x-dr-forest-principal": "fm-lead" } });
       const operationsQuality = await operationsQualityResponse.json();
       const operationsSeed = operationsQuality.moduleReadiness.find((item) => item.clientId === "show-suite");
@@ -88,6 +97,9 @@ async function main() {
       assert(await operations.locator("#verify-snapshot").isEnabled(), `Persisted evidence snapshot did not enable verification: state=${await operations.locator("#snapshot-state").textContent()} summary=${await operations.locator("#snapshot-summary").textContent()} notice=${await operations.locator("#notice").textContent()} disabled=${await operations.locator("#verify-snapshot").isDisabled()}`);
       await operations.locator("#verify-snapshot").click(); await operations.waitForFunction(() => document.querySelector("#snapshot-notice")?.textContent.includes("verification:"), null, { timeout: 10000 });
       await operations.locator("#sweep-snapshots").click(); await operations.waitForFunction(() => document.querySelector("#snapshot-notice")?.textContent.includes("Retention sweep complete"), null, { timeout: 10000 });
+      await operations.setViewportSize({ width: 390, height: 844 });
+      assert(await operations.locator(".import-panel").isVisible(), "Maintenance import panel disappeared at technician-phone width");
+      assert(await operations.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Operations page has horizontal overflow at 390px width");
       assert(!operationsErrors.length, `Operations page errors: ${operationsErrors.join(" | ")}`);
       const mobileQualityResponse = await fetch(`${baseUrl}/api/ops/quality`, { headers: { "x-dr-forest-principal": "fm-lead" } });
       const mobileQuality = await mobileQualityResponse.json();

@@ -767,3 +767,22 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 55 - Operations Concurrency and Airtable Intake v1
+
+- Official score remains **65%**. This batch reduces operator and scheduler failure modes and preserves a controlled migration path from Airtable, but it does not add hosted infrastructure or real-field operating evidence.
+- Capability added: SQLite migration `2026-08-29.ops-control-import-v1` and PostgreSQL migration `2026-08-29.postgres-ops-control-import-v1` add database-backed job leases, idempotent command records and maintenance-import batches. PostgreSQL deployment SQL is `infra/postgres/007_ops_control_import.sql`.
+- Reliability added: remediation SLA scans and notification delivery workers acquire named leases. Overlapping workers cannot process the same scheduled job concurrently, and only the current owner can release the lease.
+- Reliability added: bulk remediation dispatch now requires `Idempotency-Key` and per-task `expectedUpdatedAtById`. Exact replay returns the persisted first response, key reuse with a different request is rejected, and stale operator pages receive a conflict instead of silently overwriting newer task state.
+- Capability added: FM Lead can download a canonical Airtable CSV template, preview up to 1,000 maintenance rows, see row-level errors and apply only an all-valid batch. Preview validates required fields, CSV quoting, duplicate source IDs, dates, status/priority, existing walls and client scope.
+- Traceability added: imports retain checksum, source filename, normalized rows, errors, creator/apply actor and timestamps. Stable `AIR-*` work-order IDs and checksum deduplication make preview/apply replay-safe; applied batches append `maintenance.import.applied` to the operations timeline.
+- Experience added: Ops Today exposes one compact maintenance intake panel with file selection, preview, apply, error summary, template download and recent batch state. It does not require an Airtable account connection and keeps the normal operations path short.
+- Evidence added: API smoke covers invalid-batch blocking, checksum duplicate preview, repeat apply, client denial, missing idempotency key, exact replay, key misuse and stale-version conflict. Browser smoke executes CSV selection, preview and apply. Notification smoke proves a second worker is blocked by the active lease. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: CSV is a controlled handoff, not live two-way Airtable sync. Import apply is recoverable/idempotent but is not yet one cross-store PostgreSQL transaction; bulk dispatch prevents stale overwrites per task but is still not one all-task transaction. Lease heartbeat/hosted scheduler evidence, managed PostgreSQL, OIDC identities, webhook delivery, off-host restore and repeated live maintenance cycles remain unevidenced.
+- Target effect: concurrent operator/scheduler behavior and historical-data onboarding become materially safer; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 55
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

@@ -181,6 +181,31 @@ import {
   readPostgresNotificationStorageHealth
 } from "./lib/ops-postgres-notification-store.mjs";
 import {
+  abandonSqliteIdempotentCommand,
+  acquireSqliteJobLease,
+  beginSqliteIdempotentCommand,
+  completeSqliteIdempotentCommand,
+  createSqliteMaintenanceImport,
+  listSqliteMaintenanceImports,
+  markSqliteMaintenanceImportApplied,
+  readSqliteIntegrationStorageHealth,
+  readSqliteMaintenanceImport,
+  releaseSqliteJobLease
+} from "./lib/ops-integration-store.mjs";
+import {
+  abandonPostgresIdempotentCommand,
+  acquirePostgresJobLease,
+  beginPostgresIdempotentCommand,
+  completePostgresIdempotentCommand,
+  createPostgresMaintenanceImport,
+  listPostgresMaintenanceImports,
+  markPostgresMaintenanceImportApplied,
+  readPostgresIntegrationStorageHealth,
+  readPostgresMaintenanceImport,
+  releasePostgresJobLease
+} from "./lib/ops-postgres-integration-store.mjs";
+import { maintenanceImportTemplateCsv, normalizeMaintenanceCsv } from "./lib/ops-maintenance-import.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -631,6 +656,17 @@ async function listNotifications(options = {}) {
     ? listPostgresNotifications(runtimeDbPath, options)
     : listSqliteNotifications(runtimeDbPath, options);
 }
+
+async function acquireJobLease(input) { return productionMasterDataEnabled() ? acquirePostgresJobLease(runtimeDbPath, input) : acquireSqliteJobLease(runtimeDbPath, input); }
+async function releaseJobLease(input) { return productionMasterDataEnabled() ? releasePostgresJobLease(runtimeDbPath, input) : releaseSqliteJobLease(runtimeDbPath, input); }
+async function beginIdempotentCommand(input) { return productionMasterDataEnabled() ? beginPostgresIdempotentCommand(runtimeDbPath, input) : beginSqliteIdempotentCommand(runtimeDbPath, input); }
+async function completeIdempotentCommand(input) { return productionMasterDataEnabled() ? completePostgresIdempotentCommand(runtimeDbPath, input) : completeSqliteIdempotentCommand(runtimeDbPath, input); }
+async function abandonIdempotentCommand(input) { return productionMasterDataEnabled() ? abandonPostgresIdempotentCommand(runtimeDbPath, input) : abandonSqliteIdempotentCommand(runtimeDbPath, input); }
+async function createMaintenanceImport(input) { return productionMasterDataEnabled() ? createPostgresMaintenanceImport(runtimeDbPath, input) : createSqliteMaintenanceImport(runtimeDbPath, input); }
+async function readMaintenanceImport(id) { return productionMasterDataEnabled() ? readPostgresMaintenanceImport(runtimeDbPath, id) : readSqliteMaintenanceImport(runtimeDbPath, id); }
+async function listMaintenanceImports(limit) { return productionMasterDataEnabled() ? listPostgresMaintenanceImports(runtimeDbPath, limit) : listSqliteMaintenanceImports(runtimeDbPath, limit); }
+async function markMaintenanceImportApplied(id, appliedBy) { return productionMasterDataEnabled() ? markPostgresMaintenanceImportApplied(runtimeDbPath, id, appliedBy) : markSqliteMaintenanceImportApplied(runtimeDbPath, id, appliedBy); }
+async function readIntegrationStorageHealth() { return productionMasterDataEnabled() ? readPostgresIntegrationStorageHealth(runtimeDbPath) : readSqliteIntegrationStorageHealth(runtimeDbPath); }
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1124,6 +1160,17 @@ function sendText(res, status, message) {
     "Referrer-Policy": "no-referrer"
   });
   res.end(message);
+}
+
+function sendCsv(res, filename, csv) {
+  res.writeHead(200, {
+    "Content-Type": "text/csv; charset=utf-8",
+    "Content-Disposition": `attachment; filename="${String(filename).replace(/[^A-Za-z0-9._-]/g, "-")}"`,
+    "Cache-Control": "no-store",
+    "X-Content-Type-Options": "nosniff",
+    "X-Frame-Options": "DENY"
+  });
+  res.end(csv);
 }
 
 async function readJsonBody(req, maxBytes = maxJsonBodyBytes) {
@@ -1741,7 +1788,7 @@ function normalizeOpsEvent(input) {
   }
 
   return {
-    id: `OPS-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
+    id: input.id || `OPS-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`,
     timestamp: new Date().toISOString(),
     type,
     actor,
@@ -2483,9 +2530,73 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/admin/imports/maintenance/template.csv") {
+      requirePermission(auth, "master.data.write");
+      sendCsv(res, "dr-forest-airtable-maintenance-template.csv", maintenanceImportTemplateCsv());
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/admin/imports/maintenance") {
+      requirePermission(auth, "master.data.write");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), batches: await listMaintenanceImports(url.searchParams.get("limit")) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/admin/imports/maintenance/preview") {
+      requirePermission(auth, "master.data.write");
+      const input = await readJsonBody(req, 1024 * 1024);
+      const filename = String(input.filename || "airtable-maintenance.csv").trim();
+      if (!filename.toLowerCase().endsWith(".csv")) throw validationError("maintenance import filename must end with .csv", "MAINTENANCE_IMPORT_FILE_INVALID");
+      let normalized;
+      try {
+        const dataset = await readMasterDataDataset();
+        normalized = normalizeMaintenanceCsv(input.csv, { knownWallIds: dataset.walls.map((wall) => wall.id) });
+        const clientByWall = new Map(dataset.walls.map((wall) => [wall.id, wall.clientId]));
+        for (const row of normalized.rows) requireClientAccess(auth, clientByWall.get(row.workOrder.wallId), "maintenance import preview");
+      } catch (error) {
+        if (error.status) throw error;
+        throw validationError(error.message, "MAINTENANCE_IMPORT_PARSE_FAILED");
+      }
+      const result = await createMaintenanceImport({ source: "airtable-csv", sourceFilename: filename, checksum: normalized.checksum, rowCount: normalized.totalRows, validCount: normalized.validRows, invalidCount: normalized.invalidRows, rows: normalized.rows, errors: normalized.errors, createdBy: auth.id });
+      sendJson(res, result.duplicate ? 200 : 201, { duplicate: result.duplicate, batch: result.batch });
+      return;
+    }
+
+    const maintenanceImportApplyMatch = pathname.match(/^\/api\/admin\/imports\/maintenance\/([^/]+)\/apply$/);
+    if (req.method === "POST" && maintenanceImportApplyMatch) {
+      requirePermission(auth, "master.data.write");
+      const batchId = decodeURIComponent(maintenanceImportApplyMatch[1]);
+      const batch = await readMaintenanceImport(batchId);
+      if (!batch) throw apiError(404, "maintenance import batch not found", "MAINTENANCE_IMPORT_NOT_FOUND");
+      if (batch.status === "applied") { sendJson(res, 200, { duplicate: true, imported: batch.validCount, batch }); return; }
+      if (batch.invalidCount > 0) throw apiError(409, "maintenance import contains invalid rows and cannot be applied", "MAINTENANCE_IMPORT_HAS_ERRORS");
+      const ownerId = `${auth.id}:${randomUUID()}`;
+      const lease = await acquireJobLease({ jobName: `maintenance-import:${batchId}`, ownerId, leaseSeconds: 300 });
+      if (!lease.acquired) throw apiError(409, "maintenance import is already being applied", "MAINTENANCE_IMPORT_BUSY");
+      try {
+        const dataset = await readMasterDataDataset();
+        const clientByWall = new Map(dataset.walls.map((wall) => [wall.id, wall.clientId]));
+        const workOrders = [];
+        for (const row of batch.rows) {
+          const clientId = clientByWall.get(row.workOrder.wallId);
+          if (!clientId) throw validationError(`wall ${row.workOrder.wallId} no longer exists`, "MAINTENANCE_IMPORT_WALL_REMOVED");
+          requireClientAccess(auth, clientId, "maintenance import apply");
+          workOrders.push(await upsertMasterDataWorkOrder(row.workOrder));
+        }
+        const applied = await markMaintenanceImportApplied(batchId, auth.id);
+        const event = normalizeOpsEvent({ id: `OPS-MAINT-IMPORT-${batchId}`, type: "maintenance.import.applied", actor: auth.name, entityType: "maintenance-import", entityId: batchId, source: "airtable-csv", note: `${workOrders.length} Airtable maintenance row(s) imported into work orders.`, payload: { principalId: auth.id, checksum: batch.checksum, imported: workOrders.length, sourceFilename: batch.sourceFilename, workOrderIds: workOrders.map((order) => order.id) } });
+        await appendOpsEvent(event);
+        sendJson(res, 200, { duplicate: false, imported: workOrders.length, batch: applied, workOrderIds: workOrders.map((order) => order.id), event });
+      } finally {
+        await releaseJobLease({ jobName: `maintenance-import:${batchId}`, ownerId }).catch(() => {});
+      }
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -2498,7 +2609,8 @@ async function handleApi(req, res, pathname) {
         readAlertStorageHealth(),
         readAiVisionStorageHealth(),
         readNotificationStorageHealth(),
-        readEvidenceSnapshotStorageHealth()
+        readEvidenceSnapshotStorageHealth(),
+        readIntegrationStorageHealth()
       ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
@@ -2514,7 +2626,8 @@ async function handleApi(req, res, pathname) {
         alerts: alertStorage,
         aiVision: aiVisionStorage,
         notifications: notificationStorage,
-        evidenceSnapshots: evidenceSnapshotStorage
+        evidenceSnapshots: evidenceSnapshotStorage,
+        integrations: integrationStorage
       });
       return;
     }
@@ -2595,6 +2708,8 @@ async function handleApi(req, res, pathname) {
       requirePermission(auth, "ops.remediation.update");
       if (!["fm-lead", "platform-admin"].includes(auth.roleId)) throw apiError(403, "only FM Lead or Platform Admin can bulk-dispatch remediation tasks", "REMEDIATION_BULK_ROLE_DENIED");
       const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      if (!commandKey) throw apiError(428, "Idempotency-Key header is required for bulk dispatch", "IDEMPOTENCY_KEY_REQUIRED");
       const taskIds = [...new Set(Array.isArray(input.taskIds) ? input.taskIds.map((id) => String(id || "").trim()).filter(Boolean) : [])];
       if (!taskIds.length || taskIds.length > 100) throw validationError("taskIds must contain 1 to 100 unique task IDs", "REMEDIATION_BULK_SIZE_INVALID");
       const hasAssignedTo = Object.prototype.hasOwnProperty.call(input, "assignedTo");
@@ -2606,54 +2721,77 @@ async function handleApi(req, res, pathname) {
       if (hasPriority && !["critical", "high", "normal", "low"].includes(String(input.priority))) throw validationError("bulk priority is invalid", "REMEDIATION_BULK_PRIORITY_INVALID");
       if (hasDueAt && input.dueAt && !Number.isFinite(Date.parse(input.dueAt))) throw validationError("bulk dueAt must be a valid date-time", "REMEDIATION_BULK_DUE_INVALID");
       const dueAt = hasDueAt && input.dueAt ? new Date(input.dueAt).toISOString() : hasDueAt ? null : undefined;
-      const existingTasks = [];
-      for (const taskId of taskIds) {
-        const task = await readRemediationTask(taskId);
-        if (!task) throw apiError(404, `remediation task ${taskId} not found`, "REMEDIATION_TASK_NOT_FOUND");
-        requireClientAccess(auth, task.clientId, "remediation bulk dispatch");
-        if (["resolved", "cancelled"].includes(task.status)) throw validationError(`task ${taskId} is already terminal`, "REMEDIATION_BULK_TERMINAL_TASK");
-        if (task.reviewStatus === "pending" && (hasAssignedTo || hasStatus)) throw validationError(`task ${taskId} is awaiting independent FM review`, "REMEDIATION_BULK_REVIEW_PENDING");
-        existingTasks.push(task);
+      const expectedUpdatedAtById = input.expectedUpdatedAtById && typeof input.expectedUpdatedAtById === "object" ? input.expectedUpdatedAtById : {};
+      for (const taskId of taskIds) if (!expectedUpdatedAtById[taskId]) throw apiError(428, `expectedUpdatedAtById.${taskId} is required`, "REMEDIATION_BULK_VERSION_REQUIRED");
+      const commandPayload = { taskIds, assignedTo: hasAssignedTo ? (String(input.assignedTo || "").trim() || null) : undefined, dueAt, priority: hasPriority ? input.priority : undefined, status: hasStatus ? input.status : undefined, expectedUpdatedAtById };
+      const requestHash = createHash("sha256").update(JSON.stringify(commandPayload)).digest("hex");
+      const ownerId = `${auth.id}:${randomUUID()}`;
+      const command = await beginIdempotentCommand({ scope: "remediation-bulk-dispatch", commandKey, requestHash, ownerId, leaseSeconds: 300 });
+      if (command.duplicate) { sendJson(res, 200, { ...command.response, duplicate: true }); return; }
+      try {
+        const existingTasks = [];
+        for (const taskId of taskIds) {
+          const task = await readRemediationTask(taskId);
+          if (!task) throw apiError(404, `remediation task ${taskId} not found`, "REMEDIATION_TASK_NOT_FOUND");
+          requireClientAccess(auth, task.clientId, "remediation bulk dispatch");
+          if (["resolved", "cancelled"].includes(task.status)) throw validationError(`task ${taskId} is already terminal`, "REMEDIATION_BULK_TERMINAL_TASK");
+          if (task.reviewStatus === "pending" && (hasAssignedTo || hasStatus)) throw validationError(`task ${taskId} is awaiting independent FM review`, "REMEDIATION_BULK_REVIEW_PENDING");
+          if (String(expectedUpdatedAtById[taskId]) !== task.updatedAt) throw apiError(409, `task ${taskId} changed after it was loaded`, "REMEDIATION_BULK_VERSION_CONFLICT");
+          existingTasks.push(task);
+        }
+        const tasks = [];
+        const eventKey = createHash("sha256").update(commandKey).digest("hex").slice(0, 16);
+        for (const existing of existingTasks) {
+          const assignedTo = hasAssignedTo ? (String(input.assignedTo || "").trim() || null) : existing.assignedTo;
+          const status = hasStatus ? String(input.status) : hasAssignedTo && assignedTo && existing.status === "open" ? "assigned" : existing.status;
+          if (status === "assigned" && !assignedTo) throw validationError(`task ${existing.id} requires an assignee`, "REMEDIATION_BULK_ASSIGNEE_REQUIRED");
+          const result = await updateRemediationTask(existing.id, { status, assignedTo, dueAt, priority: hasPriority ? input.priority : existing.priority, expectedUpdatedAt: expectedUpdatedAtById[existing.id], updatedBy: auth.id });
+          const event = normalizeOpsEvent({ id: `OPS-BULK-${eventKey}-${existing.id}`, type: "remediation.task.bulk-dispatched", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Bulk dispatch updated ${result.task.id}.`, payload: { principalId: auth.id, commandKey, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, dueAt: result.task.dueAt, priority: result.task.priority } });
+          await appendOpsEvent(event);
+          tasks.push({ ...result.task, sla: remediationSla(result.task) });
+        }
+        const response = { duplicate: false, updated: tasks.length, taskIds: tasks.map((task) => task.id), tasks };
+        await completeIdempotentCommand({ scope: "remediation-bulk-dispatch", commandKey, ownerId, response });
+        sendJson(res, 200, response);
+      } catch (error) {
+        await abandonIdempotentCommand({ scope: "remediation-bulk-dispatch", commandKey, ownerId }).catch(() => {});
+        throw error;
       }
-      const tasks = [];
-      for (const existing of existingTasks) {
-        const assignedTo = hasAssignedTo ? (String(input.assignedTo || "").trim() || null) : existing.assignedTo;
-        const status = hasStatus ? String(input.status) : hasAssignedTo && assignedTo && existing.status === "open" ? "assigned" : existing.status;
-        if (status === "assigned" && !assignedTo) throw validationError(`task ${existing.id} requires an assignee`, "REMEDIATION_BULK_ASSIGNEE_REQUIRED");
-        const result = await updateRemediationTask(existing.id, { status, assignedTo, dueAt, priority: hasPriority ? input.priority : existing.priority, updatedBy: auth.id });
-        const event = normalizeOpsEvent({ type: "remediation.task.bulk-dispatched", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Bulk dispatch updated ${result.task.id}.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, dueAt: result.task.dueAt, priority: result.task.priority } });
-        await appendOpsEvent(event);
-        tasks.push({ ...result.task, sla: remediationSla(result.task) });
-      }
-      sendJson(res, 200, { updated: tasks.length, taskIds: tasks.map((task) => task.id), tasks });
       return;
     }
 
     if (req.method === "POST" && pathname === "/api/remediation/sla-scan") {
       requirePermission(auth, "ops.remediation.update");
       if (!["fm-lead", "platform-admin"].includes(auth.roleId)) throw apiError(403, "only FM Lead or Platform Admin can run remediation SLA escalation", "REMEDIATION_SLA_ROLE_DENIED");
-      const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
-      let before = null; let beforeId = null; let scanned = 0; const escalated = [];
-      while (true) {
-        const page = await listRemediationTasks({ clientIds, statuses: ["open", "assigned", "in_progress"], before, beforeId, orderBy: "updated", limit: 500 });
-        if (!page.length) break;
-        const cursorTask = page.at(-1);
-        scanned += page.length;
-        for (const task of page) {
-          const sla = remediationSla(task);
-          if (!sla.level || sla.level <= Number(task.escalationLevel || 0)) continue;
-          const reason = `${sla.overdueHours.toFixed(1)} hours overdue; escalated to level ${sla.level}.`;
-          const escalatedTask = await markRemediationEscalation(task.id, { level: sla.level, reason, updatedBy: `system:sla:${auth.id}` });
-          if (!escalatedTask) continue;
-          const notification = await enqueueNotification({ id: `NTF-RMT-${task.id}-L${sla.level}`, channel: "webhook", eventType: "remediation.task.sla-escalated", severity: sla.level >= 3 ? "critical" : sla.level === 2 ? "high" : "warning", clientId: task.clientId, wallId: task.wallId, alertId: task.id, payload: { taskId: task.id, moduleId: task.moduleId, workOrderId: task.workOrderId, assignedTo: task.assignedTo, dueAt: task.dueAt, escalationLevel: sla.level, overdueHours: Number(sla.overdueHours.toFixed(1)), reason } });
-          const event = normalizeOpsEvent({ type: "remediation.task.sla-escalated", actor: auth.name, entityType: "remediation-task", entityId: task.id, clientId: task.clientId, wallId: task.wallId, source: "ops-remediation-sla", note: reason, payload: { principalId: auth.id, level: sla.level, overdueHours: Number(sla.overdueHours.toFixed(1)), notificationId: notification.notification.id, assignedTo: task.assignedTo, dueAt: task.dueAt } });
-          await appendOpsEvent(event);
-          escalated.push({ ...escalatedTask, sla });
+      const ownerId = `${auth.id}:${randomUUID()}`;
+      const lease = await acquireJobLease({ jobName: "remediation-sla-scan", ownerId, leaseSeconds: 300 });
+      if (!lease.acquired) throw apiError(409, "remediation SLA scan is already running", "REMEDIATION_SLA_SCAN_BUSY");
+      try {
+        const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+        let before = null; let beforeId = null; let scanned = 0; const escalated = [];
+        while (true) {
+          const page = await listRemediationTasks({ clientIds, statuses: ["open", "assigned", "in_progress"], before, beforeId, orderBy: "updated", limit: 500 });
+          if (!page.length) break;
+          const cursorTask = page.at(-1);
+          scanned += page.length;
+          for (const task of page) {
+            const sla = remediationSla(task);
+            if (!sla.level || sla.level <= Number(task.escalationLevel || 0)) continue;
+            const reason = `${sla.overdueHours.toFixed(1)} hours overdue; escalated to level ${sla.level}.`;
+            const escalatedTask = await markRemediationEscalation(task.id, { level: sla.level, reason, updatedBy: `system:sla:${auth.id}` });
+            if (!escalatedTask) continue;
+            const notification = await enqueueNotification({ id: `NTF-RMT-${task.id}-L${sla.level}`, channel: "webhook", eventType: "remediation.task.sla-escalated", severity: sla.level >= 3 ? "critical" : sla.level === 2 ? "high" : "warning", clientId: task.clientId, wallId: task.wallId, alertId: task.id, payload: { taskId: task.id, moduleId: task.moduleId, workOrderId: task.workOrderId, assignedTo: task.assignedTo, dueAt: task.dueAt, escalationLevel: sla.level, overdueHours: Number(sla.overdueHours.toFixed(1)), reason } });
+            const event = normalizeOpsEvent({ type: "remediation.task.sla-escalated", actor: auth.name, entityType: "remediation-task", entityId: task.id, clientId: task.clientId, wallId: task.wallId, source: "ops-remediation-sla", note: reason, payload: { principalId: auth.id, level: sla.level, overdueHours: Number(sla.overdueHours.toFixed(1)), notificationId: notification.notification.id, assignedTo: task.assignedTo, dueAt: task.dueAt } });
+            await appendOpsEvent(event);
+            escalated.push({ ...escalatedTask, sla });
+          }
+          if (page.length < 500) break;
+          before = cursorTask.updatedAt; beforeId = cursorTask.id;
         }
-        if (page.length < 500) break;
-        before = cursorTask.updatedAt; beforeId = cursorTask.id;
+        sendJson(res, 200, { generatedAt: new Date().toISOString(), scanned, escalated: escalated.length, tasks: escalated, thresholds: remediationSlaThresholds(), lease: { jobName: lease.lease.jobName, ownerId, leaseUntil: lease.lease.leaseUntil } });
+      } finally {
+        await releaseJobLease({ jobName: "remediation-sla-scan", ownerId }).catch(() => {});
       }
-      sendJson(res, 200, { generatedAt: new Date().toISOString(), scanned, escalated: escalated.length, tasks: escalated, thresholds: remediationSlaThresholds() });
       return;
     }
 

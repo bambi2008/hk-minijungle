@@ -849,7 +849,12 @@ export async function upsertSqliteWorkOrder(dbPath, dataRoot, input) {
     due: input.due || null,
     status: input.status || "Scheduled",
     priority: input.priority || "medium",
-    tasks: Array.isArray(input.tasks) ? input.tasks : []
+    tasks: Array.isArray(input.tasks) ? input.tasks : [],
+    externalSource: input.externalSource || null,
+    externalRecordId: input.externalRecordId || null,
+    technicianId: input.technicianId || null,
+    serviceNote: input.serviceNote || null,
+    sourceUpdatedAt: input.sourceUpdatedAt || null
   };
 
   return withDatabase(dbPath, (db) => {

@@ -171,6 +171,8 @@ export async function updateSqliteRemediationTask(dbPath, id, input) {
   return withDatabase(dbPath, (db) => {
     const existing = db.prepare("SELECT * FROM ops_remediation_tasks WHERE id = ?").get(String(id));
     if (!existing) throw validationError("remediation task not found", 404);
+    const expectedUpdatedAt = optional(input?.expectedUpdatedAt);
+    if (expectedUpdatedAt && existing.updated_at !== expectedUpdatedAt) throw validationError("remediation task changed after it was loaded", 409);
     const submitForReview = input?.submitForReview === true;
     const reviewDecision = optional(input?.reviewDecision)?.toLowerCase() || null;
     if (reviewDecision && !["approved", "rejected"].includes(reviewDecision)) throw validationError("reviewDecision must be approved or rejected");
@@ -218,7 +220,10 @@ export async function updateSqliteRemediationTask(dbPath, id, input) {
       reviewStatus = reviewDecision;
       reviewedAt = now;
     }
-    db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, accepted_at = ?, accepted_by = ?, review_status = ?, submitted_at = ?, submitted_by = ?, reviewed_at = ?, reviewed_by = ?, review_note = ?, escalation_level = ?, escalated_at = ?, escalation_reason = ?, updated_at = ? WHERE id = ?").run(status, priority, assignedTo, dueAt, resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, acceptedAt, acceptedBy, reviewStatus, submittedAt, submittedBy, reviewedAt, reviewedBy, reviewNote, dueChanged ? 0 : Number(existing.escalation_level || 0), dueChanged ? null : (existing.escalated_at || null), dueChanged ? null : (existing.escalation_reason || null), now, String(id));
+    const update = expectedUpdatedAt
+      ? db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, accepted_at = ?, accepted_by = ?, review_status = ?, submitted_at = ?, submitted_by = ?, reviewed_at = ?, reviewed_by = ?, review_note = ?, escalation_level = ?, escalated_at = ?, escalation_reason = ?, updated_at = ? WHERE id = ? AND updated_at = ?").run(status, priority, assignedTo, dueAt, resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, acceptedAt, acceptedBy, reviewStatus, submittedAt, submittedBy, reviewedAt, reviewedBy, reviewNote, dueChanged ? 0 : Number(existing.escalation_level || 0), dueChanged ? null : (existing.escalated_at || null), dueChanged ? null : (existing.escalation_reason || null), now, String(id), expectedUpdatedAt)
+      : db.prepare("UPDATE ops_remediation_tasks SET status = ?, priority = ?, assigned_to = ?, due_at = ?, resolution_note = ?, evidence_ref = ?, updated_by = ?, acknowledged_at = ?, started_at = ?, resolved_at = ?, accepted_at = ?, accepted_by = ?, review_status = ?, submitted_at = ?, submitted_by = ?, reviewed_at = ?, reviewed_by = ?, review_note = ?, escalation_level = ?, escalated_at = ?, escalation_reason = ?, updated_at = ? WHERE id = ?").run(status, priority, assignedTo, dueAt, resolutionNote, evidenceRef, updatedBy, acknowledgedAt, startedAt, resolvedAt, acceptedAt, acceptedBy, reviewStatus, submittedAt, submittedBy, reviewedAt, reviewedBy, reviewNote, dueChanged ? 0 : Number(existing.escalation_level || 0), dueChanged ? null : (existing.escalated_at || null), dueChanged ? null : (existing.escalation_reason || null), now, String(id));
+    if (!update.changes) throw validationError("remediation task changed during update", 409);
     return { task: taskFromRow(db.prepare("SELECT * FROM ops_remediation_tasks WHERE id = ?").get(String(id))) };
   });
 }
