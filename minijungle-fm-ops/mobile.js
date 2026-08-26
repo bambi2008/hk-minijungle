@@ -112,7 +112,7 @@ function renderRemediationTasks() {
     const moduleLabel = task.module?.label || task.moduleId;
     const reason = (task.reasons || []).join(" · ");
     const action = task.status === "in_progress" ? "Continue" : "Start task";
-    return `<article class="remediation-item ${activeRemediationTask?.id === task.id ? "active" : ""}"><div><strong>${escapeHtml(moduleLabel)}</strong><span>${escapeHtml(reason)}</span><small>${escapeHtml(remediationStatusLabel(task.status))} · ${escapeHtml(task.priority)}${task.dueAt ? ` · due ${escapeHtml(new Date(task.dueAt).toLocaleString())}` : ""}</small></div><button type="button" data-remediation-start="${escapeHtml(task.id)}">${action}</button></article>`;
+    return `<article class="remediation-item ${activeRemediationTask?.id === task.id ? "active" : ""}"><div><strong>${escapeHtml(moduleLabel)}</strong><span>${escapeHtml(reason)}</span><small>${task.workOrderId ? `WO ${escapeHtml(task.workOrderId)} · ` : "No active WO · "}${escapeHtml(remediationStatusLabel(task.status))} · ${escapeHtml(task.priority)}${task.dueAt ? ` · due ${escapeHtml(new Date(task.dueAt).toLocaleString())}` : ""}</small></div><button type="button" data-remediation-start="${escapeHtml(task.id)}">${action}</button></article>`;
   }).join("") : "<p>No assigned module tasks.</p>";
   list.querySelectorAll("[data-remediation-start]").forEach((button) => button.addEventListener("click", () => {
     const task = remediationTasks.find((item) => item.id === button.dataset.remediationStart);
@@ -127,7 +127,7 @@ async function startRemediationTask(task) {
     activeRemediationTask = result.task;
     remediationTasks = remediationTasks.map((item) => item.id === task.id ? result.task : item);
   }
-  const stop = route.find((item) => item.wallId === task.wallId);
+  const stop = task.workOrderId ? route.find((item) => item.workOrderId === task.workOrderId) : route.find((item) => item.wallId === task.wallId);
   if (!stop) throw new Error("No route stop is available for this module task");
   await selectStop(stop, null, true, true);
   $("#module").value = task.moduleId;

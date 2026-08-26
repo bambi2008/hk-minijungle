@@ -246,7 +246,7 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 ## 9. Production Handoff Checklist
 
 - Replace demo principal with production SSO/session identity.
-- Connect remediation task IDs to real work-order IDs, technician acceptance and independent closure review; the pilot task table currently carries module/wall scope but not a production dispatch foreign key.
+- Connect the persisted remediation-to-work-order relation to real dispatch acceptance and independent closure review; the pilot now carries a `work_order_id` foreign key, but it does not prove a live dispatch or review process.
 - Register real module IDs, device IDs, camera IDs and calibration metadata.
 - Connect a managed time-series ingestion path with device authentication.
 - Move proof bytes from the local vault to managed object storage with malware scanning and retention policy.

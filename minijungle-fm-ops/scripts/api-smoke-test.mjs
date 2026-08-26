@@ -161,8 +161,9 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.modules.counts.modules === 12, "Module master table should seed addressable modules from wall module counts");
   assert(initialStorage.body.modules.relationshipIntegrity.foreignKeyIssues === 0, "Module master table should have no foreign-key issues");
   assert(initialStorage.body.reminders.counts.actions === 0, "Reminder action table should start empty in test mode");
-  assert(initialStorage.body.remediation.migrationVersion === "2026-08-25.remediation-tasks-v1", "Storage endpoint did not expose remediation task migration");
+  assert(initialStorage.body.remediation.migrationVersion === "2026-08-26.remediation-work-order-link-v1", "Storage endpoint did not expose remediation work-order migration");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
+  assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_objects"), "Storage endpoint did not expose proof media objects table");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_links"), "Storage endpoint did not expose proof media links table");
@@ -1108,6 +1109,13 @@ async function verifyApi(baseUrl) {
   assert(storageAfterProofMedia.body.proofMedia.relationshipIntegrity.foreignKeyIssues === 0, "Proof media FK check found issues");
 
   const remediationSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite") || initialOperationsQuality.body.moduleReadiness[0];
+  const crossWorkOrderRemediation = await fetchJson(`${baseUrl}api/remediation/tasks`, {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ moduleId: remediationSeed.moduleId, workOrderId: "WO-1051", sourceKey: "scope-mismatch-test", reasons: ["Cross-work-order binding must be rejected."], priority: "high" })
+  });
+  assert(crossWorkOrderRemediation.response.status === 400, "Remediation should reject a work order from another wall or client");
+  assert(crossWorkOrderRemediation.body.code === "REMEDIATION_WORK_ORDER_SCOPE_MISMATCH", "Cross-work-order remediation rejection did not expose scope mismatch code");
   const createdRemediation = await fetchJson(`${baseUrl}api/remediation/tasks`, {
     method: "POST",
     headers: jsonHeaders("fm-lead"),
@@ -1115,6 +1123,7 @@ async function verifyApi(baseUrl) {
   });
   assert(createdRemediation.response.status === 201, "FM lead should create a remediation task");
   assert(createdRemediation.body.task.status === "open" && createdRemediation.body.task.assignedTo === "field-tech-show-suite", "Created remediation task did not retain assignment");
+  assert(createdRemediation.body.task.workOrderId === remediationSeed.workOrderId && createdRemediation.body.task.workOrderId === "WO-1047", "Remediation create did not bind the current module work order");
   const duplicateRemediation = await fetchJson(`${baseUrl}api/remediation/tasks`, {
     method: "POST",
     headers: jsonHeaders("fm-lead"),
@@ -1124,7 +1133,7 @@ async function verifyApi(baseUrl) {
   const fieldRemediationList = await fetchJson(`${baseUrl}api/remediation/tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
   assert(fieldRemediationList.response.ok && fieldRemediationList.body.tasks.length === 1, "Field technician should read one scoped remediation task");
   const mobileRemediationList = await fetchJson(`${baseUrl}api/mobile/remediation-tasks?statuses=open,assigned,in_progress`, { headers: principalHeaders("field-tech-show-suite") });
-  assert(mobileRemediationList.response.ok && mobileRemediationList.body.tasks.length === 1 && mobileRemediationList.body.tasks[0].module.id === remediationSeed.moduleId, "Technician mobile should read the assigned module task with module context");
+  assert(mobileRemediationList.response.ok && mobileRemediationList.body.tasks.length === 1 && mobileRemediationList.body.tasks[0].module.id === remediationSeed.moduleId && mobileRemediationList.body.tasks[0].workOrderId === "WO-1047" && mobileRemediationList.body.tasks[0].mobileAction.workOrderId === "WO-1047", "Technician mobile should read the assigned module task with work-order context");
   const assignedRemediation = await fetchJson(`${baseUrl}api/remediation/tasks/${encodeURIComponent(createdRemediation.body.task.id)}`, {
     method: "PATCH",
     headers: jsonHeaders("fm-lead"),

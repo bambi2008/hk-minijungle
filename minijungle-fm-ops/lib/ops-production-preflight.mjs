@@ -41,7 +41,8 @@ const requiredMigrations = [
   "2026-08-19.postgres-mobile-reminder-actions-v1",
   "2026-08-23.postgres-notification-outbox-v1",
   "2026-08-23.postgres-evidence-snapshot-v3",
-  "2026-08-25.postgres-remediation-tasks-v1"
+  "2026-08-25.postgres-remediation-tasks-v1",
+  "2026-08-26.postgres-remediation-work-order-link-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
@@ -127,6 +128,7 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.proofMedia?.backend,
     storage.body?.telemetry?.backend,
     storage.body?.modules?.backend,
+    storage.body?.remediation?.backend,
     storage.body?.devices?.backend,
     storage.body?.alerts?.backend,
     storage.body?.aiVision?.backend,

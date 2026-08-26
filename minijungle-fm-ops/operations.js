@@ -51,7 +51,7 @@ function renderQuality(quality = {}) {
   $("#module-quality-list").innerHTML = moduleItems.length ? moduleItems.map((item) => {
     const task = item.remediationTask;
     const action = task ? `<div class="module-quality-actions"><span class="module-task-state ${task.status === "in_progress" ? "active" : ""}">${escapeHtml(task.status.replaceAll("_", " "))}</span><button data-remediation-edit="${escapeHtml(task.id)}" data-remediation-module="${escapeHtml(item.moduleId)}" type="button">Update</button></div>` : `<div class="module-quality-actions"><span class="module-task-state">No task</span><button data-remediation-create="${escapeHtml(item.moduleId)}" type="button">Create task</button></div>`;
-    return `<article class="module-quality-item"><div><strong>${escapeHtml(item.moduleId)} · ${escapeHtml(item.label)}</strong><span>${escapeHtml(item.reasons.join(" · "))}</span><small>Telemetry ${escapeHtml(formatTime(item.lastTelemetryAt || "No reading"))} · Camera ${escapeHtml(formatTime(item.cameraLastSeenAt || "No heartbeat"))}</small></div><div class="module-quality-right"><b>${escapeHtml(item.status.replaceAll("-", " "))}</b>${action}</div></article>`;
+    return `<article class="module-quality-item"><div><strong>${escapeHtml(item.moduleId)} · ${escapeHtml(item.label)}</strong><span>${escapeHtml(item.reasons.join(" · "))}</span><small>${item.workOrderId ? `WO ${escapeHtml(item.workOrderId)} · ` : "No active WO · "}Telemetry ${escapeHtml(formatTime(item.lastTelemetryAt || "No reading"))} · Camera ${escapeHtml(formatTime(item.cameraLastSeenAt || "No heartbeat"))}</small></div><div class="module-quality-right"><b>${escapeHtml(item.status.replaceAll("-", " "))}</b>${action}</div></article>`;
   }).join("") : "<p class=\"empty\">No module-level action items.</p>";
 }
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
@@ -88,6 +88,7 @@ function openRemediationCreate(item) {
   $("#remediation-context").textContent = `${item.moduleId} · ${item.label} · ${item.reasons.join(" · ")}`;
   $("#remediation-id").value = "";
   $("#remediation-module-id").value = item.moduleId;
+  $("#remediation-work-order-id").value = item.workOrderId || "";
   $("#remediation-source-key").value = item.status;
   $("#remediation-status").value = "open";
   $("#remediation-priority").value = "high";
@@ -104,6 +105,7 @@ function openRemediationEdit(item, task) {
   $("#remediation-context").textContent = `${item.moduleId} · ${item.label} · ${item.reasons.join(" · ")}`;
   $("#remediation-id").value = task.id;
   $("#remediation-module-id").value = item.moduleId;
+  $("#remediation-work-order-id").value = task.workOrderId || item.workOrderId || "";
   $("#remediation-source-key").value = item.status;
   $("#remediation-status").value = task.status;
   $("#remediation-priority").value = task.priority || "normal";
@@ -122,7 +124,7 @@ async function saveRemediation(event) {
   const body = { status: $("#remediation-status").value, priority: $("#remediation-priority").value, assignedTo: assignedTo || null, dueAt: dueAt ? new Date(dueAt).toISOString() : null, resolutionNote: $("#remediation-resolution-note").value.trim() || null, evidenceRef: $("#remediation-evidence-ref").value.trim() || null };
   if (!moduleId) return;
   const taskId = $("#remediation-id").value;
-  if (!taskId) Object.assign(body, { moduleId, sourceKey: $("#remediation-source-key").value, reasons: remediationState.moduleItems.find((item) => item.moduleId === moduleId)?.reasons || [] });
+  if (!taskId) Object.assign(body, { moduleId, workOrderId: $("#remediation-work-order-id").value.trim() || null, sourceKey: $("#remediation-source-key").value, reasons: remediationState.moduleItems.find((item) => item.moduleId === moduleId)?.reasons || [] });
   const submit = $("#remediation-submit"); submit.disabled = true; $("#remediation-error").textContent = "";
   try {
     await api(taskId ? `/api/remediation/tasks/${encodeURIComponent(taskId)}` : "/api/remediation/tasks", { method: taskId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });

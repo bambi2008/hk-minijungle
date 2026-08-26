@@ -709,10 +709,26 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Capability added: the technician PWA now shows assigned module tasks above the route, opens the correct wall/module, preserves the task ID through the offline queue and closes the task after capture synchronization. The existing route cache includes the active task list for temporary API outages.
 - Capability added: production evidence reporting includes the remediation storage section when determining whether all observed persistence is PostgreSQL-backed. Invalid task priorities now return explicit validation errors instead of database failures.
 - Evidence added: API smoke covers mobile task scoping, module context, mobile start/resolution, client denial and invalid-priority rejection. Playwright UI smoke covers assigned task start, capture and task removal, while existing offline queue and client/auditor flows continue to pass. Full `npm.cmd run check` remains the release gate.
-- Honest boundary: the task table is still not linked by a foreign key to a production work-order dispatch record; the mobile app still uses the pilot principal, local browser storage and local pilot proof vault. Real device authentication, OIDC/MFA, managed PostgreSQL, off-host restore and repeated field cycles remain open.
+- Honest boundary: the task table now has an application and database relation to the master work order, but technician acceptance, dispatch ownership and independent closure review are still pilot controls; the mobile app still uses the pilot principal, local browser storage and local pilot proof vault. Real device authentication, OIDC/MFA, managed PostgreSQL, off-host restore and repeated field cycles remain open.
 - Target effect: the control loop now reaches the technician&apos;s execution surface and returns evidence to Ops Today without requiring a second task system; official production operations readiness remains **65%**.
 
 ### Current Honest Score After Step 51
+
+- Production operations readiness: **65%**.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 52 - Remediation-to-Work-Order Relation v1
+
+- Official score remains **65%**. This closes an application/schema relationship gap; it does not prove a live dispatch team has accepted, executed or independently verified the work across a production estate.
+- Capability added: `ops_remediation_tasks.work_order_id` is nullable for un-dispatched exceptions and is a foreign key to `work_orders(id)` when present. SQLite upgrades existing pilot databases with `2026-08-26.remediation-work-order-link-v1`; PostgreSQL has matching adapter initialization and `infra/postgres/004_remediation_work_order_link.sql`.
+- Capability added: remediation creation auto-binds the selected module to its active wall work order. An explicitly supplied work order must belong to the same wall and client scope; cross-wall or cross-client binding returns `REMEDIATION_WORK_ORDER_SCOPE_MISMATCH`.
+- Capability added: Ops Today shows the work order in the module action queue and task dialog; the technician PWA shows the same work order and opens the exact work-order stop before capture. The relation is immutable after create so an in-flight task cannot silently move to another dispatch.
+- Evidence added: storage health reports `workOrderScopeIssues`; API and Playwright smoke tests cover automatic binding, cross-work-order rejection, mobile action context and UI task creation. Full `npm.cmd run check` remains the release gate.
+- Honest boundary: the work-order relation is now real application/database evidence, but no managed PostgreSQL deployment, real dispatch acceptance, production identity, external object storage or off-host restore drill was executed. Official production operations readiness remains **65%**.
+- Target effect: a module exception, its remediation task, technician capture and service evidence now share a stable work-order context; official production operations readiness remains **65%**.
+
+### Current Honest Score After Step 52
 
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.

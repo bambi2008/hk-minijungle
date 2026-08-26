@@ -3,7 +3,7 @@ import { mkdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
 
-export const remediationMigrationVersion = "2026-08-25.remediation-tasks-v1";
+export const remediationMigrationVersion = "2026-08-26.remediation-work-order-link-v1";
 const statuses = new Set(["open", "assigned", "in_progress", "resolved", "cancelled"]);
 const priorities = new Set(["critical", "high", "normal", "low"]);
 const transitions = {
@@ -28,6 +28,7 @@ function initialize(db) {
       id TEXT PRIMARY KEY,
       client_id TEXT NOT NULL,
       wall_id TEXT NOT NULL,
+      work_order_id TEXT,
       module_id TEXT NOT NULL,
       source TEXT NOT NULL,
       source_key TEXT NOT NULL,
@@ -47,15 +48,21 @@ function initialize(db) {
       updated_at TEXT NOT NULL,
       FOREIGN KEY (client_id) REFERENCES clients(id) ON UPDATE CASCADE ON DELETE RESTRICT,
       FOREIGN KEY (wall_id) REFERENCES living_assets(id) ON UPDATE CASCADE ON DELETE RESTRICT,
+      FOREIGN KEY (work_order_id) REFERENCES work_orders(id) ON UPDATE CASCADE ON DELETE RESTRICT,
       FOREIGN KEY (module_id) REFERENCES asset_modules(id) ON UPDATE CASCADE ON DELETE RESTRICT
     );
     CREATE INDEX IF NOT EXISTS idx_remediation_scope_status ON ops_remediation_tasks(client_id, wall_id, module_id, status, priority);
     CREATE INDEX IF NOT EXISTS idx_remediation_due ON ops_remediation_tasks(status, due_at);
     CREATE INDEX IF NOT EXISTS idx_remediation_updated ON ops_remediation_tasks(updated_at DESC, id ASC);
   `);
+  const columns = new Set(db.prepare("PRAGMA table_info(ops_remediation_tasks)").all().map((row) => row.name));
+  if (!columns.has("work_order_id")) {
+    db.exec("ALTER TABLE ops_remediation_tasks ADD COLUMN work_order_id TEXT REFERENCES work_orders(id) ON UPDATE CASCADE ON DELETE RESTRICT");
+  }
+  db.exec("CREATE INDEX IF NOT EXISTS idx_remediation_work_order ON ops_remediation_tasks(work_order_id)");
   db.prepare("INSERT OR IGNORE INTO schema_migrations (version, applied_at) VALUES (?, ?)").run(remediationMigrationVersion, new Date().toISOString());
 }
-function taskFromRow(row) { return { id: row.id, clientId: row.client_id, wallId: row.wall_id, moduleId: row.module_id, source: row.source, sourceKey: row.source_key, status: row.status, priority: row.priority, assignedTo: row.assigned_to || null, dueAt: row.due_at || null, reasons: parseJson(row.reason_json, []), resolutionNote: row.resolution_note || null, evidenceRef: row.evidence_ref || null, createdBy: row.created_by, updatedBy: row.updated_by, acknowledgedAt: row.acknowledged_at || null, startedAt: row.started_at || null, resolvedAt: row.resolved_at || null, createdAt: row.created_at, updatedAt: row.updated_at }; }
+function taskFromRow(row) { return { id: row.id, clientId: row.client_id, wallId: row.wall_id, workOrderId: row.work_order_id || null, moduleId: row.module_id, source: row.source, sourceKey: row.source_key, status: row.status, priority: row.priority, assignedTo: row.assigned_to || null, dueAt: row.due_at || null, reasons: parseJson(row.reason_json, []), resolutionNote: row.resolution_note || null, evidenceRef: row.evidence_ref || null, createdBy: row.created_by, updatedBy: row.updated_by, acknowledgedAt: row.acknowledged_at || null, startedAt: row.started_at || null, resolvedAt: row.resolved_at || null, createdAt: row.created_at, updatedAt: row.updated_at }; }
 function normalizedReasons(input) { const values = Array.isArray(input) ? input : [input]; const reasons = values.map((value) => String(value || "").trim()).filter(Boolean).slice(0, 20); if (!reasons.length) throw validationError("reasons must contain at least one explanation"); return reasons; }
 
 export async function createSqliteRemediationTask(dbPath, input) {
@@ -73,11 +80,11 @@ export async function createSqliteRemediationTask(dbPath, input) {
     const now = new Date().toISOString();
     const id = String(input?.id || `RMT-${Date.now()}-${randomUUID().slice(0, 8)}`).trim();
     const createdBy = required(input?.createdBy, "createdBy");
-    const record = { id, clientId, wallId, moduleId, source, sourceKey, status: "open", priority, assignedTo: optional(input?.assignedTo), dueAt: optional(input?.dueAt), reasons, resolutionNote: null, evidenceRef: optional(input?.evidenceRef), createdBy, updatedBy: createdBy, acknowledgedAt: null, startedAt: null, resolvedAt: null, createdAt: now, updatedAt: now };
+    const record = { id, clientId, wallId, workOrderId: optional(input?.workOrderId), moduleId, source, sourceKey, status: "open", priority, assignedTo: optional(input?.assignedTo), dueAt: optional(input?.dueAt), reasons, resolutionNote: null, evidenceRef: optional(input?.evidenceRef), createdBy, updatedBy: createdBy, acknowledgedAt: null, startedAt: null, resolvedAt: null, createdAt: now, updatedAt: now };
     try {
-      db.prepare(`INSERT INTO ops_remediation_tasks (id,client_id,wall_id,module_id,source,source_key,status,priority,assigned_to,due_at,reason_json,resolution_note,evidence_ref,created_by,updated_by,acknowledged_at,started_at,resolved_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(record.id, record.clientId, record.wallId, record.moduleId, record.source, record.sourceKey, record.status, record.priority, record.assignedTo, record.dueAt, JSON.stringify(record.reasons), record.resolutionNote, record.evidenceRef, record.createdBy, record.updatedBy, record.acknowledgedAt, record.startedAt, record.resolvedAt, record.createdAt, record.updatedAt);
+      db.prepare(`INSERT INTO ops_remediation_tasks (id,client_id,wall_id,work_order_id,module_id,source,source_key,status,priority,assigned_to,due_at,reason_json,resolution_note,evidence_ref,created_by,updated_by,acknowledged_at,started_at,resolved_at,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(record.id, record.clientId, record.wallId, record.workOrderId, record.moduleId, record.source, record.sourceKey, record.status, record.priority, record.assignedTo, record.dueAt, JSON.stringify(record.reasons), record.resolutionNote, record.evidenceRef, record.createdBy, record.updatedBy, record.acknowledgedAt, record.startedAt, record.resolvedAt, record.createdAt, record.updatedAt);
     } catch (error) {
-      if (String(error?.message || "").includes("constraint failed")) throw validationError("remediation task references an unknown client, wall or module");
+      if (String(error?.message || "").includes("constraint failed")) throw validationError("remediation task references an unknown client, wall, work order or module");
       throw error;
     }
     return { duplicate: false, task: taskFromRow(db.prepare("SELECT * FROM ops_remediation_tasks WHERE id = ?").get(record.id)) };
@@ -133,6 +140,8 @@ export async function readSqliteRemediationStorageHealth(dbPath) {
     const status = db.prepare("SELECT status, COUNT(*) AS count FROM ops_remediation_tasks GROUP BY status ORDER BY status").all();
     const counts = Object.fromEntries([...statuses].map((value) => [value, 0]));
     for (const row of status) counts[row.status] = Number(row.count);
-    return { backend: "sqlite", migrationVersion: remediationMigrationVersion, tables: ["ops_remediation_tasks"], counts: { ...counts, total: Object.values(counts).reduce((sum, value) => sum + value, 0) }, relationshipIntegrity: { foreignKeysEnabled: db.prepare("PRAGMA foreign_keys").get().foreign_keys === 1, foreignKeyIssues: db.prepare("PRAGMA foreign_key_check").all().length } };
+    const relationshipTablesReady = Number(db.prepare("SELECT COUNT(*) AS count FROM sqlite_master WHERE type = 'table' AND name IN ('work_orders', 'asset_modules')").get().count) === 2;
+    const workOrderScopeIssues = relationshipTablesReady ? db.prepare("SELECT COUNT(*) AS count FROM ops_remediation_tasks t LEFT JOIN work_orders w ON w.id = t.work_order_id LEFT JOIN asset_modules m ON m.id = t.module_id WHERE t.work_order_id IS NOT NULL AND (w.id IS NULL OR w.wall_id <> t.wall_id OR m.asset_id <> t.wall_id)").get().count : 0;
+    return { backend: "sqlite", migrationVersion: remediationMigrationVersion, tables: ["ops_remediation_tasks"], counts: { ...counts, total: Object.values(counts).reduce((sum, value) => sum + value, 0) }, relationshipIntegrity: { foreignKeysEnabled: db.prepare("PRAGMA foreign_keys").get().foreign_keys === 1, foreignKeyIssues: db.prepare("PRAGMA foreign_key_check").all().length, workOrderScopeIssues: Number(workOrderScopeIssues) } };
   });
 }

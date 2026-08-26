@@ -895,13 +895,14 @@ function ageMinutes(value, nowMs = Date.now()) {
 async function buildOperationsQuality(auth) {
   const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
   const thresholds = qualityThresholds();
-  const [modules, devices, alerts, diagnoses, captures, remediationTasks, portfolio, proofStorage, evidenceStorage] = await Promise.all([
+  const [modules, devices, alerts, diagnoses, captures, remediationTasks, activeWorkOrderByWall, portfolio, proofStorage, evidenceStorage] = await Promise.all([
     listModules({ clientIds }),
     listDevices({ clientIds }),
     listAlerts({ clientIds, statuses: ["open", "acknowledged"], limit: 500 }),
     listVisualDiagnoses({ clientIds, statuses: ["queued", "running"], limit: 500 }),
     listMobileCaptureBatches(),
     listRemediationTasks({ clientIds, statuses: ["open", "assigned", "in_progress"], limit: 500 }),
+    buildActiveWorkOrderContext(auth),
     buildPortfolioSummary(auth),
     readProofMediaStorageHealth(),
     readEvidenceSnapshotStorageHealth()
@@ -968,12 +969,13 @@ async function buildOperationsQuality(auth) {
       label: module.label,
       clientId: module.clientId,
       assetId: module.assetId,
+      workOrderId: activeWorkOrderByWall.get(module.assetId) || null,
       status,
       reasons,
       lastTelemetryAt: latestTelemetryAt,
       cameraLastSeenAt: cameraDevice?.lastSeenAt || null,
       cameraStatus: cameraStatus || null,
-      remediationTask: remediationTask ? { id: remediationTask.id, status: remediationTask.status, priority: remediationTask.priority, assignedTo: remediationTask.assignedTo, dueAt: remediationTask.dueAt } : null
+      remediationTask: remediationTask ? { id: remediationTask.id, status: remediationTask.status, priority: remediationTask.priority, assignedTo: remediationTask.assignedTo, dueAt: remediationTask.dueAt, workOrderId: remediationTask.workOrderId || null } : null
     };
   });
   const moduleReadiness = moduleReadinessDetails.filter((item) => item.status !== "ready").sort((left, right) => {
@@ -1115,6 +1117,12 @@ async function readJsonBody(req, maxBytes = maxJsonBodyBytes) {
 
 function activeWorkorders(workorders) {
   return workorders.filter((item) => String(item.status || "").toLowerCase() !== "completed");
+}
+
+async function buildActiveWorkOrderContext(auth) {
+  const [walls, workorders] = await Promise.all([readJsonData("walls"), readJsonData("workorders")]);
+  const scopedWallIds = new Set(walls.filter((wall) => canAccessClient(auth, wall.clientId)).map((wall) => wall.id));
+  return new Map(activeWorkorders(workorders).filter((order) => scopedWallIds.has(order.wallId)).map((order) => [order.wallId, order.id]));
 }
 
 function openIncidents(incidents) {
@@ -1472,9 +1480,24 @@ async function buildMobileRemediationTasks(auth, requestedStatuses = null) {
     return {
       ...task,
       module: module ? { id: module.id, label: module.label, zone: module.zone || null, assetId: module.assetId, clientId: module.clientId } : null,
-      mobileAction: { path: `/mobile.html?wallId=${encodeURIComponent(task.wallId)}&moduleId=${encodeURIComponent(task.moduleId)}`, label: task.status === "in_progress" ? "Continue" : "Start task" }
+      mobileAction: { path: `/mobile.html?${task.workOrderId ? `workOrderId=${encodeURIComponent(task.workOrderId)}&` : ""}wallId=${encodeURIComponent(task.wallId)}&moduleId=${encodeURIComponent(task.moduleId)}`, label: task.status === "in_progress" ? "Continue" : "Start task", workOrderId: task.workOrderId || null }
     };
   });
+}
+
+async function resolveRemediationWorkOrder(auth, module, requestedWorkOrderId = null) {
+  const [walls, workorders] = await Promise.all([readJsonData("walls"), readJsonData("workorders")]);
+  const wall = walls.find((item) => item.id === module.assetId);
+  const wallWorkorders = workorders.filter((order) => order.wallId === module.assetId);
+  const normalized = String(requestedWorkOrderId || "").trim();
+  if (normalized) {
+    const requested = wallWorkorders.find((order) => order.id === normalized);
+    if (!requested || wall?.clientId !== module.clientId || !canAccessClient(auth, module.clientId)) {
+      throw validationError("work order must belong to the selected module wall and client scope", "REMEDIATION_WORK_ORDER_SCOPE_MISMATCH");
+    }
+    return requested.id;
+  }
+  return activeWorkorders(wallWorkorders)[0]?.id || null;
 }
 
 function validationError(message, code = "VALIDATION_ERROR") {
@@ -2515,8 +2538,9 @@ async function handleApi(req, res, pathname) {
       const module = modules.find((item) => item.id === String(input?.moduleId || "").trim());
       if (!module) throw apiError(404, "module not found in the current client scope", "REMEDIATION_MODULE_NOT_FOUND");
       requireClientAccess(auth, module.clientId, "remediation task create");
-      const result = await createRemediationTask({ ...input, clientId: module.clientId, wallId: module.assetId, moduleId: module.id, createdBy: auth.id });
-      const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, reasons: result.task.reasons } });
+      const workOrderId = await resolveRemediationWorkOrder(auth, module, input?.workOrderId);
+      const result = await createRemediationTask({ ...input, clientId: module.clientId, wallId: module.assetId, workOrderId, moduleId: module.id, createdBy: auth.id });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, workOrderId: result.task.workOrderId, reasons: result.task.reasons } });
       if (event) await appendOpsEvent(event);
       sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
       return;
