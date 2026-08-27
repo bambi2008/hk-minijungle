@@ -786,3 +786,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 56 - Field Workforce Capacity and Dispatch Controls v1
+
+- Official production operations readiness remains **65%** even after the full release gate passes. This adds a real operating-control domain, but the previously declared managed-PostgreSQL/off-host-restore hard cap still binds and cannot be bypassed by local application work.
+- Capability added: SQLite migration `2026-08-30.workforce-dispatch-v1` and PostgreSQL migration `2026-08-30.postgres-workforce-dispatch-v1` add `ops_technicians` and `ops_workforce_assignments`. Deployment SQL is `infra/postgres/008_workforce_dispatch.sql`, and production preflight now requires both tables, the migration and PostgreSQL-backed workforce storage.
+- Control added: technician identity, active state, skills, district coverage, shift window and daily service-minute capacity are server-side master data. Assignments reject unknown/inactive technicians, missing skill or territory, daily overload, outside-shift starts and overlapping intervals.
+- Capability added: FM Lead/Platform Admin can manage profiles, inspect dated capacity, query shared candidates for up to 100 selected remediation tasks and persist generic work-order assignments. Field technicians can read only their own roster/assignments; client viewers remain denied.
+- Workflow added: remediation create, update, bulk dispatch, mobile acceptance, evidence submission and FM closure synchronize the workforce ledger. Completed work-order reminders close their assignment. The technician route now requires an active work-order assignment in addition to client scope, rather than exposing every open work order in the scoped account.
+- Experience added: Ops Today replaces free-text assignee entry with eligible technician dropdowns and adds one compact dated capacity band. Selecting tasks refreshes shared eligibility and projected minutes without adding another page to the dispatch path; the 390px layout remains free of horizontal overflow.
+- Evidence added: policy smoke covers eligibility, district denial, overlap and capacity rejection. API smoke covers roster permissions, profile creation, daily candidates, work-order assignment, ledger query and district rejection while preserving the full Airtable/remediation/mobile test suite. Playwright covers workforce rendering, candidate selection, dispatch, SLA, technician execution and independent review.
+- Honest boundary: the SQLite pilot has a clearly labelled demo technician; production PostgreSQL has no staff seed. OIDC/HR provisioning, shifts/absence feeds, GPS/travel optimisation, all-task transactionality, managed PostgreSQL, off-host restore and repeated real field cycles remain unevidenced.
+- Target effect: the platform can now prevent several common invalid assignments and produce an auditable daily capacity ledger. Functional coverage improves, but the official score remains **65%** until the external database/recovery gate is evidenced.
+
+### Current Honest Score After Step 56
+
+- Production operations readiness: **65%**. The managed PostgreSQL/off-host restore hard cap remains active.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

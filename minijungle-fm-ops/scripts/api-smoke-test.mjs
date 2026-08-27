@@ -164,6 +164,9 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.remediation.migrationVersion === "2026-08-28.remediation-dispatch-sla-v1", "Storage endpoint did not expose remediation dispatch/SLA migration");
   assert(initialStorage.body.integrations.migrationVersion === "2026-08-29.ops-control-import-v1", "Storage endpoint did not expose operations control/import migration");
   assert(initialStorage.body.integrations.tables.includes("ops_job_leases") && initialStorage.body.integrations.tables.includes("ops_idempotency_commands") && initialStorage.body.integrations.tables.includes("ops_maintenance_imports"), "Storage endpoint did not expose operations lease, idempotency and maintenance import tables");
+  assert(initialStorage.body.workforce.migrationVersion === "2026-08-30.workforce-dispatch-v1", "Storage endpoint did not expose workforce dispatch migration");
+  assert(initialStorage.body.workforce.tables.includes("ops_technicians") && initialStorage.body.workforce.tables.includes("ops_workforce_assignments"), "Storage endpoint did not expose workforce roster and assignment tables");
+  assert(initialStorage.body.workforce.relationshipIntegrity.unknownTechnicians === 0, "Workforce assignment ledger should not contain unknown technicians");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -732,7 +735,7 @@ async function verifyApi(baseUrl) {
   const fieldRoute = await fetchJson(`${baseUrl}api/mobile/route`, {
     headers: principalHeaders("field-tech-show-suite")
   });
-  assert(fieldRoute.response.ok, "Field technician mobile route endpoint failed");
+  assert(fieldRoute.response.ok, `Field technician mobile route endpoint failed: ${fieldRoute.response.status} ${JSON.stringify(fieldRoute.body)}`);
   assert(fieldRoute.body.captureSchema.itemTypes.includes("photo"), "Mobile route did not expose capture item schema");
   assert(fieldRoute.body.route.length === 1, "Field technician route should only include assigned client work orders");
   assert(fieldRoute.body.route.some((item) => item.workOrderId === "WO-1047"), "Field technician route did not include assigned show-suite work order");
@@ -1129,6 +1132,21 @@ async function verifyApi(baseUrl) {
   assert(maintenancePortfolio.body.counts.workorders === 5, "Applied Airtable maintenance row did not persist as one work order");
   const clientMaintenanceDenied = await fetchJson(`${baseUrl}api/admin/imports/maintenance`, { headers: principalHeaders("client-show-suite") });
   assert(clientMaintenanceDenied.response.status === 403, "Client viewer should not read maintenance import batches");
+
+  const workforceViewerDenied = await fetchJson(`${baseUrl}api/workforce/technicians`, { headers: principalHeaders("client-show-suite") });
+  assert(workforceViewerDenied.response.status === 403, "Client viewer should not read the workforce roster");
+  const bulkTechnician = await fetchJson(`${baseUrl}api/workforce/technicians`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ id: "field-tech-bulk", displayName: "Bulk Dispatch Test Technician", status: "active", skills: ["*"], districts: ["*"], shiftStart: "00:00", shiftEnd: "23:59", maxDailyMinutes: 480 }) });
+  assert(bulkTechnician.response.status === 201 && bulkTechnician.body.technician.id === "field-tech-bulk", "FM Lead should create a workforce technician profile");
+  const limitedTechnician = await fetchJson(`${baseUrl}api/workforce/technicians`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ id: "field-tech-limited", displayName: "Limited District Technician", status: "active", skills: ["plant-care"], districts: ["Central"], shiftStart: "08:00", shiftEnd: "18:00", maxDailyMinutes: 120 }) });
+  assert(limitedTechnician.response.status === 201, "FM Lead should create a district-limited technician profile");
+  const workforceOverview = await fetchJson(`${baseUrl}api/workforce/candidates?serviceDate=2026-08-30`, { headers: principalHeaders("fm-lead") });
+  assert(workforceOverview.response.ok && workforceOverview.body.candidates.some((item) => item.technician.id === "field-tech-bulk" && item.eligible), "Workforce candidates should expose eligible daily capacity");
+  const workOrderAssignment = await fetchJson(`${baseUrl}api/workforce/assignments`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ targetType: "work-order", targetId: "WO-1051", technicianId: "field-tech-bulk", serviceDate: "2026-08-30", scheduledStart: "2026-08-30T09:00:00+08:00", estimatedMinutes: 90 }) });
+  assert(workOrderAssignment.response.status === 201 && workOrderAssignment.body.assignment.targetId === "WO-1051", "Eligible work-order assignment should persist in the workforce ledger");
+  const workforceAssignments = await fetchJson(`${baseUrl}api/workforce/assignments?technicianId=field-tech-bulk&serviceDate=2026-08-30`, { headers: principalHeaders("fm-lead") });
+  assert(workforceAssignments.response.ok && workforceAssignments.body.assignments.length === 1, "Workforce assignment query should return the technician day plan");
+  const wrongDistrictAssignment = await fetchJson(`${baseUrl}api/workforce/assignments`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ targetType: "work-order", targetId: "WO-1047", technicianId: "field-tech-limited", serviceDate: "2026-08-30", estimatedMinutes: 60 }) });
+  assert(wrongDistrictAssignment.response.status === 409 && wrongDistrictAssignment.body.code === "WORKFORCE_ASSIGNMENT_INELIGIBLE", "Workforce assignment should reject a technician outside the service district");
 
   const showSuiteBulkSeed = initialOperationsQuality.body.moduleReadiness.find((item) => item.clientId === "show-suite");
   const bulkSeeds = [showSuiteBulkSeed, initialOperationsQuality.body.moduleReadiness.find((item) => item.moduleId !== showSuiteBulkSeed?.moduleId)].filter(Boolean);

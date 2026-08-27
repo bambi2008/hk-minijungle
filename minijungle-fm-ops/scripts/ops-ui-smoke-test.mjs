@@ -53,13 +53,14 @@ async function main() {
       assert(operationsSeed, "UI smoke could not find a Show Suite module for technician acceptance");
       await operations.locator(`[data-remediation-create="${operationsSeed.moduleId}"]`).click();
       assert(await operations.locator("#remediation-dialog").isVisible(), "Remediation task dialog did not open");
-      await operations.locator("#remediation-assigned-to").fill("field-tech-show-suite");
+      assert(await operations.locator("#workforce-list .workforce-item").count() > 0, "Operations page did not render workforce capacity");
+      await operations.locator("#remediation-assigned-to").selectOption("field-tech-show-suite");
       await operations.locator("#remediation-submit").click();
       await operations.waitForSelector("[data-remediation-edit]", { timeout: 10000 });
       assert((await operations.locator("#timeline-list").textContent()).includes("remediation.task.created"), "Remediation creation did not appear in the operations timeline");
       const operationsRemediationId = await operations.locator("[data-remediation-edit]").first().getAttribute("data-remediation-edit");
       await operations.locator(`[data-dispatch-select="${operationsRemediationId}"]`).check();
-      await operations.locator("#dispatch-assigned-to").fill("field-tech-show-suite");
+      await operations.locator("#dispatch-assigned-to").selectOption("field-tech-show-suite");
       await operations.locator("#dispatch-due-at").fill(new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString().slice(0, 16));
       await operations.locator("#dispatch-priority").selectOption("high");
       await operations.locator("#dispatch-status").selectOption("assigned");

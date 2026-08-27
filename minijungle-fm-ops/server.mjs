@@ -206,6 +206,24 @@ import {
 } from "./lib/ops-postgres-integration-store.mjs";
 import { maintenanceImportTemplateCsv, normalizeMaintenanceCsv } from "./lib/ops-maintenance-import.mjs";
 import {
+  evaluateSqliteWorkforceCandidates,
+  listSqliteTechnicians,
+  listSqliteWorkforceAssignments,
+  readSqliteWorkforceAssignment,
+  readSqliteWorkforceStorageHealth,
+  upsertSqliteTechnician,
+  upsertSqliteWorkforceAssignment
+} from "./lib/ops-workforce-store.mjs";
+import {
+  evaluatePostgresWorkforceCandidates,
+  listPostgresTechnicians,
+  listPostgresWorkforceAssignments,
+  readPostgresWorkforceAssignment,
+  readPostgresWorkforceStorageHealth,
+  upsertPostgresTechnician,
+  upsertPostgresWorkforceAssignment
+} from "./lib/ops-postgres-workforce-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -667,6 +685,13 @@ async function readMaintenanceImport(id) { return productionMasterDataEnabled() 
 async function listMaintenanceImports(limit) { return productionMasterDataEnabled() ? listPostgresMaintenanceImports(runtimeDbPath, limit) : listSqliteMaintenanceImports(runtimeDbPath, limit); }
 async function markMaintenanceImportApplied(id, appliedBy) { return productionMasterDataEnabled() ? markPostgresMaintenanceImportApplied(runtimeDbPath, id, appliedBy) : markSqliteMaintenanceImportApplied(runtimeDbPath, id, appliedBy); }
 async function readIntegrationStorageHealth() { return productionMasterDataEnabled() ? readPostgresIntegrationStorageHealth(runtimeDbPath) : readSqliteIntegrationStorageHealth(runtimeDbPath); }
+async function upsertTechnician(input) { return productionMasterDataEnabled() ? upsertPostgresTechnician(runtimeDbPath, input) : upsertSqliteTechnician(runtimeDbPath, input); }
+async function listTechnicians(options = {}) { return productionMasterDataEnabled() ? listPostgresTechnicians(runtimeDbPath, options) : listSqliteTechnicians(runtimeDbPath, options); }
+async function upsertWorkforceAssignment(input) { return productionMasterDataEnabled() ? upsertPostgresWorkforceAssignment(runtimeDbPath, input) : upsertSqliteWorkforceAssignment(runtimeDbPath, input); }
+async function readWorkforceAssignment(targetType, targetId) { return productionMasterDataEnabled() ? readPostgresWorkforceAssignment(runtimeDbPath, targetType, targetId) : readSqliteWorkforceAssignment(runtimeDbPath, targetType, targetId); }
+async function listWorkforceAssignments(options = {}) { return productionMasterDataEnabled() ? listPostgresWorkforceAssignments(runtimeDbPath, options) : listSqliteWorkforceAssignments(runtimeDbPath, options); }
+async function evaluateWorkforceCandidates(input) { return productionMasterDataEnabled() ? evaluatePostgresWorkforceCandidates(runtimeDbPath, input) : evaluateSqliteWorkforceCandidates(runtimeDbPath, input); }
+async function readWorkforceStorageHealth() { return productionMasterDataEnabled() ? readPostgresWorkforceStorageHealth(runtimeDbPath) : readSqliteWorkforceStorageHealth(runtimeDbPath); }
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1211,6 +1236,94 @@ function activeWorkorders(workorders) {
   return workorders.filter((item) => String(item.status || "").toLowerCase() !== "completed");
 }
 
+function hongKongDate(value = new Date()) {
+  const date = value instanceof Date ? value : new Date(value);
+  const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
+  const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Hong_Kong", year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(safeDate);
+  const part = (type) => parts.find((item) => item.type === type)?.value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+
+function serviceDateFor(value) {
+  const text = String(value || "").trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(text)) return text;
+  if (text && Number.isFinite(Date.parse(text))) return hongKongDate(text);
+  if (/^tomorrow/i.test(text)) return hongKongDate(new Date(Date.now() + 86400000));
+  return hongKongDate();
+}
+
+function remediationSkills(task) {
+  const text = [task.source, task.sourceKey, ...(task.reasons || [])].join(" ").toLowerCase();
+  const skills = ["plant-care"];
+  if (/camera|photo|visual|image|ai/.test(text)) skills.push("visual-diagnosis");
+  if (/sensor|telemetry|temperature|humidity|co2|conductivity|mc\b/.test(text)) skills.push("sensor-care");
+  if (/device|gateway|offline|connect/.test(text)) skills.push("device-care");
+  return [...new Set(skills)];
+}
+
+function workOrderSkills(order) {
+  const text = [order.type, ...(order.tasks || [])].join(" ").toLowerCase();
+  const skills = ["plant-care"];
+  if (/photo|capture|image|visual/.test(text)) skills.push("visual-diagnosis");
+  if (/sensor|telemetry|device|led/.test(text)) skills.push("sensor-care");
+  return [...new Set(skills)];
+}
+
+function remediationMinutes(task) { return task.priority === "critical" ? 120 : task.priority === "high" ? 90 : task.priority === "low" ? 45 : 60; }
+
+async function resolveWorkforceTarget(auth, input) {
+  const targetType = String(input?.targetType || "").trim();
+  const targetId = String(input?.targetId || "").trim();
+  if (!targetId || !["remediation-task", "work-order"].includes(targetType)) throw apiError(400, "targetType and targetId must identify a remediation-task or work-order", "WORKFORCE_TARGET_INVALID");
+  const [clients, walls] = await Promise.all([readJsonData("clients"), readJsonData("walls")]);
+  const clientById = new Map(clients.map((client) => [client.id, client]));
+  const wallById = new Map(walls.map((wall) => [wall.id, wall]));
+  if (targetType === "remediation-task") {
+    const task = input.task || await readRemediationTask(targetId);
+    if (!task) throw apiError(404, "remediation task not found", "REMEDIATION_TASK_NOT_FOUND");
+    requireClientAccess(auth, task.clientId, "workforce assignment target");
+    const wall = wallById.get(task.wallId); const client = clientById.get(task.clientId);
+    return { targetType, targetId: task.id, technicianId: input.technicianId, clientId: task.clientId, wallId: task.wallId, serviceDate: input.serviceDate || serviceDateFor(input.scheduledStart || task.dueAt), scheduledStart: input.scheduledStart || null, estimatedMinutes: input.estimatedMinutes || remediationMinutes(task), requiredSkills: input.requiredSkills || remediationSkills(task), district: input.district || client?.district || wall?.location || "*", status: input.status || (task.status === "in_progress" ? "in_progress" : task.status === "resolved" ? "completed" : task.status === "cancelled" ? "cancelled" : "planned"), assignedBy: input.assignedBy || auth.id };
+  }
+  const workorders = await readJsonData("workorders");
+  const order = workorders.find((item) => item.id === targetId);
+  if (!order) throw apiError(404, "work order not found", "WORKFORCE_WORK_ORDER_NOT_FOUND");
+  const wall = wallById.get(order.wallId); if (!wall) throw apiError(409, "work order wall is unavailable", "WORKFORCE_WALL_NOT_FOUND");
+  requireClientAccess(auth, wall.clientId, "workforce assignment target");
+  const client = clientById.get(wall.clientId);
+  return { targetType, targetId: order.id, technicianId: input.technicianId, clientId: wall.clientId, wallId: wall.id, serviceDate: input.serviceDate || serviceDateFor(input.scheduledStart || order.due), scheduledStart: input.scheduledStart || null, estimatedMinutes: input.estimatedMinutes || (order.priority === "high" ? 120 : 90), requiredSkills: input.requiredSkills || workOrderSkills(order), district: input.district || client?.district || wall.location || "*", status: input.status || "planned", assignedBy: input.assignedBy || auth.id };
+}
+
+async function assertEligibleWorkforceAssignment(context) {
+  const candidates = await evaluateWorkforceCandidates(context);
+  const candidate = candidates.find((item) => item.technician.id === context.technicianId);
+  if (!candidate) throw apiError(404, "technician is not registered", "WORKFORCE_TECHNICIAN_NOT_FOUND");
+  if (!candidate.eligible) throw apiError(409, `assignment rejected: ${candidate.reasons.join("; ")}`, "WORKFORCE_ASSIGNMENT_INELIGIBLE");
+  return candidate;
+}
+
+async function assertEligibleWorkforceBatch(contexts) {
+  if (!contexts.length) return;
+  const evaluations = await Promise.all(contexts.map((context) => assertEligibleWorkforceAssignment(context)));
+  const groups = new Map();
+  for (let index = 0; index < contexts.length; index += 1) {
+    const context = contexts[index]; const evaluation = evaluations[index]; const key = `${context.technicianId}:${context.serviceDate}`;
+    const group = groups.get(key) || { allocatedMinutes: evaluation.workload.allocatedMinutes, requestedMinutes: 0, maxDailyMinutes: evaluation.workload.maxDailyMinutes };
+    group.requestedMinutes += Number(context.estimatedMinutes || 0); groups.set(key, group);
+  }
+  for (const group of groups.values()) if (group.allocatedMinutes + group.requestedMinutes > group.maxDailyMinutes) throw apiError(409, `assignment rejected: batch capacity exceeded by ${group.allocatedMinutes + group.requestedMinutes - group.maxDailyMinutes} minutes`, "WORKFORCE_ASSIGNMENT_INELIGIBLE");
+}
+
+async function syncRemediationWorkforceAssignment(task, auth) {
+  const existing = await readWorkforceAssignment("remediation-task", task.id);
+  if (!task.assignedTo) {
+    if (existing && !["completed", "cancelled"].includes(existing.status)) await upsertWorkforceAssignment({ ...existing, status: "cancelled", assignedBy: auth.id });
+    return null;
+  }
+  const context = await resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId: task.id, technicianId: task.assignedTo, task });
+  return upsertWorkforceAssignment(context);
+}
+
 async function buildActiveWorkOrderContext(auth) {
   const [walls, workorders] = await Promise.all([readJsonData("walls"), readJsonData("workorders")]);
   const scopedWallIds = new Set(walls.filter((wall) => canAccessClient(auth, wall.clientId)).map((wall) => wall.id));
@@ -1408,13 +1521,14 @@ function mobileCaptureSchema() {
 }
 
 async function buildMobileRoute(auth) {
-  const [clients, walls, workorders, proofData, sensorData, incidentData] = await Promise.all([
+  const [clients, walls, workorders, proofData, sensorData, incidentData, workforceAssignments] = await Promise.all([
     readJsonData("clients"),
     readJsonData("walls"),
     readJsonData("workorders"),
     readJsonData("proof"),
     readJsonData("sensors"),
-    readJsonData("incidents")
+    readJsonData("incidents"),
+    auth.roleId === "field-tech" ? listWorkforceAssignments({ technicianId: auth.id, targetType: "work-order", statuses: ["planned", "accepted", "in_progress"] }) : Promise.resolve([])
   ]);
 
   const clientById = new Map(clients.map((client) => [client.id, client]));
@@ -1429,9 +1543,10 @@ async function buildMobileRoute(auth) {
   for (const reading of latestReadings) readingsByModule.set(reading.moduleId, [...(readingsByModule.get(reading.moduleId) || []), reading]);
   const modulesByWall = new Map();
   for (const module of modules) modulesByWall.set(module.assetId, [...(modulesByWall.get(module.assetId) || []), module]);
+  const assignedWorkOrderIds = new Set(workforceAssignments.map((item) => item.targetId));
 
   return activeWorkorders(workorders)
-    .filter((order) => wallById.has(order.wallId))
+    .filter((order) => wallById.has(order.wallId) && (auth.roleId !== "field-tech" || assignedWorkOrderIds.has(order.id)))
     .map((order) => {
       const wall = wallById.get(order.wallId);
       const client = clientById.get(wall.clientId);
@@ -2324,6 +2439,10 @@ async function handleApi(req, res, pathname) {
       const input = await readJsonBody(req);
       if (input.clientId) requireClientAccess(auth, input.clientId, "mobile reminder action");
       const result = await saveReminderAction({ ...input, actorId: input.actorId || auth.id });
+      if (result.action.workorderId && result.action.status === "completed") {
+        const assignment = await readWorkforceAssignment("work-order", result.action.workorderId);
+        if (assignment && (auth.roleId !== "field-tech" || assignment.technicianId === auth.id)) await upsertWorkforceAssignment({ ...assignment, status: "completed", assignedBy: auth.id });
+      }
       const event = normalizeOpsEvent({
         type: `mobile.reminder.${result.action.status}`,
         actor: auth.name,
@@ -2358,6 +2477,7 @@ async function handleApi(req, res, pathname) {
       const input = await readJsonBody(req);
       if (input.status === "resolved" || input.reviewDecision) throw apiError(403, "technicians must submit completion evidence for independent FM review", "MOBILE_REMEDIATION_REVIEW_REQUIRED");
       const result = await updateRemediationTask(taskId, { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? auth.id : input.assignedTo, acceptedBy: input.status === "in_progress" ? auth.id : undefined, submittedBy: input.submitForReview === true ? auth.id : undefined });
+      await syncRemediationWorkforceAssignment(result.task, auth);
       const eventType = input.submitForReview === true ? "remediation.task.review-submitted" : `remediation.task.${result.task.status}`;
       const event = normalizeOpsEvent({ type: eventType, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "technician-mobile", note: result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status} from mobile.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, reviewStatus: result.task.reviewStatus, assignedTo: result.task.assignedTo, acceptedBy: result.task.acceptedBy, submittedBy: result.task.submittedBy, evidenceRef: result.task.evidenceRef, channel: "technician-mobile" } });
       await appendOpsEvent(event);
@@ -2594,9 +2714,76 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/workforce/technicians") {
+      requirePermission(auth, "workforce.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      let technicians = await listTechnicians({ status: url.searchParams.get("status") || null });
+      if (auth.roleId === "field-tech") technicians = technicians.filter((item) => item.id === auth.id);
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), technicians });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/workforce/technicians") {
+      requirePermission(auth, "workforce.write");
+      const input = await readJsonBody(req);
+      const result = await upsertTechnician({ ...input, createdBy: auth.id, updatedBy: auth.id });
+      const event = normalizeOpsEvent({ type: result.created ? "workforce.technician.created" : "workforce.technician.updated", actor: auth.name, entityType: "technician", entityId: result.technician.id, source: "ops-workforce", note: `${result.technician.displayName} workforce profile saved.`, payload: { principalId: auth.id, status: result.technician.status, skills: result.technician.skills, districts: result.technician.districts, maxDailyMinutes: result.technician.maxDailyMinutes } });
+      await appendOpsEvent(event);
+      sendJson(res, result.created ? 201 : 200, { ...result, event });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/workforce/assignments") {
+      requirePermission(auth, "workforce.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const technicianId = auth.roleId === "field-tech" ? auth.id : (url.searchParams.get("technicianId") || null);
+      const assignments = await listWorkforceAssignments({ technicianId, serviceDate: url.searchParams.get("serviceDate") || null, targetType: url.searchParams.get("targetType") || null, statuses: url.searchParams.get("statuses")?.split(",") || null, clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: url.searchParams.get("limit") || 500 });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), assignments });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/workforce/candidates") {
+      requirePermission(auth, "workforce.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const serviceDate = serviceDateFor(url.searchParams.get("serviceDate") || new Date());
+      const taskIds = [...new Set((url.searchParams.get("taskIds") || "").split(",").map((item) => item.trim()).filter(Boolean))].slice(0, 100);
+      const contexts = taskIds.length
+        ? await Promise.all(taskIds.map((targetId) => resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId, serviceDate })))
+        : [{ targetType: "capacity-preview", targetId: `preview:${serviceDate}`, technicianId: "candidate", clientId: "*", wallId: "*", serviceDate, scheduledStart: null, estimatedMinutes: 60, requiredSkills: ["plant-care"], district: "*", status: "planned", assignedBy: auth.id }];
+      const evaluations = await Promise.all(contexts.map((context) => evaluateWorkforceCandidates(context)));
+      const technicians = await listTechnicians();
+      const candidates = technicians.map((technician) => {
+        const taskResults = contexts.map((context, index) => {
+          const result = evaluations[index].find((item) => item.technician.id === technician.id);
+          return { targetId: context.targetId, eligible: Boolean(result?.eligible), reasons: result?.reasons || ["technician is unavailable"], estimatedMinutes: context.estimatedMinutes };
+        });
+        const base = evaluations[0]?.find((item) => item.technician.id === technician.id);
+        const requestedMinutes = contexts.reduce((sum, item) => sum + Number(item.estimatedMinutes || 0), 0);
+        const allocatedMinutes = Number(base?.workload?.allocatedMinutes || 0);
+        const capacityExceeded = allocatedMinutes + requestedMinutes > technician.maxDailyMinutes;
+        const reasons = taskResults.flatMap((item) => item.reasons.map((reason) => `${item.targetId}: ${reason}`));
+        if (capacityExceeded) reasons.push(`batch capacity exceeded by ${allocatedMinutes + requestedMinutes - technician.maxDailyMinutes} minutes`);
+        return { technician, eligible: taskResults.every((item) => item.eligible) && !capacityExceeded, reasons: [...new Set(reasons)], taskResults, workload: { serviceDate, assignmentCount: Number(base?.workload?.assignmentCount || 0), allocatedMinutes, requestedMinutes, projectedMinutes: allocatedMinutes + requestedMinutes, remainingMinutes: Math.max(0, technician.maxDailyMinutes - allocatedMinutes), maxDailyMinutes: technician.maxDailyMinutes } };
+      });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), serviceDate, taskIds, candidates, summary: { technicians: candidates.length, eligible: candidates.filter((item) => item.eligible).length, requestedMinutes: contexts.reduce((sum, item) => sum + Number(item.estimatedMinutes || 0), 0) } });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/workforce/assignments") {
+      requirePermission(auth, "workforce.assign");
+      const input = await readJsonBody(req);
+      const context = await resolveWorkforceTarget(auth, { ...input, assignedBy: auth.id });
+      if (!["completed", "cancelled"].includes(context.status)) await assertEligibleWorkforceAssignment(context);
+      const result = await upsertWorkforceAssignment(context);
+      const event = normalizeOpsEvent({ type: result.created ? "workforce.assignment.created" : "workforce.assignment.updated", actor: auth.name, entityType: context.targetType, entityId: context.targetId, clientId: context.clientId, wallId: context.wallId, source: "ops-workforce", note: `${context.targetId} assigned to ${context.technicianId}.`, payload: { principalId: auth.id, technicianId: context.technicianId, serviceDate: context.serviceDate, scheduledStart: context.scheduledStart, estimatedMinutes: context.estimatedMinutes, requiredSkills: context.requiredSkills, district: context.district, status: context.status } });
+      await appendOpsEvent(event);
+      sendJson(res, result.created ? 201 : 200, { ...result, event });
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -2610,7 +2797,8 @@ async function handleApi(req, res, pathname) {
         readAiVisionStorageHealth(),
         readNotificationStorageHealth(),
         readEvidenceSnapshotStorageHealth(),
-        readIntegrationStorageHealth()
+        readIntegrationStorageHealth(),
+        readWorkforceStorageHealth()
       ]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
@@ -2627,7 +2815,8 @@ async function handleApi(req, res, pathname) {
         aiVision: aiVisionStorage,
         notifications: notificationStorage,
         evidenceSnapshots: evidenceSnapshotStorage,
-        integrations: integrationStorage
+        integrations: integrationStorage,
+        workforce: workforceStorage
       });
       return;
     }
@@ -2739,6 +2928,14 @@ async function handleApi(req, res, pathname) {
           if (String(expectedUpdatedAtById[taskId]) !== task.updatedAt) throw apiError(409, `task ${taskId} changed after it was loaded`, "REMEDIATION_BULK_VERSION_CONFLICT");
           existingTasks.push(task);
         }
+        const requestedAssignee = hasAssignedTo ? (String(input.assignedTo || "").trim() || null) : null;
+        if (requestedAssignee && (!hasStatus || input.status !== "cancelled")) {
+          const contexts = await Promise.all(existingTasks.map((task) => {
+            const pendingTask = { ...task, assignedTo: requestedAssignee, dueAt: dueAt === undefined ? task.dueAt : dueAt, priority: hasPriority ? input.priority : task.priority, status: hasStatus ? input.status : task.status };
+            return resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId: task.id, technicianId: requestedAssignee, task: pendingTask });
+          }));
+          await assertEligibleWorkforceBatch(contexts);
+        }
         const tasks = [];
         const eventKey = createHash("sha256").update(commandKey).digest("hex").slice(0, 16);
         for (const existing of existingTasks) {
@@ -2746,6 +2943,7 @@ async function handleApi(req, res, pathname) {
           const status = hasStatus ? String(input.status) : hasAssignedTo && assignedTo && existing.status === "open" ? "assigned" : existing.status;
           if (status === "assigned" && !assignedTo) throw validationError(`task ${existing.id} requires an assignee`, "REMEDIATION_BULK_ASSIGNEE_REQUIRED");
           const result = await updateRemediationTask(existing.id, { status, assignedTo, dueAt, priority: hasPriority ? input.priority : existing.priority, expectedUpdatedAt: expectedUpdatedAtById[existing.id], updatedBy: auth.id });
+          await syncRemediationWorkforceAssignment(result.task, auth);
           const event = normalizeOpsEvent({ id: `OPS-BULK-${eventKey}-${existing.id}`, type: "remediation.task.bulk-dispatched", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Bulk dispatch updated ${result.task.id}.`, payload: { principalId: auth.id, commandKey, previousStatus: existing.status, nextStatus: result.task.status, assignedTo: result.task.assignedTo, dueAt: result.task.dueAt, priority: result.task.priority } });
           await appendOpsEvent(event);
           tasks.push({ ...result.task, sla: remediationSla(result.task) });
@@ -2803,7 +3001,13 @@ async function handleApi(req, res, pathname) {
       if (!module) throw apiError(404, "module not found in the current client scope", "REMEDIATION_MODULE_NOT_FOUND");
       requireClientAccess(auth, module.clientId, "remediation task create");
       const workOrderId = await resolveRemediationWorkOrder(auth, module, input?.workOrderId);
+      if (input.assignedTo) {
+        const pendingTask = { id: input.id || `pending:${module.id}`, clientId: module.clientId, wallId: module.assetId, moduleId: module.id, workOrderId, source: input.source || "module-readiness", sourceKey: input.sourceKey, priority: input.priority || "normal", reasons: input.reasons || [], dueAt: input.dueAt || null, status: "open" };
+        const context = await resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId: pendingTask.id, technicianId: input.assignedTo, task: pendingTask });
+        await assertEligibleWorkforceAssignment(context);
+      }
       const result = await createRemediationTask({ ...input, clientId: module.clientId, wallId: module.assetId, workOrderId, moduleId: module.id, createdBy: auth.id });
+      if (result.task.assignedTo) await syncRemediationWorkforceAssignment(result.task, auth);
       const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, workOrderId: result.task.workOrderId, reasons: result.task.reasons } });
       if (event) await appendOpsEvent(event);
       sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
@@ -2823,7 +3027,15 @@ async function handleApi(req, res, pathname) {
       if (input.reviewDecision && !reviewerRoles.has(auth.roleId)) throw apiError(403, "only FM Lead or Platform Admin can review remediation evidence", "REMEDIATION_REVIEW_ROLE_DENIED");
       if (auth.roleId === "field-tech" && (input.status === "resolved" || input.reviewDecision)) throw apiError(403, "technicians must submit completion evidence for independent FM review", "REMEDIATION_REVIEW_REQUIRED");
       const updateInput = { ...input, updatedBy: auth.id, assignedTo: auth.roleId === "field-tech" ? (input.assignedTo || existing.assignedTo || auth.id) : input.assignedTo, acceptedBy: input.status === "in_progress" && auth.roleId === "field-tech" ? auth.id : undefined, submittedBy: input.submitForReview === true ? auth.id : undefined, reviewedBy: input.reviewDecision ? auth.id : undefined };
+      const nextAssignedTo = updateInput.assignedTo === undefined ? existing.assignedTo : updateInput.assignedTo;
+      const nextStatus = input.reviewDecision === "approved" ? "resolved" : input.reviewDecision === "rejected" ? "assigned" : input.submitForReview === true ? "in_progress" : (input.status || existing.status);
+      if (nextAssignedTo && !["resolved", "cancelled"].includes(nextStatus)) {
+        const pendingTask = { ...existing, ...input, assignedTo: nextAssignedTo, status: nextStatus, dueAt: input.dueAt === undefined ? existing.dueAt : input.dueAt };
+        const context = await resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId: existing.id, technicianId: nextAssignedTo, task: pendingTask });
+        await assertEligibleWorkforceAssignment(context);
+      }
       const result = await updateRemediationTask(taskId, updateInput);
+      await syncRemediationWorkforceAssignment(result.task, auth);
       const eventType = input.submitForReview === true ? "remediation.task.review-submitted" : input.reviewDecision ? `remediation.task.review-${input.reviewDecision}` : `remediation.task.${result.task.status}`;
       const event = normalizeOpsEvent({ type: eventType, actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: result.task.reviewNote || result.task.resolutionNote || `Remediation task ${result.task.id} moved to ${result.task.status}.`, payload: { principalId: auth.id, previousStatus: existing.status, nextStatus: result.task.status, reviewStatus: result.task.reviewStatus, assignedTo: result.task.assignedTo, acceptedBy: result.task.acceptedBy, submittedBy: result.task.submittedBy, reviewedBy: result.task.reviewedBy, evidenceRef: result.task.evidenceRef } });
       await appendOpsEvent(event);
