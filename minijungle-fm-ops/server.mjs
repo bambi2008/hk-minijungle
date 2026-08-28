@@ -308,6 +308,25 @@ import {
   reservePostgresInventory
 } from "./lib/ops-postgres-inventory-store.mjs";
 import {
+  actionSqliteServiceContract,
+  createSqliteServiceContract,
+  evaluateSqliteServiceContract,
+  listSqliteServiceContractEvents,
+  listSqliteServiceContracts,
+  readSqliteServiceContract,
+  readSqliteServiceContractHealth,
+  seedSqliteServiceContracts
+} from "./lib/ops-service-contract-store.mjs";
+import {
+  actionPostgresServiceContract,
+  createPostgresServiceContract,
+  evaluatePostgresServiceContract,
+  listPostgresServiceContractEvents,
+  listPostgresServiceContracts,
+  readPostgresServiceContract,
+  readPostgresServiceContractHealth
+} from "./lib/ops-postgres-service-contract-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -904,6 +923,13 @@ async function receiveInventoryLot(input) { return productionMasterDataEnabled()
 async function submitInventoryStockCount(input) { return productionMasterDataEnabled() ? submitPostgresInventoryStockCount(runtimeDbPath,input) : submitSqliteInventoryStockCount(runtimeDbPath,input); }
 async function reviewInventoryStockCount(countId,input) { return productionMasterDataEnabled() ? reviewPostgresInventoryStockCount(runtimeDbPath,countId,input) : reviewSqliteInventoryStockCount(runtimeDbPath,countId,input); }
 async function readInventoryHealth() { return productionMasterDataEnabled() ? readPostgresInventoryHealth(runtimeDbPath) : readSqliteInventoryHealth(runtimeDbPath); }
+async function createServiceContract(input){await ensurePilotServiceContracts();return productionMasterDataEnabled()?createPostgresServiceContract(runtimeDbPath,input):createSqliteServiceContract(runtimeDbPath,input);}
+async function listServiceContracts(options={}){await ensurePilotServiceContracts();return productionMasterDataEnabled()?listPostgresServiceContracts(runtimeDbPath,options):listSqliteServiceContracts(runtimeDbPath,options);}
+async function readServiceContract(id){await ensurePilotServiceContracts();return productionMasterDataEnabled()?readPostgresServiceContract(runtimeDbPath,id):readSqliteServiceContract(runtimeDbPath,id);}
+async function listServiceContractEvents(id){await ensurePilotServiceContracts();return productionMasterDataEnabled()?listPostgresServiceContractEvents(runtimeDbPath,id):listSqliteServiceContractEvents(runtimeDbPath,id);}
+async function actionServiceContract(id,input){await ensurePilotServiceContracts();return productionMasterDataEnabled()?actionPostgresServiceContract(runtimeDbPath,id,input):actionSqliteServiceContract(runtimeDbPath,id,input);}
+async function evaluateServiceContract(input){await ensurePilotServiceContracts();return productionMasterDataEnabled()?evaluatePostgresServiceContract(runtimeDbPath,input):evaluateSqliteServiceContract(runtimeDbPath,input);}
+async function readServiceContractHealth(){await ensurePilotServiceContracts();return productionMasterDataEnabled()?readPostgresServiceContractHealth(runtimeDbPath):readSqliteServiceContractHealth(runtimeDbPath);}
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1505,6 +1531,20 @@ async function ensurePilotInventory() {
   if (!productionConfigReport().production) await seedSqliteInventory(runtimeDbPath, dataRoot);
 }
 
+async function ensurePilotServiceContracts() {
+  if (productionConfigReport().production) return;
+  const [clients,walls]=await Promise.all([readJsonData("clients"),readJsonData("walls")]);
+  await seedSqliteServiceContracts(runtimeDbPath,{clients,walls});
+}
+
+function serviceContractForAuth(auth,contract){if(auth.roleId!=="esg-auditor")return contract;const{monthlyFee,currency,...auditorContract}=contract;return auditorContract;}
+async function serviceContractOverviewFor(auth){
+  const [contracts,clients,walls]=await Promise.all([listServiceContracts({clientIds:auth.clientScope==="all"?null:auth.clientIds,limit:1000}),readJsonData("clients"),readJsonData("walls")]);
+  const scopedClients=clients.filter((item)=>canAccessClient(auth,item.id)); const scopedWalls=walls.filter((item)=>canAccessClient(auth,item.clientId));
+  const covered=new Set(contracts.filter((item)=>item.effectiveState==="active").flatMap((item)=>item.wallIds));
+  return{generatedAt:new Date().toISOString(),contracts:contracts.map((item)=>serviceContractForAuth(auth,item)),clients:scopedClients.map((item)=>({id:item.id,name:item.name,district:item.district})),walls:scopedWalls.map((item)=>({id:item.id,clientId:item.clientId,name:item.name,location:item.location})),summary:{total:contracts.length,active:contracts.filter((item)=>item.effectiveState==="active").length,draft:contracts.filter((item)=>item.status==="draft").length,suspended:contracts.filter((item)=>item.status==="suspended").length,expired:contracts.filter((item)=>item.effectiveState==="expired").length,expiringSoon:contracts.filter((item)=>item.effectiveState==="active"&&item.daysToEnd<=60).length,uncoveredWalls:scopedWalls.filter((item)=>!covered.has(item.id)).length}};
+}
+
 async function inventoryOverviewFor(auth) {
   await ensurePilotInventory();
   const assignments = await listWorkforceAssignments({ technicianId: auth.roleId === "field-tech" ? auth.id : null, targetType: "work-order", statuses: ["planned", "accepted", "in_progress"], clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: 1000 });
@@ -1847,14 +1887,15 @@ function mobileCaptureSchema() {
 }
 
 async function buildMobileRoute(auth) {
-  const [clients, walls, workorders, proofData, sensorData, incidentData, workforceAssignments] = await Promise.all([
+  const [clients, walls, workorders, proofData, sensorData, incidentData, workforceAssignments,serviceContracts] = await Promise.all([
     readJsonData("clients"),
     readJsonData("walls"),
     readJsonData("workorders"),
     readJsonData("proof"),
     readJsonData("sensors"),
     readJsonData("incidents"),
-    auth.roleId === "field-tech" ? listWorkforceAssignments({ technicianId: auth.id, targetType: "work-order", statuses: ["planned", "accepted", "in_progress"] }) : Promise.resolve([])
+    auth.roleId === "field-tech" ? listWorkforceAssignments({ technicianId: auth.id, targetType: "work-order", statuses: ["planned", "accepted", "in_progress"] }) : Promise.resolve([]),
+    listServiceContracts({clientIds:auth.clientScope==="all"?null:auth.clientIds,limit:1000})
   ]);
 
   const clientById = new Map(clients.map((client) => [client.id, client]));
@@ -1870,6 +1911,7 @@ async function buildMobileRoute(auth) {
   const modulesByWall = new Map();
   for (const module of modules) modulesByWall.set(module.assetId, [...(modulesByWall.get(module.assetId) || []), module]);
   const assignedWorkOrderIds = new Set(workforceAssignments.map((item) => item.targetId));
+  const contractsByWall=new Map();for(const contract of serviceContracts){for(const wallId of contract.wallIds){const current=contractsByWall.get(wallId);if(!current||contract.effectiveState==="active")contractsByWall.set(wallId,contract);}}
 
   return activeWorkorders(workorders)
     .filter((order) => wallById.has(order.wallId) && (auth.roleId !== "field-tech" || assignedWorkOrderIds.has(order.id)))
@@ -1880,6 +1922,7 @@ async function buildMobileRoute(auth) {
       const wallSensors = sensors.filter((item) => item.wallId === wall.id);
       const wallIncidents = incidents.filter((item) => item.wallId === wall.id);
       const wallModules = modulesByWall.get(wall.id) || [];
+      const serviceContract=contractsByWall.get(wall.id)||null;
 
       return {
         workOrderId: order.id,
@@ -1888,6 +1931,7 @@ async function buildMobileRoute(auth) {
         due: order.due || null,
         priority: order.priority || "medium",
         status: order.status || null,
+        serviceContract:serviceContract?{id:serviceContract.id,contractNumber:serviceContract.contractNumber,planName:serviceContract.planName,effectiveState:serviceContract.effectiveState,serviceWindow:`${serviceContract.serviceWindowStart}-${serviceContract.serviceWindowEnd}`,evidenceRequired:serviceContract.evidenceRequired,endDate:serviceContract.endDate}:null,
         readiness: wall.status === "risk" || order.priority === "high" ? "exception-first" : "standard-care",
         client: {
           id: wall.clientId,
@@ -3319,6 +3363,26 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/service-contracts") {
+      requirePermission(auth,"contracts.read");
+      sendJson(res,200,await serviceContractOverviewFor(auth));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/service-contracts") {
+      requirePermission(auth,"contracts.write");
+      const input=await readJsonBody(req); requireClientAccess(auth,String(input.clientId||""),"service contract create");
+      const commandKey=String(req.headers["idempotency-key"]||"").trim();
+      const response=await runIdempotentInventoryCommand({auth,scope:"service-contract-create",commandKey,payload:input,execute:async(requestHash)=>{const result=await createServiceContract({...input,id:`SVC-${requestHash.slice(0,20)}`,createdBy:auth.id});const event=normalizeOpsEvent({id:`OPS-SVC-${requestHash.slice(0,20)}`,type:"service-contract.created",actor:auth.name,entityType:"service-contract",entityId:result.contract.id,clientId:result.contract.clientId,source:"contract-control",note:`${result.contract.contractNumber} created as draft.`,payload:{principalId:auth.id,planName:result.contract.planName,wallIds:result.contract.wallIds,endDate:result.contract.endDate}});await appendOpsEvent(event);return{...result,event};}});
+      sendJson(res,response.duplicate?200:201,response);return;
+    }
+
+    const serviceContractEventsMatch=pathname.match(/^\/api\/service-contracts\/([^/]+)\/events$/);
+    if(req.method==="GET"&&serviceContractEventsMatch){requirePermission(auth,"contracts.read");const contract=await readServiceContract(decodeURIComponent(serviceContractEventsMatch[1]));if(!contract)throw apiError(404,"service contract not found","SERVICE_CONTRACT_NOT_FOUND");requireClientAccess(auth,contract.clientId,"service contract events");sendJson(res,200,{contract:serviceContractForAuth(auth,contract),events:await listServiceContractEvents(contract.id)});return;}
+
+    const serviceContractActionMatch=pathname.match(/^\/api\/service-contracts\/([^/]+)\/actions$/);
+    if(req.method==="POST"&&serviceContractActionMatch){requirePermission(auth,"contracts.write");const contractId=decodeURIComponent(serviceContractActionMatch[1]);const existing=await readServiceContract(contractId);if(!existing)throw apiError(404,"service contract not found","SERVICE_CONTRACT_NOT_FOUND");requireClientAccess(auth,existing.clientId,"service contract action");const input=await readJsonBody(req);const commandKey=String(req.headers["idempotency-key"]||"").trim();const response=await runIdempotentInventoryCommand({auth,scope:`service-contract-action:${contractId}`,commandKey,payload:input,execute:async(requestHash)=>{const result=await actionServiceContract(contractId,{...input,actor:auth.id});const event=normalizeOpsEvent({id:`OPS-SVC-ACT-${requestHash.slice(0,20)}`,type:`service-contract.${input.action}`,actor:auth.name,entityType:"service-contract",entityId:contractId,clientId:existing.clientId,source:"contract-control",note:input.note,payload:{principalId:auth.id,previousStatus:existing.status,nextStatus:result.contract.status,effectiveState:result.contract.effectiveState}});await appendOpsEvent(event);return{...result,event};}});sendJson(res,200,response);return;}
+
     if (req.method === "GET" && (pathname === "/api/inventory/overview" || pathname === "/api/mobile/route-kit")) {
       requirePermission(auth, "inventory.read");
       sendJson(res, 200, await inventoryOverviewFor(auth));
@@ -3493,7 +3557,7 @@ async function handleApi(req, res, pathname) {
         readCommissioningHealth(),
         readDeviceLifecycleHealth()
       ]);
-      const [maintenancePlanningStorage, inventoryStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth()]);
+      const [maintenancePlanningStorage, inventoryStorage,serviceContractStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth(),readServiceContractHealth()]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...runtimeStorage,
@@ -3516,6 +3580,7 @@ async function handleApi(req, res, pathname) {
         reliability: reliabilityStorage,
         commissioning: commissioningStorage,
         deviceLifecycle: deviceLifecycleStorage
+        ,serviceContracts:serviceContractStorage
       });
       return;
     }
@@ -3706,14 +3771,16 @@ async function handleApi(req, res, pathname) {
       if (!module) throw apiError(404, "module not found in the current client scope", "REMEDIATION_MODULE_NOT_FOUND");
       requireClientAccess(auth, module.clientId, "remediation task create");
       const workOrderId = await resolveRemediationWorkOrder(auth, module, input?.workOrderId);
-      if (input.assignedTo) {
-        const pendingTask = { id: input.id || `pending:${module.id}`, clientId: module.clientId, wallId: module.assetId, moduleId: module.id, workOrderId, source: input.source || "module-readiness", sourceKey: input.sourceKey, priority: input.priority || "normal", reasons: input.reasons || [], dueAt: input.dueAt || null, status: "open" };
-        const context = await resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId: pendingTask.id, technicianId: input.assignedTo, task: pendingTask });
+      const contractEvaluation=await evaluateServiceContract({clientId:module.clientId,wallId:module.assetId,priority:input.priority||"normal"});
+      const contractInput={...input,dueAt:input.dueAt||contractEvaluation.sla?.dueAt||null};
+      if (contractInput.assignedTo) {
+        const pendingTask = { id: contractInput.id || `pending:${module.id}`, clientId: module.clientId, wallId: module.assetId, moduleId: module.id, workOrderId, source: contractInput.source || "module-readiness", sourceKey: contractInput.sourceKey, priority: contractInput.priority || "normal", reasons: contractInput.reasons || [], dueAt: contractInput.dueAt, status: "open" };
+        const context = await resolveWorkforceTarget(auth, { targetType: "remediation-task", targetId: pendingTask.id, technicianId: contractInput.assignedTo, task: pendingTask });
         await assertEligibleWorkforceAssignment(context);
       }
-      const result = await createRemediationTask({ ...input, clientId: module.clientId, wallId: module.assetId, workOrderId, moduleId: module.id, createdBy: auth.id });
+      const result = await createRemediationTask({ ...contractInput, clientId: module.clientId, wallId: module.assetId, workOrderId, moduleId: module.id, createdBy: auth.id });
       if (result.task.assignedTo) await syncRemediationWorkforceAssignment(result.task, auth);
-      const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, workOrderId: result.task.workOrderId, reasons: result.task.reasons } });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, workOrderId: result.task.workOrderId, reasons: result.task.reasons,serviceContractId:contractEvaluation.contract?.id||null,contractCoverage:contractEvaluation.coverageState,sla:contractEvaluation.sla } });
       if (event) await appendOpsEvent(event);
       sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
       return;

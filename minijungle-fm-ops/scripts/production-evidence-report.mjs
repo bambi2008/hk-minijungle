@@ -49,8 +49,8 @@ export function buildProductionEvidenceReport({
   const gate = ready?.productionGate || health?.productionGate || {};
   const production = Boolean(gate.production);
   const storageObserved = reachable({ status: storageStatus }) && storage && typeof storage === "object";
-  const sections = storageObserved ? [storage, storage.masterData, storage.mobileCapture, storage.proofMedia, storage.telemetry, storage.modules, storage.reminders, storage.remediation, storage.devices, storage.alerts, storage.aiVision, storage.notifications, storage.evidenceSnapshots, storage.integrations, storage.workforce, storage.maintenancePlanning, storage.inventory, storage.reliability, storage.commissioning, storage.deviceLifecycle] : [];
-  const postgresObserved = sections.length > 0 && Boolean(storage?.maintenancePlanning) && Boolean(storage?.inventory) && Boolean(storage?.reliability) && Boolean(storage?.commissioning) && Boolean(storage?.deviceLifecycle) && sections.filter(Boolean).every((section) => isPostgres(section.backend || section.source));
+  const sections = storageObserved ? [storage, storage.masterData, storage.mobileCapture, storage.proofMedia, storage.telemetry, storage.modules, storage.reminders, storage.remediation, storage.devices, storage.alerts, storage.aiVision, storage.notifications, storage.evidenceSnapshots, storage.integrations, storage.workforce, storage.maintenancePlanning, storage.inventory, storage.reliability, storage.commissioning, storage.deviceLifecycle,storage.serviceContracts] : [];
+  const postgresObserved = sections.length > 0 && Boolean(storage?.maintenancePlanning) && Boolean(storage?.inventory) && Boolean(storage?.reliability) && Boolean(storage?.commissioning) && Boolean(storage?.deviceLifecycle) && Boolean(storage?.serviceContracts) && sections.filter(Boolean).every((section) => isPostgres(section.backend || section.source));
   const s3Observed = isS3(storage?.proofMedia?.storageProvider);
   const oidcConfigured = gate?.identity?.provider === "oidc-required" && gateCheck(gate, "DR_FOREST_IDP_ISSUER")?.valid && gateCheck(gate, "DR_FOREST_IDP_JWKS_URL")?.valid;
   const evidence = [

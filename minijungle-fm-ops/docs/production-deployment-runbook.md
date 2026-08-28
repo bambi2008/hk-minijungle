@@ -88,6 +88,16 @@ Lot receipts require supplier, supplier lot code, received date and expiry. Rout
 
 The workflow is not purchase-order, barcode, cold-chain or financial inventory software. Production acceptance requires a real opening count, repeated receipt/transfer/consume/count cycles and variance review against warehouse evidence.
 
+## Service contracts and SLA
+
+Apply `015_service_contracts.sql` after migration `014`. Live PostgreSQL starts with no service contracts. Import only reviewed terms from signed agreements: client, covered living assets, contract dates, service window, evidence requirement, visit frequency, fee and the response/resolution hours for critical, high, normal and low priority.
+
+Create records as `draft`. An FM Lead or Platform Admin activates only after the agreement is effective, and every activation, suspension, resumption or termination requires an audit note and current `updatedAt` version. Client viewers can read only their own contract scope; field technicians receive only the compact plan/window attached to an assigned mobile route.
+
+When a remediation task has no explicit deadline, the server derives `dueAt` from the active contract's resolution SLA. A manually supplied deadline remains authoritative. Missing, scheduled, suspended or expired coverage is recorded in the audit event and does not silently invent an SLA. Run the remediation SLA scanner and notification worker as documented above, then verify at least one real task per priority against the signed terms.
+
+The platform record is an operational control, not the executed legal agreement or proof that service was delivered. Retain the signed source, amendment approval, customer notification and actual field evidence outside this table according to the approved records policy. See `docs/service-contracts-and-sla.md`.
+
 ## Airtable maintenance intake
 
 Airtable is supported as a temporary maintenance-record source through a controlled CSV handoff, not as a production runtime dependency. Export one CSV, open `Maintenance history` in Ops Today, download the canonical template, then preview the file before applying it. Required fields are `record_id`, `wall_id` and `service_date`; the supported optional fields are `status`, `priority`, `technician_id`, `tasks`, `notes` and `updated_at`.

@@ -263,6 +263,14 @@ function clearMasterData(db) {
   const hasTable = (name) => Boolean(db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?").get(name));
   // Generated module/device mappings are derived from the wall seed and can be rebuilt after import.
   // Real registered devices remain protected by foreign keys and therefore block an unsafe reset.
+  // Pilot service contracts are synthetic seed data. User-created contracts remain protected and block reset.
+  if (hasTable("ops_service_contracts")) {
+    db.exec(`
+      DELETE FROM ops_service_contract_events WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed');
+      DELETE FROM ops_service_contract_assets WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed');
+      DELETE FROM ops_service_contracts WHERE created_by = 'system:pilot-seed';
+    `);
+  }
   if (hasTable("asset_devices")) db.exec("DELETE FROM asset_devices WHERE metadata_json LIKE '%generated-from-module-device-map%'");
   if (hasTable("asset_modules")) db.exec("DELETE FROM asset_modules WHERE source = 'generated-from-asset-module-count'");
   db.exec(`

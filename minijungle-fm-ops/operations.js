@@ -10,6 +10,7 @@ const workforceState = { candidates: [], serviceDate: "", taskIds: [] };
 const maintenancePlanningState = { calendar: null };
 const inventoryState = { overview: null };
 const deviceCareState = { records: [] };
+const contractState = { overview: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -177,12 +178,38 @@ function renderQuality(quality = {}) {
   }).join("") : "<p class=\"empty\">No module-level action items.</p>";
 }
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
+function contractActionFor(contract) { if (contract.status === "draft") return "activate"; if (contract.status === "active") return "suspend"; if (contract.status === "suspended") return "resume"; return null; }
+function refreshContractWalls() {
+  const clientId = $("#contract-client").value;
+  const walls = (contractState.overview?.walls || []).filter((wall) => wall.clientId === clientId);
+  $("#contract-walls").innerHTML = walls.length ? walls.map((wall) => `<label><input type="checkbox" name="contract-wall" value="${escapeHtml(wall.id)}"><span>${escapeHtml(wall.name || wall.id)}<small>${escapeHtml(wall.location || wall.id)}</small></span></label>`).join("") : "<p class=\"contract-empty\">No living assets belong to this client.</p>";
+}
+function renderServiceContracts(payload = {}) {
+  contractState.overview = payload;
+  const summary = payload.summary || {};
+  $("#contract-gap-count").textContent = Number(summary.uncoveredWalls || 0);
+  $("#contract-state").textContent = `${Number(summary.active || 0)} active · ${Number(summary.uncoveredWalls || 0)} uncovered · ${Number(summary.expiringSoon || 0)} expiring`;
+  const selectedClient = $("#contract-client").value;
+  $("#contract-client").innerHTML = (payload.clients || []).map((client) => `<option value="${escapeHtml(client.id)}">${escapeHtml(client.name || client.id)}</option>`).join("");
+  if (selectedClient && (payload.clients || []).some((client) => client.id === selectedClient)) $("#contract-client").value = selectedClient;
+  refreshContractWalls();
+  $("#contract-list").innerHTML = (payload.contracts || []).length ? payload.contracts.map((contract) => {
+    const client = (payload.clients || []).find((item) => item.id === contract.clientId);
+    const action = contractActionFor(contract);
+    const terminal = ["terminated"].includes(contract.status);
+    const actions = terminal ? "" : `<div class="contract-actions"><input data-contract-note="${escapeHtml(contract.id)}" aria-label="Audit note for ${escapeHtml(contract.contractNumber)}" placeholder="Required audit note"><button class="contract-action" data-contract-action="${escapeHtml(contract.id)}" data-action="${escapeHtml(action || "terminate")}" data-updated-at="${escapeHtml(contract.updatedAt)}" type="button">${escapeHtml(action ? action[0].toUpperCase() + action.slice(1) : "Terminate")}</button>${action && action !== "activate" ? `<button class="contract-action" data-contract-action="${escapeHtml(contract.id)}" data-action="terminate" data-updated-at="${escapeHtml(contract.updatedAt)}" type="button">Terminate</button>` : ""}</div>`;
+    const fee = new Intl.NumberFormat("en-HK", { style: "currency", currency: contract.currency || "HKD", maximumFractionDigits: 0 }).format(Number(contract.monthlyFee || 0));
+    return `<article class="contract-item"><div><strong>${escapeHtml(contract.contractNumber)} · ${escapeHtml(contract.planName)}</strong><span>${escapeHtml(client?.name || contract.clientId)} · ${contract.wallIds.length} asset${contract.wallIds.length === 1 ? "" : "s"}</span><small>${escapeHtml(contract.startDate)} to ${escapeHtml(contract.endDate)} · ${fee}/month · ${contract.visitsPerMonth} visit${contract.visitsPerMonth === 1 ? "" : "s"}</small></div><div><strong>Service ${escapeHtml(contract.serviceWindowStart)}-${escapeHtml(contract.serviceWindowEnd)}</strong><span>Resolution: C ${contract.sla.critical.resolutionHours}h · H ${contract.sla.high.resolutionHours}h · N ${contract.sla.normal.resolutionHours}h · L ${contract.sla.low.resolutionHours}h</span><small>${contract.evidenceRequired ? "Photo and service evidence required" : "Service evidence optional"}</small></div><span class="contract-status ${escapeHtml(contract.effectiveState)}">${escapeHtml(contract.effectiveState)}</span>${actions}</article>`;
+  }).join("") : "<p class=\"contract-empty\">No service contracts are recorded.</p>";
+}
 async function load() {
   $("#notice").textContent = "";
   if (!$("#workforce-date").value) $("#workforce-date").value = localDateValue();
   if (!$("#maintenance-through-date").value) $("#maintenance-through-date").value = localDateValue(new Date(Date.now() + 30 * 86400000));
+  if (!$("#contract-start").value) $("#contract-start").value = localDateValue();
+  if (!$("#contract-end").value) $("#contract-end").value = localDateValue(new Date(Date.now() + 365 * 86400000));
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle, serviceContracts] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle"), api("/api/service-contracts")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -208,6 +235,7 @@ async function load() {
   renderWorkforce(workforce);
   renderMaintenancePlanning(maintenanceCalendar);
   renderInventory(inventory);
+  renderServiceContracts(serviceContracts);
   renderMaintenanceImports(maintenanceImports);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
@@ -314,6 +342,30 @@ $("#dispatch-filter").onchange = renderDispatchTasks;
 $("#dispatch-select-all").onchange = () => { const visible = dispatchState.tasks.filter((task) => $("#dispatch-filter").value === "overdue" ? task.sla?.level > 0 : $("#dispatch-filter").value === "pending" ? task.reviewStatus === "pending" : $("#dispatch-filter").value === "unassigned" ? !task.assignedTo : true); for (const task of visible) { if ($("#dispatch-select-all").checked) dispatchState.selected.add(task.id); else dispatchState.selected.delete(task.id); } renderDispatchTasks(); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
 $("#workforce-date").onchange = () => refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; });
 $("#maintenance-through-date").onchange = () => load().catch((error) => { $("#maintenance-notice").textContent = error.message; });
+$("#contract-client").onchange = refreshContractWalls;
+$("#contract-form").onsubmit = async (event) => {
+  event.preventDefault();
+  const wallIds = [...document.querySelectorAll('input[name="contract-wall"]:checked')].map((input) => input.value);
+  if (!wallIds.length) { $("#contract-notice").textContent = "Select at least one living asset."; return; }
+  const responseHours = { critical: 1, high: 4, normal: 8, low: 24 };
+  const resolutionHours = { critical: $("#contract-sla-critical").value, high: $("#contract-sla-high").value, normal: $("#contract-sla-normal").value, low: $("#contract-sla-low").value };
+  const body = { clientId: $("#contract-client").value, contractNumber: $("#contract-number").value.trim(), planName: $("#contract-plan").value.trim(), startDate: $("#contract-start").value, endDate: $("#contract-end").value, currency: "HKD", monthlyFee: Number($("#contract-fee").value), visitsPerMonth: Number($("#contract-visits").value), serviceWindowStart: $("#contract-window-start").value, serviceWindowEnd: $("#contract-window-end").value, evidenceRequired: $("#contract-evidence").checked, wallIds, note: $("#contract-note").value.trim(), sla: Object.fromEntries(Object.keys(responseHours).map((priority) => [priority, { responseHours: responseHours[priority], resolutionHours: Number(resolutionHours[priority]) }])) };
+  const button = $("#contract-submit"); button.disabled = true; $("#contract-notice").textContent = "Creating contract draft…";
+  try { const result = await api("/api/service-contracts", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); await load(); $("#contract-create").open = false; $("#contract-number").value = ""; $("#contract-notice").textContent = `${result.contract.contractNumber} created as draft. Review and activate it when the signed agreement is effective.`; } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
+};
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-contract-action]");
+  if (!button) return;
+  const contractId = button.dataset.contractAction;
+  const note = document.querySelector(`[data-contract-note="${CSS.escape(contractId)}"]`)?.value.trim();
+  if (!note) { $("#contract-notice").textContent = "Enter an audit note before changing a contract."; return; }
+  button.disabled = true; $("#contract-notice").textContent = `Recording ${button.dataset.action}…`;
+  try {
+    const result = await api(`/api/service-contracts/${encodeURIComponent(contractId)}/actions`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ action: button.dataset.action, expectedUpdatedAt: button.dataset.updatedAt, note }) });
+    await load();
+    $("#contract-notice").textContent = `${result.contract.contractNumber} is now ${result.contract.effectiveState}.`;
+  } catch (error) { $("#contract-notice").textContent = error.message; button.disabled = false; }
+});
 $("#maintenance-generate-form").onsubmit = async (event) => {
   event.preventDefault();
   const button = $("#maintenance-generate"); button.disabled = true; $("#maintenance-notice").textContent = "Generating due work orders with duplicate protection…";

@@ -743,6 +743,7 @@ async function verifyApi(baseUrl) {
   assert(storageAfterAdmin.body.counts.opsEvents === 11, "Admin CRUD/import events were not retained in ops event log");
   assert(storageAfterAdmin.body.masterData.counts.clients === 4, "Storage did not show imported client seed count");
   assert(storageAfterAdmin.body.masterData.relationshipIntegrity.foreignKeyIssues === 0, "Imported master data has FK issues");
+  assert(storageAfterAdmin.body.serviceContracts.counts.contracts === 4 && storageAfterAdmin.body.serviceContracts.relationshipIntegrity.foreignKeyIssues === 0, "Master-data reset did not safely rebuild pilot contract coverage");
   assert(storageAfterAdmin.body.mobileCapture.counts.captureBatches === 0, "Mobile capture batches should still be empty before mobile sync");
 
   const fieldRoute = await fetchJson(`${baseUrl}api/mobile/route`, {

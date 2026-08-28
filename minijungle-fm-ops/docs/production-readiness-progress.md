@@ -912,3 +912,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local inventory controls.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 63 - Client Service Contracts and SLA Enforcement v1
+
+- Official production operations readiness remains **65%**. The managed PostgreSQL and independently evidenced off-host restore hard cap still binds; local contract controls do not prove live commercial operation.
+- Persistence added: SQLite migration `2026-09-06.service-contracts-v1` and PostgreSQL migration `2026-09-06.postgres-service-contracts-v1` add contracts, many-to-many living-asset coverage and immutable lifecycle events. Deployment SQL is `infra/postgres/015_service_contracts.sql`.
+- Commercial control added: contract number, plan, dates, service window, visit frequency, fee, evidence requirement and response/resolution hours are normalized. Draft, active, suspended and terminated transitions require an audit note and optimistic-concurrency version.
+- SLA connection added: remediation tasks without an explicit deadline inherit the active covered contract's priority resolution time. The audit event records contract ID, coverage state and the calculated SLA; missing or inactive coverage does not fabricate a deadline.
+- Authorization and tenancy added: FM Lead/Platform Admin manage contracts. Client viewers and ESG auditors read only permitted scope. Covered assets must belong to the same client. Technicians receive only the plan, service window and coverage state attached to their assigned route.
+- Experience added: Ops Today exposes uncovered assets in the summary and one compact contract panel for draft creation and lifecycle actions. Mobile route cards show the current service plan without adding a technician navigation layer.
+- Production gate added: preflight requires all three contract tables and migration `015`. Storage health and production evidence report contract counts, backend and relationship integrity.
+- Evidence added: domain smoke proves validation, tenancy, duplicate handling, lifecycle, stale-write conflict, SLA calculation and foreign-key integrity. API smoke proves permissions, idempotency, client scope, automatic remediation deadlines and mobile handoff. Playwright proves desktop create/activate, phone visibility and 390px overflow inside the full operational journey.
+- Honest boundary: no signed Hong Kong customer contract has been imported, no legal review or amendment workflow is evidenced, no production scheduler has measured real SLA attainment, and managed PostgreSQL/off-host recovery remain unproven.
+
+### Current Honest Score After Step 63
+
+- Production operations readiness: **65%**. No score increase is claimed from local contract/SLA completion.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

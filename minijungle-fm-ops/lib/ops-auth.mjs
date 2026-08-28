@@ -30,6 +30,8 @@ const roleDefinitions = {
       "inventory.consume",
       "inventory.count",
       "inventory.review",
+      "contracts.read",
+      "contracts.write",
       "ops.state.read",
       "ops.state.write.action",
       "ops.state.write.snapshot",
@@ -144,6 +146,7 @@ const roleDefinitions = {
       ,"telemetry.alerts.read"
       ,"ai.diagnosis.read"
       ,"commissioning.read"
+      ,"contracts.read"
     ],
     actionTypes: []
   },
@@ -168,6 +171,7 @@ const roleDefinitions = {
       ,"telemetry.alerts.read"
       ,"ai.diagnosis.read"
       ,"commissioning.read"
+      ,"contracts.read"
     ],
     actionTypes: []
   }

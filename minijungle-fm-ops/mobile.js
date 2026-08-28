@@ -192,8 +192,9 @@ function renderRoute() {
     button.type = "button";
     button.className = `stop ${selected?.workOrderId === stop.workOrderId ? "active" : ""}`;
     const signals = stop.signals || {};
-    const signalText = [signals.openIncidents ? `${signals.openIncidents} incident${signals.openIncidents === 1 ? "" : "s"}` : "", signals.activeSensorAlerts ? `${signals.activeSensorAlerts} sensor alert${signals.activeSensorAlerts === 1 ? "" : "s"}` : ""].filter(Boolean).join(" · ") || "No open signals";
-    button.innerHTML = `<strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.clientName || stop.client?.name || stop.clientId)}</span><span>${escapeHtml(stop.due || "Scheduled")} · ${escapeHtml(stop.priority || "normal")} · ${stop.modules?.length || 0} modules</span><small class="stop-signal ${signalText === "No open signals" ? "quiet" : "attention"}">${escapeHtml(signalText)}</small>`;
+    const contractState=stop.serviceContract?.effectiveState||"missing";const contractSignal=contractState==="active"?"":`contract ${contractState}`;
+    const signalText = [signals.openIncidents ? `${signals.openIncidents} incident${signals.openIncidents === 1 ? "" : "s"}` : "", signals.activeSensorAlerts ? `${signals.activeSensorAlerts} sensor alert${signals.activeSensorAlerts === 1 ? "" : "s"}` : "",contractSignal].filter(Boolean).join(" · ") || "No open signals";
+    button.innerHTML = `<strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.clientName || stop.client?.name || stop.clientId)}</span><span>${escapeHtml(stop.due || "Scheduled")} · ${escapeHtml(stop.priority || "normal")} · ${stop.modules?.length || 0} modules</span><small class="stop-contract">${stop.serviceContract?`${escapeHtml(stop.serviceContract.planName)} · ${escapeHtml(stop.serviceContract.serviceWindow)}`:"No service contract"}</small><small class="stop-signal ${signalText === "No open signals" ? "quiet" : "attention"}">${escapeHtml(signalText)}</small>`;
     button.onclick = () => { activeRemediationTask = null; selectStop(stop, reminders.find((item) => item.workorderId === stop.workOrderId && item.sourceType === "workorder")); renderRemediationTasks(); };
     list.append(button);
   });

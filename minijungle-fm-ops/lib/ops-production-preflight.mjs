@@ -43,6 +43,9 @@ const requiredTables = [
   "ops_inventory_lot_transactions",
   "ops_inventory_stock_counts",
   "ops_inventory_stock_count_lines",
+  "ops_service_contracts",
+  "ops_service_contract_assets",
+  "ops_service_contract_events",
   "ops_reliability_jobs",
   "ops_reliability_runs",
   "ops_reliability_incidents",
@@ -75,6 +78,7 @@ const requiredMigrations = [
   "2026-08-31.postgres-maintenance-planning-v1",
   "2026-09-01.postgres-inventory-route-kit-v1",
   "2026-09-05.postgres-inventory-traceability-v1",
+  "2026-09-06.postgres-service-contracts-v1",
   "2026-09-02.postgres-reliability-center-v1",
   "2026-09-03.postgres-module-commissioning-v1",
   "2026-09-04.postgres-device-lifecycle-v1"
@@ -175,14 +179,16 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.inventory?.backend,
     storage.body?.reliability?.backend,
     storage.body?.commissioning?.backend,
-    storage.body?.deviceLifecycle?.backend
+    storage.body?.deviceLifecycle?.backend,
+    storage.body?.serviceContracts?.backend
   ].filter(Boolean);
   const maintenancePlanningObserved = /postgres/i.test(String(storage.body?.maintenancePlanning?.backend || ""));
   const inventoryObserved = /postgres/i.test(String(storage.body?.inventory?.backend || ""));
   const reliabilityObserved = /postgres/i.test(String(storage.body?.reliability?.backend || ""));
   const commissioningObserved = /postgres/i.test(String(storage.body?.commissioning?.backend || ""));
   const deviceLifecycleObserved = /postgres/i.test(String(storage.body?.deviceLifecycle?.backend || ""));
-  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved && reliabilityObserved && commissioningObserved && deviceLifecycleObserved;
+  const serviceContractsObserved = /postgres/i.test(String(storage.body?.serviceContracts?.backend || ""));
+  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved && reliabilityObserved && commissioningObserved && deviceLifecycleObserved && serviceContractsObserved;
   const status = ready.status === 200 && storage.status === 200 && ready.body?.status === "ready" && postgresStorage ? "verified" : "failed";
   return {
     status,
@@ -195,6 +201,7 @@ async function probeService(serviceUrl, headers = {}) {
     reliabilityObserved,
     commissioningObserved,
     deviceLifecycleObserved,
+    serviceContractsObserved,
     postgresStorage,
     reason: status === "verified" ? null : "Service readiness or PostgreSQL-backed storage observation failed"
   };
