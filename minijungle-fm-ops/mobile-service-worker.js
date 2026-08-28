@@ -1,5 +1,5 @@
-const CACHE = "dr-forest-field-v4";
-const SHELL = ["/mobile.html", "/mobile.css", "/mobile-extra.css", "/mobile-inventory.css", "/mobile-commissioning.css", "/mobile.js", "/mobile-manifest.json", "/assets/dr-forest-logo.png"];
+const CACHE = "dr-forest-field-v5";
+const SHELL = ["/mobile.html", "/mobile.css", "/mobile-extra.css", "/mobile-inventory.css", "/mobile-commissioning.css", "/mobile-device-lifecycle.css", "/mobile.js", "/mobile-manifest.json", "/assets/dr-forest-logo.png"];
 self.addEventListener("install", (event) => { event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener("activate", (event) => { event.waitUntil(caches.keys().then((keys) => Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))).then(() => self.clients.claim())); });
 self.addEventListener("fetch", (event) => {

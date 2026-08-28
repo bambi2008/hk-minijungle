@@ -9,6 +9,7 @@ const maintenanceImportState = { batch: null };
 const workforceState = { candidates: [], serviceDate: "", taskIds: [] };
 const maintenancePlanningState = { calendar: null };
 const inventoryState = { overview: null };
+const deviceCareState = { records: [] };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -47,6 +48,13 @@ function renderReliability(payload = {}) {
   $("#reliability-list").innerHTML=jobs.length?jobs.map((job)=>`<article class="reliability-item"><div><strong>${escapeHtml(job.label)}</strong><span>Expected every ${escapeHtml(intervalLabel(job.expectedIntervalSeconds))} · stale after ${escapeHtml(intervalLabel(job.staleAfterSeconds))}</span><small>${escapeHtml(job.lastFinishedAt?`Last ${job.lastStatus} ${formatTime(job.lastFinishedAt)}${job.lastDurationMs!==null?` · ${job.lastDurationMs}ms`:""}`:job.reason)}</small></div><b class="reliability-state ${escapeHtml(job.state)}">${escapeHtml(job.state.replaceAll("_"," "))}</b></article>`).join(""):"<p class=\"empty\">No background jobs registered.</p>";
 }
 function renderCommissioningSummary(payload = {}) { $("#commissioning-gap-count").textContent = Number(payload.summary?.actionRequired || 0); }
+function renderDeviceCare(payload = {}) {
+  deviceCareState.records = payload.records || [];
+  const summary = payload.summary || {};
+  $("#device-care-state").textContent = `${Number(summary.actionRequired || 0)} action · ${Number(summary.calibrationDue || 0)} due · ${Number(summary.fault || 0) + Number(summary.quarantined || 0)} fault`;
+  const ordered = [...deviceCareState.records].sort((a, b) => Number(b.profileStatus === "unmanaged" || ["due", "fault", "quarantined"].includes(b.calibrationState) || ["fault", "quarantined"].includes(b.status)) - Number(a.profileStatus === "unmanaged" || ["due", "fault", "quarantined"].includes(a.calibrationState) || ["fault", "quarantined"].includes(a.status)));
+  $("#device-care-list").innerHTML = ordered.slice(0, 30).map((record) => { const state = record.profileStatus === "unmanaged" ? "unmanaged" : ["fault", "quarantined"].includes(record.status) ? record.status : record.calibrationState; const due = record.nextCalibrationDueAt ? `Calibration ${formatTime(record.nextCalibrationDueAt)}` : "Calibration not scheduled"; return `<article class="device-care-item"><div><strong>${escapeHtml(record.label)} · ${escapeHtml(record.type.toUpperCase())}</strong><span>${escapeHtml(record.moduleId || record.wallId)} · ${escapeHtml(record.serialNumber || "Physical profile missing")}</span><small>${escapeHtml(due)} · registry ${escapeHtml(record.registryStatus)}${record.lastSeenAt ? ` · seen ${escapeHtml(formatTime(record.lastSeenAt))}` : " · no heartbeat"}</small></div><div class="device-care-actions"><b class="device-care-state ${escapeHtml(state)}">${escapeHtml(state.replaceAll("_", " "))}</b><button type="button" data-device-care="${escapeHtml(record.deviceId)}">${record.profileStatus === "unmanaged" ? "Create profile" : "Record action"}</button></div></article>`; }).join("") || "<p class=\"empty\">No registered devices.</p>";
+}
 function dispatchSlaLabel(task) { return task.sla?.level ? `SLA L${task.sla.level} · ${Number(task.sla.overdueHours || 0).toFixed(1)}h overdue` : task.sla?.state === "due_soon" ? `Due in ${Number(task.sla.dueInHours || 0).toFixed(1)}h` : task.sla?.state === "scheduled" ? "Scheduled" : "No due time"; }
 function localDateValue(value = new Date()) { const date = value instanceof Date ? value : new Date(value); const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0, 10); }
 function setTechnicianOptions(selector, candidates, emptyLabel) {
@@ -158,7 +166,7 @@ async function load() {
   if (!$("#workforce-date").value) $("#workforce-date").value = localDateValue();
   if (!$("#maintenance-through-date").value) $("#maintenance-through-date").value = localDateValue(new Date(Date.now() + 30 * 86400000));
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -177,6 +185,7 @@ async function load() {
   renderNotifications(notifications.notifications || [], notifications.summary || {});
   renderReliability(reliability);
   renderCommissioningSummary(commissioning);
+  renderDeviceCare(deviceLifecycle);
   renderTimeline(timeline);
   renderQuality(quality);
   renderDispatchQueue(dispatch);
@@ -189,7 +198,24 @@ async function load() {
 }
 const aiReviewDialog = $("#ai-review-dialog");
 const remediationDialog = $("#remediation-dialog");
+const deviceCareDialog = $("#device-care-dialog");
 function remediationTimeInput(value) { if (!value) return ""; const date = new Date(value); if (Number.isNaN(date.getTime())) return ""; const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0, 16); }
+function openDeviceCare(record) {
+  const profileMode = record.profileStatus === "unmanaged";
+  $("#device-care-id").value = record.deviceId; $("#device-care-updated-at").value = record.updatedAt || ""; $("#device-care-mode").value = profileMode ? "profile" : "action";
+  $("#device-care-title").textContent = profileMode ? "Create service profile" : "Record device action"; $("#device-care-context").textContent = `${record.label} · ${record.deviceId} · ${record.moduleId || record.wallId}`;
+  $("#device-profile-fields").hidden = !profileMode; $("#device-action-fields").hidden = profileMode;
+  $("#device-care-serial").required = profileMode; $("#device-care-serial").value = record.serialNumber || ""; $("#device-care-manufacturer").value = record.manufacturer || ""; $("#device-care-model").value = record.model || ""; $("#device-care-interval").value = record.calibrationIntervalDays || 180; $("#device-care-last-calibrated").value = remediationTimeInput(record.lastCalibratedAt); $("#device-care-warranty").value = remediationTimeInput(record.warrantyExpiresAt);
+  $("#device-care-action").value = ["fault", "quarantined"].includes(record.status) ? "returned_to_service" : "calibrated"; $("#device-care-work-order").value = ""; $("#device-care-evidence").value = ""; $("#device-care-replacement").value = ""; $("#device-care-note").value = ""; $("#device-care-error").textContent = "";
+  deviceCareDialog.showModal();
+}
+async function saveDeviceCare(event) {
+  event.preventDefault(); const deviceId = $("#device-care-id").value; const profileMode = $("#device-care-mode").value === "profile";
+  const body = profileMode ? { serialNumber: $("#device-care-serial").value.trim(), manufacturer: $("#device-care-manufacturer").value.trim() || null, model: $("#device-care-model").value.trim() || null, calibrationIntervalDays: Number($("#device-care-interval").value), lastCalibratedAt: $("#device-care-last-calibrated").value ? new Date($("#device-care-last-calibrated").value).toISOString() : null, warrantyExpiresAt: $("#device-care-warranty").value ? new Date($("#device-care-warranty").value).toISOString() : null, note: $("#device-care-note").value.trim() || null }
+    : { action: $("#device-care-action").value, expectedUpdatedAt: $("#device-care-updated-at").value, workOrderId: $("#device-care-work-order").value.trim() || null, evidenceRef: $("#device-care-evidence").value.trim() || null, replacementDeviceId: $("#device-care-replacement").value.trim() || null, note: $("#device-care-note").value.trim() || null };
+  const button = $("#device-care-submit"); button.disabled = true; $("#device-care-error").textContent = "";
+  try { await api(`/api/device-lifecycle/${encodeURIComponent(deviceId)}/${profileMode ? "profile" : "actions"}`, { method: profileMode ? "PUT" : "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); deviceCareDialog.close(); await load(); $("#device-care-notice").textContent = `${deviceId} ${profileMode ? "profile saved" : "action recorded"}.`; } catch (error) { $("#device-care-error").textContent = error.message; } finally { button.disabled = false; }
+}
 function configureRemediationReview(task = null) {
   const pending = task?.reviewStatus === "pending";
   $("#remediation-review-fields").hidden = !pending;
@@ -267,6 +293,7 @@ $("#refresh").onclick = () => load().catch((error) => { $("#notice").textContent
 $("#reliability-scan").onclick = async () => { const button=$("#reliability-scan"); button.disabled=true; $("#reliability-notice").textContent="Checking scheduled job freshness…"; try { const result=await api("/api/ops/reliability/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}); renderReliability(result); await load(); $("#reliability-notice").textContent=`Check complete · ${result.scan.opened} opened · ${result.scan.recovered} recovered`; } catch(error){$("#reliability-notice").textContent=error.message;} finally{button.disabled=false;} };
 $("#ai-review-cancel").onclick = () => aiReviewDialog.close(); $("#ai-review-form").onsubmit = saveAiReview;
 $("#remediation-cancel").onclick = () => remediationDialog.close(); $("#remediation-form").onsubmit = saveRemediation;
+$("#device-care-cancel").onclick = () => deviceCareDialog.close(); $("#device-care-form").onsubmit = saveDeviceCare;
 $("#dispatch-filter").onchange = renderDispatchTasks;
 $("#dispatch-select-all").onchange = () => { const visible = dispatchState.tasks.filter((task) => $("#dispatch-filter").value === "overdue" ? task.sla?.level > 0 : $("#dispatch-filter").value === "pending" ? task.reviewStatus === "pending" : $("#dispatch-filter").value === "unassigned" ? !task.assignedTo : true); for (const task of visible) { if ($("#dispatch-select-all").checked) dispatchState.selected.add(task.id); else dispatchState.selected.delete(task.id); } renderDispatchTasks(); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
 $("#workforce-date").onchange = () => refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; });
@@ -316,6 +343,8 @@ $("#persist-snapshot").onclick = async () => { const button = $("#persist-snapsh
 $("#verify-snapshot").onclick = async () => { const button = $("#verify-snapshot"); if (!evidenceControlState.latestId) return; button.disabled = true; $("#snapshot-notice").textContent = "Verifying latest snapshot…"; try { const result = await api(`/api/proof/evidence-snapshots/${encodeURIComponent(evidenceControlState.latestId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "Reviewed from FM Lead evidence control." }) }); $("#snapshot-notice").textContent = `${result.snapshotId} verification: ${result.verificationStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = !evidenceControlState.latestId; } };
 $("#sweep-snapshots").onclick = async () => { const button = $("#sweep-snapshots"); button.disabled = true; $("#snapshot-notice").textContent = "Running retention sweep…"; try { const result = await api("/api/proof/evidence-snapshots/retention-sweep", { method: "POST" }); $("#snapshot-notice").textContent = `Retention sweep complete · ${Number(result.expiredCount || 0)} expired`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
 document.addEventListener("click", async (event) => {
+  const deviceCare = event.target.closest("[data-device-care]");
+  if (deviceCare) { const record = deviceCareState.records.find((item) => item.deviceId === deviceCare.dataset.deviceCare); if (record) openDeviceCare(record); return; }
   const button = event.target.closest("[data-maintenance-assign]");
   if (!button) return;
   const workOrderId = button.dataset.maintenanceAssign;

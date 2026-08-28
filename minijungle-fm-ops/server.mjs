@@ -144,6 +144,20 @@ import {
   transitionPostgresCommissioning
 } from "./lib/ops-postgres-commissioning-store.mjs";
 import {
+  applySqliteDeviceLifecycleAction,
+  listSqliteDeviceLifecycle,
+  listSqliteDeviceLifecycleEvents,
+  readSqliteDeviceLifecycleHealth,
+  upsertSqliteDeviceLifecycleProfile
+} from "./lib/ops-device-lifecycle-store.mjs";
+import {
+  applyPostgresDeviceLifecycleAction,
+  listPostgresDeviceLifecycle,
+  listPostgresDeviceLifecycleEvents,
+  readPostgresDeviceLifecycleHealth,
+  upsertPostgresDeviceLifecycleProfile
+} from "./lib/ops-postgres-device-lifecycle-store.mjs";
+import {
   listSqliteDevices,
   listSqliteDeviceCameraCaptures,
   consumeSqliteDeviceReplay,
@@ -502,6 +516,52 @@ async function readCommissioningHealth() {
   return productionMasterDataEnabled()
     ? readPostgresCommissioningHealth(runtimeDbPath)
     : readSqliteCommissioningHealth(runtimeDbPath);
+}
+
+async function listDeviceLifecycle(options = {}) {
+  await listDevices();
+  return productionMasterDataEnabled()
+    ? listPostgresDeviceLifecycle(runtimeDbPath, options)
+    : listSqliteDeviceLifecycle(runtimeDbPath, options);
+}
+
+async function listDeviceLifecycleEvents(deviceId) {
+  await listDevices();
+  return productionMasterDataEnabled()
+    ? listPostgresDeviceLifecycleEvents(runtimeDbPath, deviceId)
+    : listSqliteDeviceLifecycleEvents(runtimeDbPath, deviceId);
+}
+
+async function upsertDeviceLifecycleProfile(deviceId, input) {
+  await listDevices();
+  return productionMasterDataEnabled()
+    ? upsertPostgresDeviceLifecycleProfile(runtimeDbPath, deviceId, input)
+    : upsertSqliteDeviceLifecycleProfile(runtimeDbPath, deviceId, input);
+}
+
+async function applyDeviceLifecycleAction(deviceId, input) {
+  await listDevices();
+  return productionMasterDataEnabled()
+    ? applyPostgresDeviceLifecycleAction(runtimeDbPath, deviceId, input)
+    : applySqliteDeviceLifecycleAction(runtimeDbPath, deviceId, input);
+}
+
+async function readDeviceLifecycleHealth() {
+  await listDevices();
+  return productionMasterDataEnabled()
+    ? readPostgresDeviceLifecycleHealth(runtimeDbPath)
+    : readSqliteDeviceLifecycleHealth(runtimeDbPath);
+}
+
+async function assertFieldDeviceModuleAccess(auth, moduleId, workOrderId = null) {
+  if (auth.roleId !== "field-tech") return;
+  const module = (await listModules()).find((item) => item.id === moduleId);
+  if (!module) throw apiError(404, "device module not found", "DEVICE_LIFECYCLE_MODULE_NOT_FOUND");
+  const dataset = await readMasterDataDataset();
+  const workOrders = dataset.workorders.filter((item) => item.wallId === module.assetId && (!workOrderId || item.id === workOrderId));
+  const assignments = await Promise.all(workOrders.map((item) => readWorkforceAssignment("work-order", item.id)));
+  const allowed = assignments.some((assignment) => assignment && assignment.technicianId === auth.id && assignment.status !== "cancelled");
+  if (!allowed) throw apiError(403, "device module has no matching technician work-order assignment", "DEVICE_LIFECYCLE_ASSIGNMENT_REQUIRED");
 }
 
 const commissioningDeviceTypes = ["temperature", "humidity", "co2", "mc", "camera"];
@@ -2450,6 +2510,78 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/device-lifecycle") {
+      requirePermission(auth, "device.lifecycle.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      const moduleId = url.searchParams.get("moduleId");
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "device lifecycle list");
+      }
+      if (auth.roleId === "field-tech") {
+        if (!moduleId) throw apiError(400, "field technician device lifecycle queries require moduleId", "DEVICE_LIFECYCLE_MODULE_REQUIRED");
+        await assertFieldDeviceModuleAccess(auth, moduleId);
+      }
+      sendJson(res, 200, {
+        generatedAt: new Date().toISOString(),
+        ...(await listDeviceLifecycle({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, wallId, moduleId, status: url.searchParams.get("status"), dueOnly: url.searchParams.get("dueOnly") === "true" }))
+      });
+      return;
+    }
+
+    const deviceLifecycleEventsMatch = pathname.match(/^\/api\/device-lifecycle\/([^/]+)\/events$/);
+    if (req.method === "GET" && deviceLifecycleEventsMatch) {
+      requirePermission(auth, "device.lifecycle.read");
+      const deviceId = decodeURIComponent(deviceLifecycleEventsMatch[1]);
+      const overview = await listDeviceLifecycle({ clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+      const record = overview.records.find((item) => item.deviceId === deviceId);
+      if (!record) throw apiError(404, "device lifecycle record not found in the current scope", "DEVICE_LIFECYCLE_NOT_FOUND");
+      if (auth.roleId === "field-tech") throw apiError(403, "field technicians cannot read the full device audit history", "DEVICE_LIFECYCLE_HISTORY_DENIED");
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), record, events: await listDeviceLifecycleEvents(deviceId) });
+      return;
+    }
+
+    const deviceLifecycleProfileMatch = pathname.match(/^\/api\/device-lifecycle\/([^/]+)\/profile$/);
+    if (req.method === "PUT" && deviceLifecycleProfileMatch) {
+      requirePermission(auth, "device.lifecycle.write");
+      const idempotencyKey = String(req.headers["idempotency-key"] || "").trim();
+      if (!idempotencyKey) throw apiError(428, "Idempotency-Key header is required for device lifecycle changes", "IDEMPOTENCY_KEY_REQUIRED");
+      const deviceId = decodeURIComponent(deviceLifecycleProfileMatch[1]);
+      const existing = (await listDeviceLifecycle()).records.find((item) => item.deviceId === deviceId);
+      if (!existing) throw apiError(404, "device not found", "DEVICE_LIFECYCLE_DEVICE_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "device lifecycle profile");
+      const result = await upsertDeviceLifecycleProfile(deviceId, { ...(await readJsonBody(req)), actorId: auth.id, actorName: auth.name, idempotencyKey });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "device.lifecycle.profile-saved", actor: auth.name, entityType: "device", entityId: deviceId, clientId: result.record.clientId, wallId: result.record.wallId, source: "device-lifecycle", note: `Service profile saved for ${deviceId}.`, payload: { principalId: auth.id, serialNumber: result.record.serialNumber, calibrationIntervalDays: result.record.calibrationIntervalDays } });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, lifecycleEvent: result.event, event });
+      return;
+    }
+
+    const deviceLifecycleActionMatch = pathname.match(/^\/api\/device-lifecycle\/([^/]+)\/actions$/);
+    if (req.method === "POST" && deviceLifecycleActionMatch) {
+      requirePermission(auth, "device.lifecycle.field");
+      const idempotencyKey = String(req.headers["idempotency-key"] || "").trim();
+      if (!idempotencyKey) throw apiError(428, "Idempotency-Key header is required for device lifecycle changes", "IDEMPOTENCY_KEY_REQUIRED");
+      const deviceId = decodeURIComponent(deviceLifecycleActionMatch[1]);
+      const input = await readJsonBody(req);
+      const existing = (await listDeviceLifecycle()).records.find((item) => item.deviceId === deviceId);
+      if (!existing) throw apiError(404, "device lifecycle record not found", "DEVICE_LIFECYCLE_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "device lifecycle action");
+      if (auth.roleId === "field-tech") {
+        if (!["calibrated", "fault_reported"].includes(String(input.action || "").trim().toLowerCase())) throw apiError(403, "field technician may only record calibration or report a fault", "DEVICE_LIFECYCLE_ACTION_DENIED");
+        if (!input.workOrderId) throw apiError(400, "field device action requires workOrderId", "DEVICE_LIFECYCLE_WORKORDER_REQUIRED");
+        await assertFieldDeviceModuleAccess(auth, existing.moduleId, input.workOrderId);
+      } else if (!["calibrated", "fault_reported"].includes(String(input.action || "").trim().toLowerCase())) {
+        requirePermission(auth, "device.lifecycle.write");
+      }
+      const result = await applyDeviceLifecycleAction(deviceId, { ...input, actorId: auth.id, actorName: auth.name, idempotencyKey });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: `device.lifecycle.${result.event.action}`, actor: auth.name, entityType: "device", entityId: deviceId, clientId: result.record.clientId, wallId: result.record.wallId, source: "device-lifecycle", note: result.event.note || `${deviceId} recorded ${result.event.action}.`, payload: { principalId: auth.id, moduleId: result.record.moduleId, fromStatus: result.event.fromStatus, toStatus: result.event.toStatus, workOrderId: result.event.workOrderId, evidenceRef: result.event.evidenceRef, replacementDeviceId: result.event.replacementDeviceId } });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, 200, { ...result, lifecycleEvent: result.event, event });
+      return;
+    }
+
     if (req.method === "POST" && pathname === "/api/device-ingestion/readings") {
       const input = await readJsonBody(req);
       const device = await authenticateDeviceRequest(req);
@@ -3280,7 +3412,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -3297,7 +3429,8 @@ async function handleApi(req, res, pathname) {
         readIntegrationStorageHealth(),
         readWorkforceStorageHealth(),
         readReliabilityHealth(),
-        readCommissioningHealth()
+        readCommissioningHealth(),
+        readDeviceLifecycleHealth()
       ]);
       const [maintenancePlanningStorage, inventoryStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth()]);
       sendJson(res, 200, {
@@ -3320,7 +3453,8 @@ async function handleApi(req, res, pathname) {
         maintenancePlanning: maintenancePlanningStorage,
         inventory: inventoryStorage,
         reliability: reliabilityStorage,
-        commissioning: commissioningStorage
+        commissioning: commissioningStorage,
+        deviceLifecycle: deviceLifecycleStorage
       });
       return;
     }

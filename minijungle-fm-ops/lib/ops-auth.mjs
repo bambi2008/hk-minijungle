@@ -73,6 +73,9 @@ const roleDefinitions = {
       ,"commissioning.write"
       ,"commissioning.install"
       ,"commissioning.verify"
+      ,"device.lifecycle.read"
+      ,"device.lifecycle.write"
+      ,"device.lifecycle.field"
     ],
     actionTypes: ["*"]
   },
@@ -109,6 +112,8 @@ const roleDefinitions = {
       ,"ai.diagnosis.request"
       ,"commissioning.read"
       ,"commissioning.install"
+      ,"device.lifecycle.read"
+      ,"device.lifecycle.field"
     ],
     actionTypes: [
       "workorder.complete",

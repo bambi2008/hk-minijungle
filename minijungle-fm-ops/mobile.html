@@ -11,6 +11,7 @@
   <link rel="stylesheet" href="mobile-extra.css">
   <link rel="stylesheet" href="mobile-inventory.css">
   <link rel="stylesheet" href="mobile-commissioning.css">
+  <link rel="stylesheet" href="mobile-device-lifecycle.css">
 </head>
 <body>
   <main class="shell">
@@ -39,6 +40,7 @@
       <label>Module / MODULE<select id="module"><option value="">Whole wall / no module</option></select></label>
       <div id="module-status" class="module-status" aria-live="polite"><span>No module selected</span></div>
       <div id="commissioning-mobile" class="commissioning-mobile" hidden><div class="commissioning-mobile-heading"><div><strong id="commissioning-mobile-state">UNPLANNED</strong><small id="commissioning-mobile-identity">No physical identity</small></div></div><div id="commissioning-install-checks" hidden><label class="check-row"><input id="install-identity" type="checkbox"><span>Identity label matched</span></label><label class="check-row"><input id="install-mount" type="checkbox"><span>Mount and position checked</span></label><label class="check-row"><input id="install-water" type="checkbox"><span>Water circuit checked</span></label><label class="check-row"><input id="install-electrical" type="checkbox"><span>Electrical safety checked</span></label><button id="commissioning-install" type="button">Confirm installation</button></div></div>
+      <div id="device-care-mobile" class="device-care-mobile" hidden><div class="commissioning-mobile-heading"><div><strong>DEVICE CARE</strong><small id="device-care-mobile-state">No managed devices</small></div></div><div id="device-care-mobile-list"></div><div id="device-care-mobile-form" hidden><label>Device<select id="device-care-mobile-device"></select></label><label>Action<select id="device-care-mobile-action"><option value="calibrated">Record calibration</option><option value="fault_reported">Report fault</option></select></label><label>Evidence reference<input id="device-care-mobile-evidence" placeholder="Certificate or capture ID"></label><label>Note<textarea id="device-care-mobile-note" rows="2" placeholder="Observed condition or test result"></textarea></label><button id="device-care-mobile-submit" type="button">Submit device record</button></div></div>
       <label>Water added (L)<input id="water" type="number" min="0" max="200" step="0.1" value="0"></label>
       <label>Nutrient added (ml)<input id="nutrient" type="number" min="0" max="2000" step="1" value="0"></label>
       <div class="consumable-grid"><label>Replacement pods<input id="replacement-pods" type="number" min="0" max="100" step="1" value="0"></label><label>Xponge sleeves<input id="xponge-sleeves" type="number" min="0" max="100" step="1" value="0"></label></div>

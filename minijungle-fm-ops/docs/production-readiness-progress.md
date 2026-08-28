@@ -876,3 +876,22 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local lifecycle controls.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 61 - Device Calibration, Fault and Replacement Lifecycle v1
+
+- Official production operations readiness remains **65%**. This closes another local control gap, but the managed PostgreSQL and independently evidenced off-host restore hard cap remains binding.
+- Persistence added: SQLite migration `2026-09-04.device-lifecycle-v1` and PostgreSQL migration `2026-09-04.postgres-device-lifecycle-v1` add one physical service profile per registered device and an immutable event history. Deployment SQL is `infra/postgres/013_device_lifecycle.sql`.
+- Physical control added: temperature, humidity, CO2, MC, camera and gateway devices can carry a unique serial, maker/model, warranty date, calibration interval, last calibration and next due date. Generated simulator endpoints remain explicitly `unmanaged` until an FM Lead records a checked physical identity.
+- Workflow added: FM Lead can create a profile, quarantine, restore, replace or retire. A field technician can record an evidence-backed calibration or report a fault from the selected module on the phone. Fault/quarantine removes the endpoint from active service; an FM-reviewed return restores it.
+- Authorization added: technician device actions require a specific work order that was assigned to that principal. Controlled after-visit entry remains possible after completion, while cancelled or unrelated work is denied. Client and ESG roles cannot read internal device-service controls.
+- Concurrency and traceability added: every write requires idempotency and expected-version protection. Replacement must remain inside the same client, wall, module and device type; the former asset record becomes terminal instead of being overwritten.
+- Experience added: Ops Today exposes one bounded action queue ordered around missing profiles, calibration due and faults. The existing module visit form adds a compact Device Care block; there is no new mobile navigation level.
+- Production gate added: preflight now requires both device lifecycle tables, migration `013` and PostgreSQL-backed lifecycle storage. Production evidence reporting includes the subdomain and refuses to report complete PostgreSQL observation when it is absent.
+- Evidence added: store smoke proves due-date calculation, replay, certificate requirement, fault isolation, reviewed recovery, replacement scope, terminal records and FK integrity. API smoke covers role denial, technician assignment, calibration evidence, stale-write rejection and audit history. Playwright covers FM profile creation and technician phone calibration at 390px.
+- Honest boundary: no real hardware serials, traceable reference instruments, calibration certificates, managed PostgreSQL deployment, off-host restore or repeated live device service cycles are evidenced in this workspace.
+
+### Current Honest Score After Step 61
+
+- Production operations readiness: **65%**. No score increase is claimed from local lifecycle controls.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

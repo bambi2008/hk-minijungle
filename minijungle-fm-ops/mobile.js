@@ -11,6 +11,7 @@ let activeReminder = null;
 let activeRemediationTask = null;
 let selectedModule = null;
 let selectedCommissioning = null;
+let selectedDeviceLifecycle = [];
 
 const $ = (selector) => document.querySelector(selector);
 const headers = { "Content-Type": "application/json", "x-dr-forest-principal": principal };
@@ -228,24 +229,30 @@ async function loadModuleStatus() {
   selectedModule = selected?.modules?.find((module) => module.id === moduleId) || null;
   if (!moduleId || !selected) {
     selectedCommissioning = null;
+    selectedDeviceLifecycle = [];
     $("#module-status").innerHTML = "<span>No module selected</span>";
     $("#commissioning-mobile").hidden = true;
+    $("#device-care-mobile").hidden = true;
     return;
   }
   renderModuleStatus();
   selectedCommissioning = null;
   try {
-    const [body, commissioning] = await Promise.all([
+    const [body, commissioning, deviceLifecycle] = await Promise.all([
       json(`/api/modules?wallId=${encodeURIComponent(selected.wallId)}`, { headers }),
-      json(`/api/commissioning?wallId=${encodeURIComponent(selected.wallId)}`, { headers })
+      json(`/api/commissioning?wallId=${encodeURIComponent(selected.wallId)}`, { headers }),
+      json(`/api/device-lifecycle?moduleId=${encodeURIComponent(moduleId)}`, { headers })
     ]);
     selectedModule = (body.modules || []).find((module) => module.id === moduleId) || null;
     selectedCommissioning = (commissioning.records || []).find((record) => record.moduleId === moduleId) || null;
+    selectedDeviceLifecycle = deviceLifecycle.records || [];
     renderModuleStatus();
     renderModuleCommissioning();
+    renderMobileDeviceCare();
   } catch {
     renderModuleStatus();
     renderModuleCommissioning();
+    renderMobileDeviceCare();
   }
 }
 
@@ -284,6 +291,28 @@ async function confirmCommissioningInstallation() {
   try {
     const result = await json(`/api/commissioning/${encodeURIComponent(selectedCommissioning.moduleId)}`, { method: "PATCH", headers: { ...headers, "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ toStatus: "installed", expectedUpdatedAt: selectedCommissioning.updatedAt, checklist, note: "Installation checks completed from technician mobile." }) });
     selectedCommissioning = result.record; renderModuleCommissioning(); setState("Installation recorded · FM verification pending");
+  } catch (error) { setState(error.message, "error"); } finally { button.disabled = false; }
+}
+
+function renderMobileDeviceCare() {
+  const panel = $("#device-care-mobile");
+  if (!selectedModule || !selectedDeviceLifecycle.length) { panel.hidden = true; return; }
+  panel.hidden = false;
+  const managed = selectedDeviceLifecycle.filter((record) => record.profileStatus === "managed" && !["replaced", "retired"].includes(record.status));
+  $("#device-care-mobile-state").textContent = `${managed.length}/${selectedDeviceLifecycle.length} managed`;
+  $("#device-care-mobile-list").innerHTML = selectedDeviceLifecycle.map((record) => { const state = ["fault", "quarantined"].includes(record.status) ? record.status : record.calibrationState; return `<div class="device-care-mobile-item"><strong>${escapeHtml(record.type.toUpperCase())} · ${escapeHtml(record.label)}</strong><small>${escapeHtml(record.serialNumber || "Service profile missing")} · registry ${escapeHtml(record.registryStatus)}</small><b class="${escapeHtml(state)}">${escapeHtml(state.replaceAll("_", " "))}</b></div>`; }).join("");
+  const form = $("#device-care-mobile-form"); form.hidden = !managed.length;
+  $("#device-care-mobile-device").innerHTML = managed.map((record) => `<option value="${escapeHtml(record.deviceId)}">${escapeHtml(record.type.toUpperCase())} · ${escapeHtml(record.label)}</option>`).join("");
+}
+
+async function submitMobileDeviceCare(event) {
+  event.preventDefault();
+  const deviceId = $("#device-care-mobile-device").value; const record = selectedDeviceLifecycle.find((item) => item.deviceId === deviceId); if (!record || !selected) return;
+  const action = $("#device-care-mobile-action").value; const evidenceRef = $("#device-care-mobile-evidence").value.trim(); const note = $("#device-care-mobile-note").value.trim();
+  const button = $("#device-care-mobile-submit"); button.disabled = true;
+  try {
+    const result = await json(`/api/device-lifecycle/${encodeURIComponent(deviceId)}/actions`, { method: "POST", headers: { ...headers, "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ action, expectedUpdatedAt: record.updatedAt, workOrderId: selected.workOrderId, evidenceRef: evidenceRef || null, note: note || null }) });
+    selectedDeviceLifecycle = selectedDeviceLifecycle.map((item) => item.deviceId === deviceId ? result.record : item); $("#device-care-mobile-evidence").value = ""; $("#device-care-mobile-note").value = ""; renderMobileDeviceCare(); setState(`${record.type.toUpperCase()} ${action.replaceAll("_", " ")} recorded`);
   } catch (error) { setState(error.message, "error"); } finally { button.disabled = false; }
 }
 
@@ -410,6 +439,7 @@ $("#queue").onclick = () => submit(true);
 $("#module").onchange = () => loadModuleStatus();
 $("#asset-code-form").addEventListener("submit", (event) => { event.preventDefault(); resolveModuleCode($("#asset-code").value).catch((error) => $("#asset-code-result").textContent = error.message); });
 $("#commissioning-install").onclick = () => confirmCommissioningInstallation();
+$("#device-care-mobile-submit").onclick = submitMobileDeviceCare;
 $("#refresh").onclick = () => load().catch((error) => setState(error.message, "error"));
 $("#flush-queue").onclick = () => flushQueue();
 window.addEventListener("online", () => load().then((loaded) => loaded ? flushQueue() : null).catch((error) => setState(error.message, "error")));

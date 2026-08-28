@@ -44,6 +44,22 @@ async function main() {
       assert(await operations.locator(".reliability-item").count() === 5, "Operations page did not render the five monitored background jobs");
       assert((await operations.locator("#reliability-state").textContent()).includes("at risk"), "Operations page did not render reliability summary");
       assert(await operations.locator("#commissioning-gap-count").textContent() === "12", "Operations summary should expose all generated modules as commissioning gaps");
+      assert(await operations.locator(".device-care-item").count() === 30, "Operations page did not render the bounded device service queue");
+      assert((await operations.locator("#device-care-state").textContent()).includes("60 action"), "Operations page did not expose unmanaged device profiles as action items");
+      const firstDeviceCare = operations.locator("[data-device-care]").first();
+      let managedDeviceId = await firstDeviceCare.getAttribute("data-device-care");
+      await firstDeviceCare.click();
+      assert(await operations.locator("#device-profile-fields").isVisible(), "Unmanaged device did not open the physical service profile form");
+      await operations.locator("#device-care-serial").fill("DRF-UI-DEVICE-001");
+      await operations.locator("#device-care-manufacturer").fill("DR FOREST");
+      await operations.locator("#device-care-model").fill("UI-SENSOR-V1");
+      await operations.locator("#device-care-interval").fill("180");
+      await operations.locator("#device-care-note").fill("Physical device identity checked during UI smoke.");
+      await operations.locator("#device-care-submit").click();
+      await operations.waitForFunction(() => document.querySelector("#device-care-notice")?.textContent.includes("profile saved"), null, { timeout: 15000 });
+      const managedDeviceResponse = await fetch(`${baseUrl}/api/device-lifecycle`, { headers: { "x-dr-forest-principal": "fm-lead" } });
+      const managedDeviceBody = await managedDeviceResponse.json();
+      assert(managedDeviceBody.records.some((record) => record.deviceId === managedDeviceId && record.serialNumber === "DRF-UI-DEVICE-001"), "Saved device service profile did not persist in the lifecycle ledger");
       await operations.locator("#inventory-sku").selectOption("NUT-A");
       await operations.locator("#inventory-quantity").fill("500");
       await operations.locator("#inventory-destination").selectOption("kit-field-tech-show-suite");
@@ -132,6 +148,16 @@ async function main() {
       const mobileQuality = await mobileQualityResponse.json();
       const mobileSeed = mobileQuality.moduleReadiness.find((item) => item.clientId === "show-suite");
       assert(mobileSeed, "UI smoke could not find a show-suite module for mobile remediation");
+      const mobileDeviceResponse = await fetch(`${baseUrl}/api/device-lifecycle?moduleId=${encodeURIComponent(mobileSeed.moduleId)}`, { headers: { "x-dr-forest-principal": "fm-lead" } });
+      const mobileDeviceBody = await mobileDeviceResponse.json();
+      let mobileManagedDevice = mobileDeviceBody.records.find((record) => record.profileStatus === "managed");
+      if (!mobileManagedDevice) {
+        const candidate = mobileDeviceBody.records.find((record) => record.type === "temperature") || mobileDeviceBody.records[0];
+        const profileResponse = await fetch(`${baseUrl}/api/device-lifecycle/${encodeURIComponent(candidate.deviceId)}/profile`, { method: "PUT", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "fm-lead", "Idempotency-Key": "device-profile-ui-mobile-001" }, body: JSON.stringify({ serialNumber: "DRF-UI-MOBILE-DEVICE-001", manufacturer: "DR FOREST", model: "MOBILE-SENSOR-V1", calibrationIntervalDays: 180, note: "Profile prepared for technician phone smoke." }) });
+        assert(profileResponse.status === 201, "UI smoke could not prepare a managed device on the technician module");
+        mobileManagedDevice = (await profileResponse.json()).record;
+      }
+      managedDeviceId = mobileManagedDevice.deviceId;
       const mobileTaskCreate = await fetch(`${baseUrl}/api/remediation/tasks`, { method: "POST", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "fm-lead" }, body: JSON.stringify({ moduleId: mobileSeed.moduleId, sourceKey: mobileSeed.status, reasons: mobileSeed.reasons, priority: "high", assignedTo: "field-tech-show-suite" }) });
       assert(mobileTaskCreate.status === 201, "UI smoke could not create a mobile remediation task");
       const mobileTaskBody = await mobileTaskCreate.json();
@@ -144,6 +170,13 @@ async function main() {
       await mobile.locator("#asset-code").fill("DRF-UI-MOD-001"); await mobile.locator("#asset-code-form button").click();
       await mobile.waitForFunction(() => document.querySelector("#commissioning-mobile-state")?.textContent === "PLANNED", null, { timeout: 10000 });
       assert((await mobile.locator("#asset-code-result").textContent()).includes(mobileSeed.moduleId), "Technician asset-code lookup did not open the assigned physical module");
+      assert(await mobile.locator(`#device-care-mobile-device option[value="${managedDeviceId}"]`).count() === 1, "Desktop-managed device did not appear in the assigned module phone controls");
+      await mobile.locator("#device-care-mobile-device").selectOption(managedDeviceId);
+      await mobile.locator("#device-care-mobile-evidence").fill("CAL-CERT-UI-001");
+      await mobile.locator("#device-care-mobile-note").fill("Reference probe comparison passed from technician phone.");
+      await mobile.locator("#device-care-mobile-submit").click();
+      await mobile.waitForFunction(() => document.querySelector("#sync-state")?.textContent.includes("calibrated recorded"), null, { timeout: 10000 });
+      assert((await mobile.locator("#device-care-mobile-list").textContent()).includes("current"), "Technician calibration did not refresh device care status on the phone");
       for (const selector of ["#install-identity","#install-mount","#install-water","#install-electrical"]) await mobile.locator(selector).check();
       await mobile.locator("#commissioning-install").click();
       await mobile.waitForFunction(() => document.querySelector("#commissioning-mobile-state")?.textContent === "INSTALLED", null, { timeout: 10000 });
