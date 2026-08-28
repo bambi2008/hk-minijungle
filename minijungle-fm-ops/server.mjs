@@ -224,6 +224,21 @@ import {
   upsertPostgresWorkforceAssignment
 } from "./lib/ops-postgres-workforce-store.mjs";
 import {
+  generateSqliteMaintenanceOccurrences,
+  listSqliteMaintenanceOccurrences,
+  listSqliteMaintenancePlans,
+  readSqliteMaintenancePlanningHealth,
+  upsertSqliteMaintenancePlan
+} from "./lib/ops-maintenance-planning-store.mjs";
+import {
+  generatePostgresMaintenanceOccurrences,
+  listPostgresMaintenanceOccurrences,
+  listPostgresMaintenancePlans,
+  readPostgresMaintenancePlanningHealth,
+  upsertPostgresMaintenancePlan
+} from "./lib/ops-postgres-maintenance-planning-store.mjs";
+import { addDays, cadenceDaysFromLabel, dateOnly, legacyNextDue } from "./lib/ops-maintenance-policy.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -692,6 +707,11 @@ async function readWorkforceAssignment(targetType, targetId) { return production
 async function listWorkforceAssignments(options = {}) { return productionMasterDataEnabled() ? listPostgresWorkforceAssignments(runtimeDbPath, options) : listSqliteWorkforceAssignments(runtimeDbPath, options); }
 async function evaluateWorkforceCandidates(input) { return productionMasterDataEnabled() ? evaluatePostgresWorkforceCandidates(runtimeDbPath, input) : evaluateSqliteWorkforceCandidates(runtimeDbPath, input); }
 async function readWorkforceStorageHealth() { return productionMasterDataEnabled() ? readPostgresWorkforceStorageHealth(runtimeDbPath) : readSqliteWorkforceStorageHealth(runtimeDbPath); }
+async function upsertMaintenancePlan(input) { return productionMasterDataEnabled() ? upsertPostgresMaintenancePlan(runtimeDbPath, input) : upsertSqliteMaintenancePlan(runtimeDbPath, input); }
+async function listMaintenancePlans(options = {}) { return productionMasterDataEnabled() ? listPostgresMaintenancePlans(runtimeDbPath, options) : listSqliteMaintenancePlans(runtimeDbPath, options); }
+async function listMaintenanceOccurrences(options = {}) { return productionMasterDataEnabled() ? listPostgresMaintenanceOccurrences(runtimeDbPath, options) : listSqliteMaintenanceOccurrences(runtimeDbPath, options); }
+async function generateMaintenanceOccurrences(input) { return productionMasterDataEnabled() ? generatePostgresMaintenanceOccurrences(runtimeDbPath, input) : generateSqliteMaintenanceOccurrences(runtimeDbPath, input); }
+async function readMaintenancePlanningHealth() { return productionMasterDataEnabled() ? readPostgresMaintenancePlanningHealth(runtimeDbPath) : readSqliteMaintenancePlanningHealth(runtimeDbPath); }
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1236,6 +1256,18 @@ function activeWorkorders(workorders) {
   return workorders.filter((item) => String(item.status || "").toLowerCase() !== "completed");
 }
 
+function remediationWorkOrderFor(workorders) {
+  const priorityRank = { critical: 0, high: 1, medium: 2, low: 3 };
+  return activeWorkorders(workorders).sort((left, right) => {
+    const leftPreventive = Boolean(left.sourcePlanId || left.externalSource === "maintenance-plan");
+    const rightPreventive = Boolean(right.sourcePlanId || right.externalSource === "maintenance-plan");
+    if (leftPreventive !== rightPreventive) return leftPreventive ? 1 : -1;
+    const priorityDifference = (priorityRank[String(left.priority || "medium").toLowerCase()] ?? 2) - (priorityRank[String(right.priority || "medium").toLowerCase()] ?? 2);
+    if (priorityDifference) return priorityDifference;
+    return String(left.due || "").localeCompare(String(right.due || ""));
+  })[0] || null;
+}
+
 function hongKongDate(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
   const safeDate = Number.isNaN(date.getTime()) ? new Date() : date;
@@ -1250,6 +1282,62 @@ function serviceDateFor(value) {
   if (text && Number.isFinite(Date.parse(text))) return hongKongDate(text);
   if (/^tomorrow/i.test(text)) return hongKongDate(new Date(Date.now() + 86400000));
   return hongKongDate();
+}
+
+async function ensurePilotMaintenancePlans() {
+  const [walls, clients] = await Promise.all([readJsonData("walls"), readJsonData("clients")]);
+  if (productionConfigReport().production) return;
+  const existing = await listMaintenancePlans({ limit: 1 });
+  if (existing.length) return;
+  const today = hongKongDate();
+  const clientIds = new Set(clients.map((client) => client.id));
+  for (const wall of walls) {
+    if (!clientIds.has(wall.clientId)) continue;
+    await upsertMaintenancePlan({
+      clientId: wall.clientId,
+      wallId: wall.id,
+      serviceType: "Preventive plant care",
+      cadenceDays: cadenceDaysFromLabel(wall.cadence),
+      nextDueDate: legacyNextDue(wall.nextVisit, today),
+      durationMinutes: wall.modules >= 4 ? 120 : wall.modules >= 3 ? 90 : 60,
+      tasks: ["Plant health check", "Water and nutrient check", "Trim and clean", "Fixed-angle proof photo"],
+      requiredSkills: ["plant-care", "visual-diagnosis"],
+      source: "pilot-seed",
+      createdBy: "system:pilot-seed",
+      updatedBy: "system:pilot-seed"
+    });
+  }
+}
+
+async function buildMaintenanceCalendar(auth, { fromDate, throughDate }) {
+  await ensurePilotMaintenancePlans();
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [plans, occurrences, assignments, technicians] = await Promise.all([
+    listMaintenancePlans({ clientIds, limit: 1000 }),
+    listMaintenanceOccurrences({ fromDate, throughDate, clientIds, limit: 1000 }),
+    listWorkforceAssignments({ targetType: "work-order", clientIds, limit: 1000 }),
+    listTechnicians({ status: "active" })
+  ]);
+  const assignmentByWorkOrder = new Map(assignments.map((item) => [item.targetId, item]));
+  const items = occurrences.map((item) => ({ ...item, assignment: assignmentByWorkOrder.get(item.workOrderId) || null }));
+  const activeItems = items.filter((item) => !["Completed", "Cancelled"].includes(item.workOrderStatus));
+  return {
+    generatedAt: new Date().toISOString(),
+    fromDate,
+    throughDate,
+    plans,
+    occurrences: items,
+    technicians,
+    summary: {
+      plans: plans.length,
+      activePlans: plans.filter((item) => item.status === "active").length,
+      overduePlans: plans.filter((item) => item.status === "active" && item.nextDueDate < fromDate).length,
+      dueThrough: plans.filter((item) => item.status === "active" && item.nextDueDate <= throughDate).length,
+      generated: items.length,
+      activeWorkOrders: activeItems.length,
+      unassigned: activeItems.filter((item) => !item.assignment || ["cancelled", "completed"].includes(item.assignment.status)).length
+    }
+  };
 }
 
 function remediationSkills(task) {
@@ -1327,7 +1415,7 @@ async function syncRemediationWorkforceAssignment(task, auth) {
 async function buildActiveWorkOrderContext(auth) {
   const [walls, workorders] = await Promise.all([readJsonData("walls"), readJsonData("workorders")]);
   const scopedWallIds = new Set(walls.filter((wall) => canAccessClient(auth, wall.clientId)).map((wall) => wall.id));
-  return new Map(activeWorkorders(workorders).filter((order) => scopedWallIds.has(order.wallId)).map((order) => [order.wallId, order.id]));
+  return new Map([...scopedWallIds].map((wallId) => [wallId, remediationWorkOrderFor(workorders.filter((order) => order.wallId === wallId))?.id || null]).filter(([, workOrderId]) => workOrderId));
 }
 
 function openIncidents(incidents) {
@@ -1704,7 +1792,7 @@ async function resolveRemediationWorkOrder(auth, module, requestedWorkOrderId = 
     }
     return requested.id;
   }
-  return activeWorkorders(wallWorkorders)[0]?.id || null;
+  return remediationWorkOrderFor(wallWorkorders)?.id || null;
 }
 
 function validationError(message, code = "VALIDATION_ERROR") {
@@ -2714,6 +2802,70 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/maintenance/plans") {
+      requirePermission(auth, "maintenance.plan.read");
+      await ensurePilotMaintenancePlans();
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const plans = await listMaintenancePlans({ status: url.searchParams.get("status") || null, dueBefore: url.searchParams.get("dueBefore") || null, clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: url.searchParams.get("limit") || 500 });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), plans });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/maintenance/plans") {
+      requirePermission(auth, "maintenance.plan.write");
+      const input = await readJsonBody(req);
+      const walls = await readJsonData("walls");
+      const wall = walls.find((item) => item.id === input.wallId);
+      if (!wall) throw apiError(404, "maintenance plan asset not found", "MAINTENANCE_PLAN_ASSET_NOT_FOUND");
+      requireClientAccess(auth, wall.clientId, "maintenance plan");
+      if (input.clientId && input.clientId !== wall.clientId) throw validationError("maintenance plan client and asset do not match", "MAINTENANCE_PLAN_SCOPE_MISMATCH");
+      const result = await upsertMaintenancePlan({ ...input, clientId: wall.clientId, createdBy: auth.id, updatedBy: auth.id, source: input.source || "manual" });
+      const event = normalizeOpsEvent({ type: result.created ? "maintenance.plan.created" : "maintenance.plan.updated", actor: auth.name, entityType: "maintenance-plan", entityId: result.plan.id, clientId: result.plan.clientId, wallId: result.plan.wallId, source: "maintenance-planning", note: `${result.plan.serviceType} every ${result.plan.cadenceDays} day(s), next due ${result.plan.nextDueDate}.`, payload: { principalId: auth.id, cadenceDays: result.plan.cadenceDays, nextDueDate: result.plan.nextDueDate, durationMinutes: result.plan.durationMinutes, status: result.plan.status } });
+      await appendOpsEvent(event);
+      sendJson(res, result.created ? 201 : 200, { ...result, event });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/maintenance/calendar") {
+      requirePermission(auth, "maintenance.plan.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const fromDate = dateOnly(serviceDateFor(url.searchParams.get("fromDate") || hongKongDate()), "fromDate");
+      const throughDate = dateOnly(serviceDateFor(url.searchParams.get("throughDate") || addDays(fromDate, 30)), "throughDate");
+      sendJson(res, 200, await buildMaintenanceCalendar(auth, { fromDate, throughDate }));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/maintenance/generate") {
+      requirePermission(auth, "maintenance.generate");
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      if (!commandKey) throw apiError(428, "Idempotency-Key header is required for maintenance generation", "IDEMPOTENCY_KEY_REQUIRED");
+      const fromDate = dateOnly(serviceDateFor(input.fromDate || hongKongDate()), "fromDate");
+      const throughDate = dateOnly(serviceDateFor(input.throughDate || addDays(fromDate, 30)), "throughDate");
+      const commandPayload = { fromDate, throughDate };
+      const requestHash = createHash("sha256").update(JSON.stringify(commandPayload)).digest("hex");
+      const ownerId = `${auth.id}:${randomUUID()}`;
+      const command = await beginIdempotentCommand({ scope: "maintenance-generation", commandKey, requestHash, ownerId, leaseSeconds: 300 });
+      if (command.duplicate) { sendJson(res, 200, { ...command.response, duplicate: true }); return; }
+      const lease = await acquireJobLease({ jobName: "maintenance-generation", ownerId, leaseSeconds: 300 });
+      if (!lease.acquired) { await abandonIdempotentCommand({ scope: "maintenance-generation", commandKey, ownerId }).catch(() => {}); throw apiError(409, "maintenance generation is already running", "MAINTENANCE_GENERATION_BUSY"); }
+      try {
+        await ensurePilotMaintenancePlans();
+        const result = await generateMaintenanceOccurrences({ fromDate, throughDate, actor: auth.id, runId: `MGR-${randomUUID()}`, clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+        const event = normalizeOpsEvent({ type: "maintenance.workorders.generated", actor: auth.name, entityType: "maintenance-generation", entityId: result.run.id, source: "maintenance-planning", note: `${result.run.generatedCount} preventive work order(s) generated through ${throughDate}.`, payload: { principalId: auth.id, fromDate, throughDate, generatedCount: result.run.generatedCount, skippedCount: result.run.skippedCount, workOrderIds: result.generated.slice(0, 100).map((item) => item.workOrderId) } });
+        await appendOpsEvent(event);
+        const response = { duplicate: false, ...result, event, calendar: await buildMaintenanceCalendar(auth, { fromDate, throughDate }) };
+        await completeIdempotentCommand({ scope: "maintenance-generation", commandKey, ownerId, response });
+        sendJson(res, 201, response);
+      } catch (error) {
+        await abandonIdempotentCommand({ scope: "maintenance-generation", commandKey, ownerId }).catch(() => {});
+        throw error;
+      } finally {
+        await releaseJobLease({ jobName: "maintenance-generation", ownerId }).catch(() => {});
+      }
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/workforce/technicians") {
       requirePermission(auth, "workforce.read");
       const url = new URL(req.url, `http://${host}:${port}`);
@@ -2800,6 +2952,7 @@ async function handleApi(req, res, pathname) {
         readIntegrationStorageHealth(),
         readWorkforceStorageHealth()
       ]);
+      const maintenancePlanningStorage = await readMaintenancePlanningHealth();
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...runtimeStorage,
@@ -2816,7 +2969,8 @@ async function handleApi(req, res, pathname) {
         notifications: notificationStorage,
         evidenceSnapshots: evidenceSnapshotStorage,
         integrations: integrationStorage,
-        workforce: workforceStorage
+        workforce: workforceStorage,
+        maintenancePlanning: maintenancePlanningStorage
       });
       return;
     }

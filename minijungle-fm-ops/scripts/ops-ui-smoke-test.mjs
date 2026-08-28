@@ -38,6 +38,16 @@ async function main() {
       assert((await operations.locator("#dispatch-state").textContent()).includes("active"), "Operations page did not load the remediation dispatch queue");
       assert((await operations.locator("#module-quality-list").textContent()).includes("telemetry incomplete"), "Operations page did not explain the module action reason");
       assert(await operations.locator("[data-remediation-create]").count() === 12, "Operations page did not expose remediation create actions");
+      assert((await operations.locator("#maintenance-state").textContent()).includes("active plans"), "Operations page did not render preventive plan coverage");
+      await operations.locator("#maintenance-generate").click();
+      await operations.waitForFunction(() => document.querySelector("#maintenance-notice")?.textContent.includes("generated ·"), null, { timeout: 15000 });
+      assert(await operations.locator(".maintenance-plan-item").count() > 0, "Preventive generation did not render generated work orders");
+      const showSuiteMaintenance = operations.locator(".maintenance-plan-item").filter({ hasText: "MJ-HK-021" }).first();
+      assert(await showSuiteMaintenance.count() === 1, "Preventive planner did not render a Show Suite work order");
+      await showSuiteMaintenance.locator("[data-maintenance-technician]").selectOption("field-tech-show-suite");
+      await showSuiteMaintenance.locator("[data-maintenance-assign]").click();
+      await operations.waitForFunction(() => document.querySelector("#maintenance-notice")?.textContent.includes("phone route"), null, { timeout: 10000 });
+      assert((await operations.locator("#maintenance-plan-list").textContent()).includes("field-tech-show-suite"), "Preventive work order did not persist its technician assignment");
       assert((await operations.locator("#import-state").textContent()).includes("No preview"), "Operations page did not load the maintenance import control");
       const maintenanceCsv = "record_id,wall_id,service_date,status,priority,technician_id,tasks,notes,updated_at\nui-maint-001,MJ-HK-021,2026-08-29,Completed,medium,field-tech-show-suite,Water check;Photo capture,UI import smoke,2026-08-29T09:00:00+08:00\n";
       await operations.locator("#maintenance-import-file").setInputFiles({ name: "airtable-ui-smoke.csv", mimeType: "text/csv", buffer: Buffer.from(maintenanceCsv) });

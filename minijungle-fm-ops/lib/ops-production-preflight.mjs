@@ -30,6 +30,9 @@ const requiredTables = [
   "ops_maintenance_imports",
   "ops_technicians",
   "ops_workforce_assignments",
+  "ops_maintenance_plans",
+  "ops_maintenance_occurrences",
+  "ops_maintenance_generation_runs",
   "evidence_snapshots"
 ];
 
@@ -51,7 +54,8 @@ const requiredMigrations = [
   "2026-08-27.postgres-remediation-review-loop-v1",
   "2026-08-28.postgres-remediation-dispatch-sla-v1",
   "2026-08-29.postgres-ops-control-import-v1",
-  "2026-08-30.postgres-workforce-dispatch-v1"
+  "2026-08-30.postgres-workforce-dispatch-v1",
+  "2026-08-31.postgres-maintenance-planning-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
@@ -144,9 +148,11 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.notifications?.backend,
     storage.body?.evidenceSnapshots?.backend,
     storage.body?.integrations?.backend,
-    storage.body?.workforce?.backend
+    storage.body?.workforce?.backend,
+    storage.body?.maintenancePlanning?.backend
   ].filter(Boolean);
-  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend));
+  const maintenancePlanningObserved = /postgres/i.test(String(storage.body?.maintenancePlanning?.backend || ""));
+  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved;
   const status = ready.status === 200 && storage.status === 200 && ready.body?.status === "ready" && postgresStorage ? "verified" : "failed";
   return {
     status,
@@ -154,6 +160,7 @@ async function probeService(serviceUrl, headers = {}) {
     storageStatus: storage.status,
     readyBackend,
     storageBackends,
+    maintenancePlanningObserved,
     postgresStorage,
     reason: status === "verified" ? null : "Service readiness or PostgreSQL-backed storage observation failed"
   };

@@ -804,3 +804,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. The managed PostgreSQL/off-host restore hard cap remains active.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 57 - Preventive Maintenance Planning v1
+
+- Official production operations readiness remains **65%**. The managed-PostgreSQL and independently evidenced off-host restore hard cap still binds.
+- Capability added: SQLite migration `2026-08-31.maintenance-planning-v1` and PostgreSQL migration `2026-08-31.postgres-maintenance-planning-v1` add `ops_maintenance_plans`, `ops_maintenance_occurrences` and `ops_maintenance_generation_runs`. Deployment SQL is `infra/postgres/009_maintenance_planning.sql`.
+- Control added: a maximum 90-day generation window creates deterministic ordinary work orders and occurrence records in one database transaction, advances the plan cursor, and refuses runs above 1,000 occurrences.
+- Concurrency added: `Idempotency-Key` replay returns the original response, while a named operations lease prevents concurrent generation across application instances.
+- Workflow added: Ops Today now exposes plan gaps, generated/unassigned work and direct technician assignment. Workforce eligibility remains authoritative; only an active work-order assignment places preventive work on the technician phone route.
+- Migration boundary clarified: Airtable CSV remains the controlled historical-data intake. The maintenance planner is the source for future recurring work.
+- Evidence added: store smoke covers overdue catch-up, cursor advance, duplicate prevention, horizon limits and relationship integrity. API and Playwright coverage verify permissions, idempotent generation, calendar visibility, assignment persistence and phone-route handoff.
+- Honest boundary: the feature does not prove scheduler uptime, travel optimization, technician leave integration, auto-assignment, managed PostgreSQL operation, off-host restore, or repeated live field cycles. Those remain production blockers, so the score does not move.
+
+### Current Honest Score After Step 57
+
+- Production operations readiness: **65%**. No score increase is claimed from local feature completion.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

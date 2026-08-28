@@ -7,6 +7,7 @@ const remediationState = { moduleItems: [], task: null };
 const dispatchState = { tasks: [], selected: new Set(), nextCursor: null, summary: {} };
 const maintenanceImportState = { batch: null };
 const workforceState = { candidates: [], serviceDate: "", taskIds: [] };
+const maintenancePlanningState = { calendar: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -51,6 +52,20 @@ function renderWorkforce(payload = {}) {
   $("#workforce-selection").textContent = workforceState.taskIds.length ? `${workforceState.taskIds.length} selected task${workforceState.taskIds.length === 1 ? "" : "s"} · only shared eligible technicians can be assigned` : "Current day capacity before a task is selected.";
   $("#workforce-list").innerHTML = workforceState.candidates.length ? workforceState.candidates.map((item) => `<article class="workforce-item"><div><strong>${escapeHtml(item.technician.displayName)}</strong><span>${escapeHtml(item.technician.skills.join(" · "))} · ${escapeHtml(item.technician.districts.join(" · "))}</span><small>${item.workload.allocatedMinutes}m allocated · ${item.workload.remainingMinutes}m remaining · shift ${escapeHtml(item.technician.shiftStart)}-${escapeHtml(item.technician.shiftEnd)}</small></div><b class="${item.eligible ? "ready" : "blocked"}">${item.eligible ? "Eligible" : escapeHtml(item.reasons[0] || "Blocked")}</b></article>`).join("") : "<p class=\"empty\">No technicians registered.</p>";
   setTechnicianOptions("#dispatch-assigned-to", workforceState.candidates, "No change"); setTechnicianOptions("#remediation-assigned-to", workforceState.candidates, "Unassigned");
+}
+function renderMaintenancePlanning(payload = {}) {
+  maintenancePlanningState.calendar = payload;
+  const summary = payload.summary || {};
+  const items = (payload.occurrences || []).filter((item) => !["Completed", "Cancelled"].includes(item.workOrderStatus));
+  const technicians = payload.technicians || [];
+  $("#maintenance-plan-count").textContent = Number(summary.overduePlans || 0);
+  $("#maintenance-state").textContent = `${Number(summary.activePlans || 0)} active plans · ${Number(summary.unassigned || 0)} unassigned`;
+  $("#maintenance-plan-state").textContent = Number(summary.overduePlans || 0) ? `${summary.overduePlans} plan gap${summary.overduePlans === 1 ? "" : "s"} need generation` : `${Number(summary.dueThrough || 0)} due through selected horizon`;
+  $("#maintenance-plan-list").innerHTML = items.length ? items.slice(0, 30).map((item) => {
+    const assignment = item.assignment;
+    const options = technicians.map((technician) => `<option value="${escapeHtml(technician.id)}" ${assignment?.technicianId === technician.id ? "selected" : ""}>${escapeHtml(technician.displayName)}</option>`).join("");
+    return `<article class="maintenance-plan-item"><div><strong>${escapeHtml(item.wallId)} · ${escapeHtml(item.serviceType)}</strong><span>${escapeHtml(item.serviceDate)} · ${escapeHtml(item.workOrderId)} · ${escapeHtml(item.workOrderStatus || "Scheduled")}</span><small>${escapeHtml((item.tasks || []).join(" · "))}</small></div><div class="maintenance-assignment"><select data-maintenance-technician="${escapeHtml(item.workOrderId)}" aria-label="Technician for ${escapeHtml(item.workOrderId)}"><option value="">Unassigned</option>${options}</select><button data-maintenance-assign="${escapeHtml(item.workOrderId)}" data-service-date="${escapeHtml(item.serviceDate)}" type="button">${assignment ? "Update" : "Assign"}</button>${assignment ? `<a href="${escapeHtml(fieldLink({ workOrderId: item.workOrderId, wallId: item.wallId }))}">Phone route</a>` : ""}</div><b class="maintenance-state ${assignment ? "assigned" : "unassigned"}">${assignment ? escapeHtml(assignment.technicianId) : "Needs owner"}</b></article>`;
+  }).join("") : "<p class=\"empty\">No generated preventive work orders in this window.</p>";
 }
 async function refreshWorkforceCandidates() {
   const serviceDate = $("#workforce-date").value || localDateValue(); const taskIds = [...dispatchState.selected]; const query = new URLSearchParams({ serviceDate }); if (taskIds.length) query.set("taskIds", taskIds.join(","));
@@ -114,7 +129,9 @@ function renderEvidenceControl(storage, latest = null) { const evidence = storag
 async function load() {
   $("#notice").textContent = "";
   if (!$("#workforce-date").value) $("#workforce-date").value = localDateValue();
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`)]);
+  if (!$("#maintenance-through-date").value) $("#maintenance-through-date").value = localDateValue(new Date(Date.now() + 30 * 86400000));
+  const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`)]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -135,6 +152,7 @@ async function load() {
   renderQuality(quality);
   renderDispatchQueue(dispatch);
   renderWorkforce(workforce);
+  renderMaintenancePlanning(maintenanceCalendar);
   renderMaintenanceImports(maintenanceImports);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
@@ -221,6 +239,16 @@ $("#remediation-cancel").onclick = () => remediationDialog.close(); $("#remediat
 $("#dispatch-filter").onchange = renderDispatchTasks;
 $("#dispatch-select-all").onchange = () => { const visible = dispatchState.tasks.filter((task) => $("#dispatch-filter").value === "overdue" ? task.sla?.level > 0 : $("#dispatch-filter").value === "pending" ? task.reviewStatus === "pending" : $("#dispatch-filter").value === "unassigned" ? !task.assignedTo : true); for (const task of visible) { if ($("#dispatch-select-all").checked) dispatchState.selected.add(task.id); else dispatchState.selected.delete(task.id); } renderDispatchTasks(); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
 $("#workforce-date").onchange = () => refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; });
+$("#maintenance-through-date").onchange = () => load().catch((error) => { $("#maintenance-notice").textContent = error.message; });
+$("#maintenance-generate-form").onsubmit = async (event) => {
+  event.preventDefault();
+  const button = $("#maintenance-generate"); button.disabled = true; $("#maintenance-notice").textContent = "Generating due work orders with duplicate protection…";
+  try {
+    const result = await api("/api/maintenance/generate", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value }) });
+    await load();
+    $("#maintenance-notice").textContent = `${result.run.generatedCount} work order${result.run.generatedCount === 1 ? "" : "s"} generated · ${result.run.skippedCount} already existed`;
+  } catch (error) { $("#maintenance-notice").textContent = error.message; } finally { button.disabled = false; }
+};
 $("#dispatch-due-at").onchange = () => { if ($("#dispatch-due-at").value) $("#workforce-date").value = $("#dispatch-due-at").value.slice(0, 10); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
 $("#dispatch-load-more").onclick = () => loadMoreDispatch().catch((error) => { $("#dispatch-notice").textContent = error.message; });
 $("#dispatch-sla-scan").onclick = async () => { const button = $("#dispatch-sla-scan"); button.disabled = true; $("#dispatch-notice").textContent = "Scanning active SLA deadlines…"; try { const result = await api("/api/remediation/sla-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); await load(); $("#dispatch-notice").textContent = `${result.scanned} scanned · ${result.escalated} newly escalated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
@@ -230,5 +258,19 @@ $("#maintenance-import-apply").onclick = async () => { const batch = maintenance
 $("#persist-snapshot").onclick = async () => { const button = $("#persist-snapshot"); button.disabled = true; $("#snapshot-notice").textContent = "Persisting current evidence package…"; try { const result = await api("/api/proof/evidence-snapshots", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); $("#snapshot-notice").textContent = `${result.snapshotId} persisted · ${result.signatureStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#verify-snapshot").onclick = async () => { const button = $("#verify-snapshot"); if (!evidenceControlState.latestId) return; button.disabled = true; $("#snapshot-notice").textContent = "Verifying latest snapshot…"; try { const result = await api(`/api/proof/evidence-snapshots/${encodeURIComponent(evidenceControlState.latestId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "Reviewed from FM Lead evidence control." }) }); $("#snapshot-notice").textContent = `${result.snapshotId} verification: ${result.verificationStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = !evidenceControlState.latestId; } };
 $("#sweep-snapshots").onclick = async () => { const button = $("#sweep-snapshots"); button.disabled = true; $("#snapshot-notice").textContent = "Running retention sweep…"; try { const result = await api("/api/proof/evidence-snapshots/retention-sweep", { method: "POST" }); $("#snapshot-notice").textContent = `Retention sweep complete · ${Number(result.expiredCount || 0)} expired`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-maintenance-assign]");
+  if (!button) return;
+  const workOrderId = button.dataset.maintenanceAssign;
+  const select = [...document.querySelectorAll("[data-maintenance-technician]")].find((item) => item.dataset.maintenanceTechnician === workOrderId);
+  const technicianId = select?.value;
+  if (!technicianId) { $("#maintenance-notice").textContent = "Choose a technician before assigning."; return; }
+  button.disabled = true;
+  try {
+    await api("/api/workforce/assignments", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ targetType: "work-order", targetId: workOrderId, technicianId, serviceDate: button.dataset.serviceDate }) });
+    await load();
+    $("#maintenance-notice").textContent = `${workOrderId} is now visible on ${technicianId}'s phone route.`;
+  } catch (error) { $("#maintenance-notice").textContent = error.message; button.disabled = false; }
+});
 document.addEventListener("click", async (event) => { const aiStart = event.target.closest("[data-ai-start]"); const aiReview = event.target.closest("[data-ai-review]"); const remediationCreate = event.target.closest("[data-remediation-create]"); const remediationEdit = event.target.closest("[data-remediation-edit]"); if (aiStart) { aiStart.disabled = true; try { await startAiDiagnosis(aiStart.dataset.aiStart); } catch (error) { $("#notice").textContent = error.message; aiStart.disabled = false; } return; } if (aiReview) { const diagnosis = aiReviewState.diagnoses.find((item) => item.id === aiReview.dataset.aiReview); if (diagnosis) openAiReview(diagnosis); return; } if (remediationCreate) { const item = remediationState.moduleItems.find((candidate) => candidate.moduleId === remediationCreate.dataset.remediationCreate); if (item) openRemediationCreate(item); return; } if (remediationEdit) { const item = remediationState.moduleItems.find((candidate) => candidate.moduleId === remediationEdit.dataset.remediationModule); if (item?.remediationTask) openRemediationEdit(item, item.remediationTask); return; } const button = event.target.closest("[data-alert-status]"); if (!button) return; button.disabled = true; try { await api(`/api/telemetry/alerts/${encodeURIComponent(button.dataset.alertStatus)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: button.dataset.nextStatus, resolutionNote: "Handled from Today operations queue." }) }); await load(); } catch (error) { $("#notice").textContent = error.message; button.disabled = false; } });
 load().catch((error) => { $("#notice").textContent = error.message; });

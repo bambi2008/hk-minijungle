@@ -1,5 +1,7 @@
 # Airtable Maintenance Import
 
+> Scope: historical and transitional maintenance records. Future preventive work is controlled by the database-backed maintenance planner documented in `preventive-maintenance-planning.md`.
+
 Use Airtable as the temporary capture surface and DR FOREST OPS as the controlled operational record. The import does not require an Airtable account connection or API token.
 
 ## Recommended Airtable columns

@@ -107,6 +107,7 @@ async function verifyApi(baseUrl) {
   assert(!authPolicy.body.roles["client-viewer"].permissions.includes("proof.media.write"), "Client viewer should not receive proof media write permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("notifications.read"), "FM lead auth policy did not expose notification read permission");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.plan.write") && authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.generate"), "FM lead auth policy did not expose preventive maintenance controls");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.read"), "Auth policy did not expose field mobile remediation read permission");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.update"), "Auth policy did not expose field mobile remediation update permission");
 
@@ -167,6 +168,8 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.workforce.migrationVersion === "2026-08-30.workforce-dispatch-v1", "Storage endpoint did not expose workforce dispatch migration");
   assert(initialStorage.body.workforce.tables.includes("ops_technicians") && initialStorage.body.workforce.tables.includes("ops_workforce_assignments"), "Storage endpoint did not expose workforce roster and assignment tables");
   assert(initialStorage.body.workforce.relationshipIntegrity.unknownTechnicians === 0, "Workforce assignment ledger should not contain unknown technicians");
+  assert(initialStorage.body.maintenancePlanning.migrationVersion === "2026-08-31.maintenance-planning-v1", "Storage endpoint did not expose maintenance planning migration");
+  assert(initialStorage.body.maintenancePlanning.tables.includes("ops_maintenance_plans") && initialStorage.body.maintenancePlanning.tables.includes("ops_maintenance_occurrences") && initialStorage.body.maintenancePlanning.tables.includes("ops_maintenance_generation_runs"), "Storage endpoint did not expose maintenance planning tables");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -1132,6 +1135,29 @@ async function verifyApi(baseUrl) {
   assert(maintenancePortfolio.body.counts.workorders === 5, "Applied Airtable maintenance row did not persist as one work order");
   const clientMaintenanceDenied = await fetchJson(`${baseUrl}api/admin/imports/maintenance`, { headers: principalHeaders("client-show-suite") });
   assert(clientMaintenanceDenied.response.status === 403, "Client viewer should not read maintenance import batches");
+
+  const maintenancePlans = await fetchJson(`${baseUrl}api/maintenance/plans`, { headers: principalHeaders("fm-lead") });
+  assert(maintenancePlans.response.ok && maintenancePlans.body.plans.length === 4, "Pilot maintenance plan initialization should cover every living asset");
+  const maintenanceViewerDenied = await fetchJson(`${baseUrl}api/maintenance/plans`, { headers: principalHeaders("client-show-suite") });
+  assert(maintenanceViewerDenied.response.status === 403, "Client viewer should not read internal maintenance plans");
+  const maintenancePlanUpdate = await fetchJson(`${baseUrl}api/maintenance/plans`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ wallId: "MJ-HK-021", serviceType: "Preventive plant care", cadenceDays: 7, nextDueDate: "2026-08-31", durationMinutes: 90, tasks: ["Plant health check", "Fixed-angle proof photo"], requiredSkills: ["plant-care", "visual-diagnosis"] }) });
+  assert(maintenancePlanUpdate.response.ok && maintenancePlanUpdate.body.plan.nextDueDate === "2026-08-31", "FM Lead should update an asset maintenance plan");
+  const generationWithoutKey = await fetchJson(`${baseUrl}api/maintenance/generate`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ fromDate: "2026-08-31", throughDate: "2026-09-07" }) });
+  assert(generationWithoutKey.response.status === 428, "Maintenance generation should require an idempotency key");
+  const generationHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "api-maintenance-generation-001" };
+  const maintenanceGeneration = await fetchJson(`${baseUrl}api/maintenance/generate`, { method: "POST", headers: generationHeaders, body: JSON.stringify({ fromDate: "2026-08-31", throughDate: "2026-09-07" }) });
+  assert(maintenanceGeneration.response.status === 201 && maintenanceGeneration.body.run.generatedCount > 0, "Maintenance generation should persist due work orders");
+  const duplicateMaintenanceGeneration = await fetchJson(`${baseUrl}api/maintenance/generate`, { method: "POST", headers: generationHeaders, body: JSON.stringify({ fromDate: "2026-08-31", throughDate: "2026-09-07" }) });
+  assert(duplicateMaintenanceGeneration.response.ok && duplicateMaintenanceGeneration.body.duplicate === true && duplicateMaintenanceGeneration.body.run.id === maintenanceGeneration.body.run.id, "Maintenance generation retry should return the original result");
+  const maintenanceCalendar = await fetchJson(`${baseUrl}api/maintenance/calendar?fromDate=2026-07-01&throughDate=2026-09-07`, { headers: principalHeaders("fm-lead") });
+  assert(maintenanceCalendar.response.ok && maintenanceCalendar.body.occurrences.length === maintenanceGeneration.body.run.generatedCount, "Maintenance calendar should expose every generated occurrence");
+  assert(maintenanceCalendar.body.summary.unassigned > 0, "Generated maintenance work orders should remain visibly unassigned until dispatch");
+  const generatedShowSuite = maintenanceCalendar.body.occurrences.find((item) => item.wallId === "MJ-HK-021");
+  assert(generatedShowSuite, "Maintenance calendar should contain a generated show-suite work order");
+  const generatedAssignment = await fetchJson(`${baseUrl}api/workforce/assignments`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ targetType: "work-order", targetId: generatedShowSuite.workOrderId, technicianId: "field-tech-show-suite", serviceDate: generatedShowSuite.serviceDate, estimatedMinutes: 90 }) });
+  assert(generatedAssignment.response.status === 201 && generatedAssignment.body.assignment.targetId === generatedShowSuite.workOrderId, "Generated work order should enter the workforce ledger");
+  const generatedPhoneRoute = await fetchJson(`${baseUrl}api/mobile/route`, { headers: principalHeaders("field-tech-show-suite") });
+  assert(generatedPhoneRoute.response.ok && generatedPhoneRoute.body.route.some((item) => item.workOrderId === generatedShowSuite.workOrderId), "Assigned generated work order should appear on the technician phone route");
 
   const workforceViewerDenied = await fetchJson(`${baseUrl}api/workforce/technicians`, { headers: principalHeaders("client-show-suite") });
   assert(workforceViewerDenied.response.status === 403, "Client viewer should not read the workforce roster");
