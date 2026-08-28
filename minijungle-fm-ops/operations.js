@@ -101,6 +101,22 @@ function renderInventory(payload = {}) {
   if (currentWorkOrder && [...workOrderSelect.options].some((option) => option.value === currentWorkOrder)) workOrderSelect.value = currentWorkOrder;
   const balances = payload.balances || [];
   $("#inventory-list").innerHTML = balances.length ? balances.map((item) => `<article class="inventory-item"><div><strong>${escapeHtml(item.name)} · ${escapeHtml(item.sku)}</strong><span>${escapeHtml(item.onHand)} on hand · ${escapeHtml(item.reserved)} reserved · ${escapeHtml(item.available)} available</span><small>Reorder at ${escapeHtml(item.reorderPoint)} ${escapeHtml(item.unit)}</small></div><div class="inventory-location"><strong>${escapeHtml(item.locationLabel)}</strong><span>${escapeHtml(item.locationKind.replaceAll("-", " "))}</span></div><b class="inventory-level ${item.lowStock ? "low" : ""}">${item.lowStock ? "Low stock" : "Available"}</b></article>`).join("") : "<p class=\"empty\">No inventory balances recorded.</p>";
+  const receiptSku = $("#inventory-receipt-sku"); const currentReceiptSku = receiptSku.value;
+  receiptSku.innerHTML = (payload.items || []).map((item) => `<option value="${escapeHtml(item.sku)}">${escapeHtml(item.name)} · ${escapeHtml(item.unit)}</option>`).join("");
+  if (currentReceiptSku && [...receiptSku.options].some((option) => option.value === currentReceiptSku)) receiptSku.value = currentReceiptSku;
+  const lots = payload.lots || []; const pendingCounts = (payload.stockCounts || []).filter((item) => item.status === "submitted");
+  $("#inventory-trace-state").textContent = `${Number(summary.expiringLots || 0)} expiring · ${pendingCounts.length} count review`;
+  $("#inventory-lot-list").innerHTML = lots.length ? lots.slice(0, 16).map((lot) => `<article class="inventory-item inventory-lot"><div><strong>${escapeHtml(lot.sku)} · ${escapeHtml(lot.lotCode)}</strong><span>${escapeHtml(lot.supplier)} · expires ${escapeHtml(lot.expiryDate)}</span><small>${escapeHtml(lot.id)}</small></div><div class="inventory-location"><strong>${escapeHtml((payload.locations || []).find((item) => item.id === lot.locationId)?.label || lot.locationId)}</strong><span>${escapeHtml(lot.onHand)} ${escapeHtml(lot.unit)}</span></div><b class="inventory-level ${lot.daysToExpiry <= 30 ? "low" : ""}">${lot.daysToExpiry <= 0 ? "Expired" : `${lot.daysToExpiry}d`}</b></article>`).join("") : "<p class=\"empty\">No traceable lots with stock.</p>";
+  $("#inventory-count-list").innerHTML = pendingCounts.length ? pendingCounts.map((count) => `<article class="inventory-count"><div><strong>${escapeHtml(count.id)} · ${escapeHtml(count.locationId)}</strong><span>${escapeHtml(count.countedBy)} · ${escapeHtml(new Date(count.countedAt).toLocaleString())}</span><small>${escapeHtml(count.lines.map((line) => `${line.lotCode} ${line.expectedQuantity}→${line.countedQuantity}`).join(" · "))}</small></div><div class="inventory-count-actions"><input data-count-note="${escapeHtml(count.id)}" aria-label="Review note" placeholder="Review note" maxlength="160"><button type="button" data-count-review="approved" data-count-id="${escapeHtml(count.id)}">Approve</button><button type="button" data-count-review="rejected" data-count-id="${escapeHtml(count.id)}">Reject</button></div></article>`).join("") : "<p class=\"empty\">No stock counts awaiting review.</p>";
+  $("#inventory-count-list").querySelectorAll("[data-count-review]").forEach((button) => button.addEventListener("click", () => reviewInventoryCount(button)));
+}
+async function reviewInventoryCount(button) {
+  const countId = button.dataset.countId; const decision = button.dataset.countReview;
+  const note = document.querySelector(`[data-count-note="${CSS.escape(countId)}"]`)?.value.trim();
+  if (!note) { $("#inventory-notice").textContent = "Add a review note before approving or rejecting the count."; return; }
+  button.disabled = true; $("#inventory-notice").textContent = `${decision === "approved" ? "Applying" : "Rejecting"} counted variance…`;
+  try { await api(`/api/inventory/counts/${encodeURIComponent(countId)}/review`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ decision, note }) }); await load(); $("#inventory-notice").textContent = `Stock count ${countId} ${decision}.`; }
+  catch (error) { $("#inventory-notice").textContent = error.message; button.disabled = false; }
 }
 async function refreshWorkforceCandidates() {
   const serviceDate = $("#workforce-date").value || localDateValue(); const taskIds = [...dispatchState.selected]; const query = new URLSearchParams({ serviceDate }); if (taskIds.length) query.set("taskIds", taskIds.join(","));
@@ -332,6 +348,14 @@ $("#inventory-action-form").onsubmit = async (event) => {
     $("#inventory-notice").textContent = action === "reserve" ? `${quantity} ${sku} reserved for ${workOrderId}.` : `${quantity} ${sku} loaded to route kit.`;
     $("#inventory-quantity").value = "";
   } catch (error) { $("#inventory-notice").textContent = error.message; } finally { button.disabled = false; }
+};
+$("#inventory-receipt-form").onsubmit = async (event) => {
+  event.preventDefault(); const overview = inventoryState.overview || {}; const warehouse = (overview.locations || []).find((item) => item.kind === "warehouse");
+  if (!warehouse) { $("#inventory-notice").textContent = "Warehouse location is not configured."; return; }
+  const body = { locationId: warehouse.id, sku: $("#inventory-receipt-sku").value, lotCode: $("#inventory-lot-code").value.trim(), supplier: $("#inventory-supplier").value.trim(), quantity: Number($("#inventory-receipt-quantity").value), expiryDate: $("#inventory-expiry").value, receivedDate: localDateValue(), note: "Received and checked by FM inventory control" };
+  const button = event.submitter; button.disabled = true; $("#inventory-notice").textContent = "Receiving traceable lot…";
+  try { const result = await api("/api/inventory/lots/receive", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); event.target.reset(); await load(); $("#inventory-notice").textContent = `${result.lot.sku} lot ${result.lot.lotCode} received and added to FEFO allocation.`; }
+  catch (error) { $("#inventory-notice").textContent = error.message; } finally { button.disabled = false; }
 };
 $("#dispatch-due-at").onchange = () => { if ($("#dispatch-due-at").value) $("#workforce-date").value = $("#dispatch-due-at").value.slice(0, 10); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
 $("#dispatch-load-more").onclick = () => loadMoreDispatch().catch((error) => { $("#dispatch-notice").textContent = error.message; });

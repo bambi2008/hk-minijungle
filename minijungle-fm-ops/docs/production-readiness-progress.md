@@ -895,3 +895,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local lifecycle controls.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 62 - Inventory Traceability and Reconciliation v1
+
+- Official production operations readiness remains **65%**. This closes a material stock-control gap, but the managed PostgreSQL and independently evidenced off-host restore hard cap remains binding.
+- Persistence added: SQLite migration `2026-09-05.inventory-traceability-v1` and PostgreSQL migration `2026-09-05.postgres-inventory-traceability-v1` add supplier lots, location-level lot balances, immutable lot transactions, stock counts and count lines. Deployment SQL is `infra/postgres/014_inventory_traceability.sql`.
+- Traceability added: controlled receipt captures supplier, lot code, received date and expiry. Existing route-kit transfers and visit consumption automatically allocate FEFO lots in the same database transaction as the aggregate inventory movement. Historical stock without a lot remains explicitly `untrackedQuantity`.
+- Reconciliation added: a technician can submit physical quantities only for their own route kit. Submission freezes expected quantities without changing stock; a different FM Lead or Platform Admin must approve with a note before lot and aggregate balances are adjusted. Stale counts and adjustments below reserved stock are rejected.
+- Experience added: Ops Today keeps lot receipt and pending-count review inside the existing inventory panel. The technician phone shows one FEFO instruction and a compact count form; no additional navigation level is introduced.
+- Production gate added: preflight now requires all five traceability tables and migration `014`. Inventory storage health reports lot/count row totals, invalid lot balances and submitted-count drift.
+- Evidence added: domain smoke proves receipt, FEFO transfer, FEFO consumption, separation of duties, approved variance and relationship integrity. API smoke covers role denial, idempotent lot receipt, own-kit count scope and FM review. Playwright covers desktop receipt, phone FEFO display, phone count, desktop approval and 390px overflow as part of the full operational journey.
+- Honest boundary: no barcode scanner, supplier purchase-order feed, real physical opening count, warehouse temperature record, managed PostgreSQL deployment, off-host restore or repeated live reconciliation cycle is evidenced in this workspace.
+
+### Current Honest Score After Step 62
+
+- Production operations readiness: **65%**. No score increase is claimed from local inventory controls.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

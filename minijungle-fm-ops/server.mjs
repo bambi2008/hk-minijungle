@@ -290,14 +290,21 @@ import {
   consumeSqliteInventory,
   readSqliteInventoryHealth,
   readSqliteInventoryOverview,
+  receiveSqliteInventoryLot,
+  reviewSqliteInventoryStockCount,
   reserveSqliteInventory,
-  seedSqliteInventory
+  seedSqliteInventory,
+  submitSqliteInventoryStockCount
 } from "./lib/ops-inventory-store.mjs";
 import {
   applyPostgresInventoryMovement,
   consumePostgresInventory,
   readPostgresInventoryHealth,
   readPostgresInventoryOverview,
+  readPostgresInventoryTraceability,
+  receivePostgresInventoryLot,
+  reviewPostgresInventoryStockCount,
+  submitPostgresInventoryStockCount,
   reservePostgresInventory
 } from "./lib/ops-postgres-inventory-store.mjs";
 import {
@@ -889,10 +896,13 @@ async function listMaintenancePlans(options = {}) { return productionMasterDataE
 async function listMaintenanceOccurrences(options = {}) { return productionMasterDataEnabled() ? listPostgresMaintenanceOccurrences(runtimeDbPath, options) : listSqliteMaintenanceOccurrences(runtimeDbPath, options); }
 async function generateMaintenanceOccurrences(input) { return productionMasterDataEnabled() ? generatePostgresMaintenanceOccurrences(runtimeDbPath, input) : generateSqliteMaintenanceOccurrences(runtimeDbPath, input); }
 async function readMaintenancePlanningHealth() { return productionMasterDataEnabled() ? readPostgresMaintenancePlanningHealth(runtimeDbPath) : readSqliteMaintenancePlanningHealth(runtimeDbPath); }
-async function readInventoryOverview(options = {}) { return productionMasterDataEnabled() ? readPostgresInventoryOverview(runtimeDbPath, options) : readSqliteInventoryOverview(runtimeDbPath, options); }
+async function readInventoryOverview(options = {}) { if (!productionMasterDataEnabled()) return readSqliteInventoryOverview(runtimeDbPath, options); const [overview,traceability]=await Promise.all([readPostgresInventoryOverview(runtimeDbPath,options),readPostgresInventoryTraceability(runtimeDbPath,options)]);return{...overview,...traceability,summary:{...overview.summary,...traceability.summary}}; }
 async function applyInventoryMovement(input) { return productionMasterDataEnabled() ? applyPostgresInventoryMovement(runtimeDbPath, input) : applySqliteInventoryMovement(runtimeDbPath, input); }
 async function reserveInventory(input) { return productionMasterDataEnabled() ? reservePostgresInventory(runtimeDbPath, input) : reserveSqliteInventory(runtimeDbPath, input); }
 async function consumeInventory(input) { return productionMasterDataEnabled() ? consumePostgresInventory(runtimeDbPath, input) : consumeSqliteInventory(runtimeDbPath, input); }
+async function receiveInventoryLot(input) { return productionMasterDataEnabled() ? receivePostgresInventoryLot(runtimeDbPath,input) : receiveSqliteInventoryLot(runtimeDbPath,input); }
+async function submitInventoryStockCount(input) { return productionMasterDataEnabled() ? submitPostgresInventoryStockCount(runtimeDbPath,input) : submitSqliteInventoryStockCount(runtimeDbPath,input); }
+async function reviewInventoryStockCount(countId,input) { return productionMasterDataEnabled() ? reviewPostgresInventoryStockCount(runtimeDbPath,countId,input) : reviewSqliteInventoryStockCount(runtimeDbPath,countId,input); }
 async function readInventoryHealth() { return productionMasterDataEnabled() ? readPostgresInventoryHealth(runtimeDbPath) : readSqliteInventoryHealth(runtimeDbPath); }
 
 async function createProofMediaIntent(input) {
@@ -3312,6 +3322,57 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && (pathname === "/api/inventory/overview" || pathname === "/api/mobile/route-kit")) {
       requirePermission(auth, "inventory.read");
       sendJson(res, 200, await inventoryOverviewFor(auth));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/inventory/lots/receive") {
+      requirePermission(auth, "inventory.write");
+      await ensurePilotInventory();
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "inventory-lot-receipt", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await receiveInventoryLot({ ...input, id: `LOT-${requestHash.slice(0, 20)}`, actor: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-LOT-${requestHash.slice(0, 20)}`, type: "inventory.lot.received", actor: auth.name, entityType: "inventory-lot", entityId: result.lot.id, source: "inventory-control", note: `${result.lot.sku} lot ${result.lot.lotCode} received with expiry ${result.lot.expiryDate}.`, payload: { principalId: auth.id, locationId: input.locationId, supplier: result.lot.supplier, quantity: input.quantity, expiryDate: result.lot.expiryDate } });
+        await appendOpsEvent(event);
+        return { ...result, event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/inventory/counts") {
+      requirePermission(auth, "inventory.count");
+      await ensurePilotInventory();
+      const input = await readJsonBody(req);
+      if (auth.roleId === "field-tech") {
+        const overview = await inventoryOverviewFor(auth);
+        const ownKit = overview.locations.find((item) => item.kind === "technician-kit" && item.technicianId === auth.id);
+        if (!ownKit || input.locationId !== ownKit.id) throw apiError(403, "technician can count only their own route kit", "INVENTORY_TECHNICIAN_SCOPE_DENIED");
+      }
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "inventory-stock-count", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await submitInventoryStockCount({ ...input, id: `CNT-${requestHash.slice(0, 20)}`, countedBy: auth.id, technicianId: auth.roleId === "field-tech" ? auth.id : null });
+        const event = normalizeOpsEvent({ id: `OPS-CNT-${requestHash.slice(0, 20)}`, type: "inventory.count.submitted", actor: auth.name, entityType: "inventory-count", entityId: result.count.id, source: auth.roleId === "field-tech" ? "technician-mobile" : "inventory-control", note: `${result.count.lines.length} lot count line(s) submitted for independent review.`, payload: { principalId: auth.id, locationId: result.count.locationId, varianceLines: result.count.lines.filter((line) => line.variance !== 0).length } });
+        await appendOpsEvent(event);
+        return { ...result, event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
+    const inventoryCountReviewMatch = pathname.match(/^\/api\/inventory\/counts\/([^/]+)\/review$/);
+    if (req.method === "POST" && inventoryCountReviewMatch) {
+      requirePermission(auth, "inventory.review");
+      const countId = decodeURIComponent(inventoryCountReviewMatch[1]);
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: `inventory-count-review:${countId}`, commandKey, payload: input, execute: async (requestHash) => {
+        const result = await reviewInventoryStockCount(countId, { ...input, reviewedBy: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-CNT-REV-${requestHash.slice(0, 20)}`, type: `inventory.count.${result.count.status}`, actor: auth.name, entityType: "inventory-count", entityId: result.count.id, source: "inventory-control", note: `Stock count ${result.count.id} ${result.count.status}: ${input.note}.`, payload: { principalId: auth.id, locationId: result.count.locationId, variance: result.count.lines.reduce((sum, line) => sum + Number(line.variance || 0), 0) } });
+        await appendOpsEvent(event);
+        return { ...result, event };
+      }});
+      sendJson(res, 200, response);
       return;
     }
 

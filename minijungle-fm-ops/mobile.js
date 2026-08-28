@@ -117,9 +117,21 @@ async function load() {
 function renderRouteKit() {
   const ownLocation = (routeKit.locations || []).find((item) => item.kind === "technician-kit" && item.technicianId === principal);
   const balances = (routeKit.balances || []).filter((item) => item.locationId === ownLocation?.id);
+  const lots = (routeKit.lots || []).filter((item) => item.locationId === ownLocation?.id);
   const low = balances.filter((item) => item.lowStock).length;
   $("#route-kit-state").textContent = ownLocation ? `${low} low` : "Not configured";
-  $("#route-kit-list").innerHTML = balances.length ? balances.map((item) => `<div class="route-kit-item ${item.lowStock ? "low" : ""}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.available)} ${escapeHtml(item.unit)} available${item.reserved ? ` · ${escapeHtml(item.reserved)} reserved` : ""}</span></div>`).join("") : "<p>No route-kit stock is recorded.</p>";
+  $("#route-kit-list").innerHTML = balances.length ? balances.map((item) => { const firstLot = lots.find((lot) => lot.sku === item.sku); return `<div class="route-kit-item ${item.lowStock ? "low" : ""}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.available)} ${escapeHtml(item.unit)} available${item.reserved ? ` · ${escapeHtml(item.reserved)} reserved` : ""}</span>${firstLot ? `<small>Use first: ${escapeHtml(firstLot.lotCode)} · exp ${escapeHtml(firstLot.expiryDate)}</small>` : "<small>Untracked opening stock</small>"}</div>`; }).join("") : "<p>No route-kit stock is recorded.</p>";
+  $("#route-kit-count").hidden = !ownLocation || !lots.length;
+  $("#route-kit-count-lines").innerHTML = lots.map((lot) => `<label>${escapeHtml(lot.sku)} · ${escapeHtml(lot.lotCode)}<span>Expected ${escapeHtml(lot.onHand)} ${escapeHtml(lot.unit)}</span><input type="number" min="0" step="0.001" required value="${escapeHtml(lot.onHand)}" data-count-lot="${escapeHtml(lot.id)}"></label>`).join("");
+}
+
+async function submitRouteKitCount(event) {
+  event.preventDefault(); const ownLocation = (routeKit.locations || []).find((item) => item.kind === "technician-kit" && item.technicianId === principal);
+  if (!ownLocation) return;
+  const lines = [...document.querySelectorAll("[data-count-lot]")].map((input) => ({ lotId: input.dataset.countLot, countedQuantity: Number(input.value), reason: Number(input.value) === Number((routeKit.lots || []).find((lot) => lot.id === input.dataset.countLot)?.onHand) ? null : "Physical route-kit variance" }));
+  const button = event.submitter; button.disabled = true; $("#route-kit-count-notice").textContent = "Submitting count…";
+  try { const result = await json("/api/inventory/counts", { method: "POST", headers: { ...headers, "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ locationId: ownLocation.id, lines, note: $("#route-kit-count-note").value.trim() }) }); await load(); $("#route-kit-count").open = false; $("#route-kit-count-notice").textContent = `${result.count.id} submitted for FM review.`; setState("Route-kit count submitted"); }
+  catch (error) { $("#route-kit-count-notice").textContent = error.message; setState(error.message, "error"); } finally { button.disabled = false; }
 }
 
 function remediationStatusLabel(status) { return String(status || "open").replaceAll("_", " "); }
@@ -435,6 +447,7 @@ $("#photo").addEventListener("change", () => {
 $("#clear-photo").onclick = () => { $("#photo").value = ""; clearPhotoPreview(); };
 
 $("#capture-form").addEventListener("submit", (event) => { event.preventDefault(); submit(false); });
+$("#route-kit-count-form").addEventListener("submit", submitRouteKitCount);
 $("#queue").onclick = () => submit(true);
 $("#module").onchange = () => loadModuleStatus();
 $("#asset-code-form").addEventListener("submit", (event) => { event.preventDefault(); resolveModuleCode($("#asset-code").value).catch((error) => $("#asset-code-result").textContent = error.message); });

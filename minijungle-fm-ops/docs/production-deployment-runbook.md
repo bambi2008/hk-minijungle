@@ -80,6 +80,14 @@ Ops Today requests shared candidates for the selected remediation tasks and disp
 
 The current control is not route optimisation. Production still needs OIDC-to-technician provisioning, approved shift/absence inputs, Hong Kong travel-time modelling, concurrency/load evidence and measured field acceptance. Remediation updates and workforce reservations are coordinated by application logic rather than one all-task transaction, so partial bulk failure remains an explicit runbook/reconciliation risk.
 
+## Inventory lots and stock counts
+
+Apply `010_inventory_route_kits.sql` and `014_inventory_traceability.sql`. Live PostgreSQL must start without pilot stock. Record approved physical opening quantities as real supplier lots or retain the balance as explicitly untracked stock until reconciled.
+
+Lot receipts require supplier, supplier lot code, received date and expiry. Route-kit transfer and field consumption allocate FEFO lots inside the same inventory transaction. A technician can submit a count only for their own route kit; submission does not change stock. A different FM Lead or Platform Admin approves or rejects with a note. Approval is blocked when the lot changed after submission or would reduce aggregate stock below reserved quantity. See `docs/inventory-traceability-and-counts.md`.
+
+The workflow is not purchase-order, barcode, cold-chain or financial inventory software. Production acceptance requires a real opening count, repeated receipt/transfer/consume/count cycles and variance review against warehouse evidence.
+
 ## Airtable maintenance intake
 
 Airtable is supported as a temporary maintenance-record source through a controlled CSV handoff, not as a production runtime dependency. Export one CSV, open `Maintenance history` in Ops Today, download the canonical template, then preview the file before applying it. Required fields are `record_id`, `wall_id` and `service_date`; the supported optional fields are `status`, `priority`, `technician_id`, `tasks`, `notes` and `updated_at`.

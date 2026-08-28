@@ -108,11 +108,11 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("notifications.read"), "FM lead auth policy did not expose notification read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.plan.write") && authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.generate"), "FM lead auth policy did not expose preventive maintenance controls");
-  assert(authPolicy.body.roles["fm-lead"].permissions.includes("inventory.write") && authPolicy.body.roles["fm-lead"].permissions.includes("inventory.reserve"), "FM lead auth policy did not expose inventory controls");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("inventory.write") && authPolicy.body.roles["fm-lead"].permissions.includes("inventory.reserve") && authPolicy.body.roles["fm-lead"].permissions.includes("inventory.review"), "FM lead auth policy did not expose inventory controls");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("reliability.read") && authPolicy.body.roles["fm-lead"].permissions.includes("reliability.scan"), "FM lead auth policy did not expose reliability controls");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("commissioning.write") && authPolicy.body.roles["fm-lead"].permissions.includes("commissioning.verify"), "FM lead auth policy did not expose commissioning controls");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("commissioning.install") && !authPolicy.body.roles["field-tech"].permissions.includes("commissioning.verify"), "Field technician commissioning permissions should allow installation but preserve independent verification");
-  assert(authPolicy.body.roles["field-tech"].permissions.includes("inventory.read") && authPolicy.body.roles["field-tech"].permissions.includes("inventory.consume"), "Field technician auth policy did not expose route-kit controls");
+  assert(authPolicy.body.roles["field-tech"].permissions.includes("inventory.read") && authPolicy.body.roles["field-tech"].permissions.includes("inventory.consume") && authPolicy.body.roles["field-tech"].permissions.includes("inventory.count"), "Field technician auth policy did not expose route-kit controls");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.read"), "Auth policy did not expose field mobile remediation read permission");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.update"), "Auth policy did not expose field mobile remediation update permission");
 
@@ -1385,6 +1385,10 @@ async function verifyApi(baseUrl) {
   const inventoryOverview = await fetchJson(`${baseUrl}api/inventory/overview`, { headers: principalHeaders("fm-lead") });
   assert(inventoryOverview.response.ok && inventoryOverview.body.locations.some((item) => item.kind === "warehouse") && inventoryOverview.body.locations.some((item) => item.technicianId === "field-tech-show-suite"), "FM inventory overview should expose warehouse and technician kit locations");
   assert(inventoryOverview.body.summary.lowStockWarehouse === 0, "Pilot warehouse opening balances should start above reorder points");
+  const lotReceipt = await fetchJson(`${baseUrl}api/inventory/lots/receive`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "inventory-lot-receipt-api-smoke-001" }, body: JSON.stringify({ locationId:"warehouse-hk",sku:"NUT-A",lotCode:"NUT-HK-API-2098",supplier:"Approved API supplier",quantity:50,receivedDate:new Date().toISOString().slice(0,10),expiryDate:"2098-09-30",note:"API traceability smoke receipt" }) });
+  assert(lotReceipt.response.status === 201 && lotReceipt.body.lot.lotCode === "NUT-HK-API-2098", "FM lead should receive a supplier and expiry backed lot");
+  const fieldLotReceiptDenied = await fetchJson(`${baseUrl}api/inventory/lots/receive`, { method: "POST", headers: { ...jsonHeaders("field-tech-show-suite"), "Idempotency-Key": "inventory-lot-receipt-field-denied" }, body: JSON.stringify({ locationId:"warehouse-hk",sku:"NUT-A",lotCode:"DENIED",supplier:"Denied",quantity:1,expiryDate:"2026-12-31" }) });
+  assert(fieldLotReceiptDenied.response.status === 403, "Field technician should not receive warehouse lots");
   const missingInventoryIdempotency = await fetchJson(`${baseUrl}api/inventory/reservations`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ workOrderId: inventoryWorkOrderId, technicianId: "field-tech-show-suite", sourceLocationId: "warehouse-hk", sku: "NUT-A", quantity: 250 }) });
   assert(missingInventoryIdempotency.response.status === 428 && missingInventoryIdempotency.body.code === "IDEMPOTENCY_KEY_REQUIRED", "Inventory reservation should require Idempotency-Key");
   const reservationHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "inventory-reserve-api-smoke-001" };
@@ -1397,6 +1401,7 @@ async function verifyApi(baseUrl) {
   assert(reusedInventoryKey.response.status === 409 && reusedInventoryKey.body.code === "IDEMPOTENCY_KEY_REUSED", "Inventory idempotency key reuse with a different payload should be rejected");
   const inventoryTransfer = await fetchJson(`${baseUrl}api/inventory/transactions`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "inventory-transfer-api-smoke-001" }, body: JSON.stringify({ type: "transfer", sourceLocationId: "warehouse-hk", destinationLocationId: "kit-field-tech-show-suite", workOrderId: inventoryWorkOrderId, sku: "NUT-A", quantity: 250, note: "API smoke route kit load" }) });
   assert(inventoryTransfer.response.status === 201 && inventoryTransfer.body.transactions.length === 2, "Reserved warehouse stock should transfer to the technician route kit");
+  assert(inventoryTransfer.body.transactions[0].metadata.traceability.allocations[0].lotCode === "NUT-HK-API-2098", "Route-kit load should allocate the earliest-expiry lot first");
   const fieldRouteKit = await fetchJson(`${baseUrl}api/mobile/route-kit`, { headers: principalHeaders("field-tech-show-suite") });
   assert(fieldRouteKit.response.ok && fieldRouteKit.body.locations.length === 1 && fieldRouteKit.body.locations.every((item) => item.kind === "technician-kit" && item.technicianId === "field-tech-show-suite"), "Field route-kit view should expose only the technician's own kit");
   assert(fieldRouteKit.body.balances.find((item) => item.locationId === "kit-field-tech-show-suite" && item.sku === "NUT-A")?.onHand === 250, "Route-kit load should be visible to the technician");
@@ -1418,8 +1423,18 @@ async function verifyApi(baseUrl) {
   const inventoryAfter = await fetchJson(`${baseUrl}api/inventory/overview`, { headers: principalHeaders("fm-lead") });
   assert(inventoryAfter.body.balances.find((item) => item.locationId === "kit-field-tech-show-suite" && item.sku === "NUT-A")?.onHand === 215, "Transfer and two consumption paths should reconcile to 215 ml");
   assert(inventoryAfter.body.reservations.find((item) => item.workOrderId === inventoryWorkOrderId && item.sku === "NUT-A")?.status === "consumed", "Loading reserved stock should close the work-order reservation");
+  const countedLot = inventoryAfter.body.lots.find((item) => item.locationId === "kit-field-tech-show-suite" && item.lotCode === "NUT-HK-API-2098");
+  assert(countedLot?.onHand === 15, "FEFO consumption should leave the expected traceable lot quantity");
+  const stockCount = await fetchJson(`${baseUrl}api/inventory/counts`, { method:"POST",headers:{...jsonHeaders("field-tech-show-suite"),"Idempotency-Key":"inventory-count-api-smoke-001"},body:JSON.stringify({locationId:"kit-field-tech-show-suite",note:"End of API route count",lines:[{lotId:countedLot.id,countedQuantity:14,reason:"Physical variance"}]}) });
+  assert(stockCount.response.status === 201 && stockCount.body.count.status === "submitted" && stockCount.body.count.lines[0].variance === -1, "Technician should submit own-kit count without directly changing stock");
+  const clientCountDenied = await fetchJson(`${baseUrl}api/inventory/counts`, { method:"POST",headers:{...jsonHeaders("client-show-suite"),"Idempotency-Key":"inventory-count-client-denied"},body:JSON.stringify({locationId:"kit-field-tech-show-suite",lines:[{lotId:countedLot.id,countedQuantity:14}]}) });
+  assert(clientCountDenied.response.status === 403, "Client viewer should not submit inventory counts");
+  const countReview = await fetchJson(`${baseUrl}api/inventory/counts/${encodeURIComponent(stockCount.body.count.id)}/review`, { method:"POST",headers:{...jsonHeaders("fm-lead"),"Idempotency-Key":"inventory-count-review-api-smoke-001"},body:JSON.stringify({decision:"approved",note:"Count sheet and route evidence checked"}) });
+  assert(countReview.response.ok && countReview.body.count.status === "approved", "FM lead should independently approve and post the count variance");
+  const inventoryReconciled = await fetchJson(`${baseUrl}api/inventory/overview`, { headers: principalHeaders("fm-lead") });
+  assert(inventoryReconciled.body.balances.find((item) => item.locationId === "kit-field-tech-show-suite" && item.sku === "NUT-A")?.onHand === 214, "Approved lot variance should reconcile the aggregate route-kit balance");
   const inventoryStorage = await fetchJson(`${baseUrl}api/storage`, { headers: principalHeaders("fm-lead") });
-  assert(inventoryStorage.body.inventory.backend === "sqlite" && inventoryStorage.body.inventory.relationshipIntegrity.invalidBalances === 0 && inventoryStorage.body.inventory.counts.transactions === 4, "Storage health should expose reconciled inventory tables");
+  assert(inventoryStorage.body.inventory.backend === "sqlite" && inventoryStorage.body.inventory.relationshipIntegrity.invalidBalances === 0 && inventoryStorage.body.inventory.relationshipIntegrity.invalidLotBalances === 0 && inventoryStorage.body.inventory.counts.transactions === 6 && inventoryStorage.body.inventory.counts.stockCounts === 1, "Storage health should expose reconciled aggregate, lot and count tables");
   const qualityAfterRemediation = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
   assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "FM-approved remediation task should leave no active task in the quality summary");
 }

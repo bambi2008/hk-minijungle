@@ -28,6 +28,8 @@ const roleDefinitions = {
       "inventory.write",
       "inventory.reserve",
       "inventory.consume",
+      "inventory.count",
+      "inventory.review",
       "ops.state.read",
       "ops.state.write.action",
       "ops.state.write.snapshot",
@@ -102,6 +104,7 @@ const roleDefinitions = {
       "mobile.capture.write",
       "inventory.read",
       "inventory.consume",
+      "inventory.count",
       "proof.media.read",
       "proof.media.write"
       ,"telemetry.read"

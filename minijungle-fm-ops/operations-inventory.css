@@ -56,14 +56,29 @@
 .inventory-item small { margin-top: 4px; color: #8a978d; font-size: 10px; }
 .inventory-level { font-size: 11px; color: #175438; text-align: right; }
 .inventory-level.low { color: #a33d2c; }
+.inventory-trace { border-top: 1px solid #dce7dd; padding-top: 10px; }
+.inventory-trace > summary { display: flex; justify-content: space-between; gap: 12px; cursor: pointer; color: #244d36; font-size: 12px; font-weight: bold; }
+.inventory-trace > summary span { color: #6a796d; font-size: 11px; font-weight: normal; }
+.inventory-receipt-toolbar { grid-template-columns: repeat(5, minmax(110px, 1fr)) auto; margin-top: 10px; }
+.inventory-lot { background: #fbfdfb; }
+.inventory-count-list { display: grid; gap: 8px; margin-top: 10px; }
+.inventory-count { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, .7fr); gap: 12px; align-items: center; border: 1px solid #d9e5da; padding: 10px; }
+.inventory-count strong, .inventory-count span, .inventory-count small { display: block; }
+.inventory-count span, .inventory-count small { margin-top: 4px; color: #6a796d; font-size: 11px; }
+.inventory-count-actions { display: grid; grid-template-columns: minmax(100px, 1fr) auto auto; gap: 6px; }
+.inventory-count-actions input, .inventory-count-actions button { min-width: 0; border: 1px solid #c9d8ca; border-radius: 4px; padding: 8px; background: #fff; font: inherit; }
+.inventory-count-actions button { color: #175438; font-weight: bold; cursor: pointer; }
 
 @media (max-width: 900px) {
   .summary { grid-template-columns: repeat(3, minmax(0, 1fr)); }
-  .inventory-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inventory-toolbar, .inventory-receipt-toolbar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .inventory-count { grid-template-columns: 1fr; }
 }
 @media (max-width: 560px) {
   .summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .inventory-toolbar { grid-template-columns: 1fr; }
   .inventory-item { grid-template-columns: 1fr auto; }
   .inventory-location { grid-column: 1; }
+  .inventory-count-actions { grid-template-columns: 1fr 1fr; }
+  .inventory-count-actions input { grid-column: 1 / -1; }
 }

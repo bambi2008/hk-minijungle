@@ -2,6 +2,8 @@ import { randomUUID } from "node:crypto";
 
 export const inventoryMigrationVersion = "2026-09-01.inventory-route-kit-v1";
 export const postgresInventoryMigrationVersion = "2026-09-01.postgres-inventory-route-kit-v1";
+export const inventoryTraceabilityMigrationVersion = "2026-09-05.inventory-traceability-v1";
+export const postgresInventoryTraceabilityMigrationVersion = "2026-09-05.postgres-inventory-traceability-v1";
 
 export const inventoryLocationKinds = new Set(["warehouse", "technician-kit", "site-buffer"]);
 export const inventoryTransactionTypes = new Set(["receipt", "adjustment", "transfer-out", "transfer-in", "consume"]);
@@ -72,7 +74,10 @@ export function normalizeInventoryMovement(input) {
     workOrderId: input?.workOrderId ? text(input.workOrderId) : null,
     note: text(input?.note || "Inventory movement"),
     actor: text(input?.actor || "system"),
-    occurredAt: input?.occurredAt ? new Date(input.occurredAt).toISOString() : new Date().toISOString()
+    occurredAt: input?.occurredAt ? new Date(input.occurredAt).toISOString() : new Date().toISOString(),
+    lotCode: input?.lotCode ? text(input.lotCode).toUpperCase() : null,
+    supplier: input?.supplier ? text(input.supplier) : null,
+    expiryDate: input?.expiryDate ? normalizeDate(input.expiryDate, "expiryDate") : null
   };
 }
 
@@ -107,5 +112,61 @@ export function normalizeConsumption(input) {
     note: text(input?.note || "Field consumption"),
     actor: text(input?.actor || "system"),
     occurredAt: input?.occurredAt ? new Date(input.occurredAt).toISOString() : new Date().toISOString()
+  };
+}
+
+function normalizeDate(value, field) {
+  const date = new Date(`${String(value || "").slice(0, 10)}T00:00:00.000Z`);
+  if (Number.isNaN(date.getTime())) throw inventoryError(`${field} must be a valid date`);
+  return date.toISOString().slice(0, 10);
+}
+
+export function normalizeLotReceipt(input) {
+  const receivedDate = normalizeDate(input?.receivedDate || new Date().toISOString(), "receivedDate");
+  const expiryDate = normalizeDate(input?.expiryDate, "expiryDate");
+  if (expiryDate < receivedDate) throw inventoryError("expiryDate cannot be before receivedDate");
+  if (expiryDate < new Date().toISOString().slice(0, 10)) throw inventoryError("expiryDate cannot be in the past", "INVENTORY_LOT_EXPIRED", 409);
+  return {
+    id: text(input?.id || `LOT-${randomUUID()}`),
+    sku: text(input?.sku, "sku").toUpperCase(),
+    lotCode: text(input?.lotCode, "lotCode").toUpperCase(),
+    supplier: text(input?.supplier, "supplier"),
+    locationId: text(input?.locationId, "locationId"),
+    quantity: quantity(input?.quantity),
+    receivedDate,
+    expiryDate,
+    note: text(input?.note || "Traceable stock receipt"),
+    actor: text(input?.actor || "system"),
+    occurredAt: input?.occurredAt ? new Date(input.occurredAt).toISOString() : new Date().toISOString()
+  };
+}
+
+export function normalizeStockCount(input) {
+  const lines = Array.isArray(input?.lines) ? input.lines : [];
+  if (!lines.length) throw inventoryError("lines must include at least one counted lot");
+  const normalized = lines.map((line, index) => ({
+    lotId: text(line?.lotId, `lines[${index}].lotId`),
+    countedQuantity: quantity(line?.countedQuantity, `lines[${index}].countedQuantity`, { allowZero: true }),
+    reason: line?.reason ? text(line.reason) : null
+  }));
+  if (new Set(normalized.map((line) => line.lotId)).size !== normalized.length) throw inventoryError("lines cannot repeat a lot");
+  return {
+    id: text(input?.id || `CNT-${randomUUID()}`),
+    locationId: text(input?.locationId, "locationId"),
+    lines: normalized,
+    note: text(input?.note || "Physical stock count"),
+    countedBy: text(input?.countedBy || input?.actor || "system"),
+    countedAt: input?.countedAt ? new Date(input.countedAt).toISOString() : new Date().toISOString()
+  };
+}
+
+export function normalizeStockCountReview(input) {
+  const decision = text(input?.decision, "decision");
+  if (!new Set(["approved", "rejected"]).has(decision)) throw inventoryError("decision must be approved or rejected");
+  return {
+    decision,
+    note: text(input?.note, "note"),
+    reviewedBy: text(input?.reviewedBy || input?.actor || "system"),
+    reviewedAt: new Date().toISOString()
   };
 }

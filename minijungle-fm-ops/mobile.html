@@ -33,7 +33,7 @@
       <div class="section-heading"><div><p>ASSIGNED WORK / FIELD ROUTE</p><h2 id="route-heading">Select a stop</h2></div><button id="refresh" type="button" aria-label="Refresh route">Refresh</button></div>
       <div id="route-list" class="route-list" aria-live="polite"></div>
     </section>
-    <section class="route-kit" aria-labelledby="route-kit-heading"><div class="section-heading"><div><p>ROUTE KIT / 路線物料</p><h2 id="route-kit-heading">Available stock</h2></div><span id="route-kit-state" class="work-order">Loading</span></div><div id="route-kit-list" class="route-kit-list" aria-live="polite"></div></section>
+    <section class="route-kit" aria-labelledby="route-kit-heading"><div class="section-heading"><div><p>ROUTE KIT / 路線物料</p><h2 id="route-kit-heading">Available stock</h2></div><span id="route-kit-state" class="work-order">Loading</span></div><div id="route-kit-list" class="route-kit-list" aria-live="polite"></div><details id="route-kit-count"><summary>Count route kit / 盤點路線包</summary><form id="route-kit-count-form"><div id="route-kit-count-lines"></div><label>Count note / 盤點備註<input id="route-kit-count-note" required maxlength="160" value="End-of-route physical count"></label><button type="submit">Submit for FM review / 提交覆核</button></form><p id="route-kit-count-notice" aria-live="polite"></p></details></section>
     <form id="capture-form" class="capture" hidden>
       <div class="section-heading"><div><p>VISIT RECORD / FIELD CAPTURE</p><h2 id="asset-title"></h2></div><span id="work-order" class="work-order"></span></div>
       <div id="capture-context" class="capture-context" aria-live="polite"></div>
