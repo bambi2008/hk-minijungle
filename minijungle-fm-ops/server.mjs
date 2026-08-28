@@ -204,6 +204,23 @@ import {
   readPostgresMaintenanceImport,
   releasePostgresJobLease
 } from "./lib/ops-postgres-integration-store.mjs";
+import { defaultReliabilityJobs } from "./lib/ops-reliability-policy.mjs";
+import {
+  beginSqliteReliabilityRun,
+  finishSqliteReliabilityRun,
+  readSqliteReliabilityHealth,
+  readSqliteReliabilityOverview,
+  scanSqliteReliability,
+  seedSqliteReliabilityJobs
+} from "./lib/ops-reliability-store.mjs";
+import {
+  beginPostgresReliabilityRun,
+  finishPostgresReliabilityRun,
+  readPostgresReliabilityHealth,
+  readPostgresReliabilityOverview,
+  scanPostgresReliability,
+  seedPostgresReliabilityJobs
+} from "./lib/ops-postgres-reliability-store.mjs";
 import { maintenanceImportTemplateCsv, normalizeMaintenanceCsv } from "./lib/ops-maintenance-import.mjs";
 import {
   evaluateSqliteWorkforceCandidates,
@@ -715,6 +732,12 @@ async function readMaintenanceImport(id) { return productionMasterDataEnabled() 
 async function listMaintenanceImports(limit) { return productionMasterDataEnabled() ? listPostgresMaintenanceImports(runtimeDbPath, limit) : listSqliteMaintenanceImports(runtimeDbPath, limit); }
 async function markMaintenanceImportApplied(id, appliedBy) { return productionMasterDataEnabled() ? markPostgresMaintenanceImportApplied(runtimeDbPath, id, appliedBy) : markSqliteMaintenanceImportApplied(runtimeDbPath, id, appliedBy); }
 async function readIntegrationStorageHealth() { return productionMasterDataEnabled() ? readPostgresIntegrationStorageHealth(runtimeDbPath) : readSqliteIntegrationStorageHealth(runtimeDbPath); }
+async function ensureReliabilityJobs() { return productionMasterDataEnabled() ? seedPostgresReliabilityJobs(runtimeDbPath, defaultReliabilityJobs()) : seedSqliteReliabilityJobs(runtimeDbPath, defaultReliabilityJobs()); }
+async function beginReliabilityRun(input) { await ensureReliabilityJobs(); return productionMasterDataEnabled() ? beginPostgresReliabilityRun(runtimeDbPath, input) : beginSqliteReliabilityRun(runtimeDbPath, input); }
+async function finishReliabilityRun(id, input) { return productionMasterDataEnabled() ? finishPostgresReliabilityRun(runtimeDbPath, id, input) : finishSqliteReliabilityRun(runtimeDbPath, id, input); }
+async function readReliabilityOverview(options = {}) { await ensureReliabilityJobs(); return productionMasterDataEnabled() ? readPostgresReliabilityOverview(runtimeDbPath, options) : readSqliteReliabilityOverview(runtimeDbPath, options); }
+async function scanReliability(options = {}) { await ensureReliabilityJobs(); return productionMasterDataEnabled() ? scanPostgresReliability(runtimeDbPath, options) : scanSqliteReliability(runtimeDbPath, options); }
+async function readReliabilityHealth() { await ensureReliabilityJobs(); return productionMasterDataEnabled() ? readPostgresReliabilityHealth(runtimeDbPath) : readSqliteReliabilityHealth(runtimeDbPath); }
 async function upsertTechnician(input) { return productionMasterDataEnabled() ? upsertPostgresTechnician(runtimeDbPath, input) : upsertSqliteTechnician(runtimeDbPath, input); }
 async function listTechnicians(options = {}) { return productionMasterDataEnabled() ? listPostgresTechnicians(runtimeDbPath, options) : listSqliteTechnicians(runtimeDbPath, options); }
 async function upsertWorkforceAssignment(input) { return productionMasterDataEnabled() ? upsertPostgresWorkforceAssignment(runtimeDbPath, input) : upsertSqliteWorkforceAssignment(runtimeDbPath, input); }
@@ -2920,15 +2943,19 @@ async function handleApi(req, res, pathname) {
       if (command.duplicate) { sendJson(res, 200, { ...command.response, duplicate: true }); return; }
       const lease = await acquireJobLease({ jobName: "maintenance-generation", ownerId, leaseSeconds: 300 });
       if (!lease.acquired) { await abandonIdempotentCommand({ scope: "maintenance-generation", commandKey, ownerId }).catch(() => {}); throw apiError(409, "maintenance generation is already running", "MAINTENANCE_GENERATION_BUSY"); }
+      let reliabilityRun = null;
       try {
+        reliabilityRun = (await beginReliabilityRun({ jobName: "maintenance-generation", ownerId, details: { fromDate, throughDate, trigger: "ops-api" } })).run;
         await ensurePilotMaintenancePlans();
         const result = await generateMaintenanceOccurrences({ fromDate, throughDate, actor: auth.id, runId: `MGR-${randomUUID()}`, clientIds: auth.clientScope === "all" ? null : auth.clientIds });
         const event = normalizeOpsEvent({ type: "maintenance.workorders.generated", actor: auth.name, entityType: "maintenance-generation", entityId: result.run.id, source: "maintenance-planning", note: `${result.run.generatedCount} preventive work order(s) generated through ${throughDate}.`, payload: { principalId: auth.id, fromDate, throughDate, generatedCount: result.run.generatedCount, skippedCount: result.run.skippedCount, workOrderIds: result.generated.slice(0, 100).map((item) => item.workOrderId) } });
         await appendOpsEvent(event);
         const response = { duplicate: false, ...result, event, calendar: await buildMaintenanceCalendar(auth, { fromDate, throughDate }) };
         await completeIdempotentCommand({ scope: "maintenance-generation", commandKey, ownerId, response });
+        await finishReliabilityRun(reliabilityRun.id, { status: "succeeded", result: { generatedCount: result.run.generatedCount, skippedCount: result.run.skippedCount } });
         sendJson(res, 201, response);
       } catch (error) {
+        if (reliabilityRun) await finishReliabilityRun(reliabilityRun.id, { status: "failed", error: error.message }).catch(() => {});
         await abandonIdempotentCommand({ scope: "maintenance-generation", commandKey, ownerId }).catch(() => {});
         throw error;
       } finally {
@@ -3064,9 +3091,50 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/ops/reliability") {
+      requirePermission(auth, "reliability.read");
+      sendJson(res, 200, await readReliabilityOverview());
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/ops/reliability/scan") {
+      requirePermission(auth, "reliability.scan");
+      const ownerId = `${auth.id}:${randomUUID()}`;
+      const lease = await acquireJobLease({ jobName: "reliability-watchdog", ownerId, leaseSeconds: 120 });
+      if (!lease.acquired) throw apiError(409, "reliability watchdog is already running", "RELIABILITY_SCAN_BUSY");
+      let reliabilityRun = null;
+      try {
+        reliabilityRun = (await beginReliabilityRun({ jobName: "reliability-watchdog", ownerId, details: { trigger: "ops-api", principalId: auth.id } })).run;
+        const first = await scanReliability();
+        await finishReliabilityRun(reliabilityRun.id, { status: "succeeded", result: { opened: first.opened.length, recovered: first.recovered.length } });
+        const second = await scanReliability();
+        const transitions = [...first.opened, ...first.recovered, ...second.opened, ...second.recovered];
+        const overview = await readReliabilityOverview();
+        const jobs = new Map(overview.jobs.map((job) => [job.jobName, job]));
+        const notifications = [];
+        for (const incident of transitions) {
+          const recovered = incident.status === "recovered";
+          const job = jobs.get(incident.jobName);
+          const notification = await enqueueNotification({ id: `NTF-REL-${incident.id}-${recovered ? "RECOVERED" : "OPEN"}`, channel: "webhook", eventType: recovered ? "reliability.job.recovered" : "reliability.job.failed", severity: recovered ? "info" : incident.severity, alertId: incident.id, payload: { incidentId: incident.id, jobName: incident.jobName, label: job?.label || incident.jobName, state: job?.state || incident.openedState, reason: incident.reason, openedAt: incident.openedAt, recoveredAt: incident.recoveredAt } });
+          notifications.push(notification.notification);
+          await appendOpsEvent(normalizeOpsEvent({ type: recovered ? "reliability.job.recovered" : "reliability.job.incident-opened", actor: auth.name, entityType: "reliability-job", entityId: incident.jobName, source: "reliability-watchdog", note: recovered ? `${job?.label || incident.jobName} recovered.` : `${job?.label || incident.jobName}: ${incident.reason}`, payload: { principalId: auth.id, incidentId: incident.id, severity: incident.severity, notificationId: notification.notification.id } }));
+        }
+        sendJson(res, 200, { ...overview, scan: { opened: first.opened.length + second.opened.length, recovered: first.recovered.length + second.recovered.length, transitions }, notifications });
+      } catch (error) {
+        if (reliabilityRun) {
+          await finishReliabilityRun(reliabilityRun.id, { status: "failed", error: error.message }).catch(() => {});
+          await scanReliability().catch(() => {});
+        }
+        throw error;
+      } finally {
+        await releaseJobLease({ jobName: "reliability-watchdog", ownerId }).catch(() => {});
+      }
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -3081,7 +3149,8 @@ async function handleApi(req, res, pathname) {
         readNotificationStorageHealth(),
         readEvidenceSnapshotStorageHealth(),
         readIntegrationStorageHealth(),
-        readWorkforceStorageHealth()
+        readWorkforceStorageHealth(),
+        readReliabilityHealth()
       ]);
       const [maintenancePlanningStorage, inventoryStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth()]);
       sendJson(res, 200, {
@@ -3102,7 +3171,8 @@ async function handleApi(req, res, pathname) {
         integrations: integrationStorage,
         workforce: workforceStorage,
         maintenancePlanning: maintenancePlanningStorage,
-        inventory: inventoryStorage
+        inventory: inventoryStorage,
+        reliability: reliabilityStorage
       });
       return;
     }
@@ -3250,7 +3320,9 @@ async function handleApi(req, res, pathname) {
       const ownerId = `${auth.id}:${randomUUID()}`;
       const lease = await acquireJobLease({ jobName: "remediation-sla-scan", ownerId, leaseSeconds: 300 });
       if (!lease.acquired) throw apiError(409, "remediation SLA scan is already running", "REMEDIATION_SLA_SCAN_BUSY");
+      let reliabilityRun = null;
       try {
+        reliabilityRun = (await beginReliabilityRun({ jobName: "remediation-sla-scan", ownerId, details: { trigger: "ops-api", principalId: auth.id } })).run;
         const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
         let before = null; let beforeId = null; let scanned = 0; const escalated = [];
         while (true) {
@@ -3272,7 +3344,11 @@ async function handleApi(req, res, pathname) {
           if (page.length < 500) break;
           before = cursorTask.updatedAt; beforeId = cursorTask.id;
         }
+        await finishReliabilityRun(reliabilityRun.id, { status: "succeeded", result: { scanned, escalated: escalated.length } });
         sendJson(res, 200, { generatedAt: new Date().toISOString(), scanned, escalated: escalated.length, tasks: escalated, thresholds: remediationSlaThresholds(), lease: { jobName: lease.lease.jobName, ownerId, leaseUntil: lease.lease.leaseUntil } });
+      } catch (error) {
+        if (reliabilityRun) await finishReliabilityRun(reliabilityRun.id, { status: "failed", error: error.message }).catch(() => {});
+        throw error;
       } finally {
         await releaseJobLease({ jobName: "remediation-sla-scan", ownerId }).catch(() => {});
       }

@@ -49,8 +49,8 @@ export function buildProductionEvidenceReport({
   const gate = ready?.productionGate || health?.productionGate || {};
   const production = Boolean(gate.production);
   const storageObserved = reachable({ status: storageStatus }) && storage && typeof storage === "object";
-  const sections = storageObserved ? [storage, storage.masterData, storage.mobileCapture, storage.proofMedia, storage.telemetry, storage.modules, storage.reminders, storage.remediation, storage.devices, storage.alerts, storage.aiVision, storage.notifications, storage.evidenceSnapshots, storage.integrations, storage.workforce, storage.maintenancePlanning, storage.inventory] : [];
-  const postgresObserved = sections.length > 0 && Boolean(storage?.maintenancePlanning) && Boolean(storage?.inventory) && sections.filter(Boolean).every((section) => isPostgres(section.backend || section.source));
+  const sections = storageObserved ? [storage, storage.masterData, storage.mobileCapture, storage.proofMedia, storage.telemetry, storage.modules, storage.reminders, storage.remediation, storage.devices, storage.alerts, storage.aiVision, storage.notifications, storage.evidenceSnapshots, storage.integrations, storage.workforce, storage.maintenancePlanning, storage.inventory, storage.reliability] : [];
+  const postgresObserved = sections.length > 0 && Boolean(storage?.maintenancePlanning) && Boolean(storage?.inventory) && Boolean(storage?.reliability) && sections.filter(Boolean).every((section) => isPostgres(section.backend || section.source));
   const s3Observed = isS3(storage?.proofMedia?.storageProvider);
   const oidcConfigured = gate?.identity?.provider === "oidc-required" && gateCheck(gate, "DR_FOREST_IDP_ISSUER")?.valid && gateCheck(gate, "DR_FOREST_IDP_JWKS_URL")?.valid;
   const evidence = [
@@ -65,7 +65,7 @@ export function buildProductionEvidenceReport({
     evidenceItem("offhost-restore", "Off-host backup and restore", "DR_FOREST_OFFHOST_RESTORE_DRILL", gate, false, "This requires a dated restore log and checksum record; the HTTP health endpoint cannot prove it."),
     evidenceItem("real-device-pilot", "Real device and camera pilot", "DR_FOREST_REAL_DEVICE_PILOT", gate, Boolean(ready?.devices?.count || storage?.devices?.counts?.devices), "A device count is observable, but real signed traffic, key rotation and camera readback still require the field evidence marker."),
     evidenceItem("multi-client-pilot", "Repeated multi-client operations", "DR_FOREST_MULTI_CLIENT_PILOT", gate, false, "A database count cannot prove repeated service cycles, response times or unresolved exceptions."),
-    evidenceItem("monitoring", "Monitoring and alert routing", "DR_FOREST_MONITORING_VERIFIED", gate, false, "Health endpoints do not prove alert delivery, escalation or recovery notification."),
+    evidenceItem("monitoring", "Monitoring and alert routing", "DR_FOREST_MONITORING_VERIFIED", gate, Boolean(storage?.reliability?.counts?.runs && storage?.reliability?.counts?.incidents), "Persisted job runs and incidents are observable, but production verification still requires a dated alert-delivery and recovery-notification drill."),
     evidenceItem("ai-provider", "External AI provider evaluation", "DR_FOREST_AI_PROVIDER_VERIFIED", gate, Boolean(ready?.aiVision?.diagnoses || storage?.aiVision?.counts?.diagnoses), "Stored diagnosis tasks are observable; provider accuracy, latency, cost and human override evidence remain external."),
     evidenceItem("media-scan", "Media scan and quarantine", "DR_FOREST_MEDIA_SCAN_VERIFIED", gate, s3Observed, s3Observed ? "Object storage configuration is observable; malware scan/quarantine still needs a dated test artifact." : "S3 media storage was not observed from the available health/storage responses.")
   ];

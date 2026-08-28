@@ -109,6 +109,7 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("notifications.read"), "FM lead auth policy did not expose notification read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.plan.write") && authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.generate"), "FM lead auth policy did not expose preventive maintenance controls");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("inventory.write") && authPolicy.body.roles["fm-lead"].permissions.includes("inventory.reserve"), "FM lead auth policy did not expose inventory controls");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("reliability.read") && authPolicy.body.roles["fm-lead"].permissions.includes("reliability.scan"), "FM lead auth policy did not expose reliability controls");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("inventory.read") && authPolicy.body.roles["field-tech"].permissions.includes("inventory.consume"), "Field technician auth policy did not expose route-kit controls");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.read"), "Auth policy did not expose field mobile remediation read permission");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.update"), "Auth policy did not expose field mobile remediation update permission");
@@ -172,6 +173,8 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.workforce.relationshipIntegrity.unknownTechnicians === 0, "Workforce assignment ledger should not contain unknown technicians");
   assert(initialStorage.body.maintenancePlanning.migrationVersion === "2026-08-31.maintenance-planning-v1", "Storage endpoint did not expose maintenance planning migration");
   assert(initialStorage.body.maintenancePlanning.tables.includes("ops_maintenance_plans") && initialStorage.body.maintenancePlanning.tables.includes("ops_maintenance_occurrences") && initialStorage.body.maintenancePlanning.tables.includes("ops_maintenance_generation_runs"), "Storage endpoint did not expose maintenance planning tables");
+  assert(initialStorage.body.reliability.migrationVersion === "2026-09-02.reliability-center-v1", "Storage endpoint did not expose reliability migration");
+  assert(initialStorage.body.reliability.tables.includes("ops_reliability_jobs") && initialStorage.body.reliability.tables.includes("ops_reliability_runs") && initialStorage.body.reliability.tables.includes("ops_reliability_incidents"), "Storage endpoint did not expose reliability tables");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -1149,6 +1152,10 @@ async function verifyApi(baseUrl) {
   const generationHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "api-maintenance-generation-001" };
   const maintenanceGeneration = await fetchJson(`${baseUrl}api/maintenance/generate`, { method: "POST", headers: generationHeaders, body: JSON.stringify({ fromDate: "2026-08-31", throughDate: "2026-09-07" }) });
   assert(maintenanceGeneration.response.status === 201 && maintenanceGeneration.body.run.generatedCount > 0, "Maintenance generation should persist due work orders");
+  const reliabilityAfterMaintenance = await fetchJson(`${baseUrl}api/ops/reliability`, { headers: principalHeaders("fm-lead") });
+  assert(reliabilityAfterMaintenance.response.ok && reliabilityAfterMaintenance.body.jobs.find((job) => job.jobName === "maintenance-generation")?.state === "healthy", "Maintenance generation should leave a successful reliability run");
+  const clientReliabilityDenied = await fetchJson(`${baseUrl}api/ops/reliability`, { headers: principalHeaders("client-show-suite") });
+  assert(clientReliabilityDenied.response.status === 403, "Client viewer should not read internal automation reliability");
   const duplicateMaintenanceGeneration = await fetchJson(`${baseUrl}api/maintenance/generate`, { method: "POST", headers: generationHeaders, body: JSON.stringify({ fromDate: "2026-08-31", throughDate: "2026-09-07" }) });
   assert(duplicateMaintenanceGeneration.response.ok && duplicateMaintenanceGeneration.body.duplicate === true && duplicateMaintenanceGeneration.body.run.id === maintenanceGeneration.body.run.id, "Maintenance generation retry should return the original result");
   const maintenanceCalendar = await fetchJson(`${baseUrl}api/maintenance/calendar?fromDate=2026-07-01&throughDate=2026-09-07`, { headers: principalHeaders("fm-lead") });
@@ -1213,6 +1220,10 @@ async function verifyApi(baseUrl) {
   assert(firstSlaScan.response.ok && firstSlaScan.body.escalated === 2 && firstSlaScan.body.tasks.every((task) => task.escalationLevel === 2 && task.sla.state === "overdue_l2"), "SLA scan did not persist level-two escalation for six-hour overdue tasks");
   const secondSlaScan = await fetchJson(`${baseUrl}api/remediation/sla-scan`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
   assert(secondSlaScan.response.ok && secondSlaScan.body.escalated === 0, "Repeated SLA scan should not duplicate an existing escalation level");
+  const reliabilityScan = await fetchJson(`${baseUrl}api/ops/reliability/scan`, { method: "POST", headers: jsonHeaders("fm-lead"), body: "{}" });
+  assert(reliabilityScan.response.ok && reliabilityScan.body.jobs.find((job) => job.jobName === "remediation-sla-scan")?.state === "healthy" && reliabilityScan.body.jobs.find((job) => job.jobName === "reliability-watchdog")?.state === "healthy", "Reliability scan should observe successful SLA and watchdog runs");
+  const clientReliabilityScanDenied = await fetchJson(`${baseUrl}api/ops/reliability/scan`, { method: "POST", headers: jsonHeaders("client-show-suite"), body: "{}" });
+  assert(clientReliabilityScanDenied.response.status === 403, "Client viewer should not run the reliability watchdog");
   const remediationNotifications = await fetchJson(`${baseUrl}api/notifications?limit=50`, { headers: principalHeaders("fm-lead") });
   assert(remediationNotifications.body.notifications.filter((item) => item.eventType === "remediation.task.sla-escalated").length === 2, "SLA escalation did not create one idempotent notification per task and level");
   const bulkCancelled = await fetchJson(`${baseUrl}api/remediation/tasks/bulk`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "bulk-dispatch-api-smoke-cancel" }, body: JSON.stringify({ taskIds: bulkTaskIds, expectedUpdatedAtById: Object.fromEntries(firstSlaScan.body.tasks.map((task) => [task.id, task.updatedAt])), status: "cancelled" }) });

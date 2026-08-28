@@ -67,6 +67,8 @@ const roleDefinitions = {
       ,"ai.diagnosis.write"
       ,"observability.read"
       ,"notifications.read"
+      ,"reliability.read"
+      ,"reliability.scan"
     ],
     actionTypes: ["*"]
   },

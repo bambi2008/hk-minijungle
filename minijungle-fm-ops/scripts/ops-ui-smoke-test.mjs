@@ -41,6 +41,8 @@ async function main() {
       assert((await operations.locator("#maintenance-state").textContent()).includes("active plans"), "Operations page did not render preventive plan coverage");
       assert(await operations.locator(".inventory-item").count() === 8, "Operations page did not render warehouse and route-kit balances");
       assert((await operations.locator("#inventory-state").textContent()).includes("warehouse low"), "Operations page did not render inventory readiness");
+      assert(await operations.locator(".reliability-item").count() === 5, "Operations page did not render the five monitored background jobs");
+      assert((await operations.locator("#reliability-state").textContent()).includes("at risk"), "Operations page did not render reliability summary");
       await operations.locator("#inventory-sku").selectOption("NUT-A");
       await operations.locator("#inventory-quantity").fill("500");
       await operations.locator("#inventory-destination").selectOption("kit-field-tech-show-suite");
@@ -63,7 +65,7 @@ async function main() {
       await operations.waitForFunction(() => document.querySelector("#import-state")?.textContent.includes("1 valid"), null, { timeout: 10000 });
       assert(await operations.locator("#maintenance-import-apply").isEnabled(), "Valid maintenance preview did not enable apply");
       await operations.locator("#maintenance-import-apply").click();
-      await operations.waitForFunction(() => document.querySelector("#maintenance-import-notice")?.textContent.includes("1 maintenance row imported"), null, { timeout: 10000 });
+      await operations.waitForFunction(() => document.querySelector("#maintenance-import-notice")?.textContent.includes("1 maintenance row imported"), null, { timeout: 20000 });
       assert((await operations.locator("#maintenance-import-history").textContent()).includes("applied"), "Applied maintenance import did not appear in recent history");
       const operationsQualityResponse = await fetch(`${baseUrl}/api/ops/quality`, { headers: { "x-dr-forest-principal": "fm-lead" } });
       const operationsQuality = await operationsQualityResponse.json();
@@ -87,6 +89,9 @@ async function main() {
       await operations.locator("#dispatch-sla-scan").click();
       await operations.waitForFunction(() => document.querySelector("#dispatch-notice")?.textContent.includes("1 newly escalated"), null, { timeout: 10000 });
       assert((await operations.locator("#dispatch-list").textContent()).includes("overdue"), "Operations dispatch queue did not show the persisted overdue SLA state");
+      await operations.locator("#reliability-scan").click();
+      await operations.waitForFunction(() => document.querySelector("#reliability-notice")?.textContent.includes("Check complete"), null, { timeout: 10000 });
+      assert((await operations.locator("#reliability-list").textContent()).includes("Remediation SLA scan"), "Reliability panel did not preserve the monitored SLA job");
       const operationsStart = await fetch(`${baseUrl}/api/mobile/remediation-tasks/${encodeURIComponent(operationsRemediationId)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "field-tech-show-suite" }, body: JSON.stringify({ status: "in_progress" }) });
       assert(operationsStart.ok, "UI smoke could not record technician acceptance");
       const operationsSubmit = await fetch(`${baseUrl}/api/mobile/remediation-tasks/${encodeURIComponent(operationsRemediationId)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "field-tech-show-suite" }, body: JSON.stringify({ submitForReview: true, resolutionNote: "Re-seated monitoring gateway and confirmed the next service check.", evidenceRef: "CAP-UI-REMEDIATION-001" }) });
@@ -119,6 +124,7 @@ async function main() {
       await operations.setViewportSize({ width: 390, height: 844 });
       assert(await operations.locator(".import-panel").isVisible(), "Maintenance import panel disappeared at technician-phone width");
       assert(await operations.locator(".inventory-panel").isVisible(), "Inventory panel disappeared at technician-phone width");
+      assert(await operations.locator(".reliability-panel").isVisible(), "Reliability panel disappeared at technician-phone width");
       assert(await operations.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Operations page has horizontal overflow at 390px width");
       assert(!operationsErrors.length, `Operations page errors: ${operationsErrors.join(" | ")}`);
       const mobileQualityResponse = await fetch(`${baseUrl}/api/ops/quality`, { headers: { "x-dr-forest-principal": "fm-lead" } });

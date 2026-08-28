@@ -10,9 +10,9 @@ DR_FOREST_STORAGE_BACKEND=postgres
 DR_FOREST_DATABASE_URL=postgresql://...
 ```
 
-The current adapter covers append-only operations events, state snapshots, actions, remediation tasks, preventive planning, workforce dispatch and inventory route-kit control with connection pooling, transactions, JSONB payloads, and idempotent migrations. Evidence snapshots use migration v3 with SHA-256 fingerprints, an explicit unsigned/signed HMAC-SHA256 contract, verification state and retention expiry. The health endpoint reports the PostgreSQL migration and row counts.
+The current adapter covers append-only operations events, state snapshots, actions, remediation tasks, preventive planning, workforce dispatch, inventory route-kit control and background-job reliability records with connection pooling, transactions, JSONB payloads, and idempotent migrations. Evidence snapshots use migration v3 with SHA-256 fingerprints, an explicit unsigned/signed HMAC-SHA256 contract, verification state and retention expiry. The health endpoint reports the PostgreSQL migration and row counts.
 
-Apply migrations in numeric order through `010_inventory_route_kits.sql`. Production inventory tables are intentionally empty after migration; warehouse counts, technician kits and opening balances must come from an approved physical count or controlled import.
+Apply migrations in numeric order through `011_reliability_center.sql`. Production inventory tables are intentionally empty after migration; warehouse counts, technician kits and opening balances must come from an approved physical count or controlled import. Reliability job definitions are registered by the application, while run and incident rows are created only by actual executions.
 
 Before a real launch, apply the remaining master-data, telemetry, device, alert, AI, session, audit, remediation-task, and evidence snapshot migrations in the same managed database. Do not point production at the pilot SQLite file. Use a separate database role with only schema migration and application privileges, enable TLS, private networking, automated point-in-time recovery, and connection limits.
 

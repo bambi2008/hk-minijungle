@@ -839,3 +839,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local feature completion.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 59 - Operations Reliability Center v1
+
+- Official production operations readiness remains **65%**. The managed PostgreSQL and independently evidenced off-host restore hard cap still binds, and local monitoring tests cannot prove hosted alert delivery.
+- Persistence added: SQLite migration `2026-09-02.reliability-center-v1` and PostgreSQL migration `2026-09-02.postgres-reliability-center-v1` add monitored job definitions, immutable run history and open/recovered reliability incidents. Deployment SQL is `infra/postgres/011_reliability_center.sql`.
+- Runtime control added: every run records owner, start, finish, duration, result or failure. State calculation distinguishes warming, running, healthy, skipped, failed, stale, stalled and never-run without relying on frontend timers.
+- Recovery loop added: watchdog scans open only one incident per failed job, refresh the reason while it remains unhealthy and recover that same incident after a successful run. Failure and recovery transitions create idempotent outbox notifications and operations timeline events.
+- Existing workflows connected: preventive-maintenance generation and remediation SLA scans now report successful or failed execution. Notification delivery records skipped, successful or failed runs. The normal backup command now wraps the existing backup process with the same run ledger.
+- Experience added: Ops Today shows five automation jobs, latest execution, expected interval, stale threshold and at-risk count in one compact panel. FM Lead can run the watchdog without navigating to a separate admin surface; client roles remain denied.
+- Production gate added: preflight now requires all three reliability tables, migration `011` and PostgreSQL-backed reliability storage. Production evidence reporting observes reliability storage but still refuses to mark monitoring verified without an external dated delivery/recovery drill.
+- Evidence added: store smoke proves healthy, stale, no-duplicate incident, failed and recovered states plus foreign-key integrity. API smoke covers role denial, maintenance/SLA run records, watchdog execution and storage health. Browser smoke covers desktop interaction and 390px rendering.
+- Honest boundary: no hosted scheduler, external webhook delivery, on-call acknowledgement, production log sink or recovery drill is configured in this workspace. These remain external production blockers.
+
+### Current Honest Score After Step 59
+
+- Production operations readiness: **65%**. No score increase is claimed from local reliability controls.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
