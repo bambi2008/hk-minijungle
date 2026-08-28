@@ -43,6 +43,7 @@ async function main() {
       assert((await operations.locator("#inventory-state").textContent()).includes("warehouse low"), "Operations page did not render inventory readiness");
       assert(await operations.locator(".reliability-item").count() === 5, "Operations page did not render the five monitored background jobs");
       assert((await operations.locator("#reliability-state").textContent()).includes("at risk"), "Operations page did not render reliability summary");
+      assert(await operations.locator("#commissioning-gap-count").textContent() === "12", "Operations summary should expose all generated modules as commissioning gaps");
       await operations.locator("#inventory-sku").selectOption("NUT-A");
       await operations.locator("#inventory-quantity").fill("500");
       await operations.locator("#inventory-destination").selectOption("kit-field-tech-show-suite");
@@ -135,9 +136,18 @@ async function main() {
       assert(mobileTaskCreate.status === 201, "UI smoke could not create a mobile remediation task");
       const mobileTaskBody = await mobileTaskCreate.json();
       assert(mobileTaskBody.task.workOrderId === mobileSeed.workOrderId && mobileTaskBody.task.workOrderId === "WO-1047", "UI smoke remediation task was not bound to the module work order");
+      const commissioningPlan = await fetch(`${baseUrl}/api/commissioning`, { method: "POST", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "fm-lead", "Idempotency-Key": "commissioning-ui-plan-001" }, body: JSON.stringify({ moduleId: mobileSeed.moduleId, serialNumber: "DRF-UI-SERIAL-001", publicCode: "DRF-UI-MOD-001", hardwareRevision: "UI-A1", installLocation: "Show suite test position" }) });
+      assert(commissioningPlan.status === 201, "UI smoke could not plan a physical module identity");
       const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const mobileErrors = []; mobile.on("console", (message) => { if (message.type() === "error") mobileErrors.push(message.text()); }); mobile.on("pageerror", (error) => mobileErrors.push(error.message));
       await mobile.goto(`${baseUrl}/mobile.html`); await mobile.evaluate(() => localStorage.removeItem("dr-forest.field-capture.queue.v3")); await mobile.waitForFunction(() => document.querySelectorAll(".stop").length > 0, null, { timeout: 10000 }); await mobile.locator(".stop").first().click(); await mobile.waitForTimeout(300);
+      await mobile.locator("#asset-code").fill("DRF-UI-MOD-001"); await mobile.locator("#asset-code-form button").click();
+      await mobile.waitForFunction(() => document.querySelector("#commissioning-mobile-state")?.textContent === "PLANNED", null, { timeout: 10000 });
+      assert((await mobile.locator("#asset-code-result").textContent()).includes(mobileSeed.moduleId), "Technician asset-code lookup did not open the assigned physical module");
+      for (const selector of ["#install-identity","#install-mount","#install-water","#install-electrical"]) await mobile.locator(selector).check();
+      await mobile.locator("#commissioning-install").click();
+      await mobile.waitForFunction(() => document.querySelector("#commissioning-mobile-state")?.textContent === "INSTALLED", null, { timeout: 10000 });
+      assert((await mobile.locator("#sync-state").textContent()).includes("FM verification pending"), "Technician installation did not preserve the independent FM review step");
       assert((await mobile.locator("#route-kit-list").textContent()).includes("500 ml available"), "Technician app did not show the loaded nutrient route kit");
       assert(await mobile.locator(".reminder").count() > 0, "Technician app did not load reminders");
       await mobile.waitForSelector(".remediation-item", { timeout: 10000 });
@@ -209,6 +219,15 @@ async function main() {
       const adminErrors = []; admin.on("console", (message) => { if (message.type() === "error") adminErrors.push(message.text()); }); admin.on("pageerror", (error) => adminErrors.push(error.message));
       await admin.goto(`${baseUrl}/admin.html`); await admin.waitForFunction(() => document.querySelectorAll("#clients-list tbody tr").length === 4, null, { timeout: 10000 }); await admin.locator("[data-tab=modules]").click();
       assert(await admin.locator("#modules-list tbody tr").count() === 12, "Admin page did not load module master data");
+      await admin.locator("[data-tab=commissioning]").click();
+      assert(await admin.locator("#commissioning-list tbody tr").count() === 12, "Admin page did not render the complete commissioning ledger");
+      const commissioningRow = admin.locator("#commissioning-list tbody tr").filter({ hasText: mobileSeed.moduleId });
+      assert((await commissioningRow.textContent()).includes("INSTALLED"), "Admin commissioning ledger did not receive the technician installation");
+      await commissioningRow.locator('[data-commissioning-action="verified"]').click();
+      await admin.locator('#commissioning-editor input[name="deviceMappingChecked"]').check(); await admin.locator('#commissioning-editor input[name="cameraViewChecked"]').check(); await admin.locator('#commissioning-editor input[name="note"]').fill("Independent FM acceptance completed in UI smoke.");
+      await admin.locator("#commissioning-submit").click();
+      await admin.waitForFunction((moduleId) => [...document.querySelectorAll("#commissioning-list tbody tr")].some((row) => row.textContent.includes(moduleId) && row.textContent.includes("VERIFIED")), mobileSeed.moduleId, { timeout: 10000 });
+      assert((await commissioningRow.textContent()).includes("VERIFIED"), "Admin commissioning workflow did not persist independent FM acceptance");
       assert(!adminErrors.length, `Admin page errors: ${adminErrors.join(" | ")}`);
     } finally { await browser.close(); }
     console.log(`Ops UI smoke test passed at ${baseUrl}`);

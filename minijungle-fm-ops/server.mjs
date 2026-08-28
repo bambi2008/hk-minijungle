@@ -128,6 +128,22 @@ import {
   upsertSqliteModule
 } from "./lib/ops-module-store.mjs";
 import {
+  listSqliteCommissioning,
+  listSqliteCommissioningEvents,
+  planSqliteCommissioning,
+  readSqliteCommissioningByCode,
+  readSqliteCommissioningHealth,
+  transitionSqliteCommissioning
+} from "./lib/ops-commissioning-store.mjs";
+import {
+  listPostgresCommissioning,
+  listPostgresCommissioningEvents,
+  planPostgresCommissioning,
+  readPostgresCommissioningByCode,
+  readPostgresCommissioningHealth,
+  transitionPostgresCommissioning
+} from "./lib/ops-postgres-commissioning-store.mjs";
+import {
   listSqliteDevices,
   listSqliteDeviceCameraCaptures,
   consumeSqliteDeviceReplay,
@@ -444,6 +460,69 @@ async function readModuleStorageHealth() {
   return productionMasterDataEnabled()
     ? readPostgresModuleStorageHealth(runtimeDbPath, dataRoot)
     : readSqliteModuleStorageHealth(runtimeDbPath, dataRoot);
+}
+
+async function listCommissioning(options = {}) {
+  await listModules();
+  return productionMasterDataEnabled()
+    ? listPostgresCommissioning(runtimeDbPath, options)
+    : listSqliteCommissioning(runtimeDbPath, options);
+}
+
+async function listCommissioningEvents(moduleId) {
+  await listModules();
+  return productionMasterDataEnabled()
+    ? listPostgresCommissioningEvents(runtimeDbPath, moduleId)
+    : listSqliteCommissioningEvents(runtimeDbPath, moduleId);
+}
+
+async function readCommissioningByCode(publicCode) {
+  await listModules();
+  return productionMasterDataEnabled()
+    ? readPostgresCommissioningByCode(runtimeDbPath, publicCode)
+    : readSqliteCommissioningByCode(runtimeDbPath, publicCode);
+}
+
+async function planCommissioning(input) {
+  await listModules();
+  return productionMasterDataEnabled()
+    ? planPostgresCommissioning(runtimeDbPath, input)
+    : planSqliteCommissioning(runtimeDbPath, input);
+}
+
+async function transitionCommissioning(moduleId, input) {
+  await listModules();
+  return productionMasterDataEnabled()
+    ? transitionPostgresCommissioning(runtimeDbPath, moduleId, input)
+    : transitionSqliteCommissioning(runtimeDbPath, moduleId, input);
+}
+
+async function readCommissioningHealth() {
+  await listModules();
+  return productionMasterDataEnabled()
+    ? readPostgresCommissioningHealth(runtimeDbPath)
+    : readSqliteCommissioningHealth(runtimeDbPath);
+}
+
+const commissioningDeviceTypes = ["temperature", "humidity", "co2", "mc", "camera"];
+
+async function commissioningOverviewFor(auth, options = {}) {
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [commissioning, devices] = await Promise.all([
+    listCommissioning({ ...options, clientIds }),
+    listDevices({ clientIds })
+  ]);
+  const records = commissioning.records.map((record) => {
+    const moduleDevices = devices.filter((device) => device.moduleId === record.moduleId && device.status !== "retired");
+    const mappedDeviceTypes = [...new Set(moduleDevices.map((device) => device.type))];
+    const missingDeviceTypes = commissioningDeviceTypes.filter((type) => !mappedDeviceTypes.includes(type));
+    return { ...record, mappedDeviceTypes, missingDeviceTypes, verificationReady: record.status === "installed" && missingDeviceTypes.length === 0 };
+  });
+  return {
+    generatedAt: new Date().toISOString(),
+    records,
+    summary: { ...commissioning.summary, deviceMappingGaps: records.filter((record) => record.status !== "retired" && record.missingDeviceTypes.length > 0).length }
+  };
 }
 
 async function appendSensorReading(input) {
@@ -2455,6 +2534,72 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/commissioning") {
+      requirePermission(auth, "commissioning.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const wallId = url.searchParams.get("wallId");
+      if (wallId) requireClientAccess(auth, (await listModules({ wallId })).at(0)?.clientId, "commissioning list");
+      sendJson(res, 200, await commissioningOverviewFor(auth, { wallId, status: url.searchParams.get("status") }));
+      return;
+    }
+
+    const commissioningEventsMatch = pathname.match(/^\/api\/commissioning\/([^/]+)\/events$/);
+    if (req.method === "GET" && commissioningEventsMatch) {
+      requirePermission(auth, "commissioning.read");
+      const moduleId = decodeURIComponent(commissioningEventsMatch[1]);
+      const overview = await commissioningOverviewFor(auth);
+      const record = overview.records.find((item) => item.moduleId === moduleId);
+      if (!record) throw apiError(404, "commissioning module not found in the current client scope", "COMMISSIONING_NOT_FOUND");
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), record, events: await listCommissioningEvents(moduleId) });
+      return;
+    }
+
+    const commissioningCodeMatch = pathname.match(/^\/api\/mobile\/module-code\/([^/]+)$/);
+    if (req.method === "GET" && commissioningCodeMatch) {
+      requirePermission(auth, "mobile.route.read");
+      requirePermission(auth, "commissioning.read");
+      const record = await readCommissioningByCode(decodeURIComponent(commissioningCodeMatch[1]));
+      if (!record || record.status === "retired") throw apiError(404, "active module code not found", "COMMISSIONING_CODE_NOT_FOUND");
+      requireClientAccess(auth, record.clientId, "mobile module code");
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), record, mobileUrl: `/mobile.html?moduleCode=${encodeURIComponent(record.publicCode)}` });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/commissioning") {
+      requirePermission(auth, "commissioning.write");
+      const idempotencyKey = String(req.headers["idempotency-key"] || "").trim();
+      if (!idempotencyKey) throw apiError(428, "Idempotency-Key header is required for commissioning changes", "IDEMPOTENCY_KEY_REQUIRED");
+      const input = await readJsonBody(req);
+      const module = (await listModules()).find((item) => item.id === String(input.moduleId || "").trim());
+      if (!module) throw apiError(404, "module not found", "COMMISSIONING_MODULE_NOT_FOUND");
+      requireClientAccess(auth, module.clientId, "commissioning plan");
+      const result = await planCommissioning({ ...input, actorId: auth.id, actorName: auth.name, idempotencyKey });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: "module.commissioning.planned", actor: auth.name, entityType: "module", entityId: result.record.moduleId, clientId: result.record.clientId, wallId: result.record.wallId, source: "module-commissioning", note: `Physical identity ${result.record.serialNumber} planned for ${result.record.moduleId}.`, payload: { principalId: auth.id, publicCode: result.record.publicCode, hardwareRevision: result.record.hardwareRevision } });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event });
+      return;
+    }
+
+    const commissioningTransitionMatch = pathname.match(/^\/api\/commissioning\/([^/]+)$/);
+    if (req.method === "PATCH" && commissioningTransitionMatch) {
+      const moduleId = decodeURIComponent(commissioningTransitionMatch[1]);
+      const input = await readJsonBody(req); const toStatus = String(input.toStatus || "").trim().toLowerCase();
+      if (toStatus === "installed") requirePermission(auth, "commissioning.install");
+      else if (toStatus === "verified") requirePermission(auth, "commissioning.verify");
+      else requirePermission(auth, "commissioning.write");
+      const idempotencyKey = String(req.headers["idempotency-key"] || "").trim();
+      if (!idempotencyKey) throw apiError(428, "Idempotency-Key header is required for commissioning changes", "IDEMPOTENCY_KEY_REQUIRED");
+      const overview = await commissioningOverviewFor(auth); const current = overview.records.find((item) => item.moduleId === moduleId);
+      if (!current) throw apiError(404, "commissioning module not found in the current client scope", "COMMISSIONING_NOT_FOUND");
+      requireClientAccess(auth, current.clientId, "commissioning transition");
+      if (toStatus === "verified" && current.missingDeviceTypes.length) throw apiError(409, `device mapping incomplete: ${current.missingDeviceTypes.join(", ")}`, "COMMISSIONING_DEVICE_COVERAGE_INCOMPLETE");
+      const result = await transitionCommissioning(moduleId, { ...input, actorId: auth.id, actorName: auth.name, idempotencyKey });
+      const event = result.duplicate ? null : normalizeOpsEvent({ type: `module.commissioning.${result.record.status}`, actor: auth.name, entityType: "module", entityId: result.record.moduleId, clientId: result.record.clientId, wallId: result.record.wallId, source: "module-commissioning", note: result.record.lifecycleNote || `Module ${result.record.moduleId} moved to ${result.record.status}.`, payload: { principalId: auth.id, fromStatus: result.event.fromStatus, toStatus: result.event.toStatus, installedBy: result.record.installedBy, verifiedBy: result.record.verifiedBy } });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, 200, { ...result, event });
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/telemetry/alert-rules") {
       requirePermission(auth, "telemetry.alerts.read");
       const url = new URL(req.url, `http://${host}:${port}`);
@@ -2669,7 +2814,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/admin/master-data") {
       requirePermission(auth, "master.data.read");
-      const [clients, walls, workorders, sensorData, modules, devices, alertRules] = await Promise.all([readJsonData("clients"), readJsonData("walls"), readJsonData("workorders"), readJsonData("sensors"), listModules(), listDevices(), listAlertRules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds })]);
+      const [clients, walls, workorders, sensorData, modules, devices, alertRules, commissioning] = await Promise.all([readJsonData("clients"), readJsonData("walls"), readJsonData("workorders"), readJsonData("sensors"), listModules(), listDevices(), listAlertRules({ clientIds: auth.clientScope === "all" ? null : auth.clientIds }), commissioningOverviewFor(auth)]);
       const scopedClients = filterByClientScope(auth, clients, (client) => client.id);
       const clientIds = new Set(scopedClients.map((client) => client.id));
       sendJson(res, 200, {
@@ -2680,7 +2825,8 @@ async function handleApi(req, res, pathname) {
         sensors: (sensorData.readings || []).filter((sensor) => clientIds.has(walls.find((asset) => asset.id === sensor.wallId)?.clientId)),
         modules: modules.filter((module) => clientIds.has(module.clientId)),
         devices: devices.filter((device) => clientIds.has(device.clientId)),
-        alertRules: alertRules.filter((rule) => !rule.clientId || clientIds.has(rule.clientId))
+        alertRules: alertRules.filter((rule) => !rule.clientId || clientIds.has(rule.clientId)),
+        commissioning: { records: commissioning.records.filter((record) => clientIds.has(record.clientId)), summary: commissioning.summary }
       });
       return;
     }
@@ -3134,7 +3280,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -3150,7 +3296,8 @@ async function handleApi(req, res, pathname) {
         readEvidenceSnapshotStorageHealth(),
         readIntegrationStorageHealth(),
         readWorkforceStorageHealth(),
-        readReliabilityHealth()
+        readReliabilityHealth(),
+        readCommissioningHealth()
       ]);
       const [maintenancePlanningStorage, inventoryStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth()]);
       sendJson(res, 200, {
@@ -3172,7 +3319,8 @@ async function handleApi(req, res, pathname) {
         workforce: workforceStorage,
         maintenancePlanning: maintenancePlanningStorage,
         inventory: inventoryStorage,
-        reliability: reliabilityStorage
+        reliability: reliabilityStorage,
+        commissioning: commissioningStorage
       });
       return;
     }

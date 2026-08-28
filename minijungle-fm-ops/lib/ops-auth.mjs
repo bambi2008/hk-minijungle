@@ -69,6 +69,10 @@ const roleDefinitions = {
       ,"notifications.read"
       ,"reliability.read"
       ,"reliability.scan"
+      ,"commissioning.read"
+      ,"commissioning.write"
+      ,"commissioning.install"
+      ,"commissioning.verify"
     ],
     actionTypes: ["*"]
   },
@@ -103,6 +107,8 @@ const roleDefinitions = {
       ,"telemetry.alerts.read"
       ,"ai.diagnosis.read"
       ,"ai.diagnosis.request"
+      ,"commissioning.read"
+      ,"commissioning.install"
     ],
     actionTypes: [
       "workorder.complete",
@@ -129,6 +135,7 @@ const roleDefinitions = {
       ,"telemetry.health.read"
       ,"telemetry.alerts.read"
       ,"ai.diagnosis.read"
+      ,"commissioning.read"
     ],
     actionTypes: []
   },
@@ -152,6 +159,7 @@ const roleDefinitions = {
       ,"telemetry.health.read"
       ,"telemetry.alerts.read"
       ,"ai.diagnosis.read"
+      ,"commissioning.read"
     ],
     actionTypes: []
   }

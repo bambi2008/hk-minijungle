@@ -46,6 +46,7 @@ function renderReliability(payload = {}) {
   $("#reliability-state").textContent=`${Number(summary.healthy||0)} healthy · ${Number(summary.atRisk||0)} at risk · ${Number(summary.openIncidents||0)} open`;
   $("#reliability-list").innerHTML=jobs.length?jobs.map((job)=>`<article class="reliability-item"><div><strong>${escapeHtml(job.label)}</strong><span>Expected every ${escapeHtml(intervalLabel(job.expectedIntervalSeconds))} · stale after ${escapeHtml(intervalLabel(job.staleAfterSeconds))}</span><small>${escapeHtml(job.lastFinishedAt?`Last ${job.lastStatus} ${formatTime(job.lastFinishedAt)}${job.lastDurationMs!==null?` · ${job.lastDurationMs}ms`:""}`:job.reason)}</small></div><b class="reliability-state ${escapeHtml(job.state)}">${escapeHtml(job.state.replaceAll("_"," "))}</b></article>`).join(""):"<p class=\"empty\">No background jobs registered.</p>";
 }
+function renderCommissioningSummary(payload = {}) { $("#commissioning-gap-count").textContent = Number(payload.summary?.actionRequired || 0); }
 function dispatchSlaLabel(task) { return task.sla?.level ? `SLA L${task.sla.level} · ${Number(task.sla.overdueHours || 0).toFixed(1)}h overdue` : task.sla?.state === "due_soon" ? `Due in ${Number(task.sla.dueInHours || 0).toFixed(1)}h` : task.sla?.state === "scheduled" ? "Scheduled" : "No due time"; }
 function localDateValue(value = new Date()) { const date = value instanceof Date ? value : new Date(value); const offset = date.getTimezoneOffset() * 60000; return new Date(date.getTime() - offset).toISOString().slice(0, 10); }
 function setTechnicianOptions(selector, candidates, emptyLabel) {
@@ -157,7 +158,7 @@ async function load() {
   if (!$("#workforce-date").value) $("#workforce-date").value = localDateValue();
   if (!$("#maintenance-through-date").value) $("#maintenance-through-date").value = localDateValue(new Date(Date.now() + 30 * 86400000));
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -175,6 +176,7 @@ async function load() {
   renderCaptures(captures.batches || []);
   renderNotifications(notifications.notifications || [], notifications.summary || {});
   renderReliability(reliability);
+  renderCommissioningSummary(commissioning);
   renderTimeline(timeline);
   renderQuality(quality);
   renderDispatchQueue(dispatch);

@@ -10,6 +10,7 @@ let selected = null;
 let activeReminder = null;
 let activeRemediationTask = null;
 let selectedModule = null;
+let selectedCommissioning = null;
 
 const $ = (selector) => document.querySelector(selector);
 const headers = { "Content-Type": "application/json", "x-dr-forest-principal": principal };
@@ -107,6 +108,8 @@ async function load() {
     const stop = route.find((item) => item.workOrderId === workOrderId);
     if (stop) selectStop(stop, reminder, false);
   }
+  const moduleCode = query.get("moduleCode");
+  if (moduleCode) await resolveModuleCode(moduleCode, false);
   return liveRoute;
 }
 
@@ -183,6 +186,24 @@ function renderRoute() {
   });
 }
 
+async function resolveModuleCode(code, scroll = true) {
+  const value = String(code || "").trim();
+  if (!value) return;
+  const body = await json(`/api/mobile/module-code/${encodeURIComponent(value)}`, { headers });
+  const record = body.record;
+  const stop = route.find((item) => item.wallId === record.wallId && (item.modules || []).some((module) => module.id === record.moduleId));
+  if (!stop) {
+    $("#asset-code-result").textContent = `${record.moduleLabel} resolved, but it is not on the assigned route.`;
+    return;
+  }
+  await selectStop(stop, reminders.find((item) => item.workorderId === stop.workOrderId), false);
+  $("#module").value = record.moduleId;
+  await loadModuleStatus();
+  $("#asset-code").value = record.publicCode;
+  $("#asset-code-result").textContent = `${record.moduleLabel} · ${record.moduleId} · ${record.status} · ${stop.assetName || stop.wallId}`;
+  if (scroll) $("#capture-form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
 async function selectStop(stop, reminder = null, scroll = true, preserveRemediation = false) {
   if (!preserveRemediation) activeRemediationTask = null;
   selected = stop;
@@ -206,16 +227,25 @@ async function loadModuleStatus() {
   const moduleId = $("#module").value;
   selectedModule = selected?.modules?.find((module) => module.id === moduleId) || null;
   if (!moduleId || !selected) {
+    selectedCommissioning = null;
     $("#module-status").innerHTML = "<span>No module selected</span>";
+    $("#commissioning-mobile").hidden = true;
     return;
   }
   renderModuleStatus();
+  selectedCommissioning = null;
   try {
-    const body = await json(`/api/modules?wallId=${encodeURIComponent(selected.wallId)}`, { headers });
+    const [body, commissioning] = await Promise.all([
+      json(`/api/modules?wallId=${encodeURIComponent(selected.wallId)}`, { headers }),
+      json(`/api/commissioning?wallId=${encodeURIComponent(selected.wallId)}`, { headers })
+    ]);
     selectedModule = (body.modules || []).find((module) => module.id === moduleId) || null;
+    selectedCommissioning = (commissioning.records || []).find((record) => record.moduleId === moduleId) || null;
     renderModuleStatus();
+    renderModuleCommissioning();
   } catch {
     renderModuleStatus();
+    renderModuleCommissioning();
   }
 }
 
@@ -228,6 +258,33 @@ function renderModuleStatus() {
   $("#module-status").innerHTML = [
     ["TEMP", "temperature", "C"], ["RH", "humidity", "%"], ["CO2", "co2", "ppm"], ["MC", "mc", "MC"]
   ].map(([label, metric, unit]) => { const reading = byMetric.get(metric); const status = String(reading?.status || "no-data").replace(/[^a-z-]/gi, "").toLowerCase(); return `<span class="reading-${status}"><b>${label}</b><strong>${reading ? `${escapeHtml(reading.value)} ${unit}` : "--"}</strong><small>${reading ? `${escapeHtml(reading.status || "unknown")} · ${escapeHtml(observedLabel(reading))}` : "no data"}</small></span>`; }).join("");
+}
+
+function renderModuleCommissioning() {
+  const panel = $("#commissioning-mobile");
+  if (!selectedCommissioning) { panel.hidden = true; return; }
+  panel.hidden = false;
+  $("#commissioning-mobile-state").textContent = selectedCommissioning.status.toUpperCase();
+  $("#commissioning-mobile-identity").textContent = selectedCommissioning.serialNumber ? `${selectedCommissioning.serialNumber} · ${selectedCommissioning.publicCode}` : "Physical identity not planned";
+  const canInstall = ["planned", "suspended"].includes(selectedCommissioning.status);
+  $("#commissioning-install-checks").hidden = !canInstall;
+  if (canInstall) {
+    const checklist = selectedCommissioning.checklist || {};
+    $("#install-identity").checked = checklist.identityLabelApplied === true;
+    $("#install-mount").checked = checklist.physicalMountChecked === true;
+    $("#install-water").checked = checklist.waterCircuitChecked === true;
+    $("#install-electrical").checked = checklist.electricalSafetyChecked === true;
+  }
+}
+
+async function confirmCommissioningInstallation() {
+  if (!selectedCommissioning || !["planned", "suspended"].includes(selectedCommissioning.status)) return;
+  const checklist = { identityLabelApplied: $("#install-identity").checked, physicalMountChecked: $("#install-mount").checked, waterCircuitChecked: $("#install-water").checked, electricalSafetyChecked: $("#install-electrical").checked };
+  const button = $("#commissioning-install"); button.disabled = true;
+  try {
+    const result = await json(`/api/commissioning/${encodeURIComponent(selectedCommissioning.moduleId)}`, { method: "PATCH", headers: { ...headers, "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ toStatus: "installed", expectedUpdatedAt: selectedCommissioning.updatedAt, checklist, note: "Installation checks completed from technician mobile." }) });
+    selectedCommissioning = result.record; renderModuleCommissioning(); setState("Installation recorded · FM verification pending");
+  } catch (error) { setState(error.message, "error"); } finally { button.disabled = false; }
 }
 
 async function acknowledgeReminder(reminder) {
@@ -351,6 +408,8 @@ $("#clear-photo").onclick = () => { $("#photo").value = ""; clearPhotoPreview();
 $("#capture-form").addEventListener("submit", (event) => { event.preventDefault(); submit(false); });
 $("#queue").onclick = () => submit(true);
 $("#module").onchange = () => loadModuleStatus();
+$("#asset-code-form").addEventListener("submit", (event) => { event.preventDefault(); resolveModuleCode($("#asset-code").value).catch((error) => $("#asset-code-result").textContent = error.message); });
+$("#commissioning-install").onclick = () => confirmCommissioningInstallation();
 $("#refresh").onclick = () => load().catch((error) => setState(error.message, "error"));
 $("#flush-queue").onclick = () => flushQueue();
 window.addEventListener("online", () => load().then((loaded) => loaded ? flushQueue() : null).catch((error) => setState(error.message, "error")));

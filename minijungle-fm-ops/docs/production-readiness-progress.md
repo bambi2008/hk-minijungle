@@ -857,3 +857,22 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local reliability controls.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 60 - Module Commissioning and Physical Asset Lifecycle v1
+
+- Official production operations readiness remains **65%**. This batch closes an application control gap, but the managed PostgreSQL and independently evidenced off-host restore hard cap remains binding.
+- Persistence added: SQLite migration `2026-09-03.module-commissioning-v1` and PostgreSQL migration `2026-09-03.postgres-module-commissioning-v1` add one authoritative physical identity record per module and an immutable lifecycle event ledger. Deployment SQL is `infra/postgres/012_module_commissioning.sql`.
+- Identity control added: real serial numbers and field asset codes are globally unique. Generated pilot modules remain explicitly `unplanned`; they are not silently treated as installed equipment.
+- Workflow added: FM Lead plans the physical identity, a field technician records four installation checks on the phone, and a different FM Lead or Platform Admin independently verifies the sensor mapping and camera view. The installer cannot verify the same module.
+- Concurrency and audit added: all writes require an idempotency key and expected `updatedAt` version. Replay returns the original result, stale pages fail with a conflict, and suspension or retirement requires an audit note.
+- Device boundary added: verification requires mapped temperature, humidity, CO2, MC and camera device records. Mapping proves registry coverage only; it does not fabricate connectivity, calibration or live telemetry.
+- Experience added: Ops Today exposes the total commissioning gap without adding another daily-work panel. Ops Admin adds a dedicated lifecycle table and short action dialog. The 390px technician app can resolve an assigned physical module code and record installation checks without leaving the visit flow.
+- Production gate added: preflight now requires both commissioning tables, migration `012` and PostgreSQL-backed commissioning health. Production evidence refuses to report complete PostgreSQL observation when this subdomain is absent.
+- Evidence added: store smoke covers identity uniqueness, replay, checklist enforcement, stale-write conflict, separation of duties, code resolution, suspension, retirement and FK integrity. API smoke covers tenant scope, permissions, planning, technician installation, independent FM verification, event history and storage health. Playwright covers the complete desktop-to-phone-to-desktop workflow and mobile layout.
+- Honest boundary: no real hardware serials, signed site acceptance documents, calibrated device maps, managed PostgreSQL deployment, off-host restore or repeated live-site commissioning cycles are evidenced in this workspace.
+
+### Current Honest Score After Step 60
+
+- Production operations readiness: **65%**. No score increase is claimed from local lifecycle controls.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

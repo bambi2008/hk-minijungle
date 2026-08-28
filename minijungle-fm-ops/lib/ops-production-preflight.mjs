@@ -41,6 +41,8 @@ const requiredTables = [
   "ops_reliability_jobs",
   "ops_reliability_runs",
   "ops_reliability_incidents",
+  "ops_module_commissioning",
+  "ops_module_commissioning_events",
   "evidence_snapshots"
 ];
 
@@ -65,7 +67,8 @@ const requiredMigrations = [
   "2026-08-30.postgres-workforce-dispatch-v1",
   "2026-08-31.postgres-maintenance-planning-v1",
   "2026-09-01.postgres-inventory-route-kit-v1",
-  "2026-09-02.postgres-reliability-center-v1"
+  "2026-09-02.postgres-reliability-center-v1",
+  "2026-09-03.postgres-module-commissioning-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
@@ -161,12 +164,14 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.workforce?.backend,
     storage.body?.maintenancePlanning?.backend,
     storage.body?.inventory?.backend,
-    storage.body?.reliability?.backend
+    storage.body?.reliability?.backend,
+    storage.body?.commissioning?.backend
   ].filter(Boolean);
   const maintenancePlanningObserved = /postgres/i.test(String(storage.body?.maintenancePlanning?.backend || ""));
   const inventoryObserved = /postgres/i.test(String(storage.body?.inventory?.backend || ""));
   const reliabilityObserved = /postgres/i.test(String(storage.body?.reliability?.backend || ""));
-  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved && reliabilityObserved;
+  const commissioningObserved = /postgres/i.test(String(storage.body?.commissioning?.backend || ""));
+  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved && reliabilityObserved && commissioningObserved;
   const status = ready.status === 200 && storage.status === 200 && ready.body?.status === "ready" && postgresStorage ? "verified" : "failed";
   return {
     status,
@@ -177,6 +182,7 @@ async function probeService(serviceUrl, headers = {}) {
     maintenancePlanningObserved,
     inventoryObserved,
     reliabilityObserved,
+    commissioningObserved,
     postgresStorage,
     reason: status === "verified" ? null : "Service readiness or PostgreSQL-backed storage observation failed"
   };
