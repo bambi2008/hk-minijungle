@@ -239,6 +239,21 @@ import {
 } from "./lib/ops-postgres-maintenance-planning-store.mjs";
 import { addDays, cadenceDaysFromLabel, dateOnly, legacyNextDue } from "./lib/ops-maintenance-policy.mjs";
 import {
+  applySqliteInventoryMovement,
+  consumeSqliteInventory,
+  readSqliteInventoryHealth,
+  readSqliteInventoryOverview,
+  reserveSqliteInventory,
+  seedSqliteInventory
+} from "./lib/ops-inventory-store.mjs";
+import {
+  applyPostgresInventoryMovement,
+  consumePostgresInventory,
+  readPostgresInventoryHealth,
+  readPostgresInventoryOverview,
+  reservePostgresInventory
+} from "./lib/ops-postgres-inventory-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -712,6 +727,11 @@ async function listMaintenancePlans(options = {}) { return productionMasterDataE
 async function listMaintenanceOccurrences(options = {}) { return productionMasterDataEnabled() ? listPostgresMaintenanceOccurrences(runtimeDbPath, options) : listSqliteMaintenanceOccurrences(runtimeDbPath, options); }
 async function generateMaintenanceOccurrences(input) { return productionMasterDataEnabled() ? generatePostgresMaintenanceOccurrences(runtimeDbPath, input) : generateSqliteMaintenanceOccurrences(runtimeDbPath, input); }
 async function readMaintenancePlanningHealth() { return productionMasterDataEnabled() ? readPostgresMaintenancePlanningHealth(runtimeDbPath) : readSqliteMaintenancePlanningHealth(runtimeDbPath); }
+async function readInventoryOverview(options = {}) { return productionMasterDataEnabled() ? readPostgresInventoryOverview(runtimeDbPath, options) : readSqliteInventoryOverview(runtimeDbPath, options); }
+async function applyInventoryMovement(input) { return productionMasterDataEnabled() ? applyPostgresInventoryMovement(runtimeDbPath, input) : applySqliteInventoryMovement(runtimeDbPath, input); }
+async function reserveInventory(input) { return productionMasterDataEnabled() ? reservePostgresInventory(runtimeDbPath, input) : reserveSqliteInventory(runtimeDbPath, input); }
+async function consumeInventory(input) { return productionMasterDataEnabled() ? consumePostgresInventory(runtimeDbPath, input) : consumeSqliteInventory(runtimeDbPath, input); }
+async function readInventoryHealth() { return productionMasterDataEnabled() ? readPostgresInventoryHealth(runtimeDbPath) : readSqliteInventoryHealth(runtimeDbPath); }
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1309,6 +1329,52 @@ async function ensurePilotMaintenancePlans() {
   }
 }
 
+async function ensurePilotInventory() {
+  if (!productionConfigReport().production) await seedSqliteInventory(runtimeDbPath, dataRoot);
+}
+
+async function inventoryOverviewFor(auth) {
+  await ensurePilotInventory();
+  const assignments = await listWorkforceAssignments({ technicianId: auth.roleId === "field-tech" ? auth.id : null, targetType: "work-order", statuses: ["planned", "accepted", "in_progress"], clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: 1000 });
+  const overview = await readInventoryOverview(auth.roleId === "field-tech" ? { technicianId: auth.id, workOrderIds: assignments.map((item) => item.targetId) } : {});
+  const reservedWorkOrders = new Set(overview.reservations.filter((item) => item.status === "active").map((item) => item.workOrderId));
+  return { ...overview, routeReadiness: { assignedWorkOrders: assignments.length, unreservedWorkOrders: assignments.filter((item) => !reservedWorkOrders.has(item.targetId)).length, assignments: assignments.map((item) => ({ workOrderId: item.targetId, technicianId: item.technicianId, serviceDate: item.serviceDate, reserved: reservedWorkOrders.has(item.targetId) })) } };
+}
+
+async function assertInventoryWorkOrderAccess(auth, workOrderId, technicianId = null) {
+  const resolveEntityClientId = await buildEntityClientResolver();
+  const clientId = resolveEntityClientId("workorder", workOrderId);
+  if (!clientId) throw apiError(404, "inventory action references an unknown work order", "INVENTORY_WORKORDER_NOT_FOUND");
+  requireClientAccess(auth, clientId, "inventory work order");
+  if (auth.roleId === "field-tech") {
+    if (technicianId && technicianId !== auth.id) throw apiError(403, "technician inventory scope denied", "INVENTORY_TECHNICIAN_SCOPE_DENIED");
+    const assignment = await readWorkforceAssignment("work-order", workOrderId);
+    if (!assignment || assignment.technicianId !== auth.id || !["planned", "accepted", "in_progress"].includes(assignment.status)) throw apiError(403, "work order is not actively assigned to this technician", "INVENTORY_ASSIGNMENT_REQUIRED");
+  }
+  return clientId;
+}
+
+function mobileConsumables(batch) {
+  const items = Array.isArray(batch?.consumables) ? batch.consumables : [];
+  return items.map((item) => ({ sku: String(item?.sku || "").trim().toUpperCase(), quantity: Number(item?.quantity) })).filter((item) => item.sku && Number.isFinite(item.quantity) && item.quantity > 0);
+}
+
+async function runIdempotentInventoryCommand({ auth, scope, commandKey, payload, execute }) {
+  if (!commandKey) throw apiError(428, "Idempotency-Key header is required for inventory mutations", "IDEMPOTENCY_KEY_REQUIRED");
+  const requestHash = createHash("sha256").update(JSON.stringify(payload)).digest("hex");
+  const ownerId = `${auth.id}:${randomUUID()}`;
+  const command = await beginIdempotentCommand({ scope, commandKey, requestHash, ownerId, leaseSeconds: 120 });
+  if (command.duplicate) return { ...command.response, duplicate: true };
+  try {
+    const response = await execute(requestHash);
+    await completeIdempotentCommand({ scope, commandKey, ownerId, response });
+    return response;
+  } catch (error) {
+    await abandonIdempotentCommand({ scope, commandKey, ownerId }).catch(() => {});
+    throw error;
+  }
+}
+
 async function buildMaintenanceCalendar(auth, { fromDate, throughDate }) {
   await ensurePilotMaintenancePlans();
   const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
@@ -1839,6 +1905,11 @@ async function validateMobileCaptureScope(auth, batch) {
   if (batch.moduleId) {
     const module = (await listModules({ wallId: batch.wallId })).find((item) => item.id === batch.moduleId);
     if (!module || module.clientId !== clientId) throw validationError("mobile capture module does not belong to the selected wall and client", "MOBILE_CAPTURE_MODULE_SCOPE_MISMATCH");
+  }
+
+  if (auth.roleId === "field-tech") {
+    if (String(batch.technicianId || "").trim() !== auth.id) throw apiError(403, "mobile capture technician scope denied", "MOBILE_CAPTURE_TECHNICIAN_SCOPE_DENIED");
+    await assertInventoryWorkOrderAccess(auth, batch.workorderId, batch.technicianId);
   }
 }
 
@@ -2933,6 +3004,66 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && (pathname === "/api/inventory/overview" || pathname === "/api/mobile/route-kit")) {
+      requirePermission(auth, "inventory.read");
+      sendJson(res, 200, await inventoryOverviewFor(auth));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/inventory/transactions") {
+      requirePermission(auth, "inventory.write");
+      await ensurePilotInventory();
+      const input = await readJsonBody(req);
+      if (input.workOrderId) await assertInventoryWorkOrderAccess(auth, input.workOrderId, input.technicianId || null);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "inventory-movement", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await applyInventoryMovement({ ...input, id: `INV-${requestHash.slice(0, 20)}`, actor: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-INV-${requestHash.slice(0, 20)}`, type: `inventory.${input.type || "movement"}.recorded`, actor: auth.name, entityType: "inventory", entityId: result.transactions[0]?.groupId || result.transactions[0]?.id, source: "inventory-control", note: `${input.sku} ${input.type} recorded for ${input.quantity}.`, payload: { principalId: auth.id, sku: input.sku, quantity: input.quantity, transactionIds: result.transactions.map((item) => item.id) } });
+        await appendOpsEvent(event);
+        return { duplicate: result.duplicate, ...result, event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/inventory/reservations") {
+      requirePermission(auth, "inventory.reserve");
+      await ensurePilotInventory();
+      const input = await readJsonBody(req);
+      const clientId = await assertInventoryWorkOrderAccess(auth, input.workOrderId, input.technicianId || null);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "inventory-reservation", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await reserveInventory({ ...input, id: `RES-${requestHash.slice(0, 20)}`, actor: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-RES-${requestHash.slice(0, 20)}`, type: "inventory.reserved", actor: auth.name, entityType: "workorder", entityId: input.workOrderId, clientId, source: "inventory-control", note: `${input.quantity} ${input.sku} reserved for ${input.workOrderId}.`, payload: { principalId: auth.id, reservationId: result.reservation.id, technicianId: input.technicianId || null, sourceLocationId: input.sourceLocationId } });
+        await appendOpsEvent(event);
+        return { duplicate: result.duplicate, ...result, event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/inventory/consume") {
+      requirePermission(auth, "inventory.consume");
+      await ensurePilotInventory();
+      const input = await readJsonBody(req);
+      const technicianId = auth.roleId === "field-tech" ? auth.id : (input.technicianId || null);
+      const clientId = await assertInventoryWorkOrderAccess(auth, input.workOrderId, technicianId);
+      if (auth.roleId === "field-tech") {
+        const overview = await inventoryOverviewFor(auth);
+        const ownKit = overview.locations.find((item) => item.kind === "technician-kit" && item.technicianId === auth.id);
+        if (!ownKit || input.locationId !== ownKit.id) throw apiError(403, "field consumption must use the technician's own route kit", "INVENTORY_TECHNICIAN_SCOPE_DENIED");
+      }
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "inventory-consumption", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await consumeInventory({ ...input, id: `CON-${requestHash.slice(0, 20)}`, technicianId, actor: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-CON-${requestHash.slice(0, 20)}`, type: "inventory.consumed", actor: auth.name, entityType: "workorder", entityId: input.workOrderId, clientId, source: "inventory-control", note: `${result.transactions.length} consumable line(s) posted to ${input.workOrderId}.`, payload: { principalId: auth.id, technicianId, locationId: input.locationId, transactionIds: result.transactions.map((item) => item.id) } });
+        await appendOpsEvent(event);
+        return { duplicate: result.duplicate, ...result, event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
       const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage] = await Promise.all([
@@ -2952,7 +3083,7 @@ async function handleApi(req, res, pathname) {
         readIntegrationStorageHealth(),
         readWorkforceStorageHealth()
       ]);
-      const maintenancePlanningStorage = await readMaintenancePlanningHealth();
+      const [maintenancePlanningStorage, inventoryStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth()]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
         ...runtimeStorage,
@@ -2970,7 +3101,8 @@ async function handleApi(req, res, pathname) {
         evidenceSnapshots: evidenceSnapshotStorage,
         integrations: integrationStorage,
         workforce: workforceStorage,
-        maintenancePlanning: maintenancePlanningStorage
+        maintenancePlanning: maintenancePlanningStorage,
+        inventory: inventoryStorage
       });
       return;
     }
@@ -3355,6 +3487,7 @@ async function handleApi(req, res, pathname) {
       await validateMobileCaptureScope(auth, batchInput);
       const result = await saveMobileCaptureBatch(batchInput);
       let event = null;
+      let inventory = { status: "not-recorded", items: [] };
 
       if (!result.duplicate) {
         const exceptionCount = result.batch.items.filter((item) => item.type === "exception").length;
@@ -3379,9 +3512,29 @@ async function handleApi(req, res, pathname) {
         await appendOpsEvent(event);
       }
 
+      const consumables = mobileConsumables(batchInput);
+      if (consumables.length) {
+        requirePermission(auth, "inventory.consume");
+        await ensurePilotInventory();
+        try {
+          const clientId = await assertInventoryWorkOrderAccess(auth, result.batch.workorderId, result.batch.technicianId);
+          const overview = await readInventoryOverview({ technicianId: result.batch.technicianId, workOrderIds: [result.batch.workorderId] });
+          const kit = overview.locations.find((item) => item.kind === "technician-kit" && item.technicianId === result.batch.technicianId);
+          if (!kit) throw apiError(409, "technician route kit is not configured", "INVENTORY_ROUTE_KIT_NOT_CONFIGURED");
+          const posted = await consumeInventory({ id: `CON-${result.batch.id}`, locationId: kit.id, workOrderId: result.batch.workorderId, technicianId: result.batch.technicianId, captureBatchId: result.batch.id, items: consumables, actor: auth.id, note: "Consumables posted from technician visit capture", occurredAt: result.batch.capturedAt });
+          inventory = { status: "recorded", duplicate: posted.duplicate, locationId: kit.id, items: consumables, transactions: posted.transactions };
+          if (!posted.duplicate) await appendOpsEvent(normalizeOpsEvent({ id: `OPS-MOBILE-CON-${result.batch.id}`, type: "inventory.mobile-consumption.recorded", actor: auth.name, entityType: "workorder", entityId: result.batch.workorderId, clientId, wallId: result.batch.wallId, source: "technician-mobile", note: `${consumables.length} consumable line(s) posted from mobile visit.`, payload: { principalId: auth.id, batchId: result.batch.id, technicianId: result.batch.technicianId, locationId: kit.id, items: consumables } }));
+        } catch (error) {
+          if (!String(error?.code || "").startsWith("INVENTORY_")) throw error;
+          inventory = { status: "exception", code: error.code, message: error.message, items: consumables };
+          if (!result.duplicate) await appendOpsEvent(normalizeOpsEvent({ id: `OPS-MOBILE-CON-EX-${result.batch.id}`, type: "inventory.mobile-consumption.exception", actor: auth.name, entityType: "workorder", entityId: result.batch.workorderId, clientId: result.batch.clientId, wallId: result.batch.wallId, source: "technician-mobile", note: `Visit evidence saved; inventory posting needs review: ${error.message}`, payload: { principalId: auth.id, batchId: result.batch.id, technicianId: result.batch.technicianId, code: error.code, items: consumables } }));
+        }
+      }
+
       sendJson(res, result.duplicate ? 200 : 201, {
         ...result,
-        event
+        event,
+        inventory
       });
       return;
     }

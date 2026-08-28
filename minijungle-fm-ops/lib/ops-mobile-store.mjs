@@ -132,6 +132,12 @@ function normalizeBatch(input) {
     receivedAt: new Date().toISOString(),
     syncStatus: "synced",
     notes: input?.notes ? String(input.notes).trim() : "",
+    consumables: Array.isArray(input?.consumables) ? input.consumables.map((item, index) => {
+      const sku = requireString(item?.sku, `consumables[${index}].sku`).toUpperCase();
+      const quantity = Number(item?.quantity);
+      if (!Number.isFinite(quantity) || quantity <= 0) throw validationError(`consumables[${index}].quantity must be greater than zero`);
+      return { sku, quantity };
+    }) : [],
     items: []
   };
 

@@ -24,6 +24,10 @@ const roleDefinitions = {
       "maintenance.plan.read",
       "maintenance.plan.write",
       "maintenance.generate",
+      "inventory.read",
+      "inventory.write",
+      "inventory.reserve",
+      "inventory.consume",
       "ops.state.read",
       "ops.state.write.action",
       "ops.state.write.snapshot",
@@ -87,6 +91,8 @@ const roleDefinitions = {
       "device.captures.read",
       "mobile.capture.read",
       "mobile.capture.write",
+      "inventory.read",
+      "inventory.consume",
       "proof.media.read",
       "proof.media.write"
       ,"telemetry.read"

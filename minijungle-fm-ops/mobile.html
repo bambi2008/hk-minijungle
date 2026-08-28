@@ -9,6 +9,7 @@
   <link rel="icon" href="assets/dr-forest-logo.png">
   <link rel="stylesheet" href="mobile.css">
   <link rel="stylesheet" href="mobile-extra.css">
+  <link rel="stylesheet" href="mobile-inventory.css">
 </head>
 <body>
   <main class="shell">
@@ -29,6 +30,7 @@
       <div class="section-heading"><div><p>ASSIGNED WORK / FIELD ROUTE</p><h2 id="route-heading">Select a stop</h2></div><button id="refresh" type="button" aria-label="Refresh route">Refresh</button></div>
       <div id="route-list" class="route-list" aria-live="polite"></div>
     </section>
+    <section class="route-kit" aria-labelledby="route-kit-heading"><div class="section-heading"><div><p>ROUTE KIT / 路線物料</p><h2 id="route-kit-heading">Available stock</h2></div><span id="route-kit-state" class="work-order">Loading</span></div><div id="route-kit-list" class="route-kit-list" aria-live="polite"></div></section>
     <form id="capture-form" class="capture" hidden>
       <div class="section-heading"><div><p>VISIT RECORD / FIELD CAPTURE</p><h2 id="asset-title"></h2></div><span id="work-order" class="work-order"></span></div>
       <div id="capture-context" class="capture-context" aria-live="polite"></div>
@@ -36,6 +38,7 @@
       <div id="module-status" class="module-status" aria-live="polite"><span>No module selected</span></div>
       <label>Water added (L)<input id="water" type="number" min="0" max="200" step="0.1" value="0"></label>
       <label>Nutrient added (ml)<input id="nutrient" type="number" min="0" max="2000" step="1" value="0"></label>
+      <div class="consumable-grid"><label>Replacement pods<input id="replacement-pods" type="number" min="0" max="100" step="1" value="0"></label><label>Xponge sleeves<input id="xponge-sleeves" type="number" min="0" max="100" step="1" value="0"></label></div>
       <label>Visual health (0-100)<input id="health" type="number" min="0" max="100" step="1" value="80" required></label>
       <label class="check-row"><input id="exception" type="checkbox"><span>Exception found / 異常需要跟進</span></label>
       <label>Visit note<textarea id="notes" rows="3" placeholder="What changed, what needs follow-up"></textarea></label>

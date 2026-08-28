@@ -8,6 +8,7 @@ const dispatchState = { tasks: [], selected: new Set(), nextCursor: null, summar
 const maintenanceImportState = { batch: null };
 const workforceState = { candidates: [], serviceDate: "", taskIds: [] };
 const maintenancePlanningState = { calendar: null };
+const inventoryState = { overview: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -66,6 +67,24 @@ function renderMaintenancePlanning(payload = {}) {
     const options = technicians.map((technician) => `<option value="${escapeHtml(technician.id)}" ${assignment?.technicianId === technician.id ? "selected" : ""}>${escapeHtml(technician.displayName)}</option>`).join("");
     return `<article class="maintenance-plan-item"><div><strong>${escapeHtml(item.wallId)} · ${escapeHtml(item.serviceType)}</strong><span>${escapeHtml(item.serviceDate)} · ${escapeHtml(item.workOrderId)} · ${escapeHtml(item.workOrderStatus || "Scheduled")}</span><small>${escapeHtml((item.tasks || []).join(" · "))}</small></div><div class="maintenance-assignment"><select data-maintenance-technician="${escapeHtml(item.workOrderId)}" aria-label="Technician for ${escapeHtml(item.workOrderId)}"><option value="">Unassigned</option>${options}</select><button data-maintenance-assign="${escapeHtml(item.workOrderId)}" data-service-date="${escapeHtml(item.serviceDate)}" type="button">${assignment ? "Update" : "Assign"}</button>${assignment ? `<a href="${escapeHtml(fieldLink({ workOrderId: item.workOrderId, wallId: item.wallId }))}">Phone route</a>` : ""}</div><b class="maintenance-state ${assignment ? "assigned" : "unassigned"}">${assignment ? escapeHtml(assignment.technicianId) : "Needs owner"}</b></article>`;
   }).join("") : "<p class=\"empty\">No generated preventive work orders in this window.</p>";
+}
+function renderInventory(payload = {}) {
+  inventoryState.overview = payload;
+  const summary = payload.summary || {};
+  const readiness = payload.routeReadiness || {};
+  $("#inventory-low-count").textContent = Number(summary.lowStockWarehouse || 0);
+  $("#inventory-state").textContent = `${Number(summary.lowStockWarehouse || 0)} warehouse low · ${Number(readiness.unreservedWorkOrders || 0)} assigned WOs unreserved`;
+  const itemSelect = $("#inventory-sku"); const currentSku = itemSelect.value;
+  itemSelect.innerHTML = (payload.items || []).map((item) => `<option value="${escapeHtml(item.sku)}">${escapeHtml(item.name)} · ${escapeHtml(item.unit)}</option>`).join("");
+  if (currentSku && [...itemSelect.options].some((option) => option.value === currentSku)) itemSelect.value = currentSku;
+  const kitSelect = $("#inventory-destination"); const currentKit = kitSelect.value;
+  kitSelect.innerHTML = `<option value="">Select kit</option>` + (payload.locations || []).filter((item) => item.kind === "technician-kit").map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(item.label)}</option>`).join("");
+  if (currentKit && [...kitSelect.options].some((option) => option.value === currentKit)) kitSelect.value = currentKit;
+  const workOrderSelect = $("#inventory-work-order"); const currentWorkOrder = workOrderSelect.value;
+  workOrderSelect.innerHTML = `<option value="">Select for reservation</option>` + (readiness.assignments || []).map((item) => `<option value="${escapeHtml(item.workOrderId)}" data-technician="${escapeHtml(item.technicianId)}">${escapeHtml(item.workOrderId)} · ${escapeHtml(item.technicianId)}${item.reserved ? " · reserved" : ""}</option>`).join("");
+  if (currentWorkOrder && [...workOrderSelect.options].some((option) => option.value === currentWorkOrder)) workOrderSelect.value = currentWorkOrder;
+  const balances = payload.balances || [];
+  $("#inventory-list").innerHTML = balances.length ? balances.map((item) => `<article class="inventory-item"><div><strong>${escapeHtml(item.name)} · ${escapeHtml(item.sku)}</strong><span>${escapeHtml(item.onHand)} on hand · ${escapeHtml(item.reserved)} reserved · ${escapeHtml(item.available)} available</span><small>Reorder at ${escapeHtml(item.reorderPoint)} ${escapeHtml(item.unit)}</small></div><div class="inventory-location"><strong>${escapeHtml(item.locationLabel)}</strong><span>${escapeHtml(item.locationKind.replaceAll("-", " "))}</span></div><b class="inventory-level ${item.lowStock ? "low" : ""}">${item.lowStock ? "Low stock" : "Available"}</b></article>`).join("") : "<p class=\"empty\">No inventory balances recorded.</p>";
 }
 async function refreshWorkforceCandidates() {
   const serviceDate = $("#workforce-date").value || localDateValue(); const taskIds = [...dispatchState.selected]; const query = new URLSearchParams({ serviceDate }); if (taskIds.length) query.set("taskIds", taskIds.join(","));
@@ -131,7 +150,7 @@ async function load() {
   if (!$("#workforce-date").value) $("#workforce-date").value = localDateValue();
   if (!$("#maintenance-through-date").value) $("#maintenance-through-date").value = localDateValue(new Date(Date.now() + 30 * 86400000));
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`)]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -153,6 +172,7 @@ async function load() {
   renderDispatchQueue(dispatch);
   renderWorkforce(workforce);
   renderMaintenancePlanning(maintenanceCalendar);
+  renderInventory(inventory);
   renderMaintenanceImports(maintenanceImports);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
@@ -248,6 +268,32 @@ $("#maintenance-generate-form").onsubmit = async (event) => {
     await load();
     $("#maintenance-notice").textContent = `${result.run.generatedCount} work order${result.run.generatedCount === 1 ? "" : "s"} generated · ${result.run.skippedCount} already existed`;
   } catch (error) { $("#maintenance-notice").textContent = error.message; } finally { button.disabled = false; }
+};
+$("#inventory-action-form").onsubmit = async (event) => {
+  event.preventDefault();
+  const action = event.submitter?.value || "transfer";
+  const overview = inventoryState.overview || {};
+  const warehouse = (overview.locations || []).find((item) => item.kind === "warehouse");
+  const workOrderId = $("#inventory-work-order").value;
+  const selectedWorkOrder = $("#inventory-work-order").selectedOptions[0];
+  const sku = $("#inventory-sku").value;
+  const quantity = Number($("#inventory-quantity").value);
+  const destinationLocationId = $("#inventory-destination").value;
+  if (!warehouse) { $("#inventory-notice").textContent = "Warehouse location is not configured."; return; }
+  if (!sku || !Number.isFinite(quantity) || quantity <= 0) { $("#inventory-notice").textContent = "Choose an SKU and enter a positive quantity."; return; }
+  if (action === "reserve" && !workOrderId) { $("#inventory-notice").textContent = "Choose a work order before reserving stock."; return; }
+  if (action === "transfer" && !destinationLocationId) { $("#inventory-notice").textContent = "Choose a technician route kit."; return; }
+  const button = event.submitter; button.disabled = true; $("#inventory-notice").textContent = action === "reserve" ? "Reserving stock…" : "Loading route kit…";
+  try {
+    if (action === "reserve") {
+      await api("/api/inventory/reservations", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ workOrderId, technicianId: selectedWorkOrder?.dataset.technician || null, sourceLocationId: warehouse.id, sku, quantity }) });
+    } else {
+      await api("/api/inventory/transactions", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ type: "transfer", sourceLocationId: warehouse.id, destinationLocationId, workOrderId: workOrderId || null, sku, quantity, note: workOrderId ? `Route kit load for ${workOrderId}` : "Route kit replenishment" }) });
+    }
+    await load();
+    $("#inventory-notice").textContent = action === "reserve" ? `${quantity} ${sku} reserved for ${workOrderId}.` : `${quantity} ${sku} loaded to route kit.`;
+    $("#inventory-quantity").value = "";
+  } catch (error) { $("#inventory-notice").textContent = error.message; } finally { button.disabled = false; }
 };
 $("#dispatch-due-at").onchange = () => { if ($("#dispatch-due-at").value) $("#workforce-date").value = $("#dispatch-due-at").value.slice(0, 10); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
 $("#dispatch-load-more").onclick = () => loadMoreDispatch().catch((error) => { $("#dispatch-notice").textContent = error.message; });

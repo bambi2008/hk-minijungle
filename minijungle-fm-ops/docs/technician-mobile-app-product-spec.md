@@ -258,3 +258,11 @@ An AI visual diagnosis request is linked to a stored camera capture and starts a
 - Move proof bytes from the local vault to managed object storage with malware scanning and retention policy.
 - Test offline conflict recovery on at least two technician devices.
 - Run a repeated multi-client pilot and reconcile module, sensor, photo and work-order counts daily.
+## 10. Route Kit and Consumables Addendum
+
+- The home route includes a compact read-only route-kit stock strip before visit capture.
+- The technician sees only the kit attached to their own identity.
+- Nutrient volume, replacement pods and Xponge sleeves are explicit consumables. Water remains service evidence and is not treated as warehouse stock.
+- Consumption is attached to the current assigned work order and capture batch.
+- A stock mismatch must never discard a captured photo or visit record. The server returns a visible stock-review state and writes an operations exception for FM follow-up.
+- Offline records retain the consumable quantities and submit them on the same retry-safe capture batch.

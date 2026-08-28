@@ -821,3 +821,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local feature completion.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 58 - Consumables and Route Kit Control v1
+
+- Official production operations readiness remains **65%**. The managed PostgreSQL and independently evidenced off-host restore hard cap still binds; a local inventory ledger cannot move the official score by itself.
+- Persistence added: SQLite migration `2026-09-01.inventory-route-kit-v1` and PostgreSQL migration `2026-09-01.postgres-inventory-route-kit-v1` add locations, SKUs, constrained balances, work-order reservations and immutable transactions. Deployment SQL is `infra/postgres/010_inventory_route_kits.sql`.
+- Workflow added: FM Lead can reserve warehouse stock and load a technician route kit. A work-order-linked transfer consumes its matching reservation and creates balanced transfer-out/transfer-in rows in one database transaction.
+- Mobile integration added: the existing technician visit form records nutrient, replacement-pod and Xponge use. Evidence persists first; inventory then posts idempotently from the same capture batch. Insufficient stock creates an auditable inventory exception without losing the visit record.
+- Authorization added: client/auditor roles cannot read internal stock; field technicians see only their own route kit and can consume only against an active work-order assignment. FM/Admin retain stock mutation controls.
+- Experience added: Ops Today exposes one compact warehouse/route-kit panel with low-stock and unreserved-work indicators, reservation and route-kit loading. The mobile app adds one visible route-kit strip and two small consumable inputs without another navigation level.
+- Production gate added: preflight now requires all five inventory tables, the `010` migration marker and PostgreSQL-backed inventory health. Production does not receive pilot stock seeds.
+- Evidence added: store smoke proves reservation replay, reserved transfer, two-sided ledger, consumption replay, overdraw rollback, technician scope and balance integrity. API smoke proves permissions, idempotency-key misuse, reservation/transfer/consume reconciliation and mobile-linked consumption. Playwright proves the backend transfer and phone deduction at 390px without horizontal overflow.
+- Honest boundary: physical counts, barcode/QR scanning, purchase orders, supplier integration, lot/expiry tracking, stock valuation and repeated real warehouse cycles are not yet proven.
+
+### Current Honest Score After Step 58
+
+- Production operations readiness: **65%**. No score increase is claimed from local feature completion.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

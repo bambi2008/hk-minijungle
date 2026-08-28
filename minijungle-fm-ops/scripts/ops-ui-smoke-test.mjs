@@ -39,6 +39,14 @@ async function main() {
       assert((await operations.locator("#module-quality-list").textContent()).includes("telemetry incomplete"), "Operations page did not explain the module action reason");
       assert(await operations.locator("[data-remediation-create]").count() === 12, "Operations page did not expose remediation create actions");
       assert((await operations.locator("#maintenance-state").textContent()).includes("active plans"), "Operations page did not render preventive plan coverage");
+      assert(await operations.locator(".inventory-item").count() === 8, "Operations page did not render warehouse and route-kit balances");
+      assert((await operations.locator("#inventory-state").textContent()).includes("warehouse low"), "Operations page did not render inventory readiness");
+      await operations.locator("#inventory-sku").selectOption("NUT-A");
+      await operations.locator("#inventory-quantity").fill("500");
+      await operations.locator("#inventory-destination").selectOption("kit-field-tech-show-suite");
+      await operations.locator("#inventory-transfer").click();
+      await operations.waitForFunction(() => document.querySelector("#inventory-notice")?.textContent.includes("loaded to route kit"), null, { timeout: 10000 });
+      assert((await operations.locator("#inventory-list").textContent()).includes("500 on hand"), "Route-kit transfer did not update the stock panel");
       await operations.locator("#maintenance-generate").click();
       await operations.waitForFunction(() => document.querySelector("#maintenance-notice")?.textContent.includes("generated ·"), null, { timeout: 15000 });
       assert(await operations.locator(".maintenance-plan-item").count() > 0, "Preventive generation did not render generated work orders");
@@ -110,6 +118,7 @@ async function main() {
       await operations.locator("#sweep-snapshots").click(); await operations.waitForFunction(() => document.querySelector("#snapshot-notice")?.textContent.includes("Retention sweep complete"), null, { timeout: 10000 });
       await operations.setViewportSize({ width: 390, height: 844 });
       assert(await operations.locator(".import-panel").isVisible(), "Maintenance import panel disappeared at technician-phone width");
+      assert(await operations.locator(".inventory-panel").isVisible(), "Inventory panel disappeared at technician-phone width");
       assert(await operations.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), "Operations page has horizontal overflow at 390px width");
       assert(!operationsErrors.length, `Operations page errors: ${operationsErrors.join(" | ")}`);
       const mobileQualityResponse = await fetch(`${baseUrl}/api/ops/quality`, { headers: { "x-dr-forest-principal": "fm-lead" } });
@@ -123,6 +132,7 @@ async function main() {
       const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
       const mobileErrors = []; mobile.on("console", (message) => { if (message.type() === "error") mobileErrors.push(message.text()); }); mobile.on("pageerror", (error) => mobileErrors.push(error.message));
       await mobile.goto(`${baseUrl}/mobile.html`); await mobile.evaluate(() => localStorage.removeItem("dr-forest.field-capture.queue.v3")); await mobile.waitForFunction(() => document.querySelectorAll(".stop").length > 0, null, { timeout: 10000 }); await mobile.locator(".stop").first().click(); await mobile.waitForTimeout(300);
+      assert((await mobile.locator("#route-kit-list").textContent()).includes("500 ml available"), "Technician app did not show the loaded nutrient route kit");
       assert(await mobile.locator(".reminder").count() > 0, "Technician app did not load reminders");
       await mobile.waitForSelector(".remediation-item", { timeout: 10000 });
       assert(await mobile.locator(".remediation-item").count() === 1, "Technician app did not load the assigned remediation task");
@@ -130,9 +140,13 @@ async function main() {
       await mobile.waitForFunction(() => document.querySelector("#remediation-list")?.textContent.includes("in progress"), null, { timeout: 10000 });
       assert((await mobile.locator("#remediation-list").textContent()).includes("in progress"), "Technician app did not start the remediation task");
       await mobile.locator("#module").selectOption(mobileSeed.moduleId);
+      await mobile.locator("#nutrient").fill("10");
       await mobile.locator("#notes").fill("Reconnected the module gateway and confirmed the next service check.");
       await mobile.locator("#capture-form button[type=submit]").click();
       await mobile.waitForFunction(() => document.querySelector("#remediation-list")?.textContent.includes("Awaiting FM review"), null, { timeout: 10000 });
+      await mobile.waitForFunction(() => document.querySelector("#route-kit-list")?.textContent.includes("490 ml available") && document.querySelector("#sync-state")?.textContent !== "Loading", null, { timeout: 10000 });
+      const routeKitAfterVisit = await mobile.locator("#route-kit-list").textContent();
+      assert(routeKitAfterVisit.includes("490 ml available"), `Mobile visit did not deduct nutrient use from the route kit: kit=${routeKitAfterVisit} state=${await mobile.locator("#sync-state").textContent()}`);
       assert(await mobile.locator("[data-remediation-start]").isDisabled(), "Technician task should lock while independent FM review is pending");
       const mobileTaskApprove = await fetch(`${baseUrl}/api/remediation/tasks/${encodeURIComponent(mobileTaskBody.task.id)}`, { method: "PATCH", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "fm-lead" }, body: JSON.stringify({ reviewDecision: "approved", reviewNote: "Mobile completion evidence reviewed and accepted." }) });
       assert(mobileTaskApprove.ok, "UI smoke could not approve the mobile remediation task");
@@ -146,9 +160,10 @@ async function main() {
       assert(await mobile.locator("#capture-context").textContent().then((text) => text.trim().length > 0), "Technician capture context did not load");
       await mobile.locator("#module").selectOption({ index: 1 }); await mobile.waitForTimeout(150);
       assert(await mobile.locator("#module-status span").count() === 4, "Technician module status did not expose four monitoring metrics");
-      await mobile.locator("#queue").click(); await mobile.waitForTimeout(150);
+      await mobile.locator("#replacement-pods").fill("1"); await mobile.locator("#xponge-sleeves").fill("1"); await mobile.locator("#queue").click(); await mobile.waitForTimeout(150);
       assert(await mobile.locator("#queue-count").textContent() === "1", "Technician app did not persist an offline capture");
       assert((await mobile.locator("#queue-list").textContent()).includes("pending"), "Offline capture did not expose queue status");
+      assert(await mobile.evaluate(() => { const item = JSON.parse(localStorage.getItem("dr-forest.field-capture.queue.v3"))[0]; return item.replacementPods === "1" && item.xpongeSleeves === "1"; }), "Offline queue did not retain explicit consumable quantities");
       await mobile.locator("#exception").check(); await mobile.locator("#queue").click(); await mobile.waitForTimeout(100);
       assert((await mobile.locator("#sync-state").textContent()).includes("Add a short note"), `Technician exception capture accepted a missing note: state=${await mobile.locator("#sync-state").textContent()} exception=${await mobile.locator("#exception").isChecked()} notes=${await mobile.locator("#notes").inputValue()}`);
       await mobile.locator("#notes").fill("Access panel needs follow-up"); await mobile.locator("#queue").click(); await mobile.waitForTimeout(150);

@@ -108,6 +108,8 @@ async function verifyApi(baseUrl) {
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("observability.read"), "FM lead auth policy did not expose observability read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("notifications.read"), "FM lead auth policy did not expose notification read permission");
   assert(authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.plan.write") && authPolicy.body.roles["fm-lead"].permissions.includes("maintenance.generate"), "FM lead auth policy did not expose preventive maintenance controls");
+  assert(authPolicy.body.roles["fm-lead"].permissions.includes("inventory.write") && authPolicy.body.roles["fm-lead"].permissions.includes("inventory.reserve"), "FM lead auth policy did not expose inventory controls");
+  assert(authPolicy.body.roles["field-tech"].permissions.includes("inventory.read") && authPolicy.body.roles["field-tech"].permissions.includes("inventory.consume"), "Field technician auth policy did not expose route-kit controls");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.read"), "Auth policy did not expose field mobile remediation read permission");
   assert(authPolicy.body.roles["field-tech"].permissions.includes("mobile.remediation.update"), "Auth policy did not expose field mobile remediation update permission");
 
@@ -1301,6 +1303,48 @@ async function verifyApi(baseUrl) {
   assert(clientRemediationDenied.response.status === 403, "Client viewer should not read internal remediation tasks");
   const clientMobileRemediationDenied = await fetchJson(`${baseUrl}api/mobile/remediation-tasks`, { headers: principalHeaders("client-show-suite") });
   assert(clientMobileRemediationDenied.response.status === 403, "Client viewer should not read technician remediation tasks");
+
+  const clientInventoryDenied = await fetchJson(`${baseUrl}api/inventory/overview`, { headers: principalHeaders("client-show-suite") });
+  assert(clientInventoryDenied.response.status === 403, "Client viewer should not read internal inventory");
+  const inventoryWorkOrderId = generatedShowSuite.workOrderId;
+  const inventoryOverview = await fetchJson(`${baseUrl}api/inventory/overview`, { headers: principalHeaders("fm-lead") });
+  assert(inventoryOverview.response.ok && inventoryOverview.body.locations.some((item) => item.kind === "warehouse") && inventoryOverview.body.locations.some((item) => item.technicianId === "field-tech-show-suite"), "FM inventory overview should expose warehouse and technician kit locations");
+  assert(inventoryOverview.body.summary.lowStockWarehouse === 0, "Pilot warehouse opening balances should start above reorder points");
+  const missingInventoryIdempotency = await fetchJson(`${baseUrl}api/inventory/reservations`, { method: "POST", headers: jsonHeaders("fm-lead"), body: JSON.stringify({ workOrderId: inventoryWorkOrderId, technicianId: "field-tech-show-suite", sourceLocationId: "warehouse-hk", sku: "NUT-A", quantity: 250 }) });
+  assert(missingInventoryIdempotency.response.status === 428 && missingInventoryIdempotency.body.code === "IDEMPOTENCY_KEY_REQUIRED", "Inventory reservation should require Idempotency-Key");
+  const reservationHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "inventory-reserve-api-smoke-001" };
+  const reservationBody = { workOrderId: inventoryWorkOrderId, technicianId: "field-tech-show-suite", sourceLocationId: "warehouse-hk", sku: "NUT-A", quantity: 250 };
+  const inventoryReservation = await fetchJson(`${baseUrl}api/inventory/reservations`, { method: "POST", headers: reservationHeaders, body: JSON.stringify(reservationBody) });
+  assert(inventoryReservation.response.status === 201 && inventoryReservation.body.reservation.remainingQuantity === 250, "FM lead should reserve warehouse stock against a work order");
+  const replayedInventoryReservation = await fetchJson(`${baseUrl}api/inventory/reservations`, { method: "POST", headers: reservationHeaders, body: JSON.stringify(reservationBody) });
+  assert(replayedInventoryReservation.response.ok && replayedInventoryReservation.body.duplicate === true, "Inventory reservation replay should return the original response");
+  const reusedInventoryKey = await fetchJson(`${baseUrl}api/inventory/reservations`, { method: "POST", headers: reservationHeaders, body: JSON.stringify({ ...reservationBody, quantity: 251 }) });
+  assert(reusedInventoryKey.response.status === 409 && reusedInventoryKey.body.code === "IDEMPOTENCY_KEY_REUSED", "Inventory idempotency key reuse with a different payload should be rejected");
+  const inventoryTransfer = await fetchJson(`${baseUrl}api/inventory/transactions`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "inventory-transfer-api-smoke-001" }, body: JSON.stringify({ type: "transfer", sourceLocationId: "warehouse-hk", destinationLocationId: "kit-field-tech-show-suite", workOrderId: inventoryWorkOrderId, sku: "NUT-A", quantity: 250, note: "API smoke route kit load" }) });
+  assert(inventoryTransfer.response.status === 201 && inventoryTransfer.body.transactions.length === 2, "Reserved warehouse stock should transfer to the technician route kit");
+  const fieldRouteKit = await fetchJson(`${baseUrl}api/mobile/route-kit`, { headers: principalHeaders("field-tech-show-suite") });
+  assert(fieldRouteKit.response.ok && fieldRouteKit.body.locations.length === 1 && fieldRouteKit.body.locations.every((item) => item.kind === "technician-kit" && item.technicianId === "field-tech-show-suite"), "Field route-kit view should expose only the technician's own kit");
+  assert(fieldRouteKit.body.balances.find((item) => item.locationId === "kit-field-tech-show-suite" && item.sku === "NUT-A")?.onHand === 250, "Route-kit load should be visible to the technician");
+  const wrongKitConsumption = await fetchJson(`${baseUrl}api/inventory/consume`, { method: "POST", headers: { ...jsonHeaders("field-tech-show-suite"), "Idempotency-Key": "inventory-consume-wrong-kit" }, body: JSON.stringify({ locationId: "warehouse-hk", workOrderId: inventoryWorkOrderId, items: [{ sku: "NUT-A", quantity: 1 }] }) });
+  assert(wrongKitConsumption.response.status === 403 && wrongKitConsumption.body.code === "INVENTORY_TECHNICIAN_SCOPE_DENIED", "Field technician should not consume warehouse stock");
+  const consumeHeaders = { ...jsonHeaders("field-tech-show-suite"), "Idempotency-Key": "inventory-consume-api-smoke-001" };
+  const consumeBody = { locationId: "kit-field-tech-show-suite", workOrderId: inventoryWorkOrderId, items: [{ sku: "NUT-A", quantity: 25 }], note: "Manual field consumption smoke" };
+  const inventoryConsumption = await fetchJson(`${baseUrl}api/inventory/consume`, { method: "POST", headers: consumeHeaders, body: JSON.stringify(consumeBody) });
+  assert(inventoryConsumption.response.status === 201 && inventoryConsumption.body.transactions[0].quantity === -25, "Assigned technician should consume from the own route kit");
+  const replayedInventoryConsumption = await fetchJson(`${baseUrl}api/inventory/consume`, { method: "POST", headers: consumeHeaders, body: JSON.stringify(consumeBody) });
+  assert(replayedInventoryConsumption.response.ok && replayedInventoryConsumption.body.duplicate === true, "Consumption replay should not deduct stock twice");
+  const overdrawConsumption = await fetchJson(`${baseUrl}api/inventory/consume`, { method: "POST", headers: { ...jsonHeaders("field-tech-show-suite"), "Idempotency-Key": "inventory-consume-overdraw" }, body: JSON.stringify({ ...consumeBody, items: [{ sku: "NUT-A", quantity: 5000 }] }) });
+  assert(overdrawConsumption.response.status === 409 && overdrawConsumption.body.code === "INVENTORY_INSUFFICIENT_STOCK", "Route-kit overdraw should fail without changing stock");
+  const mobileInventoryBatch = { id: "MCB-INVENTORY-001", technicianId: "field-tech-show-suite", clientId: "show-suite", wallId: "MJ-HK-021", workorderId: inventoryWorkOrderId, deviceId: "offline-phone-inventory", capturedAt: "2026-09-01T09:20:00.000Z", notes: "Inventory-linked visit", consumables: [{ sku: "NUT-A", quantity: 10 }], items: [{ type: "nutrient", label: "Nutrient added", value: "10", unit: "ml" }, { type: "health-check", label: "Visual health score", value: "84", unit: "score" }] };
+  const mobileInventorySync = await fetchJson(`${baseUrl}api/mobile/capture-batches`, { method: "POST", headers: jsonHeaders("field-tech-show-suite"), body: JSON.stringify(mobileInventoryBatch) });
+  assert(mobileInventorySync.response.status === 201 && mobileInventorySync.body.inventory.status === "recorded" && mobileInventorySync.body.inventory.transactions.length === 1, "Mobile capture should post explicit consumables after saving evidence");
+  const duplicateMobileInventorySync = await fetchJson(`${baseUrl}api/mobile/capture-batches`, { method: "POST", headers: jsonHeaders("field-tech-show-suite"), body: JSON.stringify(mobileInventoryBatch) });
+  assert(duplicateMobileInventorySync.response.ok && duplicateMobileInventorySync.body.duplicate === true && duplicateMobileInventorySync.body.inventory.duplicate === true, "Duplicate mobile capture should not consume inventory twice");
+  const inventoryAfter = await fetchJson(`${baseUrl}api/inventory/overview`, { headers: principalHeaders("fm-lead") });
+  assert(inventoryAfter.body.balances.find((item) => item.locationId === "kit-field-tech-show-suite" && item.sku === "NUT-A")?.onHand === 215, "Transfer and two consumption paths should reconcile to 215 ml");
+  assert(inventoryAfter.body.reservations.find((item) => item.workOrderId === inventoryWorkOrderId && item.sku === "NUT-A")?.status === "consumed", "Loading reserved stock should close the work-order reservation");
+  const inventoryStorage = await fetchJson(`${baseUrl}api/storage`, { headers: principalHeaders("fm-lead") });
+  assert(inventoryStorage.body.inventory.backend === "sqlite" && inventoryStorage.body.inventory.relationshipIntegrity.invalidBalances === 0 && inventoryStorage.body.inventory.counts.transactions === 4, "Storage health should expose reconciled inventory tables");
   const qualityAfterRemediation = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
   assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "FM-approved remediation task should leave no active task in the quality summary");
 }

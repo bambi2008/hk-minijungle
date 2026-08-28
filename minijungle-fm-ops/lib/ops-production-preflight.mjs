@@ -33,6 +33,11 @@ const requiredTables = [
   "ops_maintenance_plans",
   "ops_maintenance_occurrences",
   "ops_maintenance_generation_runs",
+  "ops_inventory_locations",
+  "ops_inventory_items",
+  "ops_inventory_balances",
+  "ops_inventory_reservations",
+  "ops_inventory_transactions",
   "evidence_snapshots"
 ];
 
@@ -55,7 +60,8 @@ const requiredMigrations = [
   "2026-08-28.postgres-remediation-dispatch-sla-v1",
   "2026-08-29.postgres-ops-control-import-v1",
   "2026-08-30.postgres-workforce-dispatch-v1",
-  "2026-08-31.postgres-maintenance-planning-v1"
+  "2026-08-31.postgres-maintenance-planning-v1",
+  "2026-09-01.postgres-inventory-route-kit-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
@@ -149,10 +155,12 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.evidenceSnapshots?.backend,
     storage.body?.integrations?.backend,
     storage.body?.workforce?.backend,
-    storage.body?.maintenancePlanning?.backend
+    storage.body?.maintenancePlanning?.backend,
+    storage.body?.inventory?.backend
   ].filter(Boolean);
   const maintenancePlanningObserved = /postgres/i.test(String(storage.body?.maintenancePlanning?.backend || ""));
-  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved;
+  const inventoryObserved = /postgres/i.test(String(storage.body?.inventory?.backend || ""));
+  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved;
   const status = ready.status === 200 && storage.status === 200 && ready.body?.status === "ready" && postgresStorage ? "verified" : "failed";
   return {
     status,
@@ -161,6 +169,7 @@ async function probeService(serviceUrl, headers = {}) {
     readyBackend,
     storageBackends,
     maintenancePlanningObserved,
+    inventoryObserved,
     postgresStorage,
     reason: status === "verified" ? null : "Service readiness or PostgreSQL-backed storage observation failed"
   };

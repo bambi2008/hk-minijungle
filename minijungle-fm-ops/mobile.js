@@ -5,6 +5,7 @@ const queueLimit = 20;
 let route = [];
 let reminders = [];
 let remediationTasks = [];
+let routeKit = { locations: [], balances: [], summary: {} };
 let selected = null;
 let activeReminder = null;
 let activeRemediationTask = null;
@@ -29,12 +30,12 @@ function saveQueue(items) {
 function routeSnapshot() {
   try {
     const value = JSON.parse(localStorage.getItem(routeSnapshotKey) || "null");
-    return value && Array.isArray(value.route) && Array.isArray(value.reminders) ? { ...value, remediationTasks: Array.isArray(value.remediationTasks) ? value.remediationTasks : [] } : null;
+    return value && Array.isArray(value.route) && Array.isArray(value.reminders) ? { ...value, remediationTasks: Array.isArray(value.remediationTasks) ? value.remediationTasks : [], routeKit: value.routeKit || { locations: [], balances: [], summary: {} } } : null;
   } catch { return null; }
 }
-function saveRouteSnapshot(nextRoute, nextReminders, counts, nextRemediationTasks = []) {
+function saveRouteSnapshot(nextRoute, nextReminders, counts, nextRemediationTasks = [], nextRouteKit = {}) {
   try {
-    localStorage.setItem(routeSnapshotKey, JSON.stringify({ savedAt: new Date().toISOString(), route: nextRoute, reminders: nextReminders, remediationTasks: nextRemediationTasks, counts }));
+    localStorage.setItem(routeSnapshotKey, JSON.stringify({ savedAt: new Date().toISOString(), route: nextRoute, reminders: nextReminders, remediationTasks: nextRemediationTasks, routeKit: nextRouteKit, counts }));
   } catch { /* Route cache is a convenience; the capture queue remains the durable local workflow. */ }
 }
 function enqueue(item, lastError = null) {
@@ -70,18 +71,21 @@ async function load() {
   setState(navigator.onLine ? "Loading" : "Offline · cached route");
   let liveRoute = true;
   try {
-    const [routeBody, reminderBody, remediationBody] = await Promise.all([
+    const [routeBody, reminderBody, remediationBody, routeKitBody] = await Promise.all([
       json(`/api/mobile/route`, { headers }),
       json(`/api/mobile/reminders`, { headers }),
-      json(`/api/mobile/remediation-tasks?statuses=open,assigned,in_progress`, { headers })
+      json(`/api/mobile/remediation-tasks?statuses=open,assigned,in_progress`, { headers }),
+      json(`/api/mobile/route-kit`, { headers })
     ]);
     route = routeBody.route || [];
     reminders = reminderBody.items || [];
     remediationTasks = remediationBody.tasks || [];
-    saveRouteSnapshot(route, reminders, reminderBody.counts || {}, remediationTasks);
+    routeKit = routeKitBody;
+    saveRouteSnapshot(route, reminders, reminderBody.counts || {}, remediationTasks, routeKit);
     renderRoute();
     renderReminders(reminderBody.counts || {});
     renderRemediationTasks();
+    renderRouteKit();
     setState(queueItems().length ? `Ready · ${queueItems().length} pending` : "Ready");
   } catch (error) {
     const cached = routeSnapshot();
@@ -90,9 +94,11 @@ async function load() {
     route = cached.route;
     reminders = cached.reminders;
     remediationTasks = cached.remediationTasks || [];
+    routeKit = cached.routeKit || { locations: [], balances: [], summary: {} };
     renderRoute();
     renderReminders(cached.counts || {});
     renderRemediationTasks();
+    renderRouteKit();
     setState(navigator.onLine ? "Cached route · service unavailable" : "Offline · cached route", "error");
   }
   const workOrderId = query.get("workOrderId");
@@ -102,6 +108,14 @@ async function load() {
     if (stop) selectStop(stop, reminder, false);
   }
   return liveRoute;
+}
+
+function renderRouteKit() {
+  const ownLocation = (routeKit.locations || []).find((item) => item.kind === "technician-kit" && item.technicianId === principal);
+  const balances = (routeKit.balances || []).filter((item) => item.locationId === ownLocation?.id);
+  const low = balances.filter((item) => item.lowStock).length;
+  $("#route-kit-state").textContent = ownLocation ? `${low} low` : "Not configured";
+  $("#route-kit-list").innerHTML = balances.length ? balances.map((item) => `<div class="route-kit-item ${item.lowStock ? "low" : ""}"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.available)} ${escapeHtml(item.unit)} available${item.reserved ? ` · ${escapeHtml(item.reserved)} reserved` : ""}</span></div>`).join("") : "<p>No route-kit stock is recorded.</p>";
 }
 
 function remediationStatusLabel(status) { return String(status || "open").replaceAll("_", " "); }
@@ -249,6 +263,8 @@ async function createPayload() {
     latestReadings: selectedModule?.latestReadings || [],
     water: $("#water").value,
     nutrient: $("#nutrient").value,
+    replacementPods: $("#replacement-pods").value,
+    xpongeSleeves: $("#xponge-sleeves").value,
     health: $("#health").value,
     notes,
     exception,
@@ -268,8 +284,13 @@ async function sync(item) {
     { type: "health-check", label: "Visual health score", value: item.health, unit: "score", metadata: { moduleId: item.moduleId, telemetry: item.latestReadings || [] } }
   ];
   if (item.exception) items.push({ type: "exception", label: "Exception follow-up", value: item.notes, metadata: { moduleId: item.moduleId, source: "technician-mobile" } });
-  const capture = { id: item.id, technicianId: principal, clientId: item.stop.clientId, wallId: item.stop.wallId, moduleId: item.moduleId, workorderId: item.stop.workOrderId, deviceId: "field-browser", capturedAt: item.createdAt, notes: item.notes, items };
-  await json("/api/mobile/capture-batches", { method: "POST", headers, body: JSON.stringify(capture) });
+  const consumables = [
+    { sku: "NUT-A", quantity: Number(item.nutrient || 0) },
+    { sku: "POD-S", quantity: Number(item.replacementPods || 0) },
+    { sku: "XSP-90", quantity: Number(item.xpongeSleeves || 0) }
+  ].filter((entry) => entry.quantity > 0);
+  const capture = { id: item.id, technicianId: principal, clientId: item.stop.clientId, wallId: item.stop.wallId, moduleId: item.moduleId, workorderId: item.stop.workOrderId, deviceId: "field-browser", capturedAt: item.createdAt, notes: item.notes, consumables, items };
+  const captureResult = await json("/api/mobile/capture-batches", { method: "POST", headers, body: JSON.stringify(capture) });
   if (item.photo) {
     const bytes = Uint8Array.from(atob(item.photo.base64), (c) => c.charCodeAt(0));
     const media = { id: mediaId, clientId: item.stop.clientId, wallId: item.stop.wallId, moduleId: item.moduleId, workorderId: item.stop.workOrderId, captureBatchId: item.id, captureItemId: photoItemId, category: "visit-photo", filename: item.photo.name || "field-photo.jpg", contentType: item.photo.type, byteSize: bytes.length, sha256: await sha256(item.photo.base64), source: "technician-mobile", metadata: { privacy: "plant-zone-only", capturedOffline: true, cameraDevice: "technician-phone" } };
@@ -283,8 +304,9 @@ async function sync(item) {
     activeRemediationTask = null;
     remediationTasks = remediationTasks.map((task) => task.id === item.remediationTaskId ? mergeRemediationTask(currentTask, result.task) : task);
     renderRemediationTasks();
-    return result;
+    return { ...result, inventory: captureResult.inventory };
   }
+  return captureResult;
 }
 
 async function submit(offlineOnly = false) {
@@ -292,7 +314,7 @@ async function submit(offlineOnly = false) {
   try {
     item = await createPayload();
     if (offlineOnly) { enqueue(item); setState("Saved offline"); return; }
-    setState("Syncing"); await sync(item); setState("Synced"); $("#capture-form").reset(); clearPhotoPreview(); await load();
+    setState("Syncing"); const result = await sync(item); $("#capture-form").reset(); clearPhotoPreview(); await load(); setState(result?.inventory?.status === "exception" ? `Visit saved · stock review: ${result.inventory.message}` : "Synced", result?.inventory?.status === "exception" ? "error" : "");
   } catch (error) {
     if (!offlineOnly && item && selected) { try { enqueue(item, error.message); } catch (queueError) { setState(queueError.message, "error"); return; } }
     setState(error.message || "Saved offline", "error");
