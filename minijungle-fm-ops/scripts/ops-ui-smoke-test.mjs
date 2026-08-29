@@ -30,6 +30,14 @@ async function main() {
       await operations.goto(`${baseUrl}/operations.html`); await operations.waitForFunction(() => document.querySelector("#open-count")?.textContent !== "--", null, { timeout: 10000 });
       assert(await operations.locator(".route-item").count() === 4, "Operations page did not load four route stops");
       assert(await operations.locator(".module-item").count() === 12, "Operations page did not load module health rows");
+      assert((await operations.locator("#module-query-state").textContent()).includes("12 of 12 modules"), "Operations module query did not expose the initial page total");
+      await operations.locator("#module-search").fill("MJ-HK-021-M01");
+      await operations.locator("#module-query-submit").click();
+      await operations.waitForFunction(() => document.querySelector("#module-query-state")?.textContent.includes("1 of 1 modules"), null, { timeout: 10000 });
+      assert(await operations.locator(".module-item").count() === 1 && (await operations.locator("#modules-list").textContent()).includes("MJ-HK-021-M01"), "Operations module search did not narrow the module list");
+      await operations.locator("#module-search").fill("");
+      await operations.locator("#module-query-submit").click();
+      await operations.waitForFunction(() => document.querySelector("#module-query-state")?.textContent.includes("12 of 12 modules"), null, { timeout: 10000 });
       await operations.waitForFunction(() => document.querySelector("#quality-state")?.textContent !== "Loading", null, { timeout: 10000 });
       assert(await operations.locator(".quality-gate").count() === 4, "Operations page did not render four quality gates");
       await operations.waitForFunction(() => document.querySelector("#health-esg-state")?.textContent !== "Loading", null, { timeout: 10000 });

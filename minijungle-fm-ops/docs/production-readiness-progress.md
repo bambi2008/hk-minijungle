@@ -230,6 +230,22 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
 
+### Step 68 - Module Portfolio Query and Cursor Pagination v1
+
+- Score before: **65%**. Score after: **65%**. Bounded reads improve the scale path, but they do not prove a live 1,000-module portfolio, managed PostgreSQL capacity or off-host recovery.
+- Query contract added: `GET /api/modules` now supports a capped page size, case-insensitive search across module/wall/zone fields, wall/client/status filters, stable ordering and opaque continuation cursors.
+- Persistence added: SQLite and PostgreSQL implementations use the same contract and parameterized predicates. The response returns the current page plus `total`, `hasMore`, `nextCursor` and normalized filters.
+- Scope control added: authenticated client and field-technician scopes are pushed into the database query. Explicit out-of-scope client requests are rejected; an empty scope returns no records.
+- Experience added: Ops Today now starts with a compact module search and status filter, loads only the current page, reports loaded versus total, and exposes a load-more action when more modules exist.
+- Evidence added: direct store smoke proves page bounds, stable continuation, search, client scope, empty scope and invalid cursor rejection. API smoke proves page continuation, no duplicate rows, search, invalid cursor status and cross-client denial. Playwright proves the FM search workflow on the desktop console.
+- Honest boundary: the local fixture has 12 modules and cannot establish real production latency, database sizing, connection-pool behavior, concurrent route usage, monitoring thresholds or 1,000+ live module operations. Managed PostgreSQL and independently evidenced off-host restore remain the binding release gates.
+
+### Current Honest Score After Step 68
+
+- Production operations readiness: **65%**. No score increase is claimed from pagination and search.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Step 21 - Production Module, Device and Telemetry PostgreSQL Runtime Switch v1
 
 - Official score: remains **65%**. The managed database/off-host restore hard cap still requires a real connected service, migration verification and an isolated restore drill.

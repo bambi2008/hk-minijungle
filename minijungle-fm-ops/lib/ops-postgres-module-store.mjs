@@ -1,4 +1,5 @@
 import { getPostgresPool } from "./ops-postgres-store.mjs";
+import { encodeModuleCursor, moduleQueryCursorPositionMax, moduleQueryFilters, normalizeModuleQuery } from "./ops-module-query.mjs";
 
 export const postgresModuleMigrationVersion = "2026-08-19.postgres-modules-v1";
 
@@ -30,6 +31,36 @@ export async function listPostgresModules(dbPath, dataRoot, { wallId = null, cli
     : await pool.query("SELECT * FROM asset_modules ORDER BY asset_id ASC, position ASC NULLS LAST, id ASC");
   const allowed = clientIds ? new Set(clientIds) : null;
   return result.rows.map(moduleFromRow).filter((item) => !allowed || allowed.has(item.clientId));
+}
+
+export async function listPostgresModulePage(dbPath, dataRoot, options = {}) {
+  const pool = getPostgresPool(); await initialize(pool);
+  const query = normalizeModuleQuery(options);
+  const values = [];
+  const clauses = [];
+  const add = (value) => { values.push(value); return `$${values.length}`; };
+  if (query.wallId) clauses.push(`asset_id = ${add(query.wallId)}`);
+  if (query.clientId) clauses.push(`client_id = ${add(query.clientId)}`);
+  if (query.clientIds) {
+    if (!query.clientIds.length) return { items: [], page: { limit: query.limit, total: 0, hasMore: false, nextCursor: null }, filters: moduleQueryFilters(query) };
+    clauses.push(`client_id = ANY(${add(query.clientIds)}::text[])`);
+  }
+  if (query.statuses.length) clauses.push(`status = ANY(${add(query.statuses)}::text[])`);
+  if (query.search) clauses.push(`(id ILIKE ${add(`%${query.search}%`)} OR label ILIKE ${add(`%${query.search}%`)} OR asset_id ILIKE ${add(`%${query.search}%`)} OR zone ILIKE ${add(`%${query.search}%`)})`);
+  if (query.cursor) {
+    const assetId = add(query.cursor.assetId); const position = add(query.cursor.position); const id = add(query.cursor.id);
+    clauses.push(`(asset_id > ${assetId} OR (asset_id = ${assetId} AND COALESCE(position, ${moduleQueryCursorPositionMax()}) > ${position}) OR (asset_id = ${assetId} AND COALESCE(position, ${moduleQueryCursorPositionMax()}) = ${position} AND id > ${id}))`);
+  }
+  const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+  const countResult = await pool.query(`SELECT COUNT(*)::int AS count FROM asset_modules ${where}`, values);
+  const pageValues = [...values, query.limit + 1];
+  const rowsResult = await pool.query(`SELECT * FROM asset_modules ${where} ORDER BY asset_id ASC, position ASC NULLS LAST, id ASC LIMIT $${pageValues.length}`, pageValues);
+  const items = rowsResult.rows.slice(0, query.limit).map(moduleFromRow);
+  return {
+    items,
+    page: { limit: query.limit, total: Number(countResult.rows[0].count), hasMore: rowsResult.rows.length > query.limit, nextCursor: rowsResult.rows.length > query.limit ? encodeModuleCursor(items.at(-1)) : null },
+    filters: moduleQueryFilters(query)
+  };
 }
 
 export async function upsertPostgresModule(dbPath, dataRoot, input) {

@@ -12,6 +12,7 @@ const inventoryState = { overview: null };
 const deviceCareState = { records: [] };
 const contractState = { overview: null };
 const releaseEvidenceLedgerState = { payload: null };
+const moduleQueryState = { search: "", status: "", cursor: null, total: 0, hasMore: false, items: [] };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -199,6 +200,29 @@ function renderEsgObservationScope(payload = {}) {
   clientSelect.innerHTML = (payload.clients || []).map((client) => `<option value="${escapeHtml(client.id)}">${escapeHtml(client.name || client.id)}</option>`).join("");
   if (current && (payload.clients || []).some((client) => client.id === current)) clientSelect.value = current;
 }
+function moduleQueryUrl(cursor = null) {
+  const params = new URLSearchParams({ limit: "20" });
+  if (moduleQueryState.search) params.set("search", moduleQueryState.search);
+  if (moduleQueryState.status) params.set("status", moduleQueryState.status);
+  if (cursor) params.set("cursor", cursor);
+  return `/api/modules?${params.toString()}`;
+}
+function renderModulePage(payload = {}, append = false) {
+  const incoming = payload.modules || [];
+  moduleQueryState.items = append ? [...moduleQueryState.items, ...incoming] : incoming;
+  moduleQueryState.total = Number(payload.page?.total ?? moduleQueryState.items.length);
+  moduleQueryState.cursor = payload.page?.nextCursor || null;
+  moduleQueryState.hasMore = Boolean(payload.page?.hasMore);
+  const page = payload.page || {};
+  $("#module-query-state").textContent = `${moduleQueryState.items.length} of ${moduleQueryState.total} modules${page.hasMore ? " · more available" : ""}`;
+  $("#module-load-more").hidden = !moduleQueryState.hasMore;
+  $("#modules-list").innerHTML = moduleQueryState.items.length ? moduleQueryState.items.map((module) => { const hasData = (module.latestReadings || []).length > 0; const gap = Object.values(module.monitoringDevices || {}).some((device) => device.state === "not_connected") || !hasData; return `<article class="module-item"><div><strong>${escapeHtml(module.label)}</strong><span>${escapeHtml(module.id)} · ${escapeHtml(module.assetId)} · ${escapeHtml(module.zone || "No zone")} · ${hasData ? `${module.latestReadings.length}/4 metrics` : "No telemetry yet"}</span></div><span class="module-state ${gap ? "warn" : ""}">${gap ? "Needs setup" : "Connected"}</span></article>`; }).join("") : "<p>No modules match this search.</p>";
+}
+async function loadModulePage(append = false) {
+  const payload = await api(moduleQueryUrl(append ? moduleQueryState.cursor : null));
+  renderModulePage(payload, append);
+  return payload;
+}
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 function renderReleaseEvidence(payload = {}) {
   releaseEvidenceLedgerState.payload = payload;
@@ -278,15 +302,14 @@ async function load() {
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
-  $("#module-count").textContent = modules.modules?.length || 0;
-  const deviceGaps = (modules.modules || []).filter((item) => Object.values(item.monitoringDevices || {}).some((device) => device.state === "not_connected") || !(item.latestReadings || []).length).length;
-  $("#device-gap-count").textContent = deviceGaps;
+  $("#module-count").textContent = Number(quality.summary?.modules ?? modules.page?.total ?? modules.modules?.length ?? 0);
+  $("#device-gap-count").textContent = Number(quality.summary?.moduleUnready ?? (modules.modules || []).filter((item) => Object.values(item.monitoringDevices || {}).some((device) => device.state === "not_connected") || !(item.latestReadings || []).length).length);
   $("#alert-count").textContent = alerts.alerts?.filter((item) => item.status === "open").length || 0;
   $("#ai-count").textContent = diagnoses.diagnoses?.length || 0;
   $("#route-state").textContent = `${route.route?.length || 0} stops`;
   $("#reminder-list").innerHTML = reminders.items?.length ? reminders.items.slice(0, 8).map((item) => `<article class="reminder ${item.priority === "high" || item.priority === "critical" ? "urgent" : ""}"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.reason)}</span><small>${escapeHtml(item.due || "Scheduled")}</small></div><a href="${escapeHtml(item.mobileAction?.path || "mobile.html")}">Start</a></article>`).join("") : "<p>No open reminders.</p>";
   $("#route-list").innerHTML = route.route?.length ? route.route.map((stop) => `<article class="route-item"><div><strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.due || "Scheduled")} · ${stop.modules?.length || 0} modules</span></div><a href="mobile.html?workOrderId=${encodeURIComponent(stop.workOrderId)}&wallId=${encodeURIComponent(stop.wallId)}">Open</a></article>`).join("") : "<p>No assigned stops today.</p>";
-  $("#modules-list").innerHTML = modules.modules?.length ? modules.modules.slice(0, 20).map((module) => { const hasData = (module.latestReadings || []).length > 0; const gap = Object.values(module.monitoringDevices || {}).some((device) => device.state === "not_connected") || !hasData; return `<article class="module-item"><div><strong>${escapeHtml(module.label)}</strong><span>${escapeHtml(module.assetId)} · ${escapeHtml(module.zone || "No zone")} · ${hasData ? `${module.latestReadings.length}/4 metrics` : "No telemetry yet"}</span></div><span class="module-state ${gap ? "warn" : ""}">${gap ? "Needs setup" : "Connected"}</span></article>`; }).join("") : "<p>No modules registered.</p>";
+  renderModulePage(modules);
   renderAlerts(alerts.alerts || [], route.route || []);
   renderAiQueue(diagnoses.diagnoses || []);
   renderCaptures(captures.batches || []);
@@ -527,6 +550,8 @@ $("#inventory-receipt-form").onsubmit = async (event) => {
   catch (error) { $("#inventory-notice").textContent = error.message; } finally { button.disabled = false; }
 };
 $("#dispatch-due-at").onchange = () => { if ($("#dispatch-due-at").value) $("#workforce-date").value = $("#dispatch-due-at").value.slice(0, 10); refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; }); };
+$("#module-query-form").onsubmit = async (event) => { event.preventDefault(); moduleQueryState.search = $("#module-search").value.trim(); moduleQueryState.status = $("#module-status").value; moduleQueryState.cursor = null; $("#module-query-submit").disabled = true; try { await loadModulePage(false); } catch (error) { $("#module-query-state").textContent = error.message; } finally { $("#module-query-submit").disabled = false; } };
+$("#module-load-more").onclick = async () => { const button = $("#module-load-more"); button.disabled = true; try { await loadModulePage(true); } catch (error) { $("#module-query-state").textContent = error.message; } finally { button.disabled = false; } };
 $("#dispatch-load-more").onclick = () => loadMoreDispatch().catch((error) => { $("#dispatch-notice").textContent = error.message; });
 $("#dispatch-sla-scan").onclick = async () => { const button = $("#dispatch-sla-scan"); button.disabled = true; $("#dispatch-notice").textContent = "Scanning active SLA deadlines…"; try { const result = await api("/api/remediation/sla-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); await load(); $("#dispatch-notice").textContent = `${result.scanned} scanned · ${result.escalated} newly escalated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#dispatch-bulk-form").onsubmit = async (event) => { event.preventDefault(); const taskIds = [...dispatchState.selected]; if (!taskIds.length) { $("#dispatch-notice").textContent = "Select at least one task."; return; } const body = { taskIds, expectedUpdatedAtById: Object.fromEntries(taskIds.map((id) => [id, dispatchState.tasks.find((task) => task.id === id)?.updatedAt])) }; const assignedTo = $("#dispatch-assigned-to").value.trim(); const dueAt = $("#dispatch-due-at").value; const priority = $("#dispatch-priority").value; const status = $("#dispatch-status").value; if (assignedTo) body.assignedTo = assignedTo; if (dueAt) body.dueAt = new Date(dueAt).toISOString(); if (priority) body.priority = priority; if (status) body.status = status; if (Object.keys(body).length === 2) { $("#dispatch-notice").textContent = "Choose an assignment, due time, priority or status."; return; } const button = $("#dispatch-apply"); button.disabled = true; $("#dispatch-notice").textContent = "Applying dispatch update…"; try { const result = await api("/api/remediation/tasks/bulk", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); dispatchState.selected.clear(); await load(); $("#dispatch-notice").textContent = `${result.updated} task${result.updated === 1 ? "" : "s"} updated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };

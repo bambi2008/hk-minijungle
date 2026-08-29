@@ -888,10 +888,24 @@ async function verifyApi(baseUrl) {
   assert(storageAfterMobile.body.mobileCapture.counts.captureItems === 5, "Mobile capture item count did not persist");
   assert(storageAfterMobile.body.mobileCapture.relationshipIntegrity.foreignKeyIssues === 0, "Mobile capture FK check found issues");
 
+  const pagedModules = await fetchJson(`${baseUrl}api/modules?limit=3`, { headers: principalHeaders("fm-lead") });
+  assert(pagedModules.response.ok, "FM lead module page query failed");
+  assert(pagedModules.body.modules.length === 3 && pagedModules.body.page.total === 12, "Module page query did not return a bounded page and total");
+  assert(pagedModules.body.page.hasMore === true && pagedModules.body.page.nextCursor, "Module page query did not return a continuation cursor");
+  const nextModulePage = await fetchJson(`${baseUrl}api/modules?limit=3&cursor=${encodeURIComponent(pagedModules.body.page.nextCursor)}`, { headers: principalHeaders("fm-lead") });
+  assert(nextModulePage.response.ok && nextModulePage.body.modules.length === 3, "Module continuation query did not return the next bounded page");
+  assert(new Set([...pagedModules.body.modules, ...nextModulePage.body.modules].map((item) => item.id)).size === 6, "Module continuation query returned duplicate records");
+  const searchedModules = await fetchJson(`${baseUrl}api/modules?search=MJ-HK-021-M01`, { headers: principalHeaders("fm-lead") });
+  assert(searchedModules.response.ok && searchedModules.body.modules.length === 1 && searchedModules.body.modules[0].id === "MJ-HK-021-M01", "Module search did not resolve the requested module");
+  const invalidModuleCursor = await fetchJson(`${baseUrl}api/modules?cursor=not-a-module-cursor`, { headers: principalHeaders("fm-lead") });
+  assert(invalidModuleCursor.response.status === 400 && invalidModuleCursor.body.code === "MODULE_QUERY_CURSOR_INVALID", "Invalid module cursor was not rejected with a stable API error");
+
   const scopedModules = await fetchJson(`${baseUrl}api/modules?wallId=MJ-HK-021`, { headers: principalHeaders("client-show-suite") });
   assert(scopedModules.response.ok, "Client should read scoped module master data");
-  assert(scopedModules.body.modules.length === 3, "Module list should expose all modules for the selected wall");
+  assert(scopedModules.body.modules.length === 3 && scopedModules.body.page.total === 3 && scopedModules.body.page.hasMore === false, "Module list should expose all modules for the selected wall");
   assert(scopedModules.body.modules[0].monitoringDevices.temperature, "Module should expose temperature device configuration");
+  const crossClientModules = await fetchJson(`${baseUrl}api/modules?clientId=another-client`, { headers: principalHeaders("client-show-suite") });
+  assert(crossClientModules.response.status === 403, "Client module query should reject an out-of-scope client");
 
   const fieldReminders = await fetchJson(`${baseUrl}api/mobile/reminders`, { headers: principalHeaders("field-tech-show-suite") });
   assert(fieldReminders.response.ok, "Field technician reminder list failed");

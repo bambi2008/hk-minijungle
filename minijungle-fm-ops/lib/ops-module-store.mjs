@@ -2,6 +2,7 @@ import { mkdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
 import { readSqliteMasterDataset } from "./ops-master-data-store.mjs";
+import { encodeModuleCursor, moduleQueryCursorPositionMax, moduleQueryFilters, normalizeModuleQuery } from "./ops-module-query.mjs";
 
 export const moduleMigrationVersion = "2026-08-17.asset-modules-v1";
 
@@ -140,6 +141,42 @@ export async function listSqliteModules(dbPath, dataRoot, { wallId = null, clien
       : db.prepare("SELECT * FROM asset_modules ORDER BY asset_id ASC, position ASC, id ASC").all();
     const allowed = clientIds ? new Set(clientIds) : null;
     return rows.map(moduleFromRow).filter((item) => !allowed || allowed.has(item.clientId));
+  });
+}
+
+export async function listSqliteModulePage(dbPath, dataRoot, options = {}) {
+  await ensureModulesSeeded(dbPath, dataRoot);
+  const query = normalizeModuleQuery(options);
+  return withDatabase(dbPath, (db) => {
+    const clauses = [];
+    const params = [];
+    if (query.wallId) { clauses.push("asset_id = ?"); params.push(query.wallId); }
+    if (query.clientId) { clauses.push("client_id = ?"); params.push(query.clientId); }
+    if (query.clientIds) {
+      if (!query.clientIds.length) return { items: [], page: { limit: query.limit, total: 0, hasMore: false, nextCursor: null }, filters: moduleQueryFilters(query) };
+      clauses.push(`client_id IN (${query.clientIds.map(() => "?").join(",")})`); params.push(...query.clientIds);
+    }
+    if (query.statuses.length) { clauses.push(`status IN (${query.statuses.map(() => "?").join(",")})`); params.push(...query.statuses); }
+    if (query.search) {
+      const pattern = `%${query.search}%`;
+      clauses.push("(LOWER(id) LIKE LOWER(?) OR LOWER(label) LIKE LOWER(?) OR LOWER(asset_id) LIKE LOWER(?) OR LOWER(zone) LIKE LOWER(?))");
+      params.push(pattern, pattern, pattern, pattern);
+    }
+    if (query.cursor) {
+      const { assetId, position, id } = query.cursor;
+      const max = moduleQueryCursorPositionMax();
+      clauses.push("(asset_id > ? OR (asset_id = ? AND COALESCE(position, ?) > ?) OR (asset_id = ? AND COALESCE(position, ?) = ? AND id > ?))");
+      params.push(assetId, assetId, max, position, assetId, max, position, id);
+    }
+    const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
+    const total = Number(db.prepare(`SELECT COUNT(*) AS count FROM asset_modules ${where}`).get(...params).count);
+    const rows = db.prepare(`SELECT * FROM asset_modules ${where} ORDER BY asset_id ASC, COALESCE(position, ?) ASC, id ASC LIMIT ?`).all(...params, moduleQueryCursorPositionMax(), query.limit + 1);
+    const items = rows.slice(0, query.limit).map(moduleFromRow);
+    return {
+      items,
+      page: { limit: query.limit, total, hasMore: rows.length > query.limit, nextCursor: rows.length > query.limit ? encodeModuleCursor(items.at(-1)) : null },
+      filters: moduleQueryFilters(query)
+    };
   });
 }
 

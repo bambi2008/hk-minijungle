@@ -48,6 +48,7 @@ import {
 } from "./lib/ops-postgres-master-data-store.mjs";
 import {
   listPostgresModules,
+  listPostgresModulePage,
   readPostgresModuleStorageHealth,
   upsertPostgresModule
 } from "./lib/ops-postgres-module-store.mjs";
@@ -124,6 +125,7 @@ import {
 } from "./lib/ops-postgres-ai-store.mjs";
 import {
   listSqliteModules,
+  listSqliteModulePage,
   readSqliteModuleStorageHealth,
   upsertSqliteModule
 } from "./lib/ops-module-store.mjs";
@@ -557,6 +559,12 @@ async function listModules(options = {}) {
   return productionMasterDataEnabled()
     ? listPostgresModules(runtimeDbPath, dataRoot, options)
     : listSqliteModules(runtimeDbPath, dataRoot, options);
+}
+
+async function listModulePage(options = {}) {
+  return productionMasterDataEnabled()
+    ? listPostgresModulePage(runtimeDbPath, dataRoot, options)
+    : listSqliteModulePage(runtimeDbPath, dataRoot, options);
 }
 
 async function upsertModule(input) {
@@ -2861,16 +2869,27 @@ async function handleApi(req, res, pathname) {
       requirePermission(auth, "telemetry.read");
       const url = new URL(req.url, `http://${host}:${port}`);
       const wallId = url.searchParams.get("wallId");
+      const clientId = url.searchParams.get("clientId");
       if (wallId) {
         const resolveEntityClientId = await buildEntityClientResolver();
         requireClientAccess(auth, resolveEntityClientId("wall", wallId), "module list");
       }
-      const modules = await listModules({ wallId, clientIds: auth.clientScope === "all" ? null : auth.clientIds });
+      if (clientId) requireClientAccess(auth, clientId, "module list");
+      const modulePage = await listModulePage({
+        wallId,
+        clientId,
+        clientIds: auth.clientScope === "all" ? null : auth.clientIds,
+        search: url.searchParams.get("search") || url.searchParams.get("q"),
+        statuses: url.searchParams.get("status") || url.searchParams.get("statuses"),
+        limit: url.searchParams.get("limit"),
+        cursor: url.searchParams.get("cursor")
+      });
+      const modules = modulePage.items;
       const latestReadings = await listLatestReadingsByModules(modules.map((module) => module.id));
       const readingsByModule = new Map();
       for (const reading of latestReadings) readingsByModule.set(reading.moduleId, [...(readingsByModule.get(reading.moduleId) || []), reading]);
       const enriched = modules.map((module) => ({ ...module, latestReadings: readingsByModule.get(module.id) || [] }));
-      sendJson(res, 200, { generatedAt: new Date().toISOString(), modules: enriched });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), modules: enriched, page: modulePage.page, filters: modulePage.filters });
       return;
     }
 
