@@ -35,6 +35,12 @@ const roleDefinitions = {
       "production.evidence.read",
       "production.evidence.write",
       "production.evidence.verify",
+      "health.score.read",
+      "health.score.recompute",
+      "esg.ledger.read",
+      "esg.ledger.write",
+      "esg.observations.read",
+      "esg.observations.write",
       "ops.state.read",
       "ops.state.write.action",
       "ops.state.write.snapshot",
@@ -67,6 +73,7 @@ const roleDefinitions = {
       ,"telemetry.read"
       ,"telemetry.write"
       ,"telemetry.health.read"
+      ,"health.score.read"
       ,"telemetry.alerts.read"
       ,"telemetry.alerts.write"
       ,"ai.diagnosis.read"
@@ -115,6 +122,7 @@ const roleDefinitions = {
       ,"telemetry.read"
       ,"telemetry.write"
       ,"telemetry.health.read"
+      ,"health.score.read"
       ,"telemetry.alerts.read"
       ,"ai.diagnosis.read"
       ,"ai.diagnosis.request"
@@ -150,6 +158,8 @@ const roleDefinitions = {
       ,"ai.diagnosis.read"
       ,"commissioning.read"
       ,"contracts.read"
+      ,"health.score.read"
+      ,"esg.ledger.read"
     ],
     actionTypes: []
   },
@@ -175,6 +185,9 @@ const roleDefinitions = {
       ,"ai.diagnosis.read"
       ,"commissioning.read"
       ,"contracts.read"
+      ,"health.score.read"
+      ,"esg.ledger.read"
+      ,"esg.observations.read"
       ,"production.evidence.read"
     ],
     actionTypes: []

@@ -1467,6 +1467,33 @@ async function verifyApi(baseUrl) {
   assert(releaseEvidenceReview.response.ok && releaseEvidenceReview.body.record.status === "verified" && releaseEvidenceReview.body.summary.verifiedCount === 1, "Platform admin should independently verify release evidence");
   const releaseEvidenceEvents = await fetchJson(`${baseUrl}api/production/evidence/${encodeURIComponent(releaseEvidenceSubmit.body.record.id)}/events`, { headers: principalHeaders("esg-auditor") });
   assert(releaseEvidenceEvents.response.ok && releaseEvidenceEvents.body.events.length === 2, "Release evidence event history should retain submission and review");
+  const operationalHealth = await fetchJson(`${baseUrl}api/ops/health`, { headers: principalHeaders("fm-lead") });
+  assert(operationalHealth.response.ok && operationalHealth.body.scoreType === "operational-health" && operationalHealth.body.methodVersion, "FM lead should read the explainable operational health report");
+  const clientOperationalHealth = await fetchJson(`${baseUrl}api/ops/health`, { headers: principalHeaders("client-show-suite") });
+  assert(clientOperationalHealth.response.ok && clientOperationalHealth.body.assets.every((item) => item.clientId === "show-suite"), "Client health report must remain tenant scoped");
+  const healthRecompute = await fetchJson(`${baseUrl}api/ops/health/recompute`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "operational-health-api-smoke-001" }, body: "{}" });
+  assert(healthRecompute.response.ok && healthRecompute.body.snapshots.length === healthRecompute.body.summary.assets, "FM lead should persist one health snapshot per scoped asset");
+  const esgObservationHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "esg-observation-api-smoke-001" };
+  const esgObservationBody = { clientId: "show-suite", wallId: "MJ-HK-021", category: "pest-disease", rating: 82, observedAt: "2026-09-01T09:30:00.000Z", note: "No visible pest pressure in the inspected zone.", evidenceRef: "MCB-INVENTORY-001" };
+  const esgObservation = await fetchJson(`${baseUrl}api/esg/observations`, { method: "POST", headers: esgObservationHeaders, body: JSON.stringify(esgObservationBody) });
+  assert(esgObservation.response.status === 201 && esgObservation.body.observation.category === "pest-disease", "FM lead should record a scoped ESG observation");
+  const esgObservationReplay = await fetchJson(`${baseUrl}api/esg/observations`, { method: "POST", headers: esgObservationHeaders, body: JSON.stringify(esgObservationBody) });
+  assert(esgObservationReplay.response.ok && esgObservationReplay.body.duplicate === true, "ESG observation writes should be idempotent");
+  const fieldEsgDenied = await fetchJson(`${baseUrl}api/esg/observations`, { method: "POST", headers: { ...jsonHeaders("field-tech-show-suite"), "Idempotency-Key": "esg-observation-field-denied" }, body: JSON.stringify(esgObservationBody) });
+  assert(fieldEsgDenied.response.status === 403, "Field technician should not write ESG observations from the short mobile workflow");
+  const clientEsgDenied = await fetchJson(`${baseUrl}api/esg/observations`, { method: "POST", headers: { ...jsonHeaders("client-show-suite"), "Idempotency-Key": "esg-observation-client-denied" }, body: JSON.stringify({ ...esgObservationBody, clientId: "central-office" }) });
+  assert(clientEsgDenied.response.status === 403, "Client viewer should not write or cross tenant ESG observations");
+  const esgObservations = await fetchJson(`${baseUrl}api/esg/observations?clientId=show-suite`, { headers: principalHeaders("esg-auditor") });
+  assert(esgObservations.response.ok && esgObservations.body.observations.some((item) => item.id === esgObservation.body.observation.id), "ESG auditor should read scoped observation evidence");
+  const esgLedgerHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "esg-ledger-api-smoke-001" };
+  const esgLedgerBody = { clientId: "show-suite", periodStart: "2026-08-01T00:00:00.000Z", periodEnd: "2026-09-30T23:59:59.999Z" };
+  const esgLedger = await fetchJson(`${baseUrl}api/esg/ledger/recompute`, { method: "POST", headers: esgLedgerHeaders, body: JSON.stringify(esgLedgerBody) });
+  assert(esgLedger.response.ok && esgLedger.body.ledger.clientId === "show-suite" && esgLedger.body.ledger.status === "partial", "ESG ledger should persist a scoped partial period with explicit gaps");
+  assert(esgLedger.body.ledger.metrics.find((item) => item.key === "pest-disease")?.value >= 1, "ESG ledger should include the persisted observation");
+  const esgLedgerClient = await fetchJson(`${baseUrl}api/esg/ledger?clientId=show-suite&periodStart=2026-08-01T00:00:00.000Z&periodEnd=2026-09-30T23:59:59.999Z`, { headers: principalHeaders("client-show-suite") });
+  assert(esgLedgerClient.response.ok && esgLedgerClient.body.evidenceRefs.includes(esgObservation.body.observation.id), "Client ledger should expose the same scoped evidence reference");
+  const healthEsgStorage = await fetchJson(`${baseUrl}api/storage`, { headers: principalHeaders("fm-lead") });
+  assert(healthEsgStorage.response.ok && healthEsgStorage.body.healthEsg.counts.healthSnapshots >= 1 && healthEsgStorage.body.healthEsg.counts.observations === 1 && healthEsgStorage.body.healthEsg.counts.ledgers === 1, "Storage health should expose health and ESG persistence counts");
 }
 
 async function main() {

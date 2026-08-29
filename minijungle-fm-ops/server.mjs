@@ -369,6 +369,33 @@ import {
   submitSqliteReleaseEvidence
 } from "./lib/ops-release-evidence-store.mjs";
 import {
+  buildEsgLedger,
+  buildOperationalHealthReport,
+  normalizeEsgPeriod,
+  normalizeEsgObservation,
+  operationalHealthMethodVersion
+} from "./lib/ops-health-esg-policy.mjs";
+import {
+  createPostgresEsgObservation,
+  ensurePostgresHealthEsgSchema,
+  listPostgresEsgObservations,
+  listPostgresEsgPeriodLedgers,
+  listPostgresOperationalHealthSnapshots,
+  readPostgresHealthEsgStorageHealth,
+  savePostgresEsgPeriodLedger,
+  savePostgresOperationalHealthSnapshot
+} from "./lib/ops-postgres-health-esg-store.mjs";
+import {
+  createSqliteEsgObservation,
+  ensureSqliteHealthEsgSchema,
+  listSqliteEsgObservations,
+  listSqliteEsgPeriodLedgers,
+  listSqliteOperationalHealthSnapshots,
+  readSqliteHealthEsgStorageHealth,
+  saveSqliteEsgPeriodLedger,
+  saveSqliteOperationalHealthSnapshot
+} from "./lib/ops-health-esg-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -988,6 +1015,14 @@ async function readReleaseEvidenceSummary(){await ensureReleaseEvidenceSchema();
 async function reviewReleaseEvidence(id,input){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?reviewPostgresReleaseEvidence(runtimeDbPath,id,input):reviewSqliteReleaseEvidence(runtimeDbPath,id,input);}
 async function listReleaseEvidenceEvents(id){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?listPostgresReleaseEvidenceEvents(runtimeDbPath,id):listSqliteReleaseEvidenceEvents(runtimeDbPath,id);}
 async function readReleaseEvidenceHealth(){return productionMasterDataEnabled()?readPostgresReleaseEvidenceHealth(runtimeDbPath):readSqliteReleaseEvidenceHealth(runtimeDbPath);}
+async function ensureHealthEsgSchema(){return productionMasterDataEnabled()?ensurePostgresHealthEsgSchema(runtimeDbPath):ensureSqliteHealthEsgSchema(runtimeDbPath);}
+async function saveOperationalHealthSnapshot(snapshot){await ensureHealthEsgSchema();return productionMasterDataEnabled()?savePostgresOperationalHealthSnapshot(runtimeDbPath,snapshot):saveSqliteOperationalHealthSnapshot(runtimeDbPath,snapshot);}
+async function listOperationalHealthSnapshots(options={}){await ensureHealthEsgSchema();return productionMasterDataEnabled()?listPostgresOperationalHealthSnapshots(runtimeDbPath,options):listSqliteOperationalHealthSnapshots(runtimeDbPath,options);}
+async function createEsgObservation(input){await ensureHealthEsgSchema();return productionMasterDataEnabled()?createPostgresEsgObservation(runtimeDbPath,input):createSqliteEsgObservation(runtimeDbPath,input);}
+async function listEsgObservations(options={}){await ensureHealthEsgSchema();return productionMasterDataEnabled()?listPostgresEsgObservations(runtimeDbPath,options):listSqliteEsgObservations(runtimeDbPath,options);}
+async function saveEsgPeriodLedger(ledger){await ensureHealthEsgSchema();return productionMasterDataEnabled()?savePostgresEsgPeriodLedger(runtimeDbPath,ledger):saveSqliteEsgPeriodLedger(runtimeDbPath,ledger);}
+async function listEsgPeriodLedgers(options={}){await ensureHealthEsgSchema();return productionMasterDataEnabled()?listPostgresEsgPeriodLedgers(runtimeDbPath,options):listSqliteEsgPeriodLedgers(runtimeDbPath,options);}
+async function readHealthEsgStorageHealth(){await readMasterDataHealth();await listModules();return productionMasterDataEnabled()?readPostgresHealthEsgStorageHealth(runtimeDbPath):readSqliteHealthEsgStorageHealth(runtimeDbPath);}
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1790,9 +1825,7 @@ async function buildPortfolioSummary(auth) {
   const reportModes = productModel.reportModes || [];
   const resolveEntityClientId = await buildEntityClientResolver();
   const scopedEvents = filterOpsEventsForAuth(events, auth, resolveEntityClientId);
-  const avgHealth = scopedWalls.length
-    ? Math.round(scopedWalls.reduce((total, wall) => total + Number(wall.health || 0), 0) / scopedWalls.length)
-    : 0;
+  const liveHealth = await buildOperationalHealthFor(auth);
 
   return {
     generatedAt: new Date().toISOString(),
@@ -1821,10 +1854,13 @@ async function buildPortfolioSummary(auth) {
       serverStateRevision: opsState.revision
     },
     health: {
-      averageScore: avgHealth,
-      riskAssets: scopedWalls.filter((wall) => wall.status === "risk").length,
-      watchAssets: scopedWalls.filter((wall) => wall.status === "watch").length,
-      stableAssets: scopedWalls.filter((wall) => wall.status === "stable").length
+      averageScore: liveHealth.summary.averageScore,
+      scoreStatus: liveHealth.summary.scoredAssets ? (liveHealth.summary.completeScores === liveHealth.summary.scoredAssets ? "measured" : "partial") : "no-data",
+      scoreConfidence: liveHealth.summary.averageConfidence,
+      riskAssets: liveHealth.assets.filter((asset) => asset.band === "critical").length,
+      watchAssets: liveHealth.assets.filter((asset) => ["watch", "recovery"].includes(asset.band)).length,
+      stableAssets: liveHealth.assets.filter((asset) => asset.band === "healthy").length,
+      noDataAssets: liveHealth.summary.noDataAssets
     }
   };
 }
@@ -1870,6 +1906,60 @@ async function buildAssetIndex(auth) {
       openIncidents: openIncidents(wallIncidents).length
     };
   });
+}
+
+async function buildOperationalHealthFor(auth) {
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [dataset, modules, captures, alerts, diagnoses] = await Promise.all([
+    readMasterDataDataset(),
+    listModules({ clientIds }),
+    listMobileCaptureBatches(),
+    listAlerts({ clientIds, limit: 1000 }),
+    listVisualDiagnoses({ clientIds, limit: 1000 })
+  ]);
+  const walls = dataset.walls.filter((wall) => canAccessClient(auth, wall.clientId));
+  const scopedCaptures = filterByClientScope(auth, captures, (batch) => batch.clientId);
+  const report = buildOperationalHealthReport({ walls, modules, captures: scopedCaptures, alerts, diagnoses });
+  const snapshots = await listOperationalHealthSnapshots({ wallIds: report.assets.map((asset) => asset.wallId), limit: 1000 });
+  const latestByWall = new Map();
+  for (const snapshot of snapshots) if (!latestByWall.has(snapshot.wallId)) latestByWall.set(snapshot.wallId, snapshot);
+  return {
+    ...report,
+    scope: auth.clientScope === "all" ? "all" : "client-scoped",
+    assets: report.assets.map((asset) => ({ ...asset, persistedSnapshot: latestByWall.get(asset.wallId) || null }))
+  };
+}
+
+function esgScopeKey(auth, clientId = null) {
+  if (clientId) return `client:${clientId}`;
+  if (auth.clientScope === "all") return "all";
+  return `clients:${[...auth.clientIds].sort().join(",")}`;
+}
+
+async function buildEsgLedgerFor(auth, input = {}) {
+  const requestedClientId = String(input.clientId || "").trim() || null;
+  if (requestedClientId) requireClientAccess(auth, requestedClientId, "ESG ledger");
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [dataset, modules, captures, alerts, diagnoses, observations] = await Promise.all([
+    readMasterDataDataset(),
+    listModules({ clientIds }),
+    listMobileCaptureBatches(),
+    listAlerts({ clientIds, limit: 1000 }),
+    listVisualDiagnoses({ clientIds, limit: 1000 }),
+    listEsgObservations({ clientIds, clientId: requestedClientId, limit: 1000 })
+  ]);
+  const walls = dataset.walls.filter((wall) => canAccessClient(auth, wall.clientId) && (!requestedClientId || wall.clientId === requestedClientId));
+  const wallIds = new Set(walls.map((wall) => wall.id));
+  const scopedModules = modules.filter((module) => wallIds.has(module.assetId));
+  const scopedCaptures = filterByClientScope(auth, captures, (batch) => batch.clientId).filter((batch) => wallIds.has(batch.wallId));
+  const scopedAlerts = alerts.filter((alert) => wallIds.has(alert.wallId));
+  const scopedDiagnoses = diagnoses.filter((diagnosis) => wallIds.has(diagnosis.wallId));
+  const healthReport = buildOperationalHealthReport({ walls, modules: scopedModules, captures: scopedCaptures, alerts: scopedAlerts, diagnoses: scopedDiagnoses });
+  let period;
+  try { period = normalizeEsgPeriod({ periodStart: input.periodStart, periodEnd: input.periodEnd }); }
+  catch (caught) { throw validationError(caught.message, "ESG_PERIOD_INVALID"); }
+  const ledger = buildEsgLedger({ scopeKey: esgScopeKey(auth, requestedClientId), clientId: requestedClientId, periodStart: period.periodStart, periodEnd: period.periodEnd, walls, modules: scopedModules, captures: scopedCaptures, alerts: scopedAlerts, diagnoses: scopedDiagnoses, observations, healthReport });
+  return { ...ledger, persisted: await listEsgPeriodLedgers({ scopeKey: ledger.scopeKey, limit: 5 }) };
 }
 
 async function buildEvidenceSnapshot(auth) {
@@ -2506,7 +2596,7 @@ async function handleApi(req, res, pathname) {
       }
       try {
         const production = productionConfigReport();
-        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage] = await Promise.all([
+        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, healthEsgStorage] = await Promise.all([
           readOpsStorageHealth(),
           readMasterDataHealth(),
           readMobileCaptureStorageHealth(),
@@ -2518,7 +2608,8 @@ async function handleApi(req, res, pathname) {
           readAlertStorageHealth(),
           readAiVisionStorageHealth(),
           readNotificationStorageHealth(),
-          readEvidenceSnapshotStorageHealth()
+          readEvidenceSnapshotStorageHealth(),
+          readHealthEsgStorageHealth()
         ]);
         const ready = production.ready;
         sendJson(res, ready ? 200 : 503, {
@@ -2538,6 +2629,7 @@ async function handleApi(req, res, pathname) {
           aiVision: { diagnoses: aiVisionStorage.counts.diagnoses, foreignKeyIssues: aiVisionStorage.relationshipIntegrity.foreignKeyIssues },
           notifications: { pending: notificationStorage.counts.pending, processing: notificationStorage.counts.processing, retry: notificationStorage.counts.retry, failed: notificationStorage.counts.failed, delivered: notificationStorage.counts.delivered, due: notificationStorage.counts.due },
           evidenceSnapshots: { count: evidenceSnapshotStorage.counts.snapshots, verified: evidenceSnapshotStorage.counts.verified, unsigned: evidenceSnapshotStorage.counts.unsigned, expired: evidenceSnapshotStorage.counts.expired, migrationVersion: evidenceSnapshotStorage.migrationVersion },
+          healthEsg: { observations: healthEsgStorage.counts.observations, ledgers: healthEsgStorage.counts.ledgers, healthSnapshots: healthEsgStorage.counts.healthSnapshots, foreignKeyIssues: healthEsgStorage.relationshipIntegrity.foreignKeyIssues, migrationVersion: healthEsgStorage.migrationVersion },
           operationalLimits: [
             ...(ready ? [] : production.failures.map((item) => `${item.name}: ${item.detail}`)),
             ...(production.production ? [] : [
@@ -3624,7 +3716,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage, releaseEvidenceStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage, releaseEvidenceStorage, healthEsgStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -3643,7 +3735,8 @@ async function handleApi(req, res, pathname) {
         readReliabilityHealth(),
         readCommissioningHealth(),
         readDeviceLifecycleHealth(),
-        readReleaseEvidenceHealth()
+        readReleaseEvidenceHealth(),
+        readHealthEsgStorageHealth()
       ]);
       const [maintenancePlanningStorage, inventoryStorage,serviceContractStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth(),readServiceContractHealth()]);
       sendJson(res, 200, {
@@ -3669,7 +3762,8 @@ async function handleApi(req, res, pathname) {
         commissioning: commissioningStorage,
         deviceLifecycle: deviceLifecycleStorage
         ,serviceContracts:serviceContractStorage,
-        releaseEvidence: releaseEvidenceStorage
+        releaseEvidence: releaseEvidenceStorage,
+        healthEsg: healthEsgStorage
       });
       return;
     }
@@ -3698,6 +3792,101 @@ async function handleApi(req, res, pathname) {
       const url = new URL(req.url, `http://${host}:${port}`);
       const [summary, records, health] = await Promise.all([readReleaseEvidenceSummary(), listReleaseEvidence({ limit: url.searchParams.get("limit") || 100 }), readReleaseEvidenceHealth()]);
       sendJson(res, 200, { ...summary, records, health });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/ops/health") {
+      requirePermission(auth, "health.score.read");
+      sendJson(res, 200, await buildOperationalHealthFor(auth));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/ops/health/recompute") {
+      requirePermission(auth, "health.score.recompute");
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "operational-health-recompute", commandKey, payload: input, execute: async (requestHash) => {
+        const report = await buildOperationalHealthFor(auth);
+        const snapshots = [];
+        for (const asset of report.assets) {
+          const result = await saveOperationalHealthSnapshot({ id: `OHS-${requestHash.slice(0, 12)}-${asset.wallId}`, wallId: asset.wallId, score: asset.score, status: asset.status, calculatedAt: report.generatedAt, inputs: { factors: asset.factors, confidence: asset.confidence, evidenceRefs: asset.evidenceRefs }, methodVersion: operationalHealthMethodVersion });
+          snapshots.push(result.snapshot);
+        }
+        const event = normalizeOpsEvent({ id: `OPS-OHS-${requestHash.slice(0, 20)}`, type: "operations.health.recomputed", actor: auth.name, entityType: "portfolio", entityId: auth.clientScope === "all" ? "all" : auth.clientIds.join(","), source: "operational-health", note: `Operational health recomputed for ${report.summary.scoredAssets}/${report.summary.assets} asset(s).`, payload: { principalId: auth.id, methodVersion: report.methodVersion, averageScore: report.summary.averageScore, scoredAssets: report.summary.scoredAssets } });
+        await appendOpsEvent(event);
+        return { ...report, snapshots, event };
+      }});
+      sendJson(res, 200, response);
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/esg/ledger") {
+      requirePermission(auth, "esg.ledger.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      sendJson(res, 200, await buildEsgLedgerFor(auth, { clientId: url.searchParams.get("clientId") || null, periodStart: url.searchParams.get("periodStart") || null, periodEnd: url.searchParams.get("periodEnd") || null }));
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/esg/ledger/recompute") {
+      requirePermission(auth, "esg.ledger.write");
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const scopeKey = esgScopeKey(auth, String(input.clientId || "").trim() || null);
+      const response = await runIdempotentInventoryCommand({ auth, scope: `esg-ledger-recompute:${scopeKey}`, commandKey, payload: input, execute: async (requestHash) => {
+        const ledger = await buildEsgLedgerFor(auth, input);
+        const saved = await saveEsgPeriodLedger({ ...ledger, id: `ESG-${requestHash.slice(0, 20)}`, generatedBy: auth.id, generatedAt: new Date().toISOString() });
+        const event = normalizeOpsEvent({ id: `OPS-ESG-${requestHash.slice(0, 20)}`, type: "esg.ledger.generated", actor: auth.name, entityType: "esg-ledger", entityId: saved.id, clientId: saved.clientId, source: "esg-operational-ledger", note: `ESG operational ledger generated for ${saved.scopeKey}.`, payload: { principalId: auth.id, period: saved.period, status: saved.status, counts: saved.counts, gaps: saved.gaps } });
+        await appendOpsEvent(event);
+        return { ledger: saved, event, persisted: await listEsgPeriodLedgers({ scopeKey: saved.scopeKey, limit: 5 }) };
+      }});
+      sendJson(res, 200, response);
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/esg/observations") {
+      requirePermission(auth, "esg.observations.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const clientId = url.searchParams.get("clientId") || null;
+      const wallId = url.searchParams.get("wallId") || null;
+      if (clientId) requireClientAccess(auth, clientId, "ESG observation list");
+      if (wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        requireClientAccess(auth, resolveEntityClientId("wall", wallId), "ESG observation list");
+      }
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), observations: await listEsgObservations({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, clientId, wallId, category: url.searchParams.get("category") || null, limit: url.searchParams.get("limit") || 100 }) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/esg/observations") {
+      requirePermission(auth, "esg.observations.write");
+      const input = await readJsonBody(req);
+      let normalized;
+      try { normalized = normalizeEsgObservation(input); }
+      catch (caught) { throw validationError(caught.message, "ESG_OBSERVATION_INVALID"); }
+      requireClientAccess(auth, normalized.clientId, "ESG observation write");
+      if (normalized.wallId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        const wallClientId = resolveEntityClientId("wall", normalized.wallId);
+        if (!wallClientId) throw validationError("observation references an unknown wall", "ESG_OBSERVATION_WALL_UNKNOWN");
+        if (wallClientId !== normalized.clientId) throw validationError("observation client and wall do not match", "ESG_OBSERVATION_SCOPE_MISMATCH");
+      }
+      if (normalized.moduleId) {
+        const module = (await listModules({ wallId: normalized.wallId || null })).find((item) => item.id === normalized.moduleId);
+        if (!module || module.clientId !== normalized.clientId || (normalized.wallId && module.assetId !== normalized.wallId)) throw validationError("observation module is outside the selected client/wall scope", "ESG_OBSERVATION_MODULE_SCOPE_MISMATCH");
+      }
+      if (normalized.workOrderId) {
+        const resolveEntityClientId = await buildEntityClientResolver();
+        const workOrderClientId = resolveEntityClientId("workorder", normalized.workOrderId);
+        if (!workOrderClientId || workOrderClientId !== normalized.clientId) throw validationError("observation work order is outside the selected client scope", "ESG_OBSERVATION_WORKORDER_SCOPE_MISMATCH");
+      }
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "esg-observation-create", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await createEsgObservation({ ...normalized, id: normalized.id || `ESG-OBS-${requestHash.slice(0, 20)}`, createdBy: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-ESG-OBS-${requestHash.slice(0, 20)}`, type: "esg.observation.created", actor: auth.name, entityType: "esg-observation", entityId: result.observation.id, clientId: result.observation.clientId, wallId: result.observation.wallId, source: "esg-observation-ledger", note: result.observation.note, payload: { principalId: auth.id, category: result.observation.category, evidenceRef: result.observation.evidenceRef, observedAt: result.observation.observedAt } });
+        if (!result.duplicate) await appendOpsEvent(event);
+        return { ...result, event: result.duplicate ? null : event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
       return;
     }
 

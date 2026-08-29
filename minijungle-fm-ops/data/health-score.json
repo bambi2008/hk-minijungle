@@ -1,20 +1,20 @@
 {
   "formula": [
     {
-      "id": "visual-ai",
-      "label": "Visual AI condition",
-      "labelZh": "视觉 AI 状态",
+      "id": "visual-condition",
+      "label": "Visual condition",
+      "labelZh": "视觉状态",
       "weight": 45,
-      "body": "Technician mobile photos are checked for yellowing, wilting, bare patches, uneven growth, pest/disease marks and overall fullness.",
-      "proof": "Standard-angle photo set, asset ID, timestamp and AI finding record."
+      "body": "Technician mobile health-check evidence records a numeric condition score. AI vision may assist, but provider output remains pending until an external result is written and reviewed.",
+      "proof": "Mobile capture batch, asset ID, timestamp, photo reference and human review state."
     },
     {
       "id": "sensor-stability",
       "label": "Sensor stability",
       "labelZh": "环境稳定度",
       "weight": 25,
-      "body": "Water level, moisture, light, temperature, humidity, nutrient signal and gateway heartbeat reduce or support the score.",
-      "proof": "Telemetry reading, target band, last-seen time and alert status."
+      "body": "Temperature, humidity, CO2 and MC readings provide the current module environment status. Missing readings reduce evidence coverage rather than being treated as healthy.",
+      "proof": "Telemetry reading, unit, last-seen time and alert status."
     },
     {
       "id": "service-compliance",
@@ -25,12 +25,12 @@
       "proof": "Work order status, technician note, photo proof and audit event."
     },
     {
-      "id": "recovery-trend",
-      "label": "Recovery trend",
-      "labelZh": "恢复趋势",
+      "id": "exception-control",
+      "label": "Exception control",
+      "labelZh": "异常控制",
       "weight": 10,
-      "body": "Survival rate, repeated issue history, replacement cycle and recovery speed show whether a wall is improving or degrading.",
-      "proof": "Historical health score, survival rate, issue recurrence and replacement log."
+      "body": "Active sensor alerts, pending AI reviews and recorded exceptions show whether known operating risks are controlled.",
+      "proof": "Alert status, diagnosis state, exception item and remediation reference."
     }
   ],
   "sources": [

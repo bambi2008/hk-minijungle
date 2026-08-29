@@ -213,6 +213,23 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Architecture scaffold readiness: approximately **83%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
 
+### Step 67 - Explainable Health Score and ESG Operational Ledger v1
+
+- Score before: **65%**. Score after: **65%**. The official production operations score does not move because managed PostgreSQL and independently evidenced off-host restore remain unproven.
+- Health score added: a persisted, explainable operational score now combines visual evidence at **45%**, module environment telemetry at **25%**, technician service evidence at **20%** and active exception control at **10%**. A score is withheld until at least 50% of weighted evidence is available, so a wall with only a master record or an empty control queue cannot appear healthy.
+- Evidence chain added: health results retain factor details, evidence references, method version, confidence and persisted SQLite/PostgreSQL snapshot records. The score is a triage signal, not plant certification, a medical claim or ESG assurance opinion.
+- ESG ledger added: FM Lead can record five structured categories, Xponge root-zone checks, pest/disease observations, chemical interventions, staff/visitor pulse and green brand touchpoints. Period ledgers separate measured mobile facts, master-data facts, estimates and missing evidence, with explicit gaps and source references.
+- Experience added: Ops Today now has one compact Health & ESG Control block for recompute, period generation and structured observation entry. The client/auditor portal receives the same read-only period ledger and evidence boundary. The technician flow remains short and continues to provide the underlying photo, water, nutrient, health-check and exception records.
+- Persistence and permissions added: SQLite and PostgreSQL migrations add health snapshots, ESG observations, ledgers and relational foreign keys. FM Lead writes; client viewer and ESG auditor read scoped results; field technician does not write ESG observations.
+- Evidence added: health/ESG policy and SQLite store smoke covers the no-data threshold, factor evidence, complete ledger, estimate labeling, foreign-key enforcement, scoping and idempotent snapshot/observation writes. Production evidence fixtures include the new storage section.
+- Honest boundary: this is an application ledger, not evidence that the Xponge claim, staff experience impact, brand impact or chemical reduction has been independently verified. Real device readings, calibrated baselines, customer-approved surveys, real ESG reporting cycles, managed PostgreSQL and off-host restore still require external evidence.
+
+### Current Honest Score After Step 67
+
+- Production operations readiness: **65%**. No score increase is claimed from health/ESG implementation.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Step 21 - Production Module, Device and Telemetry PostgreSQL Runtime Switch v1
 
 - Official score: remains **65%**. The managed database/off-host restore hard cap still requires a real connected service, migration verification and an isolated restore drill.
