@@ -219,7 +219,6 @@ import {
   completeSqliteIdempotentCommand,
   createSqliteMaintenanceImport,
   listSqliteMaintenanceImports,
-  markSqliteMaintenanceImportApplied,
   readSqliteIntegrationStorageHealth,
   readSqliteMaintenanceImport,
   releaseSqliteJobLease
@@ -231,11 +230,14 @@ import {
   completePostgresIdempotentCommand,
   createPostgresMaintenanceImport,
   listPostgresMaintenanceImports,
-  markPostgresMaintenanceImportApplied,
   readPostgresIntegrationStorageHealth,
   readPostgresMaintenanceImport,
   releasePostgresJobLease
 } from "./lib/ops-postgres-integration-store.mjs";
+import {
+  applyPostgresMaintenanceImport,
+  applySqliteMaintenanceImport
+} from "./lib/ops-maintenance-import-apply.mjs";
 import { defaultReliabilityJobs } from "./lib/ops-reliability-policy.mjs";
 import {
   beginSqliteReliabilityRun,
@@ -972,7 +974,7 @@ async function abandonIdempotentCommand(input) { return productionMasterDataEnab
 async function createMaintenanceImport(input) { return productionMasterDataEnabled() ? createPostgresMaintenanceImport(runtimeDbPath, input) : createSqliteMaintenanceImport(runtimeDbPath, input); }
 async function readMaintenanceImport(id) { return productionMasterDataEnabled() ? readPostgresMaintenanceImport(runtimeDbPath, id) : readSqliteMaintenanceImport(runtimeDbPath, id); }
 async function listMaintenanceImports(limit) { return productionMasterDataEnabled() ? listPostgresMaintenanceImports(runtimeDbPath, limit) : listSqliteMaintenanceImports(runtimeDbPath, limit); }
-async function markMaintenanceImportApplied(id, appliedBy) { return productionMasterDataEnabled() ? markPostgresMaintenanceImportApplied(runtimeDbPath, id, appliedBy) : markSqliteMaintenanceImportApplied(runtimeDbPath, id, appliedBy); }
+async function applyMaintenanceImport(input) { return productionMasterDataEnabled() ? applyPostgresMaintenanceImport(runtimeDbPath, input) : applySqliteMaintenanceImport(runtimeDbPath, input); }
 async function readIntegrationStorageHealth() { return productionMasterDataEnabled() ? readPostgresIntegrationStorageHealth(runtimeDbPath) : readSqliteIntegrationStorageHealth(runtimeDbPath); }
 async function ensureReliabilityJobs() { return productionMasterDataEnabled() ? seedPostgresReliabilityJobs(runtimeDbPath, defaultReliabilityJobs()) : seedSqliteReliabilityJobs(runtimeDbPath, defaultReliabilityJobs()); }
 async function beginReliabilityRun(input) { await ensureReliabilityJobs(); return productionMasterDataEnabled() ? beginPostgresReliabilityRun(runtimeDbPath, input) : beginSqliteReliabilityRun(runtimeDbPath, input); }
@@ -3384,17 +3386,15 @@ async function handleApi(req, res, pathname) {
       try {
         const dataset = await readMasterDataDataset();
         const clientByWall = new Map(dataset.walls.map((wall) => [wall.id, wall.clientId]));
-        const workOrders = [];
         for (const row of batch.rows) {
           const clientId = clientByWall.get(row.workOrder.wallId);
           if (!clientId) throw validationError(`wall ${row.workOrder.wallId} no longer exists`, "MAINTENANCE_IMPORT_WALL_REMOVED");
           requireClientAccess(auth, clientId, "maintenance import apply");
-          workOrders.push(await upsertMasterDataWorkOrder(row.workOrder));
         }
-        const applied = await markMaintenanceImportApplied(batchId, auth.id);
-        const event = normalizeOpsEvent({ id: `OPS-MAINT-IMPORT-${batchId}`, type: "maintenance.import.applied", actor: auth.name, entityType: "maintenance-import", entityId: batchId, source: "airtable-csv", note: `${workOrders.length} Airtable maintenance row(s) imported into work orders.`, payload: { principalId: auth.id, checksum: batch.checksum, imported: workOrders.length, sourceFilename: batch.sourceFilename, workOrderIds: workOrders.map((order) => order.id) } });
-        await appendOpsEvent(event);
-        sendJson(res, 200, { duplicate: false, imported: workOrders.length, batch: applied, workOrderIds: workOrders.map((order) => order.id), event });
+        const workOrderIds = batch.rows.map((row) => row.workOrder.id);
+        const event = normalizeOpsEvent({ id: `OPS-MAINT-IMPORT-${batchId}`, type: "maintenance.import.applied", actor: auth.name, entityType: "maintenance-import", entityId: batchId, source: "airtable-csv", note: `${workOrderIds.length} Airtable maintenance row(s) imported into work orders.`, payload: { principalId: auth.id, checksum: batch.checksum, imported: workOrderIds.length, sourceFilename: batch.sourceFilename, workOrderIds } });
+        const applied = await applyMaintenanceImport({ batchId, appliedBy: auth.id, event });
+        sendJson(res, 200, applied);
       } finally {
         await releaseJobLease({ jobName: `maintenance-import:${batchId}`, ownerId }).catch(() => {});
       }

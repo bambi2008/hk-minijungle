@@ -49,14 +49,14 @@ async function withDatabase(dbPath, callback) {
   await mkdir(dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
   try {
-    initializeOpsDatabase(db);
+    initializeSqliteOpsDatabase(db);
     return callback(db);
   } finally {
     db.close();
   }
 }
 
-function initializeOpsDatabase(db) {
+export function initializeSqliteOpsDatabase(db) {
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;

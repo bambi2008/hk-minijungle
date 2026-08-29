@@ -246,6 +246,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
 
+### Step 69 - Atomic Airtable Maintenance Import Apply v1
+
+- Score before: **65%**. Score after: **65%**. Transactional code and local rollback evidence do not remove the managed PostgreSQL and independently evidenced off-host restore hard cap.
+- Capability added: Airtable maintenance import apply now uses a dedicated SQLite/PostgreSQL transaction service. Normalized work-order upserts, the `ops_maintenance_imports` status update and the `maintenance.import.applied` event commit together or roll back together.
+- Concurrency and retry control: The existing batch-specific job lease remains in place. An applied batch returns the persisted result without duplicating work orders or audit events; state conflicts and foreign-key failures fail closed.
+- Evidence added: focused atomic smoke test covers first apply, duplicate apply, work-order/event counts and a foreign-key failure that leaves the batch previewed with no partial work order or event. API smoke confirms the real maintenance endpoint still applies and re-applies a batch correctly. Full verification and security scanning remain required after this change.
+- Honest boundary: The rollback proof is local SQLite evidence, not a live managed PostgreSQL transaction test. Airtable remains a controlled CSV handoff, not a live two-way sync. No new claim is made about service completion, external evidence assurance, cloud failover, backup restore or 1,000+ module operating performance.
+
+### Current Honest Score After Step 69
+
+- Production operations readiness: **65%**. No score increase is claimed from transaction hardening.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Step 21 - Production Module, Device and Telemetry PostgreSQL Runtime Switch v1
 
 - Official score: remains **65%**. The managed database/off-host restore hard cap still requires a real connected service, migration verification and an isolated restore drill.

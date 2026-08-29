@@ -8,8 +8,8 @@ export const integrationMigrationVersion = "2026-08-29.ops-control-import-v1";
 function storeError(message, code = "OPS_CONTROL_VALIDATION_ERROR", status = 400) { const error = new Error(message); error.code = code; error.status = status; return error; }
 function required(value, field) { const text = String(value || "").trim(); if (!text) throw storeError(`${field} is required`); return text; }
 function parseJson(value, fallback) { try { return JSON.parse(value || ""); } catch { return fallback; } }
-async function withDatabase(dbPath, callback) { await mkdir(dirname(dbPath), { recursive: true }); const db = new DatabaseSync(dbPath); try { initialize(db); return await callback(db); } finally { db.close(); } }
-function initialize(db) {
+async function withDatabase(dbPath, callback) { await mkdir(dirname(dbPath), { recursive: true }); const db = new DatabaseSync(dbPath); try { initializeSqliteIntegrationDatabase(db); return await callback(db); } finally { db.close(); } }
+export function initializeSqliteIntegrationDatabase(db) {
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;

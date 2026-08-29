@@ -36,3 +36,9 @@ Use Airtable as the temporary capture surface and DR FOREST OPS as the controlle
 - Keep the Airtable CSV export and the applied batch ID in the migration evidence folder until Airtable is retired.
 
 This path is suitable for controlled pilot migration. It is not live two-way synchronization, conflict resolution against edits made in both systems, or proof that a service visit occurred.
+
+## Atomic apply v1
+
+The apply step uses the `2026-08-29.atomic-maintenance-import-v1` transaction service. On SQLite and PostgreSQL, the normalized Airtable rows are upserted into `work_orders`, the import batch is changed from `previewed` to `applied`, and the `maintenance.import.applied` event is inserted in one database transaction. A foreign-key, validation or event-write failure rolls back all three effects.
+
+The batch-specific lease still prevents two Ops workers from applying the same batch concurrently, while the applied status makes a retry return the existing result without writing a second work order or audit event. This closes the previous partial-apply gap for the supported database backend. It does not make Airtable a live sync source, solve conflict resolution, or prove that the underlying service visit occurred.

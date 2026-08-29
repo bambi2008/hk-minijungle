@@ -18,7 +18,7 @@ async function loadSeed(dataRoot) {
   return { clients, walls, workorders, proofRecords: proof.records || [], sensorReadings: sensors.readings || [], incidents: incidents.incidents || [] };
 }
 
-async function initialize(pool) {
+export async function initializePostgresMasterDataDatabase(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL);
     CREATE TABLE IF NOT EXISTS clients (
@@ -112,10 +112,10 @@ async function importSeed(pool, seed) {
   } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); }
 }
 
-export async function readPostgresMasterDataset(dbPath, dataRoot) { const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot); return readDataset(pool); }
-export async function importPostgresMasterData(dbPath, dataRoot) { const pool = getPostgresPool(); await initialize(pool); await importSeed(pool, await loadSeed(dataRoot)); return readPostgresMasterDataHealth(dbPath, dataRoot); }
+export async function readPostgresMasterDataset(dbPath, dataRoot) { const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await ensureSeeded(pool, dataRoot); return readDataset(pool); }
+export async function importPostgresMasterData(dbPath, dataRoot) { const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await importSeed(pool, await loadSeed(dataRoot)); return readPostgresMasterDataHealth(dbPath, dataRoot); }
 export async function readPostgresMasterDataHealth(dbPath, dataRoot) {
-  const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot);
+  const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await ensureSeeded(pool, dataRoot);
   const counts = {};
   for (const [key, table] of Object.entries({ clients: "clients", livingAssets: "living_assets", assetZones: "asset_zones", workOrders: "work_orders", proofRecords: "proof_records", sensorReadings: "sensor_readings", incidents: "incidents" })) counts[key] = Number((await pool.query(`SELECT COUNT(*)::int AS count FROM ${table}`)).rows[0].count);
   const checks = await Promise.all([
@@ -130,13 +130,13 @@ export async function readPostgresMasterDataHealth(dbPath, dataRoot) {
 }
 
 export async function upsertPostgresClient(dbPath, dataRoot, input) {
-  const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot);
+  const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await ensureSeeded(pool, dataRoot);
   const client = { id: required(input.id, "client.id"), name: required(input.name, "client.name"), segment: input.segment || null, district: input.district || null, contact: input.contact || null, plan: input.plan || null, contract: input.contract || null, renewalDate: input.renewalDate || null, renewalRisk: input.renewalRisk || null, revenue: Number(input.revenue || 0), proofNeed: input.proofNeed || null };
   await pool.query("INSERT INTO clients (id,name,segment,district,contact,plan,contract,renewal_date,renewal_risk,revenue,proof_need,raw_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) ON CONFLICT(id) DO UPDATE SET name=EXCLUDED.name,segment=EXCLUDED.segment,district=EXCLUDED.district,contact=EXCLUDED.contact,plan=EXCLUDED.plan,contract=EXCLUDED.contract,renewal_date=EXCLUDED.renewal_date,renewal_risk=EXCLUDED.renewal_risk,revenue=EXCLUDED.revenue,proof_need=EXCLUDED.proof_need,raw_json=EXCLUDED.raw_json", [client.id, client.name, client.segment, client.district, client.contact, client.plan, client.contract, client.renewalDate, client.renewalRisk, client.revenue, client.proofNeed, JSON.stringify(client)]);
   return client;
 }
 export async function upsertPostgresLivingAsset(dbPath, dataRoot, input) {
-  const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot);
+  const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await ensureSeeded(pool, dataRoot);
   const wall = { id: required(input.id, "asset.id"), clientId: required(input.clientId, "asset.clientId"), name: required(input.name, "asset.name"), location: input.location || null, version: input.version || "Standard", modules: positive(input.modules, "asset.modules"), pods: positive(input.pods, "asset.pods"), health: bounded(input.health ?? 80, "asset.health", 0, 100), survival: bounded(input.survival ?? 90, "asset.survival", 0, 100), issues: Number(input.issues || 0), nextVisit: input.nextVisit || null, cadence: input.cadence || null, greenArea: Number(input.greenArea || 0), waterSaved: Number(input.waterSaved || 0), serviceMilesSaved: Number(input.serviceMilesSaved || 0), staffReach: Number(input.staffReach || 0), co2eProxy: Number(input.co2eProxy || 0), status: input.status || "stable", sensors: Array.isArray(input.sensors) ? input.sensors : [], tags: Array.isArray(input.tags) ? input.tags : [], zones: Array.isArray(input.zones) ? input.zones : [] };
   const client = await pool.connect();
   try {
@@ -149,13 +149,13 @@ export async function upsertPostgresLivingAsset(dbPath, dataRoot, input) {
   return wall;
 }
 export async function upsertPostgresWorkOrder(dbPath, dataRoot, input) {
-  const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot);
+  const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await ensureSeeded(pool, dataRoot);
   const order = { id: required(input.id, "workorder.id"), wallId: required(input.wallId, "workorder.wallId"), type: required(input.type, "workorder.type"), due: input.due || null, status: input.status || "Scheduled", priority: input.priority || "medium", tasks: Array.isArray(input.tasks) ? input.tasks : [], externalSource: input.externalSource || null, externalRecordId: input.externalRecordId || null, technicianId: input.technicianId || null, serviceNote: input.serviceNote || null, sourceUpdatedAt: input.sourceUpdatedAt || null };
   const result = await pool.query("INSERT INTO work_orders (id,wall_id,type,due,status,priority,tasks_json,raw_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT(id) DO UPDATE SET wall_id=EXCLUDED.wall_id,type=EXCLUDED.type,due=EXCLUDED.due,status=EXCLUDED.status,priority=EXCLUDED.priority,tasks_json=EXCLUDED.tasks_json,raw_json=EXCLUDED.raw_json RETURNING *", [order.id, order.wallId, order.type, order.due, order.status, order.priority, JSON.stringify(order.tasks), JSON.stringify(order)]);
   return workorderFromRow(result.rows[0]);
 }
 export async function upsertPostgresSensorReading(dbPath, dataRoot, input) {
-  const pool = getPostgresPool(); await initialize(pool); await ensureSeeded(pool, dataRoot);
+  const pool = getPostgresPool(); await initializePostgresMasterDataDatabase(pool); await ensureSeeded(pool, dataRoot);
   const reading = { id: required(input.id, "sensor.id"), wallId: required(input.wallId, "sensor.wallId"), type: input.type || null, value: Number(input.value || 0), unit: input.unit || null, target: input.target || null, status: input.status || "ok", lastSeen: input.lastSeen || null, action: input.action || null };
   const result = await pool.query("INSERT INTO sensor_readings (id,wall_id,type,value,unit,target,status,last_seen,action,raw_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT(id) DO UPDATE SET wall_id=EXCLUDED.wall_id,type=EXCLUDED.type,value=EXCLUDED.value,unit=EXCLUDED.unit,target=EXCLUDED.target,status=EXCLUDED.status,last_seen=EXCLUDED.last_seen,action=EXCLUDED.action,raw_json=EXCLUDED.raw_json RETURNING *", [reading.id, reading.wallId, reading.type, reading.value, reading.unit, reading.target, reading.status, reading.lastSeen, reading.action, JSON.stringify(reading)]);
   return sensorFromRow(result.rows[0]);

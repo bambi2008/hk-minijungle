@@ -50,14 +50,14 @@ async function withDatabase(dbPath, callback) {
   await mkdir(dirname(dbPath), { recursive: true });
   const db = new DatabaseSync(dbPath);
   try {
-    initializeMasterDataDatabase(db);
+    initializeSqliteMasterDataDatabase(db);
     return callback(db);
   } finally {
     db.close();
   }
 }
 
-function initializeMasterDataDatabase(db) {
+export function initializeSqliteMasterDataDatabase(db) {
   db.exec(`
     PRAGMA journal_mode = WAL;
     PRAGMA foreign_keys = ON;

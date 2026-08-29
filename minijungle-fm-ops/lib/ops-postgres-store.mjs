@@ -19,7 +19,7 @@ async function withDatabase(callback) {
   const pool = poolFor(databaseUrl());
   return callback(pool);
 }
-async function initialize(pool) {
+export async function initializePostgresOpsDatabase(pool) {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL);
     CREATE TABLE IF NOT EXISTS ops_events (
@@ -65,7 +65,7 @@ async function insertAction(client, action, event, revision) {
 }
 
 export async function readPostgresOpsEvents() {
-  return withDatabase(async (pool) => { await initialize(pool); const result = await pool.query("SELECT * FROM ops_events ORDER BY timestamp ASC, id ASC"); return result.rows.map(eventFromRow); });
+  return withDatabase(async (pool) => { await initializePostgresOpsDatabase(pool); const result = await pool.query("SELECT * FROM ops_events ORDER BY timestamp ASC, id ASC"); return result.rows.map(eventFromRow); });
 }
 export async function listPostgresOpsEvents(options = {}) {
   const requestedLimit = Number(options.limit);
@@ -92,12 +92,12 @@ export async function listPostgresOpsEvents(options = {}) {
   }
   const limitValue = bind(limit);
   const where = clauses.length ? `WHERE ${clauses.join(" AND ")}` : "";
-  return withDatabase(async (pool) => { await initialize(pool); const result = await pool.query(`SELECT * FROM ops_events ${where} ORDER BY timestamp DESC, id DESC LIMIT ${limitValue}`, params); return result.rows.map(eventFromRow); });
+  return withDatabase(async (pool) => { await initializePostgresOpsDatabase(pool); const result = await pool.query(`SELECT * FROM ops_events ${where} ORDER BY timestamp DESC, id DESC LIMIT ${limitValue}`, params); return result.rows.map(eventFromRow); });
 }
 export async function appendPostgresOpsEvent(event) {
-  return withDatabase(async (pool) => { await initialize(pool); await pool.query("INSERT INTO ops_events (id, timestamp, type, actor, entity_type, entity_id, client_id, wall_id, source, note, payload_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)", [event.id, event.timestamp, event.type, event.actor, event.entityType, event.entityId, event.clientId, event.wallId, event.source, event.note || "", JSON.stringify(event.payload || {})]); return event; });
+  return withDatabase(async (pool) => { await initializePostgresOpsDatabase(pool); await pool.query("INSERT INTO ops_events (id, timestamp, type, actor, entity_type, entity_id, client_id, wall_id, source, note, payload_json) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::jsonb)", [event.id, event.timestamp, event.type, event.actor, event.entityType, event.entityId, event.clientId, event.wallId, event.source, event.note || "", JSON.stringify(event.payload || {})]); return event; });
 }
-export async function readPostgresOpsState() { return withDatabase(async (pool) => { await initialize(pool); return latestSnapshot(pool); }); }
+export async function readPostgresOpsState() { return withDatabase(async (pool) => { await initializePostgresOpsDatabase(pool); return latestSnapshot(pool); }); }
 export async function savePostgresOpsStateSnapshot(input, event = null) {
   return withDatabase(async (pool) => { const client = await pool.connect(); try { await client.query("BEGIN"); const latest = await latestSnapshot(client); const snapshot = await insertSnapshot(client, buildOpsStateSnapshot(latest, input, event)); await client.query("COMMIT"); return snapshot; } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); } });
 }
@@ -105,7 +105,7 @@ export async function applyPostgresOpsStateAction(input, event = null) {
   return withDatabase(async (pool) => { const client = await pool.connect(); try { await client.query("BEGIN"); const latest = await latestSnapshot(client); const actionPayload = input.action && typeof input.action === "object" ? input.action : input; const result = reduceOpsStateAction(latest, input, event); await insertSnapshot(client, result.snapshot); await insertAction(client, actionPayload, event, result.snapshot.revision); await client.query("COMMIT"); return result; } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); } });
 }
 export async function readPostgresOpsStorageHealth() {
-  return withDatabase(async (pool) => { await initialize(pool); const [tables, events, actions, snapshots, latest, migrations] = await Promise.all([
+  return withDatabase(async (pool) => { await initializePostgresOpsDatabase(pool); const [tables, events, actions, snapshots, latest, migrations] = await Promise.all([
     pool.query("SELECT tablename AS name FROM pg_tables WHERE schemaname = current_schema() ORDER BY tablename"),
     pool.query("SELECT COUNT(*)::int AS count FROM ops_events"),
     pool.query("SELECT COUNT(*)::int AS count FROM ops_actions"),
