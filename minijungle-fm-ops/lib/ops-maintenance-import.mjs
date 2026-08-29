@@ -16,7 +16,7 @@ function normalizedHeader(value) {
   return String(value || "").replace(/^\uFEFF/, "").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function parseCsvRows(csv) {
+export function parseCsvRows(csv) {
   const text = String(csv || "");
   if (!text.trim()) throw new Error("CSV content is required");
   const rows = [];

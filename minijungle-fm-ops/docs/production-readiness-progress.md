@@ -1040,3 +1040,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from the release evidence ledger.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 71 - External Production Acceptance Toolchain v1
+
+- Score before: **65%**. Score after: **65%**. This step makes the five external production gates executable and auditable; it does not create external infrastructure or field evidence.
+- PostgreSQL path added: encrypted custom-format `pg_dump`, archive readability check, off-host upload option, and isolated `pg_restore` tooling. The restore command rejects the source host/database and never accepts a same-target restore.
+- Device path added: a production HMAC client and explicit write-enabled probes for one signed sensor reading and one camera capture. The client uses the same canonical request contract as the server and never logs the device key in its result.
+- Identity path added: OIDC discovery and JWKS reachability probe plus one real bearer-token request to the production readiness endpoint. Provider configuration is not presented as proof of MFA, role transition, scope isolation or revocation.
+- Identity matrix added: a read-only real-token acceptance script checks Platform Admin, FM Lead and two different client viewers against role claims, policy access, portfolio access and cross-client asset isolation. The result remains separate from provider reachability because one valid token cannot prove tenant isolation.
+- Field-data path added: a strict customer service-cycle evidence contract for Airtable/technician exports. It requires work order, module, technician, service time, duration and an external proof reference; the repeated-operations gate requires at least two completed cycles for each of at least two clients.
+- Acceptance path added: `production:acceptance` combines PostgreSQL preflight, OIDC, device probe reports, backup/restore reports and field-data validation. It returns `blocked` unless all five gates are observed and does not modify `DR_FOREST_*_VERIFIED` markers or the official score.
+- Evidence added: local smoke tests prove fail-closed behavior, PostgreSQL target separation, archive manifest shape, HMAC parity, identity-matrix fail-closed behavior and repeated-client data validation. No command was run against a real external resource in this workspace.
+- Honest boundary: managed PostgreSQL credentials, enterprise OIDC tenant/token, physical device keys, encrypted off-host archive, isolated restore database and real customer field-cycle export are still absent. The external acceptance status is therefore **blocked**.
+
+### Current Honest Score After Step 71
+
+- Production operations readiness: **65%**. The managed PostgreSQL and independently evidenced off-host restore hard cap remains binding; the real-device and repeated-client gates also require external evidence.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
