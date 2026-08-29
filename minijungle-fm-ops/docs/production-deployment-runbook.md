@@ -108,6 +108,8 @@ The maintenance import apply path now uses `2026-08-29.atomic-maintenance-import
 
 This does not turn Airtable into live two-way synchronization or provide conflict resolution against edits made in both systems. High-volume or unattended production imports still require a live managed PostgreSQL run, connection-pool/load evidence, operator access review and a real restore/recovery drill.
 
+The import also applies a source-freshness guard when Airtable provides `updated_at`: a preview flags an older export against the existing `AIR-*` work order, and the final transaction rechecks the timestamp before writing. Missing source timestamps remain an explicit ordering gap and should be resolved in the Airtable export contract before unattended use.
+
 The technician PWA reads `GET /api/mobile/remediation-tasks?statuses=open,assigned,in_progress` and updates `PATCH /api/mobile/remediation-tasks/:id`. A field technician receives only assigned tasks, records acceptance when starting, and submits a capture batch ID or uploaded media ID as `evidenceRef` for FM review. Pending tasks remain visible but locked; rejected tasks expose the FM note and can be resumed. This remains a pilot control until production identity and repeated real-site review cycles are evidenced.
 
 After the data loads, `Download evidence / 下載證據` creates a role-labelled JSON snapshot in the browser. It is useful for pilot review and partner walkthroughs, but it is not a signed report. A production release must replace or supplement it with an immutable server-side snapshot, a signed download URL, retention controls and a delivery acknowledgement.

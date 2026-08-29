@@ -42,3 +42,7 @@ This path is suitable for controlled pilot migration. It is not live two-way syn
 The apply step uses the `2026-08-29.atomic-maintenance-import-v1` transaction service. On SQLite and PostgreSQL, the normalized Airtable rows are upserted into `work_orders`, the import batch is changed from `previewed` to `applied`, and the `maintenance.import.applied` event is inserted in one database transaction. A foreign-key, validation or event-write failure rolls back all three effects.
 
 The batch-specific lease still prevents two Ops workers from applying the same batch concurrently, while the applied status makes a retry return the existing result without writing a second work order or audit event. This closes the previous partial-apply gap for the supported database backend. It does not make Airtable a live sync source, solve conflict resolution, or prove that the underlying service visit occurred.
+
+## Source freshness guard
+
+When an Airtable export includes `updated_at`, the import compares it with the existing `sourceUpdatedAt` stored on the same stable `AIR-*` work order. An older export is marked blocked during preview and cannot apply; the transaction service repeats the comparison at apply time to cover the preview-to-apply race. A newer or equal source version may update the existing work order without creating a duplicate. If the source omits `updated_at`, the platform cannot establish ordering and accepts the row under the existing controlled-import policy.

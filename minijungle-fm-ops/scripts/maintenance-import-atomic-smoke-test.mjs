@@ -63,7 +63,8 @@ try {
         priority: "medium",
         tasks: ["Water check", "Photo capture"],
         externalSource: "airtable-csv",
-        externalRecordId: "atomic-valid-001"
+        externalRecordId: "atomic-valid-001",
+        sourceUpdatedAt: "2026-08-29T08:00:00.000Z"
       }
     }]
   });
@@ -80,6 +81,69 @@ try {
   assert.equal(duplicate.duplicate, true);
   assert.equal(duplicate.event, null);
   assert.deepEqual(counts(), afterFirstApply);
+
+  const staleBatch = await createSqliteMaintenanceImport(dbPath, {
+    id: "MIMP-ATOMIC-STALE-001",
+    source: "airtable-csv",
+    sourceFilename: "atomic-stale.csv",
+    checksum: "atomic-stale-checksum",
+    rowCount: 1,
+    validCount: 1,
+    invalidCount: 0,
+    createdBy: "fm-lead",
+    rows: [{
+      rowNumber: 2,
+      sourceRecordId: "atomic-valid-001",
+      workOrder: {
+        id: "AIR-atomic-valid-001",
+        wallId: "MJ-HK-021",
+        type: "Maintenance",
+        due: "2026-08-30T00:00:00.000Z",
+        status: "Scheduled",
+        priority: "high",
+        tasks: ["Stale source must not overwrite"],
+        externalSource: "airtable-csv",
+        externalRecordId: "atomic-valid-001",
+        sourceUpdatedAt: "2026-08-28T08:00:00.000Z"
+      }
+    }]
+  });
+  await assert.rejects(
+    () => applySqliteMaintenanceImport(dbPath, { batchId: staleBatch.batch.id, appliedBy: "fm-lead", event: event("OPS-ATOMIC-STALE-001", staleBatch.batch.id) }),
+    /older than existing work orders/i
+  );
+  assert.deepEqual(counts(), { workOrders: 5, events: 1, previewed: 1, applied: 1 });
+
+  const freshBatch = await createSqliteMaintenanceImport(dbPath, {
+    id: "MIMP-ATOMIC-FRESH-001",
+    source: "airtable-csv",
+    sourceFilename: "atomic-fresh.csv",
+    checksum: "atomic-fresh-checksum",
+    rowCount: 1,
+    validCount: 1,
+    invalidCount: 0,
+    createdBy: "fm-lead",
+    rows: [{
+      rowNumber: 2,
+      sourceRecordId: "atomic-valid-001",
+      workOrder: {
+        id: "AIR-atomic-valid-001",
+        wallId: "MJ-HK-021",
+        type: "Maintenance",
+        due: "2026-08-30T00:00:00.000Z",
+        status: "Scheduled",
+        priority: "high",
+        tasks: ["Fresh source updates the work order"],
+        externalSource: "airtable-csv",
+        externalRecordId: "atomic-valid-001",
+        sourceUpdatedAt: "2026-08-30T08:00:00.000Z"
+      }
+    }]
+  });
+  const freshApplied = await applySqliteMaintenanceImport(dbPath, { batchId: freshBatch.batch.id, appliedBy: "fm-lead", event: event("OPS-ATOMIC-FRESH-001", freshBatch.batch.id) });
+  assert.equal(freshApplied.duplicate, false);
+  assert.equal(freshApplied.batch.status, "applied");
+  assert.deepEqual(counts(), { workOrders: 5, events: 2, previewed: 1, applied: 2 });
 
   const rollbackBatch = await createSqliteMaintenanceImport(dbPath, {
     id: "MIMP-ATOMIC-ROLLBACK-001",
@@ -109,7 +173,7 @@ try {
     /constraint|foreign key/i
   );
   const afterRollback = counts();
-  assert.deepEqual(afterRollback, { workOrders: 5, events: 1, previewed: 1, applied: 1 });
+  assert.deepEqual(afterRollback, { workOrders: 5, events: 2, previewed: 2, applied: 2 });
   const db = new DatabaseSync(dbPath);
   try {
     assert.equal(db.prepare("SELECT COUNT(*) AS count FROM work_orders WHERE id='AIR-atomic-rollback-001'").get().count, 0);
@@ -118,7 +182,7 @@ try {
   } finally {
     db.close();
   }
-  console.log(JSON.stringify({ ok: true, atomicVersion: "2026-08-29.atomic-maintenance-import-v1", firstApply: afterFirstApply, duplicateProtected: true, rollbackPreserved: afterRollback }, null, 2));
+  console.log(JSON.stringify({ ok: true, atomicVersion: "2026-08-29.atomic-maintenance-import-v1", firstApply: afterFirstApply, duplicateProtected: true, staleSourceBlocked: true, freshSourceAccepted: true, rollbackPreserved: afterRollback }, null, 2));
 } finally {
   await rm(tempRoot, { recursive: true, force: true });
 }

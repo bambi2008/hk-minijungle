@@ -8,6 +8,7 @@ import { initializeSqliteOpsDatabase } from "./ops-sqlite-store.mjs";
 import { initializePostgresIntegrationDatabase } from "./ops-postgres-integration-store.mjs";
 import { initializePostgresMasterDataDatabase } from "./ops-postgres-master-data-store.mjs";
 import { initializePostgresOpsDatabase } from "./ops-postgres-store.mjs";
+import { findStaleMaintenanceImportRows } from "./ops-maintenance-import-policy.mjs";
 
 export const maintenanceImportApplyVersion = "2026-08-29.atomic-maintenance-import-v1";
 
@@ -103,6 +104,28 @@ function resultFor({ batch, workOrders, event, duplicate }) {
   };
 }
 
+function staleSourceError(conflicts) {
+  const error = storeError("maintenance import contains source versions older than existing work orders", "MAINTENANCE_IMPORT_STALE_SOURCE", 409);
+  error.details = { conflictCount: conflicts.length, conflicts: conflicts.slice(0, 50) };
+  return error;
+}
+
+function chunks(items, size = 300) {
+  const result = [];
+  for (let index = 0; index < items.length; index += size) result.push(items.slice(index, index + size));
+  return result;
+}
+
+function readSqliteExistingWorkOrders(db, ids) {
+  const rows = [];
+  for (const chunk of chunks([...new Set(ids)])) {
+    if (!chunk.length) continue;
+    const placeholders = chunk.map(() => "?").join(",");
+    rows.push(...db.prepare(`SELECT id, raw_json FROM work_orders WHERE id IN (${placeholders})`).all(...chunk));
+  }
+  return rows.map((row) => ({ ...parseJson(row.raw_json, {}), id: row.id }));
+}
+
 function insertSqliteEvent(db, event) {
   db.prepare(`
     INSERT INTO ops_events (
@@ -161,6 +184,8 @@ export async function applySqliteMaintenanceImport(dbPath, { batchId, appliedBy,
       return resultFor({ batch, workOrders, event: normalizedEvent, duplicate: true });
     }
     if (batch.invalidCount > 0) throw storeError("maintenance import contains invalid rows and cannot be applied", "MAINTENANCE_IMPORT_HAS_ERRORS", 409);
+    const staleConflicts = findStaleMaintenanceImportRows(batch.rows, readSqliteExistingWorkOrders(db, workOrders.map((order) => order.id)));
+    if (staleConflicts.length) throw staleSourceError(staleConflicts);
     for (const order of workOrders) upsertSqliteWorkOrderInTransaction(db, order);
     const appliedAt = new Date().toISOString();
     const update = db.prepare("UPDATE ops_maintenance_imports SET status='applied', applied_by=?, applied_at=? WHERE id=? AND status='previewed'").run(actor, appliedAt, id);
@@ -204,6 +229,13 @@ async function upsertPostgresWorkOrderInTransaction(client, order) {
   return result.rows[0].id;
 }
 
+async function readPostgresExistingWorkOrders(client, ids) {
+  const uniqueIds = [...new Set(ids)];
+  if (!uniqueIds.length) return [];
+  const result = await client.query("SELECT id, raw_json FROM work_orders WHERE id=ANY($1::text[])", [uniqueIds]);
+  return result.rows.map((row) => ({ ...parseJson(row.raw_json, {}), id: row.id }));
+}
+
 export async function applyPostgresMaintenanceImport(dbPath, { batchId, appliedBy, event } = {}) {
   const pool = getPostgresPool();
   const client = await pool.connect();
@@ -228,6 +260,8 @@ export async function applyPostgresMaintenanceImport(dbPath, { batchId, appliedB
       return resultFor({ batch, workOrders, event: normalizedEvent, duplicate: true });
     }
     if (batch.invalidCount > 0) throw storeError("maintenance import contains invalid rows and cannot be applied", "MAINTENANCE_IMPORT_HAS_ERRORS", 409);
+    const staleConflicts = findStaleMaintenanceImportRows(batch.rows, await readPostgresExistingWorkOrders(client, workOrders.map((order) => order.id)));
+    if (staleConflicts.length) throw staleSourceError(staleConflicts);
     for (const order of workOrders) await upsertPostgresWorkOrderInTransaction(client, order);
     const applied = await client.query("UPDATE ops_maintenance_imports SET status='applied', applied_by=$1, applied_at=NOW() WHERE id=$2 AND status='previewed' RETURNING *", [actor, id]);
     if (!applied.rows[0]) throw storeError("Maintenance import batch changed while applying", "MAINTENANCE_IMPORT_STATE_CONFLICT", 409);

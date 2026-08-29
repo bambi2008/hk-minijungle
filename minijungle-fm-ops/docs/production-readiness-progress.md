@@ -260,6 +260,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
 
+### Step 70 - Airtable Source Freshness and Conflict Guard v1
+
+- Score before: **65%**. Score after: **65%**. Stale-source protection reduces operational overwrite risk but does not remove the managed PostgreSQL and independently evidenced off-host restore hard cap.
+- Capability added: Airtable preview compares an incoming row's `updated_at` with the existing `sourceUpdatedAt` on the same stable `AIR-*` work order. Older rows are shown as blocked before apply; equal or newer rows remain eligible to update the existing record.
+- Race protection added: the SQLite/PostgreSQL atomic apply service repeats the comparison inside its transaction, so a source cannot become stale between preview and apply without the whole batch being rejected.
+- Experience added: the Operations page preserves the conflict message and displays how many rows need a newer Airtable export. API smoke verifies preview blocking, and direct transaction smoke verifies stale rejection, newer-source acceptance, duplicate protection and rollback behavior.
+- Honest boundary: source ordering is only enforceable when Airtable supplies `updated_at`; missing timestamps remain an explicit limitation. This is a controlled CSV handoff, not live two-way sync or conflict resolution for edits made independently in both systems. No live PostgreSQL conflict test or field-operations evidence is claimed.
+
+### Current Honest Score After Step 70
+
+- Production operations readiness: **65%**. No score increase is claimed from source-freshness protection.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Step 21 - Production Module, Device and Telemetry PostgreSQL Runtime Switch v1
 
 - Official score: remains **65%**. The managed database/off-host restore hard cap still requires a real connected service, migration verification and an isolated restore drill.

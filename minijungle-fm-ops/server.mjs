@@ -256,6 +256,7 @@ import {
   seedPostgresReliabilityJobs
 } from "./lib/ops-postgres-reliability-store.mjs";
 import { maintenanceImportTemplateCsv, normalizeMaintenanceCsv } from "./lib/ops-maintenance-import.mjs";
+import { findStaleMaintenanceImportRows } from "./lib/ops-maintenance-import-policy.mjs";
 import {
   evaluateSqliteWorkforceCandidates,
   listSqliteTechnicians,
@@ -3363,6 +3364,14 @@ async function handleApi(req, res, pathname) {
         normalized = normalizeMaintenanceCsv(input.csv, { knownWallIds: dataset.walls.map((wall) => wall.id) });
         const clientByWall = new Map(dataset.walls.map((wall) => [wall.id, wall.clientId]));
         for (const row of normalized.rows) requireClientAccess(auth, clientByWall.get(row.workOrder.wallId), "maintenance import preview");
+        const staleConflicts = findStaleMaintenanceImportRows(normalized.rows, dataset.workorders);
+        if (staleConflicts.length) {
+          const staleIds = new Set(staleConflicts.map((conflict) => conflict.workOrderId));
+          normalized.rows = normalized.rows.filter((row) => !staleIds.has(row.workOrder.id));
+          normalized.errors = [...normalized.errors, ...staleConflicts.map((conflict) => ({ rowNumber: conflict.rowNumber, recordId: conflict.recordId, messages: [conflict.message] }))];
+          normalized.validRows -= staleConflicts.length;
+          normalized.invalidRows += staleConflicts.length;
+        }
       } catch (error) {
         if (error.status) throw error;
         throw validationError(error.message, "MAINTENANCE_IMPORT_PARSE_FAILED");
@@ -4663,6 +4672,7 @@ async function handleApi(req, res, pathname) {
       error: status >= 500 ? "Internal server error" : error.message
     };
     if (error.code) payload.code = error.code;
+    if (error.details && status < 500) payload.details = error.details;
     if (error.retryAfter) payload.retryAfterSeconds = error.retryAfter;
     if (status === 409 && error.snapshot) {
       payload.currentRevision = error.currentRevision;
