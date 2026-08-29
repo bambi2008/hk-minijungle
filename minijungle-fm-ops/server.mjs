@@ -434,6 +434,18 @@ import {
   sweepPostgresEvidenceSnapshots,
   verifyPostgresEvidenceSnapshot
 } from "./lib/ops-postgres-evidence-snapshot-store.mjs";
+import {
+  importSqliteFieldServiceCycles,
+  listSqliteFieldServiceCycles,
+  readSqliteFieldServiceStorageHealth
+} from "./lib/ops-field-service-store.mjs";
+import {
+  importPostgresFieldServiceCycles,
+  listPostgresFieldServiceCycles,
+  readPostgresFieldServiceStorageHealth
+} from "./lib/ops-postgres-field-service-store.mjs";
+import { normalizeFieldCycleCsv } from "./lib/ops-field-cycle-import.mjs";
+import { validateFieldCycleEvidence } from "./lib/ops-field-cycle-evidence.mjs";
 import { normalizeEvidenceRetention } from "./lib/ops-evidence-integrity.mjs";
 import { getS3Object, putS3Object } from "./lib/ops-object-storage.mjs";
 import {
@@ -1034,6 +1046,13 @@ async function listEsgObservations(options={}){await ensureHealthEsgSchema();ret
 async function saveEsgPeriodLedger(ledger){await ensureHealthEsgSchema();return productionMasterDataEnabled()?savePostgresEsgPeriodLedger(runtimeDbPath,ledger):saveSqliteEsgPeriodLedger(runtimeDbPath,ledger);}
 async function listEsgPeriodLedgers(options={}){await ensureHealthEsgSchema();return productionMasterDataEnabled()?listPostgresEsgPeriodLedgers(runtimeDbPath,options):listSqliteEsgPeriodLedgers(runtimeDbPath,options);}
 async function readHealthEsgStorageHealth(){await readMasterDataHealth();await listModules();return productionMasterDataEnabled()?readPostgresHealthEsgStorageHealth(runtimeDbPath):readSqliteHealthEsgStorageHealth(runtimeDbPath);}
+async function importFieldServiceCycles(input){return productionMasterDataEnabled()?importPostgresFieldServiceCycles(runtimeDbPath,input):importSqliteFieldServiceCycles(runtimeDbPath,input);}
+async function listFieldServiceCycles(options={}){return productionMasterDataEnabled()?listPostgresFieldServiceCycles(runtimeDbPath,options):listSqliteFieldServiceCycles(runtimeDbPath,options);}
+async function readFieldServiceStorageHealth(){
+  await readMasterDataHealth();
+  await listModules();
+  return productionMasterDataEnabled()?readPostgresFieldServiceStorageHealth(runtimeDbPath):readSqliteFieldServiceStorageHealth(runtimeDbPath);
+}
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -2580,8 +2599,8 @@ async function handleApi(req, res, pathname) {
         status: "ok",
         service: "dr-forest-fm-ops",
         mode: "api-foundation",
-        runtimeStore: "sqlite",
-        masterDataStore: "sqlite",
+        runtimeStore: production.production ? "postgresql" : "sqlite",
+        masterDataStore: production.production ? "postgresql" : "sqlite",
         authPolicy: "role-client-scope-plus-pilot-session-v1",
         mobileWorkflow: "pwa-offline-capture-v2",
         proofMediaVault: "local-verified-v1",
@@ -2607,7 +2626,7 @@ async function handleApi(req, res, pathname) {
       }
       try {
         const production = productionConfigReport();
-        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, healthEsgStorage] = await Promise.all([
+        const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, healthEsgStorage, fieldServiceStorage] = await Promise.all([
           readOpsStorageHealth(),
           readMasterDataHealth(),
           readMobileCaptureStorageHealth(),
@@ -2620,7 +2639,8 @@ async function handleApi(req, res, pathname) {
           readAiVisionStorageHealth(),
           readNotificationStorageHealth(),
           readEvidenceSnapshotStorageHealth(),
-          readHealthEsgStorageHealth()
+          readHealthEsgStorageHealth(),
+          readFieldServiceStorageHealth()
         ]);
         const ready = production.ready;
         sendJson(res, ready ? 200 : 503, {
@@ -2641,6 +2661,7 @@ async function handleApi(req, res, pathname) {
           notifications: { pending: notificationStorage.counts.pending, processing: notificationStorage.counts.processing, retry: notificationStorage.counts.retry, failed: notificationStorage.counts.failed, delivered: notificationStorage.counts.delivered, due: notificationStorage.counts.due },
           evidenceSnapshots: { count: evidenceSnapshotStorage.counts.snapshots, verified: evidenceSnapshotStorage.counts.verified, unsigned: evidenceSnapshotStorage.counts.unsigned, expired: evidenceSnapshotStorage.counts.expired, migrationVersion: evidenceSnapshotStorage.migrationVersion },
           healthEsg: { observations: healthEsgStorage.counts.observations, ledgers: healthEsgStorage.counts.ledgers, healthSnapshots: healthEsgStorage.counts.healthSnapshots, foreignKeyIssues: healthEsgStorage.relationshipIntegrity.foreignKeyIssues, migrationVersion: healthEsgStorage.migrationVersion },
+          fieldService: { cycles: fieldServiceStorage.counts.total, completed: fieldServiceStorage.counts.completed, exceptions: fieldServiceStorage.counts.exceptions, clients: fieldServiceStorage.counts.clients, foreignKeyIssues: fieldServiceStorage.relationshipIntegrity.foreignKeyIssues, migrationVersion: fieldServiceStorage.migrationVersion },
           operationalLimits: [
             ...(ready ? [] : production.failures.map((item) => `${item.name}: ${item.detail}`)),
             ...(production.production ? [] : [
@@ -3113,6 +3134,36 @@ async function handleApi(req, res, pathname) {
         generatedAt: new Date().toISOString(),
         ...authPolicySummary()
       });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/field-service/cycles") {
+      requirePermission(auth, "ops.events.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const cycles = await listFieldServiceCycles({ clientIds: auth.clientScope === "all" ? null : auth.clientIds, limit: url.searchParams.get("limit") || 500 });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), cycles, gate: validateFieldCycleEvidence({ cycles }) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/admin/field-service/cycles/import") {
+      requirePermission(auth, "master.data.import");
+      const input = await readJsonBody(req, 2 * 1024 * 1024);
+      let cycles = input.cycles;
+      if (typeof input.csv === "string") {
+        const imported = normalizeFieldCycleCsv(input.csv);
+        if (imported.errors.length) {
+          const error = apiError(409, "field-cycle CSV contains invalid rows", "FIELD_CYCLE_IMPORT_HAS_ERRORS");
+          error.details = { errors: imported.errors };
+          throw error;
+        }
+        cycles = imported.cycles;
+      }
+      if (!Array.isArray(cycles) || !cycles.length) throw validationError("field-cycle import requires a non-empty cycles array or CSV", "FIELD_CYCLE_IMPORT_EMPTY");
+      for (const cycle of cycles) requireClientAccess(auth, cycle.clientId, "field-cycle import");
+      const result = await importFieldServiceCycles({ cycles, actorId: auth.id });
+      const event = normalizeOpsEvent({ type: "field.service.cycles.imported", actor: auth.name, entityType: "field-service-cycles", entityId: `batch-${Date.now()}`, source: "field-service-import", note: `${result.total} customer field-service cycle(s) imported.`, payload: { principalId: auth.id, backend: result.backend, inserted: result.inserted, updated: result.updated, gateStatus: result.gate.status } });
+      await appendOpsEvent(event);
+      sendJson(res, 201, { ...result, event });
       return;
     }
 
@@ -3744,7 +3795,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage, releaseEvidenceStorage, healthEsgStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage, releaseEvidenceStorage, healthEsgStorage, fieldServiceStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -3764,7 +3815,8 @@ async function handleApi(req, res, pathname) {
         readCommissioningHealth(),
         readDeviceLifecycleHealth(),
         readReleaseEvidenceHealth(),
-        readHealthEsgStorageHealth()
+        readHealthEsgStorageHealth(),
+        readFieldServiceStorageHealth()
       ]);
       const [maintenancePlanningStorage, inventoryStorage,serviceContractStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth(),readServiceContractHealth()]);
       sendJson(res, 200, {
@@ -3791,7 +3843,8 @@ async function handleApi(req, res, pathname) {
         deviceLifecycle: deviceLifecycleStorage
         ,serviceContracts:serviceContractStorage,
         releaseEvidence: releaseEvidenceStorage,
-        healthEsg: healthEsgStorage
+        healthEsg: healthEsgStorage,
+        fieldService: fieldServiceStorage
       });
       return;
     }

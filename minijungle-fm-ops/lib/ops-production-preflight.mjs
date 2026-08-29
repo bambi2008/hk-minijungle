@@ -1,10 +1,11 @@
 import pg from "pg";
 import { productionConfigReport } from "./ops-production-config.mjs";
 
-export const productionPreflightVersion = "2026-09-08.production-preflight-v2";
+export const productionPreflightVersion = "2026-08-29.production-preflight-v3";
 
 const requiredTables = [
   "schema_migrations",
+  "ops_schema_migration_files",
   "ops_events",
   "ops_state_snapshots",
   "ops_actions",
@@ -62,10 +63,12 @@ const requiredTables = [
   "ops_release_evidence_records",
   "ops_release_evidence_events",
   "ops_esg_observations",
-  "ops_esg_period_ledgers"
+  "ops_esg_period_ledgers",
+  "ops_field_service_cycles"
 ];
 
 const requiredMigrations = [
+  "2026-08-29.postgres-base-master-data-ingestion-v1",
   "2026-08-17.postgres-runtime-v1",
   "2026-08-19.postgres-master-data-v1",
   "2026-08-19.postgres-modules-v1",
@@ -93,7 +96,8 @@ const requiredMigrations = [
   "2026-09-03.postgres-module-commissioning-v1",
   "2026-09-04.postgres-device-lifecycle-v1",
   "2026-09-08.postgres-release-evidence-ledger-v1",
-  "2026-08-29.postgres-health-esg-operational-ledger-v1"
+  "2026-08-29.postgres-health-esg-operational-ledger-v1",
+  "2026-08-29.postgres-field-service-cycles-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }
@@ -193,7 +197,8 @@ async function probeService(serviceUrl, headers = {}) {
     storage.body?.commissioning?.backend,
     storage.body?.deviceLifecycle?.backend,
     storage.body?.serviceContracts?.backend,
-    storage.body?.healthEsg?.backend
+    storage.body?.healthEsg?.backend,
+    storage.body?.fieldService?.backend
   ].filter(Boolean);
   const maintenancePlanningObserved = /postgres/i.test(String(storage.body?.maintenancePlanning?.backend || ""));
   const inventoryObserved = /postgres/i.test(String(storage.body?.inventory?.backend || ""));
@@ -202,7 +207,8 @@ async function probeService(serviceUrl, headers = {}) {
   const deviceLifecycleObserved = /postgres/i.test(String(storage.body?.deviceLifecycle?.backend || ""));
   const serviceContractsObserved = /postgres/i.test(String(storage.body?.serviceContracts?.backend || ""));
   const healthEsgObserved = /postgres/i.test(String(storage.body?.healthEsg?.backend || ""));
-  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved && reliabilityObserved && commissioningObserved && deviceLifecycleObserved && serviceContractsObserved && healthEsgObserved;
+  const fieldServiceObserved = /postgres/i.test(String(storage.body?.fieldService?.backend || ""));
+  const postgresStorage = storageBackends.length > 0 && storageBackends.every((backend) => /postgres/i.test(backend)) && maintenancePlanningObserved && inventoryObserved && reliabilityObserved && commissioningObserved && deviceLifecycleObserved && serviceContractsObserved && healthEsgObserved && fieldServiceObserved;
   const status = ready.status === 200 && storage.status === 200 && ready.body?.status === "ready" && postgresStorage ? "verified" : "failed";
   return {
     status,
@@ -217,6 +223,7 @@ async function probeService(serviceUrl, headers = {}) {
     deviceLifecycleObserved,
     serviceContractsObserved,
     healthEsgObserved,
+    fieldServiceObserved,
     postgresStorage,
     reason: status === "verified" ? null : "Service readiness or PostgreSQL-backed storage observation failed"
   };

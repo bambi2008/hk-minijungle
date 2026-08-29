@@ -1058,3 +1058,19 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. The managed PostgreSQL and independently evidenced off-host restore hard cap remains binding; the real-device and repeated-client gates also require external evidence.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 72 - PostgreSQL Schema Runner and Customer Field-Service Ledger v1
+
+- Score before: **65%**. Score after: **65%**. This step makes the production database deployment path and customer field-data persistence executable; it does not claim that an external PostgreSQL instance or real customer data is connected.
+- PostgreSQL migration path added: fresh deployments now have an ordered `000_master_data_and_ingestion.sql` base schema followed by the existing domain migrations through `019_field_service_cycles.sql`. A Node/`pg` runner records file hashes and byte sizes, takes a PostgreSQL advisory lock, refuses checksum drift and supports apply/verify-only reports.
+- Field-service persistence added: SQLite and PostgreSQL ledgers store client, work order, physical module, technician, service time, completion/exception status, duration, outcome, notes, proof references and source record. Imports are atomic, idempotent by cycle ID and reject missing or cross-client parent relationships.
+- Customer-data workflow added: Airtable/technician CSV or JSON can be dry-run validated first, then applied by an authenticated operator. The API exposes client-scoped cycle reads and an admin import endpoint; the repeated-operations gate still requires at least two completed cycles for each of at least two clients.
+- Runtime observation added: health, readiness, storage and production preflight now expose the field-service backend, counts, migration version and relationship integrity. Production mode requires PostgreSQL-backed observation rather than silently falling back to SQLite.
+- Experience and verification: API smoke passed after fixing an initialization-order race in `/api/storage`; focused external-acceptance smoke passed; full `npm.cmd run check` passed, including service APIs, device ingestion, backups smoke, mobile flows, portals and browser UI smoke.
+- Honest boundary: this workspace still has no managed PostgreSQL URL, enterprise identity tenant/tokens, physical device credentials, off-host archive/isolated restore target or customer field-service export. Real PostgreSQL migration, real device writes, real identity acceptance, off-host restore and customer operating cycles remain blocked until those external resources are supplied.
+
+### Current Honest Score After Step 72
+
+- Production operations readiness: **65%**. No score increase is claimed from local integration code or smoke data.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
