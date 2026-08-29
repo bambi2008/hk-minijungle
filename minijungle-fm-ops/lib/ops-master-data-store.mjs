@@ -265,6 +265,10 @@ function clearMasterData(db) {
   // Real registered devices remain protected by foreign keys and therefore block an unsafe reset.
   // Pilot service contracts are synthetic seed data. User-created contracts remain protected and block reset.
   if (hasTable("ops_service_contracts")) {
+    if (hasTable("ops_service_contract_sla_links")) db.exec("DELETE FROM ops_service_contract_sla_links WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed')");
+    if (hasTable("ops_service_contract_change_requests")) db.exec("DELETE FROM ops_service_contract_change_requests WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed')");
+    if (hasTable("ops_service_contract_version_assets")) db.exec("DELETE FROM ops_service_contract_version_assets WHERE version_id IN (SELECT id FROM ops_service_contract_versions WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed'))");
+    if (hasTable("ops_service_contract_versions")) db.exec("DELETE FROM ops_service_contract_versions WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed')");
     db.exec(`
       DELETE FROM ops_service_contract_events WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed');
       DELETE FROM ops_service_contract_assets WHERE contract_id IN (SELECT id FROM ops_service_contracts WHERE created_by = 'system:pilot-seed');

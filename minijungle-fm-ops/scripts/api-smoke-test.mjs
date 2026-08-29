@@ -3,6 +3,7 @@ import { createServer } from "node:net";
 import { createHash } from "node:crypto";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
+import { authContextFromOidcClaims } from "../lib/ops-auth.mjs";
 
 const host = "127.0.0.1";
 const projectRoot = process.cwd();
@@ -89,6 +90,8 @@ async function verifyApi(baseUrl) {
   assert(authContext.response.ok, "Auth context endpoint failed");
   assert(authContext.body.auth.roleId === "client-viewer", "Auth context did not resolve client viewer role");
   assert(authContext.body.auth.clientIds.includes("show-suite"), "Auth context did not expose client scope");
+  const unscopedClientClaims = authContextFromOidcClaims({ sub: "client-without-scope", role: "client-viewer" });
+  assert(unscopedClientClaims.clientScope === "scoped" && unscopedClientClaims.clientIds.length === 0, "OIDC client viewer without client scope must fail closed");
 
   const authPolicy = await fetchJson(`${baseUrl}api/auth/policy`, {
     headers: principalHeaders("fm-lead")
@@ -132,6 +135,8 @@ async function verifyApi(baseUrl) {
   assert(notifications.response.ok && Array.isArray(notifications.body.notifications) && notifications.body.summary && Number.isInteger(notifications.body.summary.due), "FM lead should read notification records and delivery summary");
   const deniedNotifications = await fetchJson(`${baseUrl}api/notifications`, { headers: principalHeaders("client-show-suite") });
   assert(deniedNotifications.response.status === 403, "Client viewer should not read the notification outbox");
+  const deniedDeviceHealth = await fetchJson(`${baseUrl}api/device-health`, { headers: principalHeaders("client-show-suite") });
+  assert(deniedDeviceHealth.response.status === 403 && deniedDeviceHealth.body.code === "DEVICE_HEALTH_SCOPE_DENIED", "Client viewer should not read platform-wide device health");
 
   const unknownAuth = await fetchJson(`${baseUrl}api/assets`, {
     headers: principalHeaders("unknown-principal")
@@ -180,6 +185,9 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.commissioning.migrationVersion === "2026-09-03.module-commissioning-v1", "Storage endpoint did not expose module commissioning migration");
   assert(initialStorage.body.commissioning.tables.includes("ops_module_commissioning") && initialStorage.body.commissioning.tables.includes("ops_module_commissioning_events"), "Storage endpoint did not expose commissioning identity and event tables");
   assert(initialStorage.body.commissioning.counts.unplanned === 12 && initialStorage.body.commissioning.counts.records === 0, "Generated pilot modules must start explicitly unplanned rather than commissioned");
+  assert(initialStorage.body.serviceContracts.migrationVersion === "2026-09-06.service-contracts-v1", "Storage endpoint did not expose service contract migration");
+  assert(initialStorage.body.serviceContracts.versioning.migrationVersion === "2026-09-07.service-contract-versions-v1", "Storage endpoint did not expose contract version migration");
+  assert(initialStorage.body.serviceContracts.versioning.tables.includes("ops_service_contract_change_requests") && initialStorage.body.serviceContracts.versioning.tables.includes("ops_service_contract_sla_links"), "Storage endpoint did not expose contract change and SLA link tables");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");

@@ -259,12 +259,14 @@ export function authContextFromOidcClaims(claims) {
   const roleId = String(claims?.[roleClaim] || claims?.["https://dr-forest.com/role"] || "client-viewer").trim();
   const clientIdsValue = claims?.[clientIdsClaim] ?? claims?.["https://dr-forest.com/client_ids"] ?? [];
   const clientIds = Array.isArray(clientIdsValue) ? clientIdsValue.map((item) => String(item).trim()).filter(Boolean) : String(clientIdsValue || "").split(",").map((item) => item.trim()).filter(Boolean);
+  const scopeBoundRoles = new Set(["field-tech", "client-viewer"]);
+  const effectiveClientIds = clientIds.length ? clientIds : (scopeBoundRoles.has(roleId) ? [] : ["*"]);
   const principal = {
     id: `oidc:${String(claims?.sub || "unknown")}`,
     name: String(claims?.name || claims?.email || claims?.preferred_username || claims?.sub || "OIDC user"),
     roleId: roleDefinitions[roleId] ? roleId : "client-viewer",
     tenantId: String(claims?.tenant_id || claims?.["https://dr-forest.com/tenant_id"] || process.env.DR_FOREST_DEFAULT_TENANT || "dr-forest-hk"),
-    clientIds: clientIds.length ? clientIds : ["*"]
+    clientIds: effectiveClientIds
   };
   return publicPrincipal(principal, false);
 }

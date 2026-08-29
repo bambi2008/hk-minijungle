@@ -327,6 +327,30 @@ import {
   readPostgresServiceContractHealth
 } from "./lib/ops-postgres-service-contract-store.mjs";
 import {
+  ensureSqliteServiceContractVersionSchema,
+  linkSqliteServiceContractSla,
+  listSqliteServiceContractChanges,
+  listSqliteServiceContractVersions,
+  readSqliteServiceContractChange,
+  readSqliteServiceContractPerformance,
+  readSqliteServiceContractVersionHealth,
+  requestSqliteServiceContractChange,
+  reviewSqliteServiceContractChange,
+  syncSqliteServiceContractVersion
+} from "./lib/ops-service-contract-version-store.mjs";
+import {
+  ensurePostgresServiceContractVersionSchema,
+  linkPostgresServiceContractSla,
+  listPostgresServiceContractChanges,
+  listPostgresServiceContractVersions,
+  readPostgresServiceContractChange,
+  readPostgresServiceContractPerformance,
+  readPostgresServiceContractVersionHealth,
+  requestPostgresServiceContractChange,
+  reviewPostgresServiceContractChange,
+  syncPostgresServiceContractVersion
+} from "./lib/ops-postgres-service-contract-version-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -923,13 +947,22 @@ async function receiveInventoryLot(input) { return productionMasterDataEnabled()
 async function submitInventoryStockCount(input) { return productionMasterDataEnabled() ? submitPostgresInventoryStockCount(runtimeDbPath,input) : submitSqliteInventoryStockCount(runtimeDbPath,input); }
 async function reviewInventoryStockCount(countId,input) { return productionMasterDataEnabled() ? reviewPostgresInventoryStockCount(runtimeDbPath,countId,input) : reviewSqliteInventoryStockCount(runtimeDbPath,countId,input); }
 async function readInventoryHealth() { return productionMasterDataEnabled() ? readPostgresInventoryHealth(runtimeDbPath) : readSqliteInventoryHealth(runtimeDbPath); }
-async function createServiceContract(input){await ensurePilotServiceContracts();return productionMasterDataEnabled()?createPostgresServiceContract(runtimeDbPath,input):createSqliteServiceContract(runtimeDbPath,input);}
-async function listServiceContracts(options={}){await ensurePilotServiceContracts();return productionMasterDataEnabled()?listPostgresServiceContracts(runtimeDbPath,options):listSqliteServiceContracts(runtimeDbPath,options);}
-async function readServiceContract(id){await ensurePilotServiceContracts();return productionMasterDataEnabled()?readPostgresServiceContract(runtimeDbPath,id):readSqliteServiceContract(runtimeDbPath,id);}
+async function createServiceContract(input){await ensurePilotServiceContracts();const result=productionMasterDataEnabled()?await createPostgresServiceContract(runtimeDbPath,input):await createSqliteServiceContract(runtimeDbPath,input);await syncServiceContractVersion(result.contract.id);return result;}
+async function ensureServiceContractVersions(){await ensurePilotServiceContracts();return productionMasterDataEnabled()?ensurePostgresServiceContractVersionSchema(runtimeDbPath):ensureSqliteServiceContractVersionSchema(runtimeDbPath);}
+async function syncServiceContractVersion(id){await ensureServiceContractVersions();return productionMasterDataEnabled()?syncPostgresServiceContractVersion(runtimeDbPath,id):syncSqliteServiceContractVersion(runtimeDbPath,id);}
+async function listServiceContracts(options={}){await ensurePilotServiceContracts();const result=productionMasterDataEnabled()?await listPostgresServiceContracts(runtimeDbPath,options):await listSqliteServiceContracts(runtimeDbPath,options);await ensureServiceContractVersions();return result;}
+async function readServiceContract(id){await ensurePilotServiceContracts();const result=productionMasterDataEnabled()?await readPostgresServiceContract(runtimeDbPath,id):await readSqliteServiceContract(runtimeDbPath,id);if(result)await ensureServiceContractVersions();return result;}
 async function listServiceContractEvents(id){await ensurePilotServiceContracts();return productionMasterDataEnabled()?listPostgresServiceContractEvents(runtimeDbPath,id):listSqliteServiceContractEvents(runtimeDbPath,id);}
-async function actionServiceContract(id,input){await ensurePilotServiceContracts();return productionMasterDataEnabled()?actionPostgresServiceContract(runtimeDbPath,id,input):actionSqliteServiceContract(runtimeDbPath,id,input);}
+async function actionServiceContract(id,input){await ensurePilotServiceContracts();const result=productionMasterDataEnabled()?await actionPostgresServiceContract(runtimeDbPath,id,input):await actionSqliteServiceContract(runtimeDbPath,id,input);await syncServiceContractVersion(id);return result;}
 async function evaluateServiceContract(input){await ensurePilotServiceContracts();return productionMasterDataEnabled()?evaluatePostgresServiceContract(runtimeDbPath,input):evaluateSqliteServiceContract(runtimeDbPath,input);}
-async function readServiceContractHealth(){await ensurePilotServiceContracts();return productionMasterDataEnabled()?readPostgresServiceContractHealth(runtimeDbPath):readSqliteServiceContractHealth(runtimeDbPath);}
+async function listServiceContractVersions(id){await ensureServiceContractVersions();return productionMasterDataEnabled()?listPostgresServiceContractVersions(runtimeDbPath,id):listSqliteServiceContractVersions(runtimeDbPath,id);}
+async function listServiceContractChanges(options={}){await ensureServiceContractVersions();return productionMasterDataEnabled()?listPostgresServiceContractChanges(runtimeDbPath,options):listSqliteServiceContractChanges(runtimeDbPath,options);}
+async function readServiceContractChange(id){await ensureServiceContractVersions();return productionMasterDataEnabled()?readPostgresServiceContractChange(runtimeDbPath,id):readSqliteServiceContractChange(runtimeDbPath,id);}
+async function requestServiceContractChange(input){await ensureServiceContractVersions();return productionMasterDataEnabled()?requestPostgresServiceContractChange(runtimeDbPath,input):requestSqliteServiceContractChange(runtimeDbPath,input);}
+async function reviewServiceContractChange(id,input){await ensureServiceContractVersions();return productionMasterDataEnabled()?reviewPostgresServiceContractChange(runtimeDbPath,id,input):reviewSqliteServiceContractChange(runtimeDbPath,id,input);}
+async function linkServiceContractSla(input){await ensureServiceContractVersions();return productionMasterDataEnabled()?linkPostgresServiceContractSla(runtimeDbPath,input):linkSqliteServiceContractSla(runtimeDbPath,input);}
+async function readServiceContractPerformance(options={}){await ensureServiceContractVersions();return productionMasterDataEnabled()?readPostgresServiceContractPerformance(runtimeDbPath,options):readSqliteServiceContractPerformance(runtimeDbPath,options);}
+async function readServiceContractHealth(){await ensurePilotServiceContracts();const base=productionMasterDataEnabled()?await readPostgresServiceContractHealth(runtimeDbPath):await readSqliteServiceContractHealth(runtimeDbPath);const versions=productionMasterDataEnabled()?await readPostgresServiceContractVersionHealth(runtimeDbPath):await readSqliteServiceContractVersionHealth(runtimeDbPath);return{...base,versioning:versions};}
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -1538,11 +1571,14 @@ async function ensurePilotServiceContracts() {
 }
 
 function serviceContractForAuth(auth,contract){if(auth.roleId!=="esg-auditor")return contract;const{monthlyFee,currency,...auditorContract}=contract;return auditorContract;}
+function serviceContractChangeForAuth(auth,change){if(auth.roleId!=="esg-auditor")return change;const requestedTerms={...(change.requestedTerms||{})};delete requestedTerms.monthlyFee;delete requestedTerms.currency;return{...change,requestedTerms};}
+function serviceContractVersionForAuth(auth,version){if(auth.roleId!=="esg-auditor")return version;const terms={...(version.terms||{})};delete terms.monthlyFee;delete terms.currency;return{...version,terms};}
 async function serviceContractOverviewFor(auth){
-  const [contracts,clients,walls]=await Promise.all([listServiceContracts({clientIds:auth.clientScope==="all"?null:auth.clientIds,limit:1000}),readJsonData("clients"),readJsonData("walls")]);
+  const clientIds=auth.clientScope==="all"?null:auth.clientIds;
+  const [contracts,clients,walls,changeRequests,performance]=await Promise.all([listServiceContracts({clientIds,limit:1000}),readJsonData("clients"),readJsonData("walls"),listServiceContractChanges({clientIds,statuses:["pending"],limit:1000}),readServiceContractPerformance({clientIds})]);
   const scopedClients=clients.filter((item)=>canAccessClient(auth,item.id)); const scopedWalls=walls.filter((item)=>canAccessClient(auth,item.clientId));
   const covered=new Set(contracts.filter((item)=>item.effectiveState==="active").flatMap((item)=>item.wallIds));
-  return{generatedAt:new Date().toISOString(),contracts:contracts.map((item)=>serviceContractForAuth(auth,item)),clients:scopedClients.map((item)=>({id:item.id,name:item.name,district:item.district})),walls:scopedWalls.map((item)=>({id:item.id,clientId:item.clientId,name:item.name,location:item.location})),summary:{total:contracts.length,active:contracts.filter((item)=>item.effectiveState==="active").length,draft:contracts.filter((item)=>item.status==="draft").length,suspended:contracts.filter((item)=>item.status==="suspended").length,expired:contracts.filter((item)=>item.effectiveState==="expired").length,expiringSoon:contracts.filter((item)=>item.effectiveState==="active"&&item.daysToEnd<=60).length,uncoveredWalls:scopedWalls.filter((item)=>!covered.has(item.id)).length}};
+  return{generatedAt:new Date().toISOString(),contracts:contracts.map((item)=>serviceContractForAuth(auth,item)),changeRequests:changeRequests.map((item)=>serviceContractChangeForAuth(auth,item)),performance,clients:scopedClients.map((item)=>({id:item.id,name:item.name,district:item.district})),walls:scopedWalls.map((item)=>({id:item.id,clientId:item.clientId,name:item.name,location:item.location})),summary:{total:contracts.length,active:contracts.filter((item)=>item.effectiveState==="active").length,draft:contracts.filter((item)=>item.status==="draft").length,suspended:contracts.filter((item)=>item.status==="suspended").length,expired:contracts.filter((item)=>item.effectiveState==="expired").length,expiringSoon:contracts.filter((item)=>item.effectiveState==="active"&&item.daysToEnd<=60).length,uncoveredWalls:scopedWalls.filter((item)=>!covered.has(item.id)).length}};
 }
 
 async function inventoryOverviewFor(auth) {
@@ -2532,6 +2568,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/device-health") {
       requirePermission(auth, "device.registry.read");
+      if (auth.clientScope !== "all") throw apiError(403, "device health summary requires platform-wide scope", "DEVICE_HEALTH_SCOPE_DENIED");
       sendJson(res, 200, { generatedAt: new Date().toISOString(), health: await readDeviceStorageHealth() });
       return;
     }
@@ -3369,6 +3406,22 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/service-contracts/performance") {
+      requirePermission(auth,"contracts.read");
+      const url=new URL(req.url,`http://${host}:${port}`);
+      sendJson(res,200,await readServiceContractPerformance({clientIds:auth.clientScope==="all"?null:auth.clientIds,from:url.searchParams.get("from")||undefined,through:url.searchParams.get("through")||undefined,asOf:url.searchParams.get("asOf")||undefined}));
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/service-contracts/changes") {
+      requirePermission(auth,"contracts.read");
+      const url=new URL(req.url,`http://${host}:${port}`);
+      const statuses=url.searchParams.get("statuses")?.split(",").filter(Boolean)||null;
+      const changes=await listServiceContractChanges({clientIds:auth.clientScope==="all"?null:auth.clientIds,contractId:url.searchParams.get("contractId")||null,statuses,limit:url.searchParams.get("limit")||500});
+      sendJson(res,200,{generatedAt:new Date().toISOString(),changes:changes.map((item)=>serviceContractChangeForAuth(auth,item))});
+      return;
+    }
+
     if (req.method === "POST" && pathname === "/api/service-contracts") {
       requirePermission(auth,"contracts.write");
       const input=await readJsonBody(req); requireClientAccess(auth,String(input.clientId||""),"service contract create");
@@ -3376,6 +3429,15 @@ async function handleApi(req, res, pathname) {
       const response=await runIdempotentInventoryCommand({auth,scope:"service-contract-create",commandKey,payload:input,execute:async(requestHash)=>{const result=await createServiceContract({...input,id:`SVC-${requestHash.slice(0,20)}`,createdBy:auth.id});const event=normalizeOpsEvent({id:`OPS-SVC-${requestHash.slice(0,20)}`,type:"service-contract.created",actor:auth.name,entityType:"service-contract",entityId:result.contract.id,clientId:result.contract.clientId,source:"contract-control",note:`${result.contract.contractNumber} created as draft.`,payload:{principalId:auth.id,planName:result.contract.planName,wallIds:result.contract.wallIds,endDate:result.contract.endDate}});await appendOpsEvent(event);return{...result,event};}});
       sendJson(res,response.duplicate?200:201,response);return;
     }
+
+    const serviceContractVersionMatch=pathname.match(/^\/api\/service-contracts\/([^/]+)\/versions$/);
+    if(req.method==="GET"&&serviceContractVersionMatch){requirePermission(auth,"contracts.read");const contract=await readServiceContract(decodeURIComponent(serviceContractVersionMatch[1]));if(!contract)throw apiError(404,"service contract not found","SERVICE_CONTRACT_NOT_FOUND");requireClientAccess(auth,contract.clientId,"service contract versions");sendJson(res,200,{contract:serviceContractForAuth(auth,contract),versions:(await listServiceContractVersions(contract.id)).map((item)=>serviceContractVersionForAuth(auth,item))});return;}
+
+    const serviceContractChangeMatch=pathname.match(/^\/api\/service-contracts\/([^/]+)\/changes$/);
+    if(req.method==="POST"&&serviceContractChangeMatch){requirePermission(auth,"contracts.write");const contractId=decodeURIComponent(serviceContractChangeMatch[1]);const contract=await readServiceContract(contractId);if(!contract)throw apiError(404,"service contract not found","SERVICE_CONTRACT_NOT_FOUND");requireClientAccess(auth,contract.clientId,"service contract change request");const input=await readJsonBody(req);const commandKey=String(req.headers["idempotency-key"]||"").trim();const response=await runIdempotentInventoryCommand({auth,scope:`service-contract-change:${contractId}`,commandKey,payload:input,execute:async(requestHash)=>{const result=await requestServiceContractChange({...input,id:`CHG-${requestHash.slice(0,20)}`,contractId,requestedBy:auth.id});const event=normalizeOpsEvent({id:`OPS-SVC-CHG-${requestHash.slice(0,20)}`,type:"service-contract.change-requested",actor:auth.name,entityType:"service-contract",entityId:contractId,clientId:contract.clientId,source:"contract-control",note:result.change.note,payload:{principalId:auth.id,changeRequestId:result.change.id,requestType:result.change.requestType,baseVersionNo:result.change.baseVersionNo}});await appendOpsEvent(event);return{...result,event};}});sendJson(res,response.duplicate?200:201,response);return;}
+
+    const serviceContractChangeReviewMatch=pathname.match(/^\/api\/service-contract-changes\/([^/]+)\/review$/);
+    if(req.method==="POST"&&serviceContractChangeReviewMatch){requirePermission(auth,"contracts.write");const changeId=decodeURIComponent(serviceContractChangeReviewMatch[1]);const change=await readServiceContractChange(changeId);if(!change)throw apiError(404,"change request not found","SERVICE_CONTRACT_CHANGE_NOT_FOUND");const contract=await readServiceContract(change.contractId);if(!contract)throw apiError(404,"service contract not found","SERVICE_CONTRACT_NOT_FOUND");requireClientAccess(auth,contract.clientId,"service contract change review");const input=await readJsonBody(req);const commandKey=String(req.headers["idempotency-key"]||"").trim();const response=await runIdempotentInventoryCommand({auth,scope:`service-contract-change-review:${changeId}`,commandKey,payload:input,execute:async(requestHash)=>{const result=await reviewServiceContractChange(changeId,{...input,reviewedBy:auth.id});const event=normalizeOpsEvent({id:`OPS-SVC-CHG-REV-${requestHash.slice(0,20)}`,type:`service-contract.change-${input.decision}`,actor:auth.name,entityType:"service-contract",entityId:contract.id,clientId:contract.clientId,source:"contract-control",note:input.reviewNote,payload:{principalId:auth.id,changeRequestId:changeId,decision:input.decision,resultingVersionId:result.version?.id||null}});await appendOpsEvent(event);return{...result,event};}});sendJson(res,200,response);return;}
 
     const serviceContractEventsMatch=pathname.match(/^\/api\/service-contracts\/([^/]+)\/events$/);
     if(req.method==="GET"&&serviceContractEventsMatch){requirePermission(auth,"contracts.read");const contract=await readServiceContract(decodeURIComponent(serviceContractEventsMatch[1]));if(!contract)throw apiError(404,"service contract not found","SERVICE_CONTRACT_NOT_FOUND");requireClientAccess(auth,contract.clientId,"service contract events");sendJson(res,200,{contract:serviceContractForAuth(auth,contract),events:await listServiceContractEvents(contract.id)});return;}
@@ -3779,6 +3841,7 @@ async function handleApi(req, res, pathname) {
         await assertEligibleWorkforceAssignment(context);
       }
       const result = await createRemediationTask({ ...contractInput, clientId: module.clientId, wallId: module.assetId, workOrderId, moduleId: module.id, createdBy: auth.id });
+      await linkServiceContractSla({ taskId: result.task.id, contractId: contractEvaluation.contract?.id || null, clientId: result.task.clientId, wallId: result.task.wallId, coverageState: contractEvaluation.coverageState || "missing", priority: result.task.priority, committedDueAt: result.task.dueAt || null, responseHours: contractEvaluation.sla?.responseHours ?? null, resolutionHours: contractEvaluation.sla?.resolutionHours ?? null, linkedBy: auth.id }).catch((error) => { if (!result.duplicate) throw error; });
       if (result.task.assignedTo) await syncRemediationWorkforceAssignment(result.task, auth);
       const event = result.duplicate ? null : normalizeOpsEvent({ type: "remediation.task.created", actor: auth.name, entityType: "remediation-task", entityId: result.task.id, clientId: result.task.clientId, wallId: result.task.wallId, source: "ops-remediation", note: `Remediation task created for module ${result.task.moduleId}.`, payload: { principalId: auth.id, sourceKey: result.task.sourceKey, priority: result.task.priority, workOrderId: result.task.workOrderId, reasons: result.task.reasons,serviceContractId:contractEvaluation.contract?.id||null,contractCoverage:contractEvaluation.coverageState,sla:contractEvaluation.sla } });
       if (event) await appendOpsEvent(event);

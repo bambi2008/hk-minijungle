@@ -46,6 +46,10 @@ const requiredTables = [
   "ops_service_contracts",
   "ops_service_contract_assets",
   "ops_service_contract_events",
+  "ops_service_contract_versions",
+  "ops_service_contract_version_assets",
+  "ops_service_contract_change_requests",
+  "ops_service_contract_sla_links",
   "ops_reliability_jobs",
   "ops_reliability_runs",
   "ops_reliability_incidents",
@@ -79,6 +83,7 @@ const requiredMigrations = [
   "2026-09-01.postgres-inventory-route-kit-v1",
   "2026-09-05.postgres-inventory-traceability-v1",
   "2026-09-06.postgres-service-contracts-v1",
+  "2026-09-07.postgres-service-contract-versions-v1",
   "2026-09-02.postgres-reliability-center-v1",
   "2026-09-03.postgres-module-commissioning-v1",
   "2026-09-04.postgres-device-lifecycle-v1"

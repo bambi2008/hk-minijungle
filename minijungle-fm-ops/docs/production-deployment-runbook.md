@@ -90,13 +90,13 @@ The workflow is not purchase-order, barcode, cold-chain or financial inventory s
 
 ## Service contracts and SLA
 
-Apply `015_service_contracts.sql` after migration `014`. Live PostgreSQL starts with no service contracts. Import only reviewed terms from signed agreements: client, covered living assets, contract dates, service window, evidence requirement, visit frequency, fee and the response/resolution hours for critical, high, normal and low priority.
+Apply `015_service_contracts.sql` after migration `014`, then apply `016_service_contract_versions_and_sla.sql`. Live PostgreSQL starts with no service contracts. Import only reviewed terms from signed agreements: client, covered living assets, contract dates, service window, evidence requirement, visit frequency, fee and the response/resolution hours for critical, high, normal and low priority. The application creates an initial version snapshot; later amendments and renewals must go through a pending request and authorized FM approval, and each remediation task stores its committed SLA deadline for later attainment reporting.
 
 Create records as `draft`. An FM Lead or Platform Admin activates only after the agreement is effective, and every activation, suspension, resumption or termination requires an audit note and current `updatedAt` version. Client viewers can read only their own contract scope; field technicians receive only the compact plan/window attached to an assigned mobile route.
 
 When a remediation task has no explicit deadline, the server derives `dueAt` from the active contract's resolution SLA. A manually supplied deadline remains authoritative. Missing, scheduled, suspended or expired coverage is recorded in the audit event and does not silently invent an SLA. Run the remediation SLA scanner and notification worker as documented above, then verify at least one real task per priority against the signed terms.
 
-The platform record is an operational control, not the executed legal agreement or proof that service was delivered. Retain the signed source, amendment approval, customer notification and actual field evidence outside this table according to the approved records policy. See `docs/service-contracts-and-sla.md`.
+The platform record is an operational control, not the executed legal agreement or proof that service was delivered. Retain the signed source, amendment approval, customer notification and actual field evidence outside these tables according to the approved records policy. SLA attainment is only calculable for tasks linked after this migration; the API reports unlinked tasks explicitly. See `docs/service-contracts-and-sla.md`.
 
 ## Airtable maintenance intake
 

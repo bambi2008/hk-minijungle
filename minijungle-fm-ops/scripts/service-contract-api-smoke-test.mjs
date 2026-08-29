@@ -61,6 +61,22 @@ try {
   const events = await json(`${actionUrl.replace(/\/actions$/, "/events")}`, { headers: headers("client-show-suite") });
   assert.equal(events.response.status, 200);
   assert.equal(events.body.events.length, 2);
+  const versions = await json(`${baseUrl}/api/service-contracts/${encodeURIComponent(created.body.contract.id)}/versions`, { headers: headers("client-show-suite") });
+  assert.equal(versions.response.status, 200);
+  assert.equal(versions.body.versions.length, 1);
+  assert.equal(versions.body.versions[0].status, "approved");
+  const changeTerms = { ...contractInput, planName: "Vision Care Plus · Extended", visitsPerMonth: 3, note: "Amendment terms for API smoke." };
+  const change = await json(`${baseUrl}/api/service-contracts/${encodeURIComponent(created.body.contract.id)}/changes`, { method: "POST", headers: headers("fm-lead", { "Content-Type": "application/json", "Idempotency-Key": "contract-change-api-001" }), body: JSON.stringify({ requestType: "amendment", terms: changeTerms, note: "Add a third monthly visit after approval." }) });
+  assert.equal(change.response.status, 201);
+  assert.equal(change.body.change.status, "pending");
+  const pendingChanges = await json(`${baseUrl}/api/service-contracts/changes?statuses=pending`, { headers: headers("fm-lead") });
+  assert(pendingChanges.body.changes.some((item) => item.id === change.body.change.id));
+  const changeDenied = await json(`${baseUrl}/api/service-contracts/${encodeURIComponent(created.body.contract.id)}/changes`, { method: "POST", headers: headers("client-show-suite", { "Content-Type": "application/json", "Idempotency-Key": "contract-change-client-denied" }), body: JSON.stringify({ requestType: "amendment", terms: changeTerms, note: "Client cannot alter terms." }) });
+  assert.equal(changeDenied.response.status, 403);
+  const reviewed = await json(`${baseUrl}/api/service-contract-changes/${encodeURIComponent(change.body.change.id)}/review`, { method: "POST", headers: headers("fm-lead", { "Content-Type": "application/json", "Idempotency-Key": "contract-change-review-api-001" }), body: JSON.stringify({ decision: "approve", expectedContractUpdatedAt: activated.body.contract.updatedAt, reviewNote: "Amendment approved for API smoke." }) });
+  assert.equal(reviewed.response.status, 200);
+  assert.equal(reviewed.body.version.versionNo, 2);
+  assert.equal(reviewed.body.contract.planName, "Vision Care Plus · Extended");
 
   const quality = await json(`${baseUrl}/api/ops/quality`, { headers: headers("fm-lead") });
   const module = quality.body.moduleReadiness.find((item) => item.clientId === "show-suite");
@@ -72,14 +88,22 @@ try {
   assert(dueMs >= 9.9 * 3600000 && dueMs <= 10.1 * 3600000, `high-priority SLA due time was ${dueMs}ms`);
   assert.equal(remediation.body.event.payload.serviceContractId, created.body.contract.id);
   assert.equal(remediation.body.event.payload.contractCoverage, "active");
+  const performance = await json(`${baseUrl}/api/service-contracts/performance`, { headers: headers("client-show-suite") });
+  assert.equal(performance.response.status, 200);
+  assert.equal(performance.body.summary.totalTasks, 1);
+  assert.equal(performance.body.summary.coveredTasks, 1);
+  assert.equal(performance.body.unlinkedTasks, 0);
 
   const route = await json(`${baseUrl}/api/mobile/route`, { headers: headers("field-tech-show-suite") });
   const stopRecord = route.body.route.find((item) => item.wallId === "MJ-HK-021");
-  assert.equal(stopRecord.serviceContract.planName, "Vision Care Plus");
+  assert.equal(stopRecord.serviceContract.planName, "Vision Care Plus · Extended");
   assert.equal(stopRecord.serviceContract.serviceWindow, "08:30-18:30");
   const storage = await json(`${baseUrl}/api/storage`, { headers: headers("fm-lead") });
   assert.equal(storage.body.serviceContracts.counts.contracts, 5);
   assert.equal(storage.body.serviceContracts.relationshipIntegrity.foreignKeyIssues, 0);
+  assert.equal(storage.body.serviceContracts.versioning.counts.versions, 6);
+  assert.equal(storage.body.serviceContracts.versioning.counts.changeRequests, 1);
+  assert.equal(storage.body.serviceContracts.versioning.counts.slaLinks, 1);
   console.log(JSON.stringify({ ok: true, contractId: created.body.contract.id, slaDueAt: remediation.body.task.dueAt, storage: storage.body.serviceContracts }, null, 2));
 } finally {
   await stop(server);

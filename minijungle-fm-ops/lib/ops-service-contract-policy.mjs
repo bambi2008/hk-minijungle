@@ -2,6 +2,10 @@ import { randomUUID } from "node:crypto";
 
 export const serviceContractMigrationVersion = "2026-09-06.service-contracts-v1";
 export const postgresServiceContractMigrationVersion = "2026-09-06.postgres-service-contracts-v1";
+export const serviceContractVersionMigrationVersion = "2026-09-07.service-contract-versions-v1";
+export const postgresServiceContractVersionMigrationVersion = "2026-09-07.postgres-service-contract-versions-v1";
+export const contractChangeTypes = new Set(["amendment", "renewal"]);
+export const contractChangeStatuses = new Set(["pending", "approved", "rejected"]);
 export const contractStatuses = new Set(["draft", "active", "suspended", "terminated"]);
 export const contractPriorities = ["critical", "high", "normal", "low"];
 export const defaultContractSla = Object.freeze({

@@ -179,6 +179,16 @@ function renderQuality(quality = {}) {
 }
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 function contractActionFor(contract) { if (contract.status === "draft") return "activate"; if (contract.status === "active") return "suspend"; if (contract.status === "suspended") return "resume"; return null; }
+function refreshContractChangeForm() {
+  const contractId = $("#contract-change-contract").value;
+  const contract = (contractState.overview?.contracts || []).find((item) => item.id === contractId);
+  if (!contract) { $("#contract-change-submit").disabled = true; return; }
+  $("#contract-change-submit").disabled = false;
+  $("#contract-change-plan").value = contract.planName || "";
+  $("#contract-change-start").value = contract.startDate || "";
+  $("#contract-change-end").value = contract.endDate || "";
+  $("#contract-change-visits").value = contract.visitsPerMonth || 1;
+}
 function refreshContractWalls() {
   const clientId = $("#contract-client").value;
   const walls = (contractState.overview?.walls || []).filter((wall) => wall.clientId === clientId);
@@ -193,6 +203,16 @@ function renderServiceContracts(payload = {}) {
   $("#contract-client").innerHTML = (payload.clients || []).map((client) => `<option value="${escapeHtml(client.id)}">${escapeHtml(client.name || client.id)}</option>`).join("");
   if (selectedClient && (payload.clients || []).some((client) => client.id === selectedClient)) $("#contract-client").value = selectedClient;
   refreshContractWalls();
+  const activeContracts = (payload.contracts || []).filter((contract) => contract.status === "active");
+  const selectedChangeContract = $("#contract-change-contract").value;
+  $("#contract-change-contract").innerHTML = activeContracts.map((contract) => { const client = (payload.clients || []).find((item) => item.id === contract.clientId); return `<option value="${escapeHtml(contract.id)}">${escapeHtml(contract.contractNumber)} · ${escapeHtml(client?.name || contract.clientId)}</option>`; }).join("");
+  if (selectedChangeContract && activeContracts.some((contract) => contract.id === selectedChangeContract)) $("#contract-change-contract").value = selectedChangeContract;
+  refreshContractChangeForm();
+  const performance = payload.performance?.summary || {};
+  const attainment = performance.attainmentRate === null || performance.attainmentRate === undefined ? "No completed SLA" : `${Math.round(Number(performance.attainmentRate) * 100)}% on time`;
+  $("#contract-performance").innerHTML = `<div class="contract-performance-item"><strong>${escapeHtml(attainment)}</strong><span>SLA attainment / 履约准时率 · ${Number(performance.completedTasks || 0)} completed</span></div><div class="contract-performance-item"><strong>${Number(performance.openOverdueTasks || 0)}</strong><span>open overdue / 未结逾期</span></div><div class="contract-performance-item"><strong>${Number(payload.performance?.unlinkedTasks || 0)}</strong><span>unlinked tasks / 未关联工单</span></div>`;
+  const pending = payload.changeRequests || [];
+  $("#contract-change-list").innerHTML = pending.length ? pending.map((change) => { const contract = (payload.contracts || []).find((item) => item.id === change.contractId); return `<article class="contract-change-item"><div><strong>${escapeHtml(change.requestType)} · ${escapeHtml(contract?.contractNumber || change.contractId)}</strong><span>${escapeHtml(change.requestedTerms?.planName || "Terms update")} · v${Number(change.baseVersionNo || 1)} base · requested by ${escapeHtml(change.requestedBy)}</span><small>${escapeHtml(change.note)} · ${escapeHtml(change.requestedAt)}</small></div><div class="contract-change-actions"><input data-contract-change-note="${escapeHtml(change.id)}" aria-label="Review note for ${escapeHtml(change.id)}" placeholder="Review note"><button class="contract-action" data-contract-change-review="${escapeHtml(change.id)}" data-decision="approve" data-expected-updated-at="${escapeHtml(contract?.updatedAt || change.baseUpdatedAt)}" type="button">Approve</button><button class="contract-action" data-contract-change-review="${escapeHtml(change.id)}" data-decision="reject" data-expected-updated-at="${escapeHtml(contract?.updatedAt || change.baseUpdatedAt)}" type="button">Reject</button></div></article>`; }).join("") : "";
   $("#contract-list").innerHTML = (payload.contracts || []).length ? payload.contracts.map((contract) => {
     const client = (payload.clients || []).find((item) => item.id === contract.clientId);
     const action = contractActionFor(contract);
@@ -343,6 +363,7 @@ $("#dispatch-select-all").onchange = () => { const visible = dispatchState.tasks
 $("#workforce-date").onchange = () => refreshWorkforceCandidates().catch((error) => { $("#workforce-notice").textContent = error.message; });
 $("#maintenance-through-date").onchange = () => load().catch((error) => { $("#maintenance-notice").textContent = error.message; });
 $("#contract-client").onchange = refreshContractWalls;
+$("#contract-change-contract").onchange = refreshContractChangeForm;
 $("#contract-form").onsubmit = async (event) => {
   event.preventDefault();
   const wallIds = [...document.querySelectorAll('input[name="contract-wall"]:checked')].map((input) => input.value);
@@ -353,7 +374,28 @@ $("#contract-form").onsubmit = async (event) => {
   const button = $("#contract-submit"); button.disabled = true; $("#contract-notice").textContent = "Creating contract draft…";
   try { const result = await api("/api/service-contracts", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); await load(); $("#contract-create").open = false; $("#contract-number").value = ""; $("#contract-notice").textContent = `${result.contract.contractNumber} created as draft. Review and activate it when the signed agreement is effective.`; } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
 };
+$("#contract-change-form").onsubmit = async (event) => {
+  event.preventDefault();
+  const contractId = $("#contract-change-contract").value;
+  const contract = (contractState.overview?.contracts || []).find((item) => item.id === contractId);
+  if (!contract) { $("#contract-notice").textContent = "Choose an active contract first."; return; }
+  const button = $("#contract-change-submit"); button.disabled = true; $("#contract-notice").textContent = "Submitting contract change request…";
+  try {
+    const body = { requestType: $("#contract-change-type").value, terms: { planName: $("#contract-change-plan").value.trim(), startDate: $("#contract-change-start").value, endDate: $("#contract-change-end").value, visitsPerMonth: Number($("#contract-change-visits").value) }, note: $("#contract-change-note").value.trim() };
+    const result = await api(`/api/service-contracts/${encodeURIComponent(contractId)}/changes`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) });
+    await load(); $("#contract-change").open = false; $("#contract-change-note").value = ""; $("#contract-notice").textContent = `${result.change.requestType} request recorded for ${contract.contractNumber}.`;
+  } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
+};
 document.addEventListener("click", async (event) => {
+  const reviewButton = event.target.closest("[data-contract-change-review]");
+  if (reviewButton) {
+    const changeId = reviewButton.dataset.contractChangeReview;
+    const note = document.querySelector(`[data-contract-change-note="${CSS.escape(changeId)}"]`)?.value.trim();
+    if (!note) { $("#contract-notice").textContent = "Enter a review note before deciding a contract change."; return; }
+    reviewButton.disabled = true; $("#contract-notice").textContent = `Recording ${reviewButton.dataset.decision}…`;
+    try { await api(`/api/service-contract-changes/${encodeURIComponent(changeId)}/review`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ decision: reviewButton.dataset.decision, expectedContractUpdatedAt: reviewButton.dataset.expectedUpdatedAt, reviewNote: note }) }); await load(); $("#contract-notice").textContent = `Contract change ${reviewButton.dataset.decision}d and version history updated.`; } catch (error) { $("#contract-notice").textContent = error.message; reviewButton.disabled = false; }
+    return;
+  }
   const button = event.target.closest("[data-contract-action]");
   if (!button) return;
   const contractId = button.dataset.contractAction;

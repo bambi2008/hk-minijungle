@@ -930,3 +930,35 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local contract/SLA completion.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 64 - Contract Version Chain and SLA Attainment v1
+
+- Official production operations readiness remains **65%**. Versioned contract controls and derived SLA reporting improve the product's operating model, but they do not prove a live Hong Kong portfolio, managed PostgreSQL deployment or off-host recovery.
+- Persistence added: SQLite and PostgreSQL migration `2026-09-07.*-service-contract-versions-v1` add contract version snapshots, version-to-asset coverage, amendment/renewal requests and task-to-contract SLA commitment links. PostgreSQL deployment SQL is `infra/postgres/016_service_contract_versions_and_sla.sql`.
+- Commercial workflow added: only active contracts can receive an amendment or renewal request. Authorized FM approval retires the prior approved version, updates current coverage terms and creates the next approved snapshot. Rejection leaves the active terms unchanged. Client and ESG roles remain read-only; auditor views redact fees from requested/versioned terms.
+- SLA fulfillment added: every newly created remediation task stores the contract coverage state, priority and committed deadline used at creation. The performance endpoint reports total, covered, completed, on-time, late, open-overdue, reviewed and unlinked tasks by contract and priority. It does not backfill historical task commitments or invent completion data.
+- Experience added: Ops Today exposes three compact controls in one panel: SLA attainment, open overdue and unlinked tasks; a single form requests amendment/renewal; pending changes are approved or rejected inline. The client/auditor portal exposes plan state and read-only SLA indicators. Mobile route cards continue to consume the active plan after approval.
+- Production gate added: preflight requires the four new PostgreSQL tables and migration `2026-09-07.postgres-service-contract-versions-v1`. Production evidence now refuses to treat PostgreSQL as fully observed when contract versioning is absent.
+- Evidence added: direct store smoke proves initial version creation, approval to version 2, stale request rejection, historical SLA links and on-time/overdue calculation. API smoke proves role denial, request/approval, mobile handoff and storage health. Playwright proves FM request/approval and active plan refresh in the existing desktop-to-phone journey.
+- Honest boundary: local tests do not constitute signed customer amendments, legal acceptance, real SLA history, managed PostgreSQL connectivity, external backup/restore evidence or repeated multi-client service cycles.
+
+### Current Honest Score After Step 64
+
+- Production operations readiness: **65%**. No score increase is claimed from local contract versioning or SLA reporting.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 65 - Security Boundary Hardening v1
+
+- Official production operations readiness remains **65%**. These controls reduce application risk; they do not create live PostgreSQL, external identity, off-host recovery or field-operation evidence.
+- Authorization hardening added: scoped OIDC roles fail closed when `client_ids` is absent, and the platform-wide device-health summary now requires an all-portfolio scope. This prevents a client-scoped or field-technician principal from receiving cross-client counts.
+- Rendering hardening added: admin data tables escape API/database values before inserting them into HTML, reducing stored-XSS exposure in the operational console.
+- Evidence added: API smoke asserts the missing-client-scope denial and device-health scope denial. Syntax checks, the full `npm.cmd run check`, and the focused API smoke passed locally.
+- Security review: the standard scan completed with zero reportable findings for snapshot `06363941b1c25a8b34bbc038a4f8fedcadd7ecb`; the scan reported that the working tree changed during scanning, so the current hardening was separately revalidated locally and should be rescanned after the next release snapshot.
+- Honest boundary: no real OIDC tenant claims, MFA enforcement, managed PostgreSQL deployment, S3 media controls, off-host restore rehearsal or repeated multi-client production cycles are evidenced by this step.
+
+### Current Honest Score After Step 65
+
+- Production operations readiness: **65%**. No score increase is claimed from security hardening.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

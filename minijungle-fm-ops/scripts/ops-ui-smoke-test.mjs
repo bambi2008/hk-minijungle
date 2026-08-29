@@ -62,6 +62,19 @@ async function main() {
       await uiContract.locator('[data-action="activate"]').click();
       await operations.waitForFunction(() => document.querySelector("#contract-notice")?.textContent.includes("now active"), null, { timeout: 10000 });
       assert((await operations.locator(".contract-item").filter({ hasText: "DF-HK-UI-001" }).textContent()).includes("active"), "Contract activation did not persist in the FM list");
+      await operations.locator("#contract-change").evaluate((element) => { element.open = true; });
+      const uiContractOption = await operations.locator("#contract-change-contract option").filter({ hasText: "DF-HK-UI-001" }).first().getAttribute("value");
+      await operations.locator("#contract-change-contract").selectOption(uiContractOption);
+      await operations.locator("#contract-change-plan").fill("Vision Care UI Plus");
+      await operations.locator("#contract-change-visits").fill("2");
+      await operations.locator("#contract-change-note").fill("UI smoke amendment approved by FM lead.");
+      await operations.locator("#contract-change-submit").click();
+      await operations.waitForFunction(() => document.querySelector("#contract-change-list")?.textContent.includes("DF-HK-UI-001"), null, { timeout: 10000 });
+      const pendingUiChange = operations.locator(".contract-change-item").filter({ hasText: "DF-HK-UI-001" });
+      await pendingUiChange.locator("[data-contract-change-note]").fill("UI smoke review completed.");
+      await pendingUiChange.locator('[data-decision="approve"]').click();
+      await operations.waitForFunction(() => document.querySelector("#contract-notice")?.textContent.includes("updated"), null, { timeout: 10000 });
+      assert((await operations.locator(".contract-item").filter({ hasText: "DF-HK-UI-001" }).textContent()).includes("Vision Care UI Plus"), "Approved contract amendment did not update the active plan");
       assert(await operations.locator(".device-care-item").count() === 30, "Operations page did not render the bounded device service queue");
       assert((await operations.locator("#device-care-state").textContent()).includes("60 action"), "Operations page did not expose unmanaged device profiles as action items");
       const firstDeviceCare = operations.locator("[data-device-care]").first();
@@ -270,6 +283,8 @@ async function main() {
       const clientPortalErrors = []; clientPortal.on("console", (message) => { if (message.type() === "error") clientPortalErrors.push(message.text()); }); clientPortal.on("pageerror", (error) => clientPortalErrors.push(error.message));
       await clientPortal.goto(`${baseUrl}/portal.html?role=client`); await clientPortal.waitForFunction(() => document.querySelector("#asset-state")?.textContent !== "Loading", null, { timeout: 10000 });
       assert(await clientPortal.locator(".asset-row").count() === 1, "Client portal did not keep the client scope");
+      assert(await clientPortal.locator(".portal-contract-row").count() > 0, "Client portal did not render the scoped service plan");
+      assert((await clientPortal.locator("#portal-contract-performance").textContent()).includes("SLA attainment"), "Client portal did not render SLA status");
       assert(await clientPortal.locator("#capture-count").textContent() !== "--", "Client portal did not load field capture count");
       assert(await clientPortal.locator("#capture-list").textContent().then(async (text) => text.includes("No synced field captures") || await clientPortal.locator(".capture-row").count() > 0), "Client portal did not render field capture chain");
       assert(await clientPortal.locator("#persisted-state").textContent() === "0 in scope", "Client portal should hide the all-portfolio persisted snapshot");
@@ -283,6 +298,8 @@ async function main() {
       const auditorPortalErrors = []; auditorPortal.on("console", (message) => { if (message.type() === "error") auditorPortalErrors.push(message.text()); }); auditorPortal.on("pageerror", (error) => auditorPortalErrors.push(error.message));
       await auditorPortal.goto(`${baseUrl}/portal.html?role=auditor`); await auditorPortal.waitForFunction(() => document.querySelector("#quality-status")?.textContent !== "Loading", null, { timeout: 10000 });
       assert(await auditorPortal.locator("#auditor-panel").isVisible(), "Auditor portal did not expose data quality review");
+      assert(await auditorPortal.locator(".portal-contract-row").count() > 0, "Auditor portal did not render contract coverage");
+      assert((await auditorPortal.locator("#portal-contract-performance").textContent()).includes("SLA attainment"), "Auditor portal did not render SLA status");
       assert(await auditorPortal.locator("#capture-list").textContent().then(async (text) => text.includes("No synced field captures") || await auditorPortal.locator(".capture-row").count() > 0), "Auditor portal did not render field capture chain");
       assert(await auditorPortal.locator(".persisted-row").count() === 1, "Auditor portal did not render the persisted evidence ledger");
       const [persistedDownload] = await Promise.all([auditorPortal.waitForEvent("download"), auditorPortal.locator(".persisted-download").first().click()]);
