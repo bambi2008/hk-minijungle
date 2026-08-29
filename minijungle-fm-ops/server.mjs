@@ -351,6 +351,24 @@ import {
   syncPostgresServiceContractVersion
 } from "./lib/ops-postgres-service-contract-version-store.mjs";
 import {
+  ensurePostgresReleaseEvidenceSchema,
+  listPostgresReleaseEvidence,
+  listPostgresReleaseEvidenceEvents,
+  readPostgresReleaseEvidenceHealth,
+  readPostgresReleaseEvidenceSummary,
+  reviewPostgresReleaseEvidence,
+  submitPostgresReleaseEvidence
+} from "./lib/ops-postgres-release-evidence-store.mjs";
+import {
+  ensureSqliteReleaseEvidenceSchema,
+  listSqliteReleaseEvidence,
+  listSqliteReleaseEvidenceEvents,
+  readSqliteReleaseEvidenceHealth,
+  readSqliteReleaseEvidenceSummary,
+  reviewSqliteReleaseEvidence,
+  submitSqliteReleaseEvidence
+} from "./lib/ops-release-evidence-store.mjs";
+import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
@@ -963,6 +981,13 @@ async function reviewServiceContractChange(id,input){await ensureServiceContract
 async function linkServiceContractSla(input){await ensureServiceContractVersions();return productionMasterDataEnabled()?linkPostgresServiceContractSla(runtimeDbPath,input):linkSqliteServiceContractSla(runtimeDbPath,input);}
 async function readServiceContractPerformance(options={}){await ensureServiceContractVersions();return productionMasterDataEnabled()?readPostgresServiceContractPerformance(runtimeDbPath,options):readSqliteServiceContractPerformance(runtimeDbPath,options);}
 async function readServiceContractHealth(){await ensurePilotServiceContracts();const base=productionMasterDataEnabled()?await readPostgresServiceContractHealth(runtimeDbPath):await readSqliteServiceContractHealth(runtimeDbPath);const versions=productionMasterDataEnabled()?await readPostgresServiceContractVersionHealth(runtimeDbPath):await readSqliteServiceContractVersionHealth(runtimeDbPath);return{...base,versioning:versions};}
+async function ensureReleaseEvidenceSchema(){return productionMasterDataEnabled()?ensurePostgresReleaseEvidenceSchema(runtimeDbPath):ensureSqliteReleaseEvidenceSchema(runtimeDbPath);}
+async function submitReleaseEvidence(input){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?submitPostgresReleaseEvidence(runtimeDbPath,input):submitSqliteReleaseEvidence(runtimeDbPath,input);}
+async function listReleaseEvidence(options={}){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?listPostgresReleaseEvidence(runtimeDbPath,options):listSqliteReleaseEvidence(runtimeDbPath,options);}
+async function readReleaseEvidenceSummary(){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?readPostgresReleaseEvidenceSummary(runtimeDbPath):readSqliteReleaseEvidenceSummary(runtimeDbPath);}
+async function reviewReleaseEvidence(id,input){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?reviewPostgresReleaseEvidence(runtimeDbPath,id,input):reviewSqliteReleaseEvidence(runtimeDbPath,id,input);}
+async function listReleaseEvidenceEvents(id){await ensureReleaseEvidenceSchema();return productionMasterDataEnabled()?listPostgresReleaseEvidenceEvents(runtimeDbPath,id):listSqliteReleaseEvidenceEvents(runtimeDbPath,id);}
+async function readReleaseEvidenceHealth(){return productionMasterDataEnabled()?readPostgresReleaseEvidenceHealth(runtimeDbPath):readSqliteReleaseEvidenceHealth(runtimeDbPath);}
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -3599,7 +3624,7 @@ async function handleApi(req, res, pathname) {
 
     if (req.method === "GET" && pathname === "/api/storage") {
       requirePermission(auth, "storage.read");
-      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage] = await Promise.all([
+      const [runtimeStorage, masterDataStorage, mobileCaptureStorage, proofMediaStorage, telemetryStorage, moduleStorage, reminderStorage, remediationStorage, deviceStorage, alertStorage, aiVisionStorage, notificationStorage, evidenceSnapshotStorage, integrationStorage, workforceStorage, reliabilityStorage, commissioningStorage, deviceLifecycleStorage, releaseEvidenceStorage] = await Promise.all([
         readOpsStorageHealth(),
         readMasterDataHealth(),
         readMobileCaptureStorageHealth(),
@@ -3617,7 +3642,8 @@ async function handleApi(req, res, pathname) {
         readWorkforceStorageHealth(),
         readReliabilityHealth(),
         readCommissioningHealth(),
-        readDeviceLifecycleHealth()
+        readDeviceLifecycleHealth(),
+        readReleaseEvidenceHealth()
       ]);
       const [maintenancePlanningStorage, inventoryStorage,serviceContractStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth(),readServiceContractHealth()]);
       sendJson(res, 200, {
@@ -3642,7 +3668,8 @@ async function handleApi(req, res, pathname) {
         reliability: reliabilityStorage,
         commissioning: commissioningStorage,
         deviceLifecycle: deviceLifecycleStorage
-        ,serviceContracts:serviceContractStorage
+        ,serviceContracts:serviceContractStorage,
+        releaseEvidence: releaseEvidenceStorage
       });
       return;
     }
@@ -3663,6 +3690,56 @@ async function handleApi(req, res, pathname) {
         readNotificationStorageHealth()
       ]);
       sendJson(res, 200, { generatedAt: new Date().toISOString(), notifications, summary: storage.counts });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/production/evidence") {
+      requirePermission(auth, "production.evidence.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const [summary, records, health] = await Promise.all([readReleaseEvidenceSummary(), listReleaseEvidence({ limit: url.searchParams.get("limit") || 100 }), readReleaseEvidenceHealth()]);
+      sendJson(res, 200, { ...summary, records, health });
+      return;
+    }
+
+    const releaseEvidenceEventsMatch = pathname.match(/^\/api\/production\/evidence\/([^/]+)\/events$/);
+    if (req.method === "GET" && releaseEvidenceEventsMatch) {
+      requirePermission(auth, "production.evidence.read");
+      const id = decodeURIComponent(releaseEvidenceEventsMatch[1]);
+      const record = (await listReleaseEvidence({ limit: 500 })).find((item) => item.id === id);
+      if (!record) throw apiError(404, "release evidence record not found", "RELEASE_EVIDENCE_NOT_FOUND");
+      sendJson(res, 200, { record, events: await listReleaseEvidenceEvents(id) });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/production/evidence") {
+      requirePermission(auth, "production.evidence.write");
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "production-release-evidence-submit", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await submitReleaseEvidence({ ...input, id: `RE-${requestHash.slice(0, 20)}`, submittedBy: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-RE-${requestHash.slice(0, 20)}`, type: "production.evidence.submitted", actor: auth.name, entityType: "release-evidence", entityId: result.record.id, source: "production-evidence-ledger", note: result.record.note, payload: { principalId: auth.id, requirementKey: result.record.requirementKey, artifactSha256: result.record.artifactSha256, observedAt: result.record.observedAt, expiresAt: result.record.expiresAt } });
+        await appendOpsEvent(event);
+        return { ...result, event, summary: await readReleaseEvidenceSummary() };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
+    const releaseEvidenceReviewMatch = pathname.match(/^\/api\/production\/evidence\/([^/]+)\/review$/);
+    if (req.method === "POST" && releaseEvidenceReviewMatch) {
+      requirePermission(auth, "production.evidence.verify");
+      const id = decodeURIComponent(releaseEvidenceReviewMatch[1]);
+      const record = (await listReleaseEvidence({ limit: 500 })).find((item) => item.id === id);
+      if (!record) throw apiError(404, "release evidence record not found", "RELEASE_EVIDENCE_NOT_FOUND");
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: `production-release-evidence-review:${id}`, commandKey, payload: input, execute: async (requestHash) => {
+        const result = await reviewReleaseEvidence(id, { ...input, reviewedBy: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-RE-REV-${requestHash.slice(0, 20)}`, type: `production.evidence.${input.decision}`, actor: auth.name, entityType: "release-evidence", entityId: id, source: "production-evidence-ledger", note: input.reviewNote, payload: { principalId: auth.id, requirementKey: record.requirementKey, decision: input.decision, submittedBy: record.submittedBy } });
+        await appendOpsEvent(event);
+        return { ...result, event, summary: await readReleaseEvidenceSummary() };
+      }});
+      sendJson(res, 200, response);
       return;
     }
 

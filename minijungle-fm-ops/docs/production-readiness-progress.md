@@ -962,3 +962,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from security hardening.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 66 - Production Evidence Ledger v1
+
+- Score before: **65%**. Score after: **65%**. The official score remains under the managed PostgreSQL/off-host restore hard cap; this batch improves release control and auditability without inventing external evidence.
+- Evidence control added: seven external production gates are seeded as a database-backed checklist covering PostgreSQL migration, off-host restore, signed-device pilot, repeated multi-client operations, monitoring/alert routing, AI provider evaluation and media malware scanning.
+- Persistence added: SQLite migration `2026-09-08.release-evidence-ledger-v1` and PostgreSQL migration `2026-09-08.postgres-release-evidence-ledger-v1` add requirements, submitted evidence records and append-only submission/review events. Deployment SQL is `infra/postgres/017_release_evidence_ledger.sql`.
+- Review control added: each submission stores an `https://`, `s3://` or controlled `evidence://` reference, SHA-256 digest, observation time, optional expiry, note and actor. Only a different Platform Admin can verify or reject a submitted record; stale reviews are rejected and expired verified records become `expired`.
+- Experience added: Ops Today exposes a compact production gate ledger with one submission form and inline independent review. Client viewers cannot read it; ESG auditors can read the internal checklist and history.
+- Production gate added: PostgreSQL preflight now requires the three release-evidence tables and migration `017`. Storage health and the evidence API report counts and foreign-key integrity.
+- Evidence added: direct store smoke proves idempotent submission, separation of duties, independent verification, event history and foreign-key integrity. API smoke proves role denial, checklist visibility, idempotent submit/replay, self-review denial, independent review and event retrieval. Full `npm.cmd run check` passed, including Playwright UI smoke.
+- Honest boundary: no real production artifact, OIDC/MFA tenant, managed PostgreSQL connection, external backup restore, signed-device run, media scan or multi-client field cycle was created by this code. The ledger records those facts when they happen; it does not make them true.
+
+### Current Honest Score After Step 66
+
+- Production operations readiness: **65%**. No score increase is claimed from the release evidence ledger.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

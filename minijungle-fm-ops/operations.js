@@ -11,6 +11,7 @@ const maintenancePlanningState = { calendar: null };
 const inventoryState = { overview: null };
 const deviceCareState = { records: [] };
 const contractState = { overview: null };
+const releaseEvidenceLedgerState = { payload: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) throw new Error(body.error || `Request failed (${response.status})`); return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -178,6 +179,26 @@ function renderQuality(quality = {}) {
   }).join("") : "<p class=\"empty\">No module-level action items.</p>";
 }
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
+function renderReleaseEvidence(payload = {}) {
+  releaseEvidenceLedgerState.payload = payload;
+  const requirements = payload.requirements || [];
+  const summary = payload;
+  $("#release-evidence-state").textContent = `${Number(summary.verifiedCount || 0)}/${Number(summary.requiredCount || requirements.length)} verified · ${Number(summary.missingCount || 0)} missing`;
+  $("#release-evidence-summary").innerHTML = `<div><strong>${summary.ready ? "Release gates complete" : "Release gates blocked"}</strong><span>${Number(summary.verifiedCount || 0)} verified · ${Number(summary.submittedCount || 0)} awaiting review · ${Number(summary.expiredCount || 0)} expired</span><small>These records support release decisions; they do not replace external evidence.</small></div>`;
+  const requirementSelect = $("#release-evidence-requirement");
+  const currentRequirement = requirementSelect.value;
+  requirementSelect.innerHTML = requirements.map((item) => `<option value="${escapeHtml(item.key)}">${escapeHtml(item.label)}</option>`).join("");
+  if (currentRequirement && requirements.some((item) => item.key === currentRequirement)) requirementSelect.value = currentRequirement;
+  $("#release-evidence-list").innerHTML = requirements.length ? requirements.map((item) => {
+    const record = item.latest;
+    const state = item.state || "missing";
+    const details = record ? `${record.submittedBy} · observed ${formatTime(record.observedAt)}${record.expiresAt ? ` · expires ${formatTime(record.expiresAt)}` : ""}` : "No evidence submission recorded";
+    const artifact = record ? `<small>${escapeHtml(record.artifactRef)} · SHA-256 ${escapeHtml(record.artifactSha256.slice(0, 16))}…</small>` : "";
+    const actions = record && state === "submitted" ? `<div class="release-evidence-actions"><input data-release-evidence-note="${escapeHtml(record.id)}" aria-label="Review note for ${escapeHtml(item.label)}" placeholder="Independent review note" maxlength="500"><button type="button" data-release-evidence-review="${escapeHtml(record.id)}" data-decision="verified" data-updated-at="${escapeHtml(record.updatedAt)}">Verify</button><button type="button" data-release-evidence-review="${escapeHtml(record.id)}" data-decision="rejected" data-updated-at="${escapeHtml(record.updatedAt)}">Reject</button></div>` : "";
+    return `<article class="release-evidence-item"><div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span><small>${escapeHtml(details)}</small>${artifact}</div><b class="${escapeHtml(state)}">${escapeHtml(state)}</b>${actions}</article>`;
+  }).join("") : "<p class=\"empty\">No release evidence requirements configured.</p>";
+  if (!$("#release-evidence-observed").value) $("#release-evidence-observed").value = remediationTimeInput(new Date());
+}
 function contractActionFor(contract) { if (contract.status === "draft") return "activate"; if (contract.status === "active") return "suspend"; if (contract.status === "suspended") return "resume"; return null; }
 function refreshContractChangeForm() {
   const contractId = $("#contract-change-contract").value;
@@ -229,7 +250,7 @@ async function load() {
   if (!$("#contract-start").value) $("#contract-start").value = localDateValue();
   if (!$("#contract-end").value) $("#contract-end").value = localDateValue(new Date(Date.now() + 365 * 86400000));
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
-  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle, serviceContracts] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle"), api("/api/service-contracts")]);
+  const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle, serviceContracts, releaseEvidence] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle"), api("/api/service-contracts"), api("/api/production/evidence")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
   $("#stop-count").textContent = route.route?.length || 0;
@@ -257,6 +278,7 @@ async function load() {
   renderInventory(inventory);
   renderServiceContracts(serviceContracts);
   renderMaintenanceImports(maintenanceImports);
+  renderReleaseEvidence(releaseEvidence);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
 }
@@ -364,6 +386,17 @@ $("#workforce-date").onchange = () => refreshWorkforceCandidates().catch((error)
 $("#maintenance-through-date").onchange = () => load().catch((error) => { $("#maintenance-notice").textContent = error.message; });
 $("#contract-client").onchange = refreshContractWalls;
 $("#contract-change-contract").onchange = refreshContractChangeForm;
+$("#release-evidence-form").onsubmit = async (event) => {
+  event.preventDefault();
+  const observedAt = new Date($("#release-evidence-observed").value);
+  const expiresAt = $("#release-evidence-expires").value ? new Date($("#release-evidence-expires").value) : null;
+  if (Number.isNaN(observedAt.getTime()) || (expiresAt && Number.isNaN(expiresAt.getTime()))) { $("#release-evidence-notice").textContent = "Enter valid evidence dates."; return; }
+  const button = $("#release-evidence-submit-button"); button.disabled = true; $("#release-evidence-notice").textContent = "Submitting evidence for independent review…";
+  try {
+    const result = await api("/api/production/evidence", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ requirementKey: $("#release-evidence-requirement").value, artifactRef: $("#release-evidence-ref").value.trim(), artifactSha256: $("#release-evidence-sha").value.trim(), observedAt: observedAt.toISOString(), expiresAt: expiresAt ? expiresAt.toISOString() : null, note: $("#release-evidence-note").value.trim() }) });
+    event.target.reset(); $("#release-evidence-observed").value = remediationTimeInput(new Date()); await load(); $("#release-evidence-notice").textContent = `${result.record.requirementLabel || result.record.requirementKey} submitted for independent review.`;
+  } catch (error) { $("#release-evidence-notice").textContent = error.message; } finally { button.disabled = false; }
+};
 $("#contract-form").onsubmit = async (event) => {
   event.preventDefault();
   const wallIds = [...document.querySelectorAll('input[name="contract-wall"]:checked')].map((input) => input.value);
@@ -386,6 +419,18 @@ $("#contract-change-form").onsubmit = async (event) => {
     await load(); $("#contract-change").open = false; $("#contract-change-note").value = ""; $("#contract-notice").textContent = `${result.change.requestType} request recorded for ${contract.contractNumber}.`;
   } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
 };
+document.addEventListener("click", async (event) => {
+  const button = event.target.closest("[data-release-evidence-review]");
+  if (!button) return;
+  const recordId = button.dataset.releaseEvidenceReview;
+  const note = document.querySelector(`[data-release-evidence-note="${CSS.escape(recordId)}"]`)?.value.trim();
+  if (!note) { $("#release-evidence-notice").textContent = "Enter a review note before deciding release evidence."; return; }
+  button.disabled = true; $("#release-evidence-notice").textContent = `Recording ${button.dataset.decision}…`;
+  try {
+    await api(`/api/production/evidence/${encodeURIComponent(recordId)}/review`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ decision: button.dataset.decision, expectedUpdatedAt: button.dataset.updatedAt, reviewNote: note }) });
+    await load(); $("#release-evidence-notice").textContent = `Evidence ${button.dataset.decision}.`;
+  } catch (error) { $("#release-evidence-notice").textContent = error.message; button.disabled = false; }
+});
 document.addEventListener("click", async (event) => {
   const reviewButton = event.target.closest("[data-contract-change-review]");
   if (reviewButton) {

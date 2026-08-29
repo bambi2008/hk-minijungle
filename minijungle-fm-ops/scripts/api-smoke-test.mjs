@@ -137,7 +137,6 @@ async function verifyApi(baseUrl) {
   assert(deniedNotifications.response.status === 403, "Client viewer should not read the notification outbox");
   const deniedDeviceHealth = await fetchJson(`${baseUrl}api/device-health`, { headers: principalHeaders("client-show-suite") });
   assert(deniedDeviceHealth.response.status === 403 && deniedDeviceHealth.body.code === "DEVICE_HEALTH_SCOPE_DENIED", "Client viewer should not read platform-wide device health");
-
   const unknownAuth = await fetchJson(`${baseUrl}api/assets`, {
     headers: principalHeaders("unknown-principal")
   });
@@ -188,6 +187,10 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.serviceContracts.migrationVersion === "2026-09-06.service-contracts-v1", "Storage endpoint did not expose service contract migration");
   assert(initialStorage.body.serviceContracts.versioning.migrationVersion === "2026-09-07.service-contract-versions-v1", "Storage endpoint did not expose contract version migration");
   assert(initialStorage.body.serviceContracts.versioning.tables.includes("ops_service_contract_change_requests") && initialStorage.body.serviceContracts.versioning.tables.includes("ops_service_contract_sla_links"), "Storage endpoint did not expose contract change and SLA link tables");
+  assert(initialStorage.body.releaseEvidence.migrationVersion === "2026-09-08.release-evidence-ledger-v1", "Storage endpoint did not expose release evidence ledger migration");
+  assert(initialStorage.body.releaseEvidence.tables.includes("ops_release_evidence_requirements") && initialStorage.body.releaseEvidence.tables.includes("ops_release_evidence_events"), "Storage endpoint did not expose release evidence tables");
+  assert(initialStorage.body.releaseEvidence.counts.records === 0 && initialStorage.body.releaseEvidence.counts.events === 0, "Release evidence ledger should start empty in test mode");
+  assert(initialStorage.body.releaseEvidence.relationshipIntegrity.foreignKeyIssues === 0, "Release evidence foreign keys should remain intact");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
   assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
@@ -1446,6 +1449,24 @@ async function verifyApi(baseUrl) {
   assert(inventoryStorage.body.inventory.backend === "sqlite" && inventoryStorage.body.inventory.relationshipIntegrity.invalidBalances === 0 && inventoryStorage.body.inventory.relationshipIntegrity.invalidLotBalances === 0 && inventoryStorage.body.inventory.counts.transactions === 6 && inventoryStorage.body.inventory.counts.stockCounts === 1, "Storage health should expose reconciled aggregate, lot and count tables");
   const qualityAfterRemediation = await fetchJson(`${baseUrl}api/ops/quality`, { headers: principalHeaders("fm-lead") });
   assert(qualityAfterRemediation.body.summary.openRemediationTasks === 0, "FM-approved remediation task should leave no active task in the quality summary");
+  const releaseEvidenceInitial = await fetchJson(`${baseUrl}api/production/evidence`, { headers: principalHeaders("fm-lead") });
+  assert(releaseEvidenceInitial.response.ok && releaseEvidenceInitial.body.requiredCount === 7 && releaseEvidenceInitial.body.missingCount === 7, "Release evidence ledger should expose all seven external production gates");
+  const releaseEvidenceClientDenied = await fetchJson(`${baseUrl}api/production/evidence`, { headers: principalHeaders("client-show-suite") });
+  assert(releaseEvidenceClientDenied.response.status === 403, "Client viewer should not read internal release evidence");
+  const releaseEvidenceAuditor = await fetchJson(`${baseUrl}api/production/evidence`, { headers: principalHeaders("esg-auditor") });
+  assert(releaseEvidenceAuditor.response.ok && releaseEvidenceAuditor.body.requirements.length === 7, "ESG auditor should read the release evidence checklist");
+  const releaseEvidenceHeaders = { ...jsonHeaders("fm-lead"), "Idempotency-Key": "release-evidence-api-smoke-001" };
+  const releaseEvidenceBody = { requirementKey: "full-postgres-migration", artifactRef: "evidence://api/postgres-migration", artifactSha256: "b".repeat(64), observedAt: new Date().toISOString(), note: "API smoke release evidence submission" };
+  const releaseEvidenceSubmit = await fetchJson(`${baseUrl}api/production/evidence`, { method: "POST", headers: releaseEvidenceHeaders, body: JSON.stringify(releaseEvidenceBody) });
+  assert(releaseEvidenceSubmit.response.status === 201 && releaseEvidenceSubmit.body.record.status === "submitted", "FM lead should submit release evidence for independent review");
+  const releaseEvidenceReplay = await fetchJson(`${baseUrl}api/production/evidence`, { method: "POST", headers: releaseEvidenceHeaders, body: JSON.stringify(releaseEvidenceBody) });
+  assert(releaseEvidenceReplay.response.ok && releaseEvidenceReplay.body.duplicate === true, "Release evidence submission should be idempotent");
+  const releaseEvidenceSelfReview = await fetchJson(`${baseUrl}api/production/evidence/${encodeURIComponent(releaseEvidenceSubmit.body.record.id)}/review`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "release-evidence-self-review" }, body: JSON.stringify({ decision: "verified", expectedUpdatedAt: releaseEvidenceSubmit.body.record.updatedAt, reviewNote: "Self review must be denied" }) });
+  assert(releaseEvidenceSelfReview.response.status === 409 && releaseEvidenceSelfReview.body.code === "RELEASE_EVIDENCE_SEPARATION_OF_DUTIES", "Release evidence must preserve independent review separation");
+  const releaseEvidenceReview = await fetchJson(`${baseUrl}api/production/evidence/${encodeURIComponent(releaseEvidenceSubmit.body.record.id)}/review`, { method: "POST", headers: { ...jsonHeaders("ops-admin"), "Idempotency-Key": "release-evidence-review-api-smoke" }, body: JSON.stringify({ decision: "verified", expectedUpdatedAt: releaseEvidenceSubmit.body.record.updatedAt, reviewNote: "API smoke independent review" }) });
+  assert(releaseEvidenceReview.response.ok && releaseEvidenceReview.body.record.status === "verified" && releaseEvidenceReview.body.summary.verifiedCount === 1, "Platform admin should independently verify release evidence");
+  const releaseEvidenceEvents = await fetchJson(`${baseUrl}api/production/evidence/${encodeURIComponent(releaseEvidenceSubmit.body.record.id)}/events`, { headers: principalHeaders("esg-auditor") });
+  assert(releaseEvidenceEvents.response.ok && releaseEvidenceEvents.body.events.length === 2, "Release evidence event history should retain submission and review");
 }
 
 async function main() {

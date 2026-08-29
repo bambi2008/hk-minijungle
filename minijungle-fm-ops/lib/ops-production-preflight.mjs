@@ -1,7 +1,7 @@
 import pg from "pg";
 import { productionConfigReport } from "./ops-production-config.mjs";
 
-export const productionPreflightVersion = "2026-08-23.production-preflight-v1";
+export const productionPreflightVersion = "2026-09-08.production-preflight-v2";
 
 const requiredTables = [
   "schema_migrations",
@@ -57,7 +57,10 @@ const requiredTables = [
   "ops_module_commissioning_events",
   "ops_device_lifecycle",
   "ops_device_lifecycle_events",
-  "evidence_snapshots"
+  "evidence_snapshots",
+  "ops_release_evidence_requirements",
+  "ops_release_evidence_records",
+  "ops_release_evidence_events"
 ];
 
 const requiredMigrations = [
@@ -86,7 +89,8 @@ const requiredMigrations = [
   "2026-09-07.postgres-service-contract-versions-v1",
   "2026-09-02.postgres-reliability-center-v1",
   "2026-09-03.postgres-module-commissioning-v1",
-  "2026-09-04.postgres-device-lifecycle-v1"
+  "2026-09-04.postgres-device-lifecycle-v1",
+  "2026-09-08.postgres-release-evidence-ledger-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }

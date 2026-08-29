@@ -32,6 +32,9 @@ const roleDefinitions = {
       "inventory.review",
       "contracts.read",
       "contracts.write",
+      "production.evidence.read",
+      "production.evidence.write",
+      "production.evidence.verify",
       "ops.state.read",
       "ops.state.write.action",
       "ops.state.write.snapshot",
@@ -172,6 +175,7 @@ const roleDefinitions = {
       ,"ai.diagnosis.read"
       ,"commissioning.read"
       ,"contracts.read"
+      ,"production.evidence.read"
     ],
     actionTypes: []
   }
