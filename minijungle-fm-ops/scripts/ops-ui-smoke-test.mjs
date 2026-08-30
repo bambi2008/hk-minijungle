@@ -340,9 +340,14 @@ async function main() {
       const [auditorDownload] = await Promise.all([auditorPortal.waitForEvent("download"), auditorPortal.locator("#export").click()]);
       assert(auditorDownload.suggestedFilename().includes("evidence-auditor"), "Auditor evidence export filename was not role-scoped"); await auditorDownload.delete();
       assert(!auditorPortalErrors.length, `Auditor portal errors: ${auditorPortalErrors.join(" | ")}`);
-      const admin = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+      const admin = await browser.newPage({ viewport: { width: 1280, height: 900 }, extraHTTPHeaders: { "x-dr-forest-principal": "ops-admin" } });
       const adminErrors = []; admin.on("console", (message) => { if (message.type() === "error") adminErrors.push(message.text()); }); admin.on("pageerror", (error) => adminErrors.push(error.message));
       await admin.goto(`${baseUrl}/admin.html`); await admin.waitForFunction(() => document.querySelectorAll("#clients-list tbody tr").length === 4, null, { timeout: 10000 }); await admin.locator("[data-tab=modules]").click();
+      await admin.locator("[data-tab=devices]").click(); await admin.locator("[data-new=device]").click();
+      await admin.locator('input[name="id"]').fill("DRF-UI-ADMIN-DEVICE-001"); await admin.locator('input[name="wallId"]').fill("MJ-HK-021"); await admin.locator('input[name="moduleId"]').fill("MJ-HK-021-M01"); await admin.locator('input[name="type"]').fill("temperature"); await admin.locator('input[name="label"]').fill("Admin UI device"); await admin.locator('input[name="serialNumber"]').fill("DRF-ADMIN-UI-001"); await admin.locator('input[name="manufacturer"]').fill("DR FOREST"); await admin.locator('input[name="model"]').fill("ADMIN-SENSOR-V1");
+      await admin.locator('#editor-form button[type="submit"]').click(); await admin.waitForFunction(() => document.querySelector("#notice")?.textContent.includes("service profile"), null, { timeout: 10000 });
+      const adminLifecycle = await admin.evaluate(async () => (await fetch("/api/device-lifecycle")).json()); assert(adminLifecycle.records.some((record) => record.deviceId === "DRF-UI-ADMIN-DEVICE-001" && record.serialNumber === "DRF-ADMIN-UI-001"), "Admin device registry did not persist the physical service profile");
+      await admin.locator("[data-tab=modules]").click();
       assert(await admin.locator("#modules-list tbody tr").count() === 12, "Admin page did not load module master data");
       await admin.locator("[data-tab=commissioning]").click();
       assert(await admin.locator("#commissioning-list tbody tr").count() === 12, "Admin page did not render the complete commissioning ledger");
