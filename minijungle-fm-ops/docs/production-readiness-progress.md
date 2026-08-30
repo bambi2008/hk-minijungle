@@ -1187,3 +1187,18 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from the isolated full-data rehearsal.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 81 - Admin Device Onboarding Flow Deployed to Staging
+
+- Score before: **65%**. Score after: **65%**. Making device registration available to an administrator removes a product-flow blocker, but does not prove real device connectivity or customer field operations.
+- Deployment completed: commit `46540d0` is running as `dr-forest-ops-staging` on the Hong Kong Lighthouse behind `https://ops.dr-forest.net`.
+- Admin workflow available: platform administrators and FM Leads can register or update device ID, asset/module mapping, protocol, endpoint, physical serial number, manufacturer/model, calibration interval, warranty expiry, service profile note and device-key rotation. Field technicians cannot create or edit registry records.
+- Remote verification: `https://ops.dr-forest.net/api/health/ready` returned `200`; the deployed admin bundle was found; `https://api.qiaoshenedu.com/` returned `200`; the bridge application and database containers remained healthy.
+- Isolation verification: the staging container is the only DR FOREST service on `qiaoshen_frontend`; the private PostgreSQL rehearsal container is not connected to that network. The previous staging container was retained as a stopped rollback container.
+- Honest boundary: this is still pilot staging with SQLite/local media and pilot credentials. The three real device records, signed device credentials, live sensor/camera transport, managed TencentDB PostgreSQL, off-host restore and customer field cycles remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 81
+
+- Production operations readiness: **65%**. No score increase is claimed from the staging deployment or admin workflow.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
