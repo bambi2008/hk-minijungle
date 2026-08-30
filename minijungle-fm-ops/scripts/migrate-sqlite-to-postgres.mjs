@@ -98,7 +98,15 @@ async function ensureTables(client, tables) {
     for (const foreignKey of groupedForeignKeys(table)) {
       const constraint = safeConstraintName(`fk_${table.name}_${foreignKey.from.join("_")}`);
       const clause = `ALTER TABLE ${quoteIdentifier(table.name)} ADD CONSTRAINT ${quoteIdentifier(constraint)} FOREIGN KEY (${foreignKey.from.map(quoteIdentifier).join(", ")}) REFERENCES ${quoteIdentifier(foreignKey.table)} (${foreignKey.to.map(quoteIdentifier).join(", ")})`;
-      try { await client.query(clause); } catch (error) {
+      const existing = await client.query("SELECT 1 FROM pg_constraint WHERE conname = $1 AND conrelid = to_regclass($2)", [constraint, table.name]);
+      if (existing.rowCount) continue;
+      await client.query("SAVEPOINT add_foreign_key");
+      try {
+        await client.query(clause);
+        await client.query("RELEASE SAVEPOINT add_foreign_key");
+      } catch (error) {
+        await client.query("ROLLBACK TO SAVEPOINT add_foreign_key");
+        await client.query("RELEASE SAVEPOINT add_foreign_key");
         if (!String(error?.message || "").toLowerCase().includes("already exists")) throw error;
       }
     }
