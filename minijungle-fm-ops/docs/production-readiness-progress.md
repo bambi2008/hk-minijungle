@@ -1074,3 +1074,116 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from local integration code or smoke data.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 73 - No-Cost Staging Deployment Pack
+
+- Score before: **65%**. Score after: **65%**. A staging package does not create managed PostgreSQL, COS, OIDC, off-host recovery or customer-operation evidence.
+- Deployment pack added: `docker-compose.staging.yml` runs the pilot app with persistent SQLite/runtime volumes on the existing Lighthouse server. It binds only to loopback by default and requires a separately supplied `.env.staging` file.
+- Migration rehearsal added: `docker-compose.postgres-rehearsal.yml` starts a disposable local PostgreSQL 17 container for the existing schema runner. The pilot app remains SQLite and the rehearsal database is explicitly not production evidence.
+- Operating boundary added: `docs/staging-no-cost-runbook.md` separates synthetic staging data from the future production cutover, prohibits public database ports and records the exact steps for TencentDB, COS, identity, backup/restore and field-cycle acceptance.
+- Honest boundary: the existing Lighthouse server is not a managed database, its local backup is not off-host, and no new external resource was created or purchased in this step.
+
+### Current Honest Score After Step 73
+
+- Production operations readiness: **65%**. No score increase is claimed from the no-cost staging package.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 74 - Isolated Lighthouse Staging Deployment
+
+- Score before: **65%**. Score after: **65%**. A running staging container is not evidence of production-scale operations.
+- Deployment recorded: the DR FOREST OPS image was built and started on the existing Hong Kong Lighthouse server in `/home/ubuntu/dr-forest-ops-staging` as container `dr-forest-ops-staging`.
+- Isolation recorded: the container binds only to `127.0.0.1:8010`, uses its own runtime and backup directories, and the deployment guard refused to proceed if the target directory, container name or port was already in use. No unrelated container or firewall rule was changed.
+- Verification recorded: `/api/health` and `/api/health/ready` returned successfully; Docker reported the container state as `running`.
+- Honest boundary: this is pilot mode with SQLite and local proof media. It has no public HTTPS endpoint, managed PostgreSQL, COS/object storage, enterprise OIDC/MFA, off-host backup/restore, real device credentials or customer field data. The temporary pilot credentials must be rotated before any external sharing.
+
+### Current Honest Score After Step 74
+
+- Production operations readiness: **65%**. No score increase is claimed from the isolated staging deployment.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 75 - Temporary Public HTTPS Staging Ingress
+
+- Score before: **65%**. Score after: **65%**. A public staging URL improves demonstration access but does not create production infrastructure or operating evidence.
+- Ingress verified: `ops.dr-forest.net` resolves to the Hong Kong Lighthouse server and loads the DR FOREST FM Ops staging page over HTTPS. Local server verification returned HTTP redirect `308` and HTTPS upstream status `200` for `/api/health/ready`.
+- Bridge safety: the existing `qiaoshen-caddy-1` container was not stopped or recreated, and the existing bridge routes were not changed. The DR FOREST container remains isolated from the public host port and is reachable through the Caddy frontend network.
+- Persistence boundary: the OPS route is currently loaded through a temporary Caddy runtime configuration so the bridge gateway did not require a restart. A controlled, persistent gateway change is still required before relying on this URL after a Caddy restart or server maintenance.
+- Honest boundary: this remains pilot staging with SQLite/local media and pilot credentials. Managed PostgreSQL, object storage, enterprise identity, off-host restore, real device credentials and customer field cycles are still absent.
+
+### Current Honest Score After Step 75
+
+- Production operations readiness: **65%**. No score increase is claimed from the public staging ingress.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 76 - Bridge-Safe HTTPS Persistence Preparation
+
+- Score before: **65%**. Score after: **65%**. Preparing a gateway change does not prove a completed production deployment.
+- Persistence prepared: an additive `ops.dr-forest.net` route has been written to the host-side Caddy configuration with a timestamped backup. The current running bridge gateway was not recreated or stopped.
+- Runtime boundary: the working staging route remains loaded through the temporary Caddy runtime configuration. The persistent host file is intended for a later controlled gateway maintenance action, when the Caddy mount inode can be refreshed safely.
+- Verification boundary: the temporary runtime configuration was validated and the local HTTPS request returned `200`. Final persistent activation and post-recreate verification are intentionally pending; the remote terminal session disconnected during the disposable host-file validation command.
+- Honest boundary: no production database, object storage, identity tenant, off-host restore, real device credentials or customer field cycles were created. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 76
+
+- Production operations readiness: **65%**. No score increase is claimed from configuration preparation.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 77 - Persistent HTTPS Activation and Bridge Regression
+
+- Score before: **65%**. Score after: **65%**. A durable staging ingress does not create production database, recovery, identity or field-operation evidence.
+- Persistent activation completed: the shared Caddy gateway was recreated with the explicit `/opt/qiaoshen/.env.production` environment file, so the host-side `ops.dr-forest.net` route is now loaded from the persistent bind-mounted configuration rather than the temporary runtime file.
+- Bridge safety verification: `qiaoshen-caddy-1`, `qiaoshen-app-1`, `qiaoshen-core-beta-app`, and `qiaoshen-core-beta-postgres-1` remained running; no bridge application or database container was restarted.
+- Endpoint verification: `https://ops.dr-forest.net/api/health/ready` returned `200`; `https://api.qiaoshenedu.com/` returned `200`; the active Caddy configuration contains the `ops.dr-forest.net` route.
+- Honest boundary: DR FOREST remains isolated staging with SQLite/local media and pilot credentials. Managed PostgreSQL, COS/object storage, enterprise OIDC/MFA, off-host backup/restore, real device credentials and customer field cycles are still absent.
+
+### Current Honest Score After Step 77
+
+- Production operations readiness: **65%**. No score increase is claimed from persistent HTTPS activation.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 78 - Release Gate Regression After Remote Deployment
+
+- Score before: **65%**. Score after: **65%**. Local regression evidence does not substitute for managed production resources or field acceptance.
+- Full local release gate: `npm.cmd run check` passed, including syntax checks and smoke coverage for contracts/SLA, device lifecycle, commissioning, reliability, inventory, health/ESG, module query, atomic Airtable maintenance import, external acceptance, PostgreSQL adapters, backup consistency, API, device ingestion, alert/AI scale and UI workflows.
+- Scale evidence: the device ingestion smoke accepted `1,000` readings in `1,435ms`; the alert/AI scale path created the expected history, alert and diagnosis records. This is repeatable local evidence, not a claim of 1,000 production modules.
+- Browser evidence: the Playwright UI smoke test passed against a local ephemeral server after the remote gateway change; the public HTTPS endpoint and bridge API had already returned `200` from the Hong Kong server.
+- Honest boundary: the gate intentionally reports pilot SQLite/local media and skips managed PostgreSQL, off-host restore, SSO/MFA, real signed devices and real client field cycles. Those remain external acceptance blockers.
+
+### Current Honest Score After Step 78
+
+- Production operations readiness: **65%**. No score increase is claimed from regression evidence.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 79 - Isolated PostgreSQL Schema Rehearsal on Lighthouse
+
+- Score before: **65%**. Score after: **65%**. A private server rehearsal is not a managed TencentDB deployment or an off-host recovery drill.
+- PostgreSQL rehearsal completed: PostgreSQL 17 is running as `dr-forest-postgres-rehearsal` on a dedicated Docker network, using the DR FOREST staging image as the migration runner. All 20 repository migrations were applied/verified with `verifiedCount: 20` and `missingCount: 0`.
+- Isolation evidence: the rehearsal container has no published host port (`docker port` returned empty and `docker ps` showed only container port `5432/tcp`). It is not a member of `qiaoshen_frontend`; the DR Forest staging container remains the only DR Forest member there for the approved HTTPS reverse proxy path.
+- Application boundary: the live staging application still uses pilot SQLite/local media and was not switched to the rehearsal database. The rehearsal database contains schema evidence only and must not receive customer data.
+- Honest boundary: TencentDB PostgreSQL with TLS/PITR, approved private networking, production migration/row verification, off-host encrypted backup/restore, OIDC/MFA, signed devices and repeated client field cycles remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 79
+
+- Production operations readiness: **65%**. No score increase is claimed from the isolated PostgreSQL rehearsal.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 80 - Full SQLite to PostgreSQL Data Rehearsal and Verification
+
+- Score before: **65%**. Score after: **65%**. A successful isolated data rehearsal is evidence for migration readiness, not proof of managed production operations.
+- Migration completed: the staging SQLite runtime was copied into the isolated PostgreSQL rehearsal database with the updated migration image. Foreign-key dependency order, deployment metadata exclusion (`schema_migrations`) and the `evidence_snapshots.client_ids_json` to PostgreSQL `client_ids` alias are handled explicitly.
+- Verification completed: the remote verifier returned `ok: true`, `sourceTables: 31`, `targetTables: 31` and `failures: []`. The source SHA-256 matched the recorded migration hash. This verifies the current pilot dataset and relationship/schema contract in the rehearsal environment.
+- Idempotency evidence: the migration now checks existing foreign-key constraints and uses a savepoint when adding them, so a rerun does not poison the surrounding transaction when a constraint already exists.
+- Safety regression: `dr-forest-postgres-rehearsal` has no published host port and is not connected to `qiaoshen_frontend`; `dr-forest-ops-staging` remains on SQLite/local media. `ops.dr-forest.net` returned `200`, `api.qiaoshenedu.com` returned `200`, and the bridge application/database containers remained running.
+- Honest boundary: this is still a private Lighthouse rehearsal, not TencentDB PostgreSQL with TLS/PITR/private networking. Managed database migration, off-host encrypted backup/restore, OIDC/MFA, signed device credentials and repeated customer field cycles remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 80
+
+- Production operations readiness: **65%**. No score increase is claimed from the isolated full-data rehearsal.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
