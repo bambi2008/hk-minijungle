@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import pg from "pg";
 
 const { Pool } = pg;
+const ignoredTables = new Set(["schema_migrations"]);
 const sourcePath = resolve(arg("--sqlite") || process.env.DR_FOREST_RUNTIME_DB_PATH || ".ops-data/ops-runtime.sqlite");
 const dryRun = process.argv.includes("--dry-run");
 
@@ -32,7 +33,7 @@ function sqliteValue(value) {
   return value;
 }
 function tableMetadata(db) {
-  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((row) => row.name);
+  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((row) => row.name).filter((name) => !ignoredTables.has(name));
   return tables.map((name) => {
     const columns = db.prepare(`PRAGMA table_info(${quoteIdentifier(name)})`).all();
     const foreignKeys = db.prepare(`PRAGMA foreign_key_list(${quoteIdentifier(name)})`).all();
@@ -42,6 +43,10 @@ function tableMetadata(db) {
     }));
     return { name, columns, foreignKeys, indexes };
   });
+}
+function targetColumnName(tableName, columnName) {
+  if (tableName === "evidence_snapshots" && columnName === "client_ids_json") return "client_ids";
+  return columnName;
 }
 function primaryKeyColumns(table) { return table.columns.filter((column) => Number(column.pk) > 0).sort((left, right) => left.pk - right.pk).map((column) => column.name); }
 function groupedForeignKeys(table) {
@@ -102,14 +107,20 @@ async function ensureTables(client, tables) {
 
 async function copyTable(client, db, table) {
   const columns = table.columns.map((column) => column.name);
+  const targetColumns = columns.map((column) => targetColumnName(table.name, column));
+  if (new Set(targetColumns).size !== targetColumns.length) throw new Error(`Target column mapping is ambiguous for ${table.name}`);
   const rows = db.prepare(`SELECT ${columns.map(quoteIdentifier).join(", ")} FROM ${quoteIdentifier(table.name)}`).all();
   const primary = primaryKeyColumns(table);
-  const updates = columns.filter((column) => !primary.includes(column)).map((column) => `${quoteIdentifier(column)} = EXCLUDED.${quoteIdentifier(column)}`).join(", ");
-  const conflict = primary.length ? (updates ? ` ON CONFLICT (${primary.map(quoteIdentifier).join(", ")}) DO UPDATE SET ${updates}` : ` ON CONFLICT (${primary.map(quoteIdentifier).join(", ")}) DO NOTHING`) : "";
+  const targetPrimary = primary.map((column) => targetColumnName(table.name, column));
+  const updates = columns.filter((column) => !primary.includes(column)).map((column) => {
+    const targetColumn = targetColumnName(table.name, column);
+    return `${quoteIdentifier(targetColumn)} = EXCLUDED.${quoteIdentifier(targetColumn)}`;
+  }).join(", ");
+  const conflict = targetPrimary.length ? (updates ? ` ON CONFLICT (${targetPrimary.map(quoteIdentifier).join(", ")}) DO UPDATE SET ${updates}` : ` ON CONFLICT (${targetPrimary.map(quoteIdentifier).join(", ")}) DO NOTHING`) : "";
   for (const row of rows) {
     const values = columns.map((column) => sqliteValue(row[column]));
     const placeholders = values.map((_, index) => `$${index + 1}`).join(", ");
-    await client.query(`INSERT INTO ${quoteIdentifier(table.name)} (${columns.map(quoteIdentifier).join(", ")}) VALUES (${placeholders})${conflict || " ON CONFLICT DO NOTHING"}`, values);
+    await client.query(`INSERT INTO ${quoteIdentifier(table.name)} (${targetColumns.map(quoteIdentifier).join(", ")}) VALUES (${placeholders})${conflict || " ON CONFLICT DO NOTHING"}`, values);
   }
   return rows.length;
 }
@@ -120,7 +131,7 @@ const counts = Object.fromEntries(tables.map((table) => [table.name, database.pr
 
 if (dryRun) {
   database.close();
-  console.log(JSON.stringify({ ok: true, dryRun: true, sourcePath, copyOrder: copyOrder(tables).map((table) => table.name), tables: tables.map((table) => ({ name: table.name, columns: table.columns.length, foreignKeys: groupedForeignKeys(table).length, rows: counts[table.name] })) }, null, 2));
+  console.log(JSON.stringify({ ok: true, dryRun: true, sourcePath, ignoredTables: [...ignoredTables], copyOrder: copyOrder(tables).map((table) => table.name), tables: tables.map((table) => ({ name: table.name, columns: table.columns.length, foreignKeys: groupedForeignKeys(table).length, rows: counts[table.name] })) }, null, 2));
   process.exit(0);
 }
 

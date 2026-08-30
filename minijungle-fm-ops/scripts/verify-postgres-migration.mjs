@@ -6,6 +6,7 @@ import { DatabaseSync } from "node:sqlite";
 import pg from "pg";
 
 const { Pool } = pg;
+const ignoredTables = new Set(["schema_migrations"]);
 const sourcePath = resolve(arg("--sqlite") || process.env.DR_FOREST_RUNTIME_DB_PATH || ".ops-data/ops-runtime.sqlite");
 
 function arg(name) {
@@ -28,12 +29,16 @@ function groupedForeignKeys(table) {
 }
 
 function tableMetadata(db) {
-  const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((row) => row.name);
+  const names = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%' ORDER BY name").all().map((row) => row.name).filter((name) => !ignoredTables.has(name));
   return names.map((name) => ({
     name,
     columns: db.prepare(`PRAGMA table_info(${quoteIdentifier(name)})`).all().map((column) => column.name),
     foreignKeys: groupedForeignKeys({ foreignKeys: db.prepare(`PRAGMA foreign_key_list(${quoteIdentifier(name)})`).all() })
   }));
+}
+function targetColumnName(tableName, columnName) {
+  if (tableName === "evidence_snapshots" && columnName === "client_ids_json") return "client_ids";
+  return columnName;
 }
 
 function rowCount(db, table) { return Number(db.prepare(`SELECT COUNT(*) AS count FROM ${quoteIdentifier(table)}`).get().count); }
@@ -88,7 +93,8 @@ async function verify() {
       if (count !== sourceCounts[sourceTable.name]) rowDrift.push({ table: sourceTable.name, source: sourceCounts[sourceTable.name], target: count });
       const columns = (await client.query("SELECT column_name AS name FROM information_schema.columns WHERE table_schema=current_schema() AND table_name=$1 ORDER BY ordinal_position", [sourceTable.name])).rows.map((row) => row.name);
       targetTables.push({ name: sourceTable.name, columns });
-      if (!equalColumns(sourceTable.columns, columns)) columnDrift.push({ table: sourceTable.name, source: sourceTable.columns, target: columns });
+      const expectedTargetColumns = sourceTable.columns.map((column) => targetColumnName(sourceTable.name, column));
+      if (!equalColumns(expectedTargetColumns, columns)) columnDrift.push({ table: sourceTable.name, source: sourceTable.columns, expectedTarget: expectedTargetColumns, target: columns });
       const fkCount = Number((await client.query("SELECT COUNT(*)::int AS count FROM information_schema.table_constraints WHERE table_schema=current_schema() AND table_name=$1 AND constraint_type='FOREIGN KEY'", [sourceTable.name])).rows[0].count);
       if (fkCount < sourceTable.foreignKeys.length) foreignKeyDrift.push({ table: sourceTable.name, source: sourceTable.foreignKeys.length, target: fkCount });
       for (const foreignKey of sourceTable.foreignKeys) {
