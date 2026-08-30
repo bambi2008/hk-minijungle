@@ -12,6 +12,7 @@
     "minimax:exec": "node minimax-execute.mjs",
     "vision:smoke": "node vision-provider-smoke.mjs",
     "vision:golden": "node vision-golden-paths-smoke.mjs",
+    "vercel:build": "node scripts/build-vercel.mjs",
     "ios:generate": "xcodegen generate --spec ios/project.yml --project ios",
     "ios:build": "sh ios/scripts/build-unsigned.sh",
     "testflight:preflight": "node scripts/testflight-preflight.mjs"

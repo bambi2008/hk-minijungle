@@ -1,0 +1,12 @@
+.env
+.env.*
+.git
+.ops-data
+backups
+ios
+minijungle-fm-ops
+node_modules
+outputs
+data/diagnosis-reports.json
+data/grow-clinic.sqlite
+data/notification-jobs.json

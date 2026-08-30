@@ -1,4 +1,5 @@
 node_modules/
+dist/
 .env.local
 tmp/
 *.log
@@ -9,3 +10,5 @@ ios/build/
 ios/Config/Local.xcconfig
 ios/FiveCrop.xcodeproj/xcuserdata/
 *.xcuserstate
+.vercel
+.env*
