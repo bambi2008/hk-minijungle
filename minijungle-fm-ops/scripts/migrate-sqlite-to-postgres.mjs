@@ -55,6 +55,24 @@ function groupedForeignKeys(table) {
   return [...groups.values()];
 }
 
+function copyOrder(tables) {
+  const pending = new Map(tables.map((table) => [table.name, table]));
+  const ordered = [];
+  while (pending.size) {
+    const ready = [...pending.values()]
+      .filter((table) => groupedForeignKeys(table).every((foreignKey) => foreignKey.table === table.name || !pending.has(foreignKey.table)))
+      .sort((left, right) => left.name.localeCompare(right.name));
+    if (!ready.length) {
+      throw new Error(`Cannot determine a safe PostgreSQL copy order; foreign-key cycle remains among: ${[...pending.keys()].sort().join(", ")}`);
+    }
+    for (const table of ready) {
+      ordered.push(table);
+      pending.delete(table.name);
+    }
+  }
+  return ordered;
+}
+
 async function ensureTables(client, tables) {
   for (const table of tables) {
     const primary = primaryKeyColumns(table);
@@ -102,7 +120,7 @@ const counts = Object.fromEntries(tables.map((table) => [table.name, database.pr
 
 if (dryRun) {
   database.close();
-  console.log(JSON.stringify({ ok: true, dryRun: true, sourcePath, tables: tables.map((table) => ({ name: table.name, columns: table.columns.length, foreignKeys: groupedForeignKeys(table).length, rows: counts[table.name] })) }, null, 2));
+  console.log(JSON.stringify({ ok: true, dryRun: true, sourcePath, copyOrder: copyOrder(tables).map((table) => table.name), tables: tables.map((table) => ({ name: table.name, columns: table.columns.length, foreignKeys: groupedForeignKeys(table).length, rows: counts[table.name] })) }, null, 2));
   process.exit(0);
 }
 
@@ -114,12 +132,13 @@ try {
   await client.query("BEGIN");
   await ensureTables(client, tables);
   const copied = {};
-  for (const table of tables) copied[table.name] = await copyTable(client, database, table);
+  const orderedTables = copyOrder(tables);
+  for (const table of orderedTables) copied[table.name] = await copyTable(client, database, table);
   await client.query(`CREATE TABLE IF NOT EXISTS ops_migration_runs (id TEXT PRIMARY KEY, source_path TEXT NOT NULL, source_sha256 TEXT, table_count INTEGER NOT NULL, copied_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
   const sourceSha256 = createHash("sha256").update(await (await import("node:fs/promises")).readFile(sourcePath)).digest("hex");
   await client.query("INSERT INTO ops_migration_runs (id, source_path, source_sha256, table_count) VALUES ($1, $2, $3, $4)", [`MIG-${Date.now()}`, sourcePath, sourceSha256, tables.length]);
   await client.query("COMMIT");
-  console.log(JSON.stringify({ ok: true, sourcePath, destination: "postgresql", tables: tables.length, sourceRows: counts, copiedRows: copied, sourceSha256 }, null, 2));
+  console.log(JSON.stringify({ ok: true, sourcePath, destination: "postgresql", tables: tables.length, copyOrder: orderedTables.map((table) => table.name), sourceRows: counts, copiedRows: copied, sourceSha256 }, null, 2));
 } catch (error) {
   await client.query("ROLLBACK");
   throw error;
