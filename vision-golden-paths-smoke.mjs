@@ -7,6 +7,7 @@ const host = "127.0.0.1";
 const testDataDir = await mkdtemp(join(tmpdir(), "fivecrop-golden-vision-"));
 process.env.GROW_CLINIC_DATA_DIR = testDataDir;
 const expectedProvider = process.env.VISION_EXPECTED_PROVIDER || "";
+const requestedCrop = process.env.VISION_GOLDEN_CROP || "";
 const { server, closeStorage } = await import("./server.mjs");
 
 const photoTypes = new Set(["plant", "leaf", "root", "flower", "pest", "unknown"]);
@@ -179,7 +180,11 @@ try {
   const goldenResponse = await fetch(`${base}/api/golden-paths`);
   if (goldenResponse.status !== 200) throw new Error(`GET /api/golden-paths failed: ${goldenResponse.status}`);
   const golden = await goldenResponse.json();
-  for (const item of goldenCases) {
+  const selectedCases = requestedCrop
+    ? goldenCases.filter((item) => item.cropKey === requestedCrop)
+    : goldenCases;
+  if (!selectedCases.length) throw new Error(`Unknown VISION_GOLDEN_CROP: ${requestedCrop}`);
+  for (const item of selectedCases) {
     console.log(`golden-vision-start crop=${item.cropKey} photoType=${item.photoType}`);
     const path = golden.paths?.find((candidate) => candidate.cropKey === item.cropKey);
     if (path?.pathwayId !== item.pathwayId || !path.runnableFlow?.photo || !path.runnableFlow?.action || !path.runnableFlow?.followup) {
@@ -225,7 +230,7 @@ try {
     const labelText = payload.labels.map((entry) => entry.label).join("|") || "none";
     console.log(`golden-vision-ok crop=${item.cropKey} model=${payload.model} labels=${labelText} compare=${comparison.trend}`);
   }
-  console.log(`vision-golden-paths-smoke-ok paths=${goldenCases.length}`);
+  console.log(`vision-golden-paths-smoke-ok paths=${selectedCases.length}`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
   closeStorage();

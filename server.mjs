@@ -1990,19 +1990,26 @@ function openAiVisionRequestBody(body, model, options = {}) {
 }
 
 function qwenVisionRequestBody(body, options = {}) {
+  const prompt = options.compact
+    ? [
+        visionPrompt(body),
+        "Keep the JSON compact. Use at most 3 labels, 4 observations, 3 diagnosisHints, and 5 missingPhotos.",
+        "Do not repeat the user context and do not add any keys outside the requested contract."
+      ].join("\n")
+    : visionPrompt(body);
   const requestBody = {
     model: options.model || defaultQwenVisionModel,
     messages: [
       {
         role: "user",
         content: [
-          { type: "text", text: visionPrompt(body) },
+          { type: "text", text: prompt },
           { type: "image_url", image_url: { url: body.imageData } }
         ].filter(Boolean)
       }
     ],
     temperature: 0.1,
-    max_tokens: 1600
+    max_tokens: options.maxTokens || 2200
   };
 
   if (options.structured !== false) {
@@ -2103,7 +2110,10 @@ async function analyzeVisionWithQwen(body, local) {
   }
 
   const model = await readEnvValue("QWEN_VISION_MODEL") || defaultQwenVisionModel;
-  let response = await requestQwenVision(apiKey, body, model);
+  let response = await requestQwenVision(apiKey, body, model, {
+    compact: true,
+    maxTokens: 1800
+  });
 
   if (!response.ok) {
     const firstDetail = await qwenErrorDetail(response);
@@ -2133,11 +2143,26 @@ async function analyzeVisionWithQwen(body, local) {
 
   const payload = await response.json();
   const text = outputTextFromQwenResponse(payload);
-  const parsed = jsonFromModelText(text);
+  let parsed = jsonFromModelText(text);
   if (!parsed) {
-    local.aiFallbackReason = "qwen-invalid-json";
-    local.aiFallbackDetail = text.slice(0, 900);
-    return null;
+    const retryResponse = await requestQwenVision(apiKey, body, model, {
+      compact: true,
+      maxTokens: 2600
+    });
+    if (retryResponse.ok) {
+      const retryPayload = await retryResponse.json();
+      const retryText = outputTextFromQwenResponse(retryPayload);
+      parsed = jsonFromModelText(retryText);
+      if (!parsed) {
+        local.aiFallbackReason = "qwen-invalid-json";
+        local.aiFallbackDetail = `compact-retry-returned-invalid-json: ${retryText.slice(0, 900)}`;
+        return null;
+      }
+    } else {
+      local.aiFallbackReason = `qwen-retry-http-${retryResponse.status}`;
+      local.aiFallbackDetail = await qwenErrorDetail(retryResponse);
+      return null;
+    }
   }
   return normalizeAiVisionResult({ ...parsed, model }, body, local, {
     provider: "qwen-dashscope",
