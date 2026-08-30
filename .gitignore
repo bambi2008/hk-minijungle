@@ -5,3 +5,7 @@ tmp/
 data/*.sqlite*
 .DS_Store
 .playwright-mcp/
+ios/build/
+ios/Config/Local.xcconfig
+ios/FiveCrop.xcodeproj/xcuserdata/
+*.xcuserstate

@@ -280,6 +280,7 @@ const activeCaseKey = "growClinicActiveCase";
 const customerAutoArchiveKey = "growClinicCustomerAutoArchive";
 const notificationChannelKey = "growClinicNotificationChannels";
 const publicPhotoTestKey = "fivecropPublicPhotoPrintResults";
+const realVisionRequired = new URLSearchParams(window.location.search).get("realVision") === "required";
 let latestState = null;
 let latestFindings = [];
 let photoSignals = {
@@ -354,6 +355,18 @@ const uiCopy = {
     privacyLabel: "隱私",
     diagnosisPrivacyDetail: "只有啟用視覺分析時，FiveCrop 才會發送壓縮後的植物照片。原圖不會存入病例，也不會預設用於模型訓練。",
     takePhoto: "拍照",
+    retakePhoto: "重新拍照",
+    careConfirm: "我今天會照做",
+    taskConfirm: "我已完成",
+    takeFollowupPhoto: "拍複查照",
+    viewFollowupPlan: "查看複查計劃",
+    viewFollowupResult: "查看複查結果",
+    viewDiagnosis: "查看診斷",
+    analyzingPhoto: "正在分析照片…",
+    continueAction: "繼續",
+    checkingPhoto: "正在檢查照片",
+    photoReady: "照片已就緒",
+    examplePhoto: "示例",
     appEyebrow: "專注 5 種可食室內植物",
     customerMode: "客戶",
     expertMode: "內部",
@@ -391,6 +404,18 @@ const uiCopy = {
     privacyLabel: "Privacy",
     diagnosisPrivacyDetail: "FiveCrop sends a compressed plant photo only when vision analysis is enabled. Original photos are not saved in the case or used for model training by default.",
     takePhoto: "Take a photo",
+    retakePhoto: "Retake photo",
+    careConfirm: "I’ll do this today",
+    taskConfirm: "I’ve done this",
+    takeFollowupPhoto: "Take follow-up photo",
+    viewFollowupPlan: "View follow-up plan",
+    viewFollowupResult: "View follow-up result",
+    viewDiagnosis: "View diagnosis",
+    analyzingPhoto: "Analyzing photo…",
+    continueAction: "Continue",
+    checkingPhoto: "Checking photo",
+    photoReady: "Photo ready",
+    examplePhoto: "Example",
     appEyebrow: "Care for 5 edible plants",
     customerMode: "Customer",
     expertMode: "Expert",
@@ -493,6 +518,17 @@ const traditionalPhraseMap = [
   ["椰糠", "椰糠"],
   ["珍珠岩", "珍珠岩"],
   ["植物灯", "植物燈"],
+  ["灯距", "燈距"],
+  ["支撑", "支撐"],
+  ["主干", "主幹"],
+  ["冲高", "衝高"],
+  ["特写", "特寫"],
+  ["进入", "進入"],
+  ["暂停", "暫停"],
+  ["恢复", "恢復"],
+  ["擦干", "擦乾"],
+  ["周围", "附近"],
+  ["变量", "變數"],
   ["育苗", "育苗"],
   ["浅播", "淺播"],
   ["薄覆", "薄覆"],
@@ -528,7 +564,11 @@ const traditionalCharMap = {
   "点": "點", "细": "細", "区": "區", "环": "環", "喷": "噴", "侧": "側",
   "从": "從", "转": "轉", "匀": "勻", "绿": "綠", "顺": "順", "残": "殘",
   "凑": "湊", "没": "沒", "周": "週", "浅": "淺", "驯": "馴", "几": "幾",
-  "无": "無", "剂": "劑", "频": "頻", "盘": "盤"
+  "无": "無", "剂": "劑", "频": "頻", "盘": "盤", "并": "並", "准": "準",
+  "继": "繼", "续": "續", "绑": "綁", "边": "邊", "烂": "爛", "浇": "澆",
+  "马": "馬", "状": "狀", "经": "經", "灯": "燈", "温": "溫", "弹": "彈",
+  "减": "減", "炼": "煉", "远": "遠", "于": "於", "茎": "莖", "围": "圍",
+  "进": "進", "辅": "輔", "摇": "搖", "热": "熱"
 };
 
 function t(key) {
@@ -2219,16 +2259,20 @@ function careGuidanceStageOverrideKey(cropKey, state, plan) {
   return null;
 }
 
-function resolveCropCareGuidancePlan(cropKey, state, plan) {
-  if (cropKey === "basil") return resolveBasilGuidancePlan(state, plan);
+function careGuidanceStagePlan(cropKey, plan) {
   const fallbackStageActions = cropKey === "rosemary" && !plan?.stageActions
     ? (activeLocale === "en"
       ? englishCropCareGuidancePlans.rosemary?.seed?.stageActions
       : cropCareGuidancePlans.rosemary?.seed?.stageActions)
     : null;
-  const stagePlan = fallbackStageActions
+  return fallbackStageActions
     ? { ...plan, stageActions: fallbackStageActions }
     : plan;
+}
+
+function resolveCropCareGuidancePlan(cropKey, state, plan) {
+  if (cropKey === "basil") return resolveBasilGuidancePlan(state, plan);
+  const stagePlan = careGuidanceStagePlan(cropKey, plan);
   const key = careGuidanceStageOverrideKey(cropKey, state, stagePlan);
   const override = key ? stagePlan.stageActions?.[key] : null;
   if (!override) return plan;
@@ -2413,7 +2457,7 @@ function setCustomerEntryMode(mode, { persist = true } = {}) {
 }
 
 function customerCareSignature(model) {
-  return [model.cropKey, model.mode, model.action].join("|");
+  return [model.cropKey, model.mode, model.guidanceKey || "default"].join("|");
 }
 
 function readCustomerCareRecord() {
@@ -2454,9 +2498,11 @@ function customerCareModel(state = getFormState()) {
   const crop = cropName(state.crop) || "Plant";
   const { mode, plan: basePlan } = activeCarePlan(state);
   const plan = localizedCarePlan(state.crop, mode, basePlan, state);
+  const guidanceKey = careGuidanceStageOverrideKey(state.crop, state, careGuidanceStagePlan(state.crop, basePlan)) || "default";
   const model = {
     cropKey: state.crop,
     mode,
+    guidanceKey,
     modeLabel: plan.label,
     title: activeLocale === "en" ? `${crop} care today` : `${crop}今日養護`,
     message: `${plan.summary} ${careGuidanceStageHint(state.crop, state)}`.trim(),
@@ -2537,17 +2583,23 @@ function refreshAfterCareAction(state, model, record) {
   const pending = firstPendingReminder(plan);
   const handoff = actionFollowupHandoff(plan);
   if (customerReminderKicker && customerReminderTitle && customerReminderMessage && customerReminderMeta) {
-    customerReminderKicker.textContent = "动作已完成";
-    customerReminderTitle.textContent = handoff?.title || "我会提醒你复查";
-    customerReminderMessage.textContent = handoff?.message || "现在不用继续操作，到点只拍复查照。";
+    customerReminderKicker.textContent = activeLocale === "en" ? "Action complete" : "動作已完成";
+    customerReminderTitle.textContent = handoff?.title || (activeLocale === "en" ? "FiveCrop will remind you to review" : "我會提醒你複查");
+    customerReminderMessage.textContent = handoff?.message || (activeLocale === "en"
+      ? "No more changes for now. Take only the follow-up photo when it is due."
+      : "現在不用繼續操作，到點只拍複查照。");
     customerReminderMeta.innerHTML = "";
     [
-      handoff?.idleAdvice || "现在不用继续操作",
-      handoff?.photo || (pending?.photo ? `拍 ${pending.photo}` : "同角度拍照"),
-      handoff?.dueAt || (pending?.dueAt ? `复查时间 ${dueLabel(pending.dueAt)}` : "")
+      handoff?.idleAdvice || (activeLocale === "en" ? "No more changes for now" : "現在不用繼續操作"),
+      handoff?.photo || (pending?.photo
+        ? (activeLocale === "en" ? `Take ${pending.photo}` : `拍 ${localizeText(pending.photo)}`)
+        : (activeLocale === "en" ? "Take a same-angle photo" : "同角度拍照")),
+      handoff?.dueAt || (pending?.dueAt
+        ? (activeLocale === "en" ? `Review ${dueLabel(pending.dueAt)}` : `複查時間 ${dueLabel(pending.dueAt)}`)
+        : "")
     ].filter(Boolean).forEach((item) => {
       const chip = document.createElement("span");
-      chip.textContent = item;
+      chip.textContent = localizeText(item);
       customerReminderMeta.appendChild(chip);
     });
   }
@@ -3450,7 +3502,7 @@ function reminderSignature(state, findings) {
 
 function dueLabel(dateString) {
   const date = new Date(dateString);
-  return date.toLocaleString("zh-CN", {
+  return date.toLocaleString(activeLocale === "en" ? "en-US" : "zh-HK", {
     month: "2-digit",
     day: "2-digit",
     hour: "2-digit",
@@ -3460,15 +3512,16 @@ function dueLabel(dateString) {
 
 function relativeDueText(dateString) {
   const target = Date.parse(dateString);
-  if (!Number.isFinite(target)) return "时间待定";
+  const english = activeLocale === "en";
+  if (!Number.isFinite(target)) return english ? "time to be confirmed" : "時間待定";
   const delta = target - Date.now();
-  if (delta <= 0) return "已到期";
+  if (delta <= 0) return english ? "due now" : "已到期";
   const minutes = Math.ceil(delta / (60 * 1000));
-  if (minutes < 60) return `还有 ${minutes} 分钟`;
+  if (minutes < 60) return english ? `in ${minutes} min` : `還有 ${minutes} 分鐘`;
   const hours = Math.ceil(minutes / 60);
-  if (hours < 24) return `还有 ${hours} 小时`;
+  if (hours < 24) return english ? `in ${hours} hr` : `還有 ${hours} 小時`;
   const days = Math.ceil(hours / 24);
-  if (days <= 14) return `还有 ${days} 天`;
+  if (days <= 14) return english ? `in ${days} days` : `還有 ${days} 天`;
   return dueLabel(dateString);
 }
 
@@ -4025,23 +4078,37 @@ function customerReminderSummary(state = getFormState(), findings = latestFindin
   const carePlan = customerEntryMode === "care" ? currentCareReminderPlan(state) : null;
   if (customerEntryMode === "care" && !carePlan) {
     const model = customerCareModel(state);
-    return {
-      kicker: "提醒",
-      title: "完成今天动作后安排复查",
-      message: model.followup || "点完成后，我会按这棵植物的阶段提醒你回来拍复查照。",
-      meta: ["App 内提醒", "到点拍复查照", "不用手动算时间"]
-    };
+    return activeLocale === "en"
+      ? {
+        kicker: "Reminder",
+        title: "Complete today’s action to schedule a review",
+        message: model.followup || "After you mark it done, FiveCrop will schedule the next photo for this plant stage.",
+        meta: ["In-app reminder", "One photo when due", "No date math"]
+      }
+      : {
+        kicker: "提醒",
+        title: "完成今天動作後安排複查",
+        message: model.followup || "點完成後，我會按這棵植物的階段提醒你回來拍複查照。",
+        meta: ["App 內提醒", "到點拍複查照", "不用手動計算時間"]
+      };
   }
   const loop = followupLoopInstruction(state, findings);
   if (loop.disabled) {
     if (customerEntryMode === "care") {
       const model = customerCareModel(state);
-      return {
-        kicker: "提醒",
-        title: "完成今天动作后安排复查",
-        message: model.followup || "点完成后，我会按这棵植物的阶段提醒你回来拍复查照。",
-        meta: ["App 内提醒", "到点拍复查照", "不用手动算时间"]
-      };
+      return activeLocale === "en"
+        ? {
+          kicker: "Reminder",
+          title: "Complete today’s action to schedule a review",
+          message: model.followup || "After you mark it done, FiveCrop will schedule the next photo for this plant stage.",
+          meta: ["In-app reminder", "One photo when due", "No date math"]
+        }
+        : {
+          kicker: "提醒",
+          title: "完成今天動作後安排複查",
+          message: model.followup || "點完成後，我會按這棵植物的階段提醒你回來拍複查照。",
+          meta: ["App 內提醒", "到點拍複查照", "不用手動計算時間"]
+        };
     }
     return {
       kicker: "提醒",
@@ -4068,18 +4135,31 @@ function customerReminderSummary(state = getFormState(), findings = latestFindin
 
   if (plan?.actionCompletedAt && pending?.dueAt) {
     const handoff = actionFollowupHandoff(plan);
-    return {
-      kicker: "动作已完成",
-      title: handoff?.title || `我会在 ${relativeDueText(pending.dueAt)} 提醒你复查`,
-      message: handoff?.message || "不用手动计算时间，我已经按你完成动作的时间重新安排。",
-      meta: [
-        handoff?.idleAdvice || "现在不用继续操作",
-        handoff?.photo || (pending.photo ? `拍 ${pending.photo}` : "同角度拍照"),
-        handoff?.dueAt || `复查时间 ${dueLabel(pending.dueAt)}`,
-        handoff?.success || pending.task || "按提醒复查",
-        handoff?.completed || `完成 ${dueLabel(plan.actionCompletedAt)}`
-      ]
-    };
+    return activeLocale === "en"
+      ? {
+        kicker: "Action complete",
+        title: handoff?.title || `I’ll remind you ${relativeDueText(pending.dueAt)}`,
+        message: handoff?.message || "FiveCrop rescheduled the review from the time you completed the action.",
+        meta: [
+          handoff?.idleAdvice || "No more changes for now",
+          handoff?.photo || (pending.photo ? `Take ${pending.photo}` : "Take a same-angle photo"),
+          handoff?.dueAt || `Review ${dueLabel(pending.dueAt)}`,
+          handoff?.success || pending.task || "Follow the review reminder",
+          handoff?.completed || `Completed ${dueLabel(plan.actionCompletedAt)}`
+        ]
+      }
+      : {
+        kicker: "動作已完成",
+        title: handoff?.title || `我會在 ${relativeDueText(pending.dueAt)}提醒你複查`,
+        message: handoff?.message || "不用手動計算時間，我已經按你完成動作的時間重新安排。",
+        meta: [
+          handoff?.idleAdvice || "現在不用繼續操作",
+          handoff?.photo || (pending.photo ? `拍 ${localizeText(pending.photo)}` : "同角度拍照"),
+          handoff?.dueAt || `複查時間 ${dueLabel(pending.dueAt)}`,
+          handoff?.success || localizeText(pending.task) || "按提醒複查",
+          handoff?.completed || `完成 ${dueLabel(plan.actionCompletedAt)}`
+        ]
+      };
   }
 
   const photo = loop.photo.replace(/：/g, "，");
@@ -4098,13 +4178,13 @@ function customerReminderSummary(state = getFormState(), findings = latestFindin
 function renderCustomerReminderSummary(state = getFormState(), findings = latestFindings) {
   if (!customerReminderCard || !customerReminderMeta) return;
   const summary = customerReminderSummary(state, findings);
-  customerReminderKicker.textContent = summary.kicker;
-  customerReminderTitle.textContent = summary.title;
-  customerReminderMessage.textContent = summary.message;
+  customerReminderKicker.textContent = localizeText(summary.kicker);
+  customerReminderTitle.textContent = localizeText(summary.title);
+  customerReminderMessage.textContent = localizeText(summary.message);
   customerReminderMeta.innerHTML = "";
   summary.meta.slice(0, 3).forEach((item) => {
     const chip = document.createElement("span");
-    chip.textContent = item;
+    chip.textContent = localizeText(item);
     customerReminderMeta.appendChild(chip);
   });
 }
@@ -4355,29 +4435,56 @@ function actionFollowupHandoff(plan = getReminderPlan()) {
   const pending = firstPendingReminder(plan);
   if (!plan?.actionCompletedAt || !pending?.dueAt) return null;
   const due = isReminderDue(pending);
-  const when = due ? "现在" : relativeDueText(pending.dueAt);
-  const photo = pending.photo ? `拍 ${pending.photo}` : "拍同角度照片";
-  const task = pending.task || "按提醒复查";
+  const english = activeLocale === "en";
+  const when = due ? (english ? "now" : "現在") : relativeDueText(pending.dueAt);
+  const rawPhoto = pending.photo || (english ? "a same-angle photo" : "同角度照片");
+  const photo = english ? `Take ${rawPhoto}` : `拍 ${localizeText(rawPhoto)}`;
+  const task = pending.task || (english ? "Follow the review reminder" : "按提醒複查");
   const success = pending.success || followupSuccessText(pending);
-  const reason = plan.actionFollowupReason || "已按你完成动作的时间重新计算复查节点。";
+  const reason = plan.actionFollowupReason || (english
+    ? "The review time was recalculated from when you completed the action."
+    : "已按你完成動作的時間重新計算複查節點。");
+  if (english) {
+    return {
+      due,
+      when,
+      photo,
+      task,
+      success,
+      reason,
+      title: due ? "Take the follow-up photo now" : `I’ll remind you ${when}`,
+      message: due
+        ? "Take one same-angle follow-up photo now, and FiveCrop will check whether the plant improved."
+        : `${reason} Keep conditions steady for now; take only the follow-up photo when it is due.`,
+      nextAction: due ? photo : `Review ${when}`,
+      compactReason: due
+        ? "The review is due. FiveCrop will assess the trend after the photo."
+        : `Today’s action is complete. Keep conditions steady and come back ${when} to ${photo.toLowerCase()}.`,
+      idleAdvice: due ? "Take only the follow-up photo now" : "No more changes for now",
+      completed: `Completed ${dueLabel(plan.actionCompletedAt)}`,
+      dueAt: `Review ${dueLabel(pending.dueAt)}`
+    };
+  }
+  const localizedReason = localizeText(reason);
+  const titleWhen = when.startsWith("還有 ") ? `${when.slice(3)}後` : when;
   return {
     due,
     when,
     photo,
-    task,
-    success,
-    reason,
-    title: due ? "现在拍复查照" : `我会在 ${when} 提醒你复查`,
+    task: localizeText(task),
+    success: localizeText(success),
+    reason: localizedReason,
+    title: due ? "現在拍複查照" : `我會在 ${titleWhen}提醒你複查`,
     message: due
-      ? "现在只需要拍一张同角度复查照，我会判断有没有变好。"
-      : `${reason} 现在先别叠加新动作，到点只拍复查照。`,
-    nextAction: due ? photo.replace(/^拍\s*/, "拍") : `${when}复查`,
+      ? "現在只需要拍一張同角度複查照，我會判斷有沒有變好。"
+      : `${localizedReason} 現在先不要疊加新動作，到點只拍複查照。`,
+    nextAction: due ? photo.replace(/^拍\s*/, "拍") : `${when}複查`,
     compactReason: due
-      ? "复查时间到了，拍完我会自动判断趋势。"
-      : `当前动作已完成，先不用继续调参数；${when}回来${photo}。`,
-    idleAdvice: due ? "现在只做复查拍照" : "现在不用继续操作",
+      ? "複查時間到了，拍完我會自動判斷趨勢。"
+      : `當前動作已完成，先不用繼續調參數；${when}回來${photo}。`,
+    idleAdvice: due ? "現在只做複查拍照" : "現在不用繼續操作",
     completed: `完成 ${dueLabel(plan.actionCompletedAt)}`,
-    dueAt: `复查时间 ${dueLabel(pending.dueAt)}`
+    dueAt: `複查時間 ${dueLabel(pending.dueAt)}`
   };
 }
 
@@ -4691,10 +4798,12 @@ function renderCustomerTrustAndPrivacy(state = getFormState(), findings = latest
   }
 
   if (customerPrivacyCard && customerPrivacyCopy) {
-    const usesRemoteVision = latestVisionResult?.provider && latestVisionResult.provider !== "local-heuristic-placeholder";
+    const usesRemoteVision = isRealVisionResult();
     const uploadText = usesRemoteVision
       ? "本次使用真实视觉模型时，会把压缩后的植物照片发送给 FiveCrop 后端和已配置的视觉模型提供商，只用于这次分析。"
-      : "当前会先用本地规则；只有配置真实视觉模型并上传照片时，才会发送压缩后的植物照片。";
+      : realVisionRequired
+        ? "真实视觉服务未返回结果时，FiveCrop 会停止诊断，不会用本地规则冒充真实识别。"
+        : "当前会先用本地规则；只有配置真实视觉模型并上传照片时，才会发送压缩后的植物照片。";
     customerPrivacyCopy.textContent = `${uploadText} FiveCrop 不保存原图进病例，也不会默认把照片用于训练或改进模型；清除本机记录会删除这个浏览器里的照片预览、基线和复查记录。`;
   }
 }
@@ -4758,8 +4867,31 @@ function customerMobileResultModel(state = getFormState()) {
 function renderCustomerMobileExperience(state = getFormState()) {
   if (!customerAppShell) return;
   let model = customerMobileResultModel(state);
-  const needsCropCheck = visionNeedsCropCheck();
-  if (needsCropCheck) {
+  const needsRealVision = shouldBlockDiagnosisForRealVision();
+  const needsCropCheck = !needsRealVision && visionNeedsCropCheck();
+  if (needsRealVision) {
+    model = activeLocale === "en"
+      ? {
+        risk: "Real recognition is unavailable",
+        action: "Check your connection and retry",
+        followup: "No diagnosis was created",
+        evidence: [
+          ["Photo kept on device", "You can retry without taking it again."],
+          ["No silent fallback", "Local color rules are not presented as plant recognition."],
+          ["Next step", "Retry when the vision service is connected."]
+        ]
+      }
+      : {
+        risk: "真實識別暫不可用",
+        action: "確認網路後重試識別",
+        followup: "這次沒有產生診斷",
+        evidence: [
+          ["照片仍在本機", "可以直接重試，不需要重新拍攝。"],
+          ["沒有靜默降級", "本地顏色規則不會被當成植物識別。"],
+          ["下一步", "視覺服務恢復後再次嘗試。"]
+        ]
+      };
+  } else if (needsCropCheck) {
     const selected = cropNames[state.crop] || "this crop";
     const detected = cropNames[latestVisionResult.detectedCropKey] || "";
     model = {
@@ -4778,8 +4910,8 @@ function renderCustomerMobileExperience(state = getFormState()) {
   const hasPhoto = Boolean(uploaded || document.body.classList.contains("has-plant-photo"));
   const actionModel = customerPrimaryActionModel(state, latestFindings);
   const hasFollowup = ["followup", "followup-panel", "progress"].includes(actionModel.action);
-  const baseStage = processing ? "analyzing" : (needsCropCheck && hasPhoto) ? "action" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
-  const stage = customerEntryMode === "care" && !processing && !needsCropCheck && !hasPhoto ? "care" : baseStage;
+  const baseStage = processing ? "analyzing" : ((needsRealVision || needsCropCheck) && hasPhoto) ? "action" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
+  const stage = customerEntryMode === "care" && !processing && !needsRealVision && !needsCropCheck && !hasPhoto ? "care" : baseStage;
   const stageOrder = { photo: 0, care: 0, analyzing: 0, action: 1, followup: 2 };
 
   customerAppShell.dataset.state = stage;
@@ -4809,7 +4941,11 @@ function renderCustomerMobileExperience(state = getFormState()) {
       action: ["這是植物今天需要的照護。", "今天只做一個動作，之後回來拍複查照。"],
       followup: ["看看有什麼變化。", "用同一角度拍攝，方便比較。"]
     };
-  if (needsCropCheck) {
+  if (needsRealVision) {
+    stageCopy.action = activeLocale === "en"
+      ? ["Recognition did not finish.", "Your photo is still here. Retry after checking the connection."]
+      : ["識別沒有完成。", "照片仍保留在本機；確認網路後直接重試。"];
+  } else if (needsCropCheck) {
     stageCopy.action = activeLocale === "en"
       ? ["Let's confirm the plant.", "FiveCrop only diagnoses tomato, basil, rosemary, strawberry, and pepper."]
       : ["先確認這是不是支援作物。", "FiveCrop 目前只診斷番茄、羅勒、迷迭香、草莓和辣椒。"];
@@ -4833,37 +4969,44 @@ function renderCustomerMobileExperience(state = getFormState()) {
   if (customerStagePhoto) {
     customerStagePhoto.src = uploaded || "assets/tomato-diagnosis-preview.jpg";
     customerStagePhoto.alt = uploaded
-      ? `${needsCropCheck ? "Unconfirmed crop" : cropNames[state.crop]} uploaded for diagnosis`
+      ? `${needsRealVision ? "Plant awaiting real recognition" : needsCropCheck ? "Unconfirmed crop" : cropNames[state.crop]} uploaded for diagnosis`
       : "Dwarf tomato plant beside an apartment window";
   }
   if (customerResultPhoto) {
     customerResultPhoto.src = uploaded || "assets/tomato-diagnosis-preview.jpg";
-    customerResultPhoto.alt = needsCropCheck
+    customerResultPhoto.alt = needsRealVision
+      ? "Plant photo awaiting a real vision result"
+      : needsCropCheck
       ? "Unconfirmed plant photo awaiting a clear whole-plant retake"
       : `${cropNames[state.crop]} photo used for this diagnosis`;
   }
-  if (customerResultCrop) customerResultCrop.textContent = needsCropCheck ? "Crop not confirmed" : cropNames[state.crop];
+  if (customerResultCrop) customerResultCrop.textContent = needsRealVision
+    ? (activeLocale === "en" ? "Recognition pending" : "等待真實識別")
+    : needsCropCheck ? "Crop not confirmed" : cropNames[state.crop];
   if (customerPhotoStatusLabel) {
-    customerPhotoStatusLabel.textContent = processing ? "Checking photo" : hasPhoto ? "Photo ready" : "Example";
+    customerPhotoStatusLabel.textContent = processing ? t("checkingPhoto") : hasPhoto ? t("photoReady") : t("examplePhoto");
   }
   if (customerCheckPlantBtn) {
     const labels = {
-      "guided-photo": "Take a photo",
-      "suggested-photo": "Retake photo",
-      "care-complete": "I’ll do this today",
-      "complete-current-task": "I’ve done this",
-      followup: "Take follow-up photo",
-      "followup-panel": "View follow-up plan",
-      progress: "View follow-up result",
-      diagnosis: "View diagnosis"
+      "guided-photo": t("takePhoto"),
+      "suggested-photo": t("retakePhoto"),
+      "care-complete": t("careConfirm"),
+      "complete-current-task": t("taskConfirm"),
+      followup: t("takeFollowupPhoto"),
+      "followup-panel": t("viewFollowupPlan"),
+      progress: t("viewFollowupResult"),
+      "retry-real-vision": activeLocale === "en" ? "Retry recognition" : "重試識別",
+      diagnosis: t("viewDiagnosis")
     };
     if (stage === "care") {
       const careModel = customerCareModel(state);
-      customerCheckPlantBtn.dataset.action = careModel.completed ? "guided-photo" : "care-complete";
+      customerCheckPlantBtn.dataset.action = careModel.completed ? "followup-panel" : "care-complete";
     } else {
-      customerCheckPlantBtn.dataset.action = needsCropCheck ? "suggested-photo" : (stage === "photo" ? "guided-photo" : actionModel.action);
+      customerCheckPlantBtn.dataset.action = needsRealVision
+        ? "retry-real-vision"
+        : needsCropCheck ? "suggested-photo" : (stage === "photo" ? "guided-photo" : actionModel.action);
     }
-    customerCheckPlantBtn.querySelector("span").textContent = processing ? "Analyzing photo..." : (labels[customerCheckPlantBtn.dataset.action] || "Continue");
+    customerCheckPlantBtn.querySelector("span").textContent = processing ? t("analyzingPhoto") : (labels[customerCheckPlantBtn.dataset.action] || t("continueAction"));
     customerCheckPlantBtn.disabled = processing;
   }
 }
@@ -8277,6 +8420,18 @@ function visionNeedsCropCheck(result = latestVisionResult) {
   return Boolean(result?.needsCropVerification || result?.cropMismatch);
 }
 
+function isRealVisionResult(result = latestVisionResult) {
+  return Boolean(result?.provider && result.provider !== "local-heuristic-placeholder");
+}
+
+function shouldBlockDiagnosisForRealVision(result = latestVisionResult) {
+  return Boolean(
+    realVisionRequired
+    && document.body.classList.contains("has-plant-photo")
+    && !isRealVisionResult(result)
+  );
+}
+
 function applyVisionHints(result) {
   if (visionNeedsCropCheck(result)) return;
   const symptoms = [];
@@ -8367,6 +8522,45 @@ function cropVerificationHint(result, selectedCropName) {
 
 function shouldBlockDiagnosisForCropIdentity() {
   return Boolean(visionNeedsCropCheck() && document.body.classList.contains("has-plant-photo"));
+}
+
+function renderRealVisionBlock(state = getFormState()) {
+  latestState = state;
+  latestFindings = [];
+  latestMatchedPathways = [];
+  latestMatchedPathology = [];
+  latestAssistantAdvice = null;
+  latestAssistantAdviceSignature = "";
+  syncCustomerIntakeState(state);
+  renderCustomerMobileExperience(state);
+  if (readiness) readiness.textContent = "真实识别暂不可用";
+  if (mainRisk) mainRisk.textContent = "真实识别暂不可用";
+  if (mainSummary) {
+    mainSummary.textContent = "照片已保留，但 FiveCrop 没有收到真实视觉模型结果，因此不会生成诊断或照护处方。";
+  }
+  renderList(causesList, [
+    "真实视觉服务没有连接成功，或这次请求未返回可验证的模型结果。"
+  ], (item) => item);
+  renderList(actionsList, ["保留当前照片并重试真实识别"], (item) => item);
+  renderList(taskList, ["确认网络后点击重试识别"], (item) => item);
+  renderMatchedPathways([]);
+  renderMinimalQuestions(state, []);
+  renderList(monitorList, ["FiveCrop 不会用本地颜色规则冒充真实植物识别。"], (item) => item);
+  renderList(photoList, ["当前照片仍保留在本机，可直接重试，无需重新拍摄。"], (item) => item);
+  renderList(followupList, [], (item) => item);
+  if (reportOutput) {
+    reportOutput.value = [
+      "真实识别暂不可用",
+      "",
+      "FiveCrop 没有为这张照片生成诊断或处方。",
+      "下一步：确认网络和视觉服务后重试识别。"
+    ].join("\n");
+  }
+  if (photoHint) {
+    photoHint.textContent = "真实视觉服务暂时没有返回结果。照片仍在本机；请检查网络后重试，FiveCrop 不会用本地规则冒充识别。";
+  }
+  if (copyStatus) copyStatus.textContent = "真实视觉结果缺失，未生成报告。";
+  if (saveReportBtn) saveReportBtn.disabled = true;
 }
 
 function renderCropIdentityBlock(state = getFormState()) {
@@ -9560,6 +9754,7 @@ function renderDiagnosis(state, findings) {
   renderCustomerPlantDossier(state, findings);
   renderCustomerCaseTimeline();
   renderCustomerCompactPlan(state, findings);
+  renderCustomerMobileExperience(state);
   renderCustomerJourney(state, findings);
   renderConfidenceDecision(state, findings);
   renderPhotoQuality();
@@ -9617,6 +9812,10 @@ function renderDiagnosis(state, findings) {
 }
 
 function runDiagnosis() {
+  if (shouldBlockDiagnosisForRealVision()) {
+    renderRealVisionBlock(getFormState());
+    return;
+  }
   if (shouldBlockDiagnosisForCropIdentity()) {
     renderCropIdentityBlock(getFormState());
     return;
@@ -10040,10 +10239,17 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
       hasImage: true
     });
     renderPhotoReview(gate, fileName);
+    const needsRealVision = shouldBlockDiagnosisForRealVision(vision);
     const needsCropCheck = visionNeedsCropCheck(vision);
     if (gate.canContinue) {
-      if (vision && !needsCropCheck) applyVisionHints(vision);
-      if (needsCropCheck) {
+      if (vision && !needsRealVision && !needsCropCheck) applyVisionHints(vision);
+      if (needsRealVision) {
+        trackP2Event("real_vision_unavailable", {
+          photoType: currentPhotoType,
+          source,
+          fallbackReason: vision?.aiFallbackReason || "missing-real-provider"
+        });
+      } else if (needsCropCheck) {
         trackP2Event("photo_crop_unconfirmed", {
           photoType: currentPhotoType,
           source,
@@ -10056,8 +10262,10 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
         saveBaselinePhotoSignals(currentPhotoType, signals);
       }
       photoHint.textContent = `已自动识别为${photoTypeLabel(currentPhotoType)}：${fileName}。${source === "camera" ? "相机照片" : "照片"}${gate.state === "warn" ? "可继续使用，也可以重拍优化。" : "已通过质检，诊断已更新。"}`;
-      hasRunSmartDiagnosis = !needsCropCheck;
-      if (needsCropCheck) {
+      hasRunSmartDiagnosis = !needsRealVision && !needsCropCheck;
+      if (needsRealVision) {
+        photoHint.textContent = "真实视觉服务暂时没有返回结果。照片仍在本机；请检查网络后重试，FiveCrop 不会用本地规则冒充识别。";
+      } else if (needsCropCheck) {
         const selected = cropNames[getFormState().crop] || "所选作物";
         photoHint.textContent = vision?.cropMismatch
           ? `这张照片不像${selected}，请重新选择作物或补拍整株。`
@@ -10070,7 +10278,8 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
       photoHint.textContent = `这张${photoTypeLabel(currentPhotoType)}暂时看不准：${gate.message}`;
       hasRunSmartDiagnosis = false;
     }
-    if (needsCropCheck) renderCustomerMobileExperience(getFormState());
+    if (needsRealVision) renderRealVisionBlock(getFormState());
+    else if (needsCropCheck) renderCustomerMobileExperience(getFormState());
     else runDiagnosis();
     await syncPublicPhotoCaptureResult({
       fileName,
@@ -10080,7 +10289,7 @@ async function processPlantPhotoDataUrl(dataUrl, file = {}, options = {}) {
       source,
       signals
     });
-    if (gate.canContinue && !needsCropCheck) focusPhotoDiagnosisResult();
+    if (gate.canContinue && !needsRealVision && !needsCropCheck) focusPhotoDiagnosisResult();
     else focusCustomerTarget(photoReviewCard || customerPhotoRescueCard);
   } catch {
     if (autoPhotoTypeBadge) autoPhotoTypeBadge.textContent = "识别失败";
@@ -10166,13 +10375,22 @@ customerPhotoRescueBtn.addEventListener("click", openSuggestedPhotoUpload);
 
 followupLoopUploadBtn.addEventListener("click", openFollowupUpload);
 
-function runCustomerPrimaryAction(action) {
+async function runCustomerPrimaryAction(action) {
   if (action === "guided-photo") {
     openNativeCamera();
     return;
   }
   if (action === "suggested-photo") {
     openSuggestedPhotoUpload();
+    return;
+  }
+  if (action === "retry-real-vision") {
+    const dataUrl = photoPreview?.classList.contains("visible") ? photoPreview.getAttribute("src") : "";
+    if (dataUrl?.startsWith("data:image/")) {
+      await processPlantPhotoDataUrl(dataUrl, { name: `retry-${Date.now()}.jpg` }, { source: "retry" });
+    } else {
+      openGuidedPhotoUpload();
+    }
     return;
   }
   if (action === "followup") {
@@ -10547,11 +10765,17 @@ followupPhoto.addEventListener("change", () => {
       try {
         photoSignals = signals;
         const photoType = requestedPhotoType || getFormState().photoType || "leaf";
-        await analyzePhotoWithVision(reader.result, file, {
+        const followupVision = await analyzePhotoWithVision(reader.result, file, {
           photoType,
           mode: "followup",
-          checkDay: checkDay.value
+          checkDay: checkDay.value,
+          skipHints: true
         });
+        if (realVisionRequired && !isRealVisionResult(followupVision)) {
+          followupLoopVerdict.textContent = "真实视觉服务暂时没有返回结果。这次复查没有保存；照片仍在本机，请检查网络后重试。";
+          if (customerReminderMessage) customerReminderMessage.textContent = "复查识别没有完成，不会用本地规则生成进展判断。";
+          return;
+        }
         const comparison = await compareFollowupWithVision(reader.result, file, signals);
 
         if (signals.yellowRatio !== null && signals.yellowRatio > 0.22) {
@@ -10640,6 +10864,10 @@ copyReportBtn.addEventListener("click", async () => {
 });
 
 saveReportBtn.addEventListener("click", async () => {
+  if (shouldBlockDiagnosisForRealVision()) {
+    renderRealVisionBlock(getFormState());
+    return;
+  }
   if (shouldBlockDiagnosisForCropIdentity() || !latestFindings.length) {
     renderCropIdentityBlock(getFormState());
     return;

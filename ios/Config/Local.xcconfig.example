@@ -1,0 +1,5 @@
+// Copy this file to Local.xcconfig. That file is intentionally ignored by Git.
+// Keep the query parameters: they make real vision a hard requirement in TestFlight.
+FIVECROP_APP_URL = https:/$()/your-fivecrop-host.example/?mode=customer&runtime=testflight&realVision=required
+FIVECROP_BUNDLE_ID = com.yourcompany.fivecrop
+FIVECROP_DEVELOPMENT_TEAM = YOUR_TEAM_ID

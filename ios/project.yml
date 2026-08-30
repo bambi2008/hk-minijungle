@@ -1,0 +1,59 @@
+name: FiveCrop
+options:
+  bundleIdPrefix: com.bambi2008
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+configs:
+  Debug: debug
+  Release: release
+targets:
+  FiveCrop:
+    type: application
+    platform: iOS
+    sources:
+      - path: FiveCrop
+    configFiles:
+      Debug: Config/Debug.xcconfig
+      Release: Config/Release.xcconfig
+    settings:
+      base:
+        PRODUCT_NAME: FiveCrop
+        PRODUCT_BUNDLE_IDENTIFIER: $(FIVECROP_BUNDLE_ID)
+        DEVELOPMENT_TEAM: $(FIVECROP_DEVELOPMENT_TEAM)
+        CODE_SIGN_STYLE: Automatic
+        SWIFT_VERSION: "5.0"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        ENABLE_USER_SCRIPT_SANDBOXING: true
+        SUPPORTS_MACCATALYST: false
+        SUPPORTED_PLATFORMS: iphoneos iphonesimulator
+    preBuildScripts:
+      - name: Validate TestFlight configuration
+        script: sh "$SRCROOT/scripts/validate-release-config.sh"
+        inputFiles:
+          - $(SRCROOT)/scripts/validate-release-config.sh
+        basedOnDependencyAnalysis: false
+    info:
+      path: FiveCrop/Info.plist
+      properties:
+        CFBundleDisplayName: $(FIVECROP_APP_DISPLAY_NAME)
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        FIVECROP_APP_URL: $(FIVECROP_APP_URL)
+        ITSAppUsesNonExemptEncryption: false
+        LSRequiresIPhoneOS: true
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSCameraUsageDescription: FiveCrop needs the camera to photograph your plant for diagnosis and follow-up checks.
+        NSPhotoLibraryUsageDescription: FiveCrop lets you choose an existing plant photo for diagnosis and follow-up checks.
+        UIRequiredDeviceCapabilities:
+          - arm64
+        UILaunchScreen: {}
+        UIStatusBarStyle: UIStatusBarStyleDarkContent
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIViewControllerBasedStatusBarAppearance: true

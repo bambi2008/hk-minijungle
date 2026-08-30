@@ -1,0 +1,2 @@
+"NSCameraUsageDescription" = "FiveCrop needs the camera to photograph your plant for diagnosis and follow-up checks.";
+"NSPhotoLibraryUsageDescription" = "FiveCrop lets you choose an existing plant photo for diagnosis and follow-up checks.";

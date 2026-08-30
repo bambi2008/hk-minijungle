@@ -1,0 +1,393 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		1D5843111D2CB4F36FDB7A61 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = C5053A3C59C7F3FAB30BB1F3 /* InfoPlist.strings */; };
+		271ABAB9EF9546418FA033F0 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 764360B10BAC759795BA724A /* RootView.swift */; };
+		55F9FE4CFCF1899792B3385B /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = E52410AE9CC63BA42097BF4C /* AppEnvironment.swift */; };
+		5A724B7FB43FF582C5AB72DB /* FiveCropWebView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C57CD3665261C34A8D2D597E /* FiveCropWebView.swift */; };
+		7982F49BBCD1E0A727276DEE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 46BF1DC22A3158A8796741A2 /* Assets.xcassets */; };
+		8ABCCC331545713056CEDA27 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = BB2CA0677CE7C20155A592FF /* PrivacyInfo.xcprivacy */; };
+		E159956D03CA16389B7D474C /* FiveCropApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9295339748FF2FA30DFB79CC /* FiveCropApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		1E13244C9ADCCABB272648EE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		4095E511DD9FBAC1D2B45620 /* Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Release.xcconfig; sourceTree = "<group>"; };
+		46BF1DC22A3158A8796741A2 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		764360B10BAC759795BA724A /* RootView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootView.swift; sourceTree = "<group>"; };
+		841C15C9B5700EB4E5644CF2 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
+		9295339748FF2FA30DFB79CC /* FiveCropApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiveCropApp.swift; sourceTree = "<group>"; };
+		B4FB9F0D3BB9DB624C5F4173 /* FiveCrop.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = FiveCrop.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B77AB600B3CFD6A7B0DFD0E2 /* Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Debug.xcconfig; sourceTree = "<group>"; };
+		BB2CA0677CE7C20155A592FF /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		C3C606A1ABEAD055DDC5FB44 /* zh-Hant */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hant"; path = "zh-Hant.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		C57CD3665261C34A8D2D597E /* FiveCropWebView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FiveCropWebView.swift; sourceTree = "<group>"; };
+		E52410AE9CC63BA42097BF4C /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		4A752688DDBD2AB909CB947D /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				B77AB600B3CFD6A7B0DFD0E2 /* Debug.xcconfig */,
+				4095E511DD9FBAC1D2B45620 /* Release.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+		81E329CB1C926C73E4C8D43C = {
+			isa = PBXGroup;
+			children = (
+				4A752688DDBD2AB909CB947D /* Config */,
+				84E606E311880067B5CBDDEB /* FiveCrop */,
+				F20515396B9C8D7024B43345 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		84E606E311880067B5CBDDEB /* FiveCrop */ = {
+			isa = PBXGroup;
+			children = (
+				E52410AE9CC63BA42097BF4C /* AppEnvironment.swift */,
+				46BF1DC22A3158A8796741A2 /* Assets.xcassets */,
+				9295339748FF2FA30DFB79CC /* FiveCropApp.swift */,
+				C57CD3665261C34A8D2D597E /* FiveCropWebView.swift */,
+				1E13244C9ADCCABB272648EE /* Info.plist */,
+				BB2CA0677CE7C20155A592FF /* PrivacyInfo.xcprivacy */,
+				764360B10BAC759795BA724A /* RootView.swift */,
+				C5053A3C59C7F3FAB30BB1F3 /* InfoPlist.strings */,
+			);
+			path = FiveCrop;
+			sourceTree = "<group>";
+		};
+		F20515396B9C8D7024B43345 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				B4FB9F0D3BB9DB624C5F4173 /* FiveCrop.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		29230F6A3C8820B55C54B69C /* FiveCrop */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6AD798C935C2E2CA73357207 /* Build configuration list for PBXNativeTarget "FiveCrop" */;
+			buildPhases = (
+				1E292A43A3221C7CB29352B1 /* Validate TestFlight configuration */,
+				DBCB5C550326983D3328F8BC /* Sources */,
+				AF33B95A994224A4ABB9194E /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = FiveCrop;
+			packageProductDependencies = (
+			);
+			productName = FiveCrop;
+			productReference = B4FB9F0D3BB9DB624C5F4173 /* FiveCrop.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		EF05E5D2568CB92E97A9D644 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					29230F6A3C8820B55C54B69C = {
+						DevelopmentTeam = "$(FIVECROP_DEVELOPMENT_TEAM)";
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = C0061A5239A44D3CFF8FC297 /* Build configuration list for PBXProject "FiveCrop" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+				"zh-Hant",
+			);
+			mainGroup = 81E329CB1C926C73E4C8D43C;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = F20515396B9C8D7024B43345 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				29230F6A3C8820B55C54B69C /* FiveCrop */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		AF33B95A994224A4ABB9194E /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7982F49BBCD1E0A727276DEE /* Assets.xcassets in Resources */,
+				1D5843111D2CB4F36FDB7A61 /* InfoPlist.strings in Resources */,
+				8ABCCC331545713056CEDA27 /* PrivacyInfo.xcprivacy in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		1E292A43A3221C7CB29352B1 /* Validate TestFlight configuration */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/scripts/validate-release-config.sh",
+			);
+			name = "Validate TestFlight configuration";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "sh \"$SRCROOT/scripts/validate-release-config.sh\"";
+		};
+/* End PBXShellScriptBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		DBCB5C550326983D3328F8BC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				55F9FE4CFCF1899792B3385B /* AppEnvironment.swift in Sources */,
+				E159956D03CA16389B7D474C /* FiveCropApp.swift in Sources */,
+				5A724B7FB43FF582C5AB72DB /* FiveCropWebView.swift in Sources */,
+				271ABAB9EF9546418FA033F0 /* RootView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		C5053A3C59C7F3FAB30BB1F3 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				841C15C9B5700EB4E5644CF2 /* en */,
+				C3C606A1ABEAD055DDC5FB44 /* zh-Hant */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin XCBuildConfiguration section */
+		19DB96714C1942E40A0A5E6A /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = 4095E511DD9FBAC1D2B45620 /* Release.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(FIVECROP_DEVELOPMENT_TEAM)";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = FiveCrop/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(FIVECROP_BUNDLE_ID)";
+				PRODUCT_NAME = FiveCrop;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		AF3F670F4117411CE3303645 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		B6CA1E4FB982B8AFF454E04B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		EBC31CFA4726800F9D2265E4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = B77AB600B3CFD6A7B0DFD0E2 /* Debug.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(FIVECROP_DEVELOPMENT_TEAM)";
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				INFOPLIST_FILE = FiveCrop/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 0.1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(FIVECROP_BUNDLE_ID)";
+				PRODUCT_NAME = FiveCrop;
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6AD798C935C2E2CA73357207 /* Build configuration list for PBXNativeTarget "FiveCrop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				EBC31CFA4726800F9D2265E4 /* Debug */,
+				19DB96714C1942E40A0A5E6A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C0061A5239A44D3CFF8FC297 /* Build configuration list for PBXProject "FiveCrop" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AF3F670F4117411CE3303645 /* Debug */,
+				B6CA1E4FB982B8AFF454E04B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = EF05E5D2568CB92E97A9D644 /* Project object */;
+}
