@@ -1172,3 +1172,18 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from the isolated PostgreSQL rehearsal.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 80 - Full SQLite to PostgreSQL Data Rehearsal and Verification
+
+- Score before: **65%**. Score after: **65%**. A successful isolated data rehearsal is evidence for migration readiness, not proof of managed production operations.
+- Migration completed: the staging SQLite runtime was copied into the isolated PostgreSQL rehearsal database with the updated migration image. Foreign-key dependency order, deployment metadata exclusion (`schema_migrations`) and the `evidence_snapshots.client_ids_json` to PostgreSQL `client_ids` alias are handled explicitly.
+- Verification completed: the remote verifier returned `ok: true`, `sourceTables: 31`, `targetTables: 31` and `failures: []`. The source SHA-256 matched the recorded migration hash. This verifies the current pilot dataset and relationship/schema contract in the rehearsal environment.
+- Idempotency evidence: the migration now checks existing foreign-key constraints and uses a savepoint when adding them, so a rerun does not poison the surrounding transaction when a constraint already exists.
+- Safety regression: `dr-forest-postgres-rehearsal` has no published host port and is not connected to `qiaoshen_frontend`; `dr-forest-ops-staging` remains on SQLite/local media. `ops.dr-forest.net` returned `200`, `api.qiaoshenedu.com` returned `200`, and the bridge application/database containers remained running.
+- Honest boundary: this is still a private Lighthouse rehearsal, not TencentDB PostgreSQL with TLS/PITR/private networking. Managed database migration, off-host encrypted backup/restore, OIDC/MFA, signed device credentials and repeated customer field cycles remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 80
+
+- Production operations readiness: **65%**. No score increase is claimed from the isolated full-data rehearsal.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
