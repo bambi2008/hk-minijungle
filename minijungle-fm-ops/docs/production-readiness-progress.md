@@ -1158,3 +1158,17 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from regression evidence.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 79 - Isolated PostgreSQL Schema Rehearsal on Lighthouse
+
+- Score before: **65%**. Score after: **65%**. A private server rehearsal is not a managed TencentDB deployment or an off-host recovery drill.
+- PostgreSQL rehearsal completed: PostgreSQL 17 is running as `dr-forest-postgres-rehearsal` on a dedicated Docker network, using the DR FOREST staging image as the migration runner. All 20 repository migrations were applied/verified with `verifiedCount: 20` and `missingCount: 0`.
+- Isolation evidence: the rehearsal container has no published host port (`docker port` returned empty and `docker ps` showed only container port `5432/tcp`). It is not a member of `qiaoshen_frontend`; the DR Forest staging container remains the only DR Forest member there for the approved HTTPS reverse proxy path.
+- Application boundary: the live staging application still uses pilot SQLite/local media and was not switched to the rehearsal database. The rehearsal database contains schema evidence only and must not receive customer data.
+- Honest boundary: TencentDB PostgreSQL with TLS/PITR, approved private networking, production migration/row verification, off-host encrypted backup/restore, OIDC/MFA, signed devices and repeated client field cycles remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 79
+
+- Production operations readiness: **65%**. No score increase is claimed from the isolated PostgreSQL rehearsal.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
