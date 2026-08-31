@@ -39,6 +39,9 @@ async function main() {
       await operations.locator("#module-query-submit").click();
       await operations.waitForFunction(() => document.querySelector("#module-query-state")?.textContent.includes("12 of 12 modules"), null, { timeout: 10000 });
       await operations.waitForFunction(() => document.querySelector("#quality-state")?.textContent !== "Loading", null, { timeout: 10000 });
+      assert(await operations.locator(".go-live-gate").count() === 7, "Operations page did not render the seven production acceptance gates");
+      assert((await operations.locator("#go-live-state").textContent()).includes("7 gates open"), "Operations page did not expose the blocked go-live state");
+      assert((await operations.locator("#go-live-summary").textContent()).includes("0/7"), "Operations page did not expose the external gate count");
       assert(await operations.locator(".quality-gate").count() === 4, "Operations page did not render four quality gates");
       await operations.waitForFunction(() => document.querySelector("#health-esg-state")?.textContent !== "Loading", null, { timeout: 10000 });
       assert(await operations.locator(".health-item").count() === 4, "Operations page did not render the explainable health list");

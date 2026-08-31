@@ -1203,6 +1203,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
 
+### Step 84 - Go-Live Blocker Overview in Ops
+
+- Score before: **65%**. Score after: **65%**. Making external blockers visible in one operator view improves execution clarity, but it does not create external evidence.
+- Operator view added: the Ops homepage now renders a seven-gate go-live overview from the production evidence ledger. Each gate shows its owner, next required action and current state (`Verified`, `Awaiting review`, `Rejected`, `Expired` or `Unverified`).
+- Single source of truth: the overview is driven by `/api/production/evidence`; it does not infer readiness from local smoke tests, reserved device interfaces, simulator data or configuration placeholders. A direct link takes the operator to the evidence ledger for submission and independent review.
+- Browser evidence: the isolated Playwright Ops UI smoke passed with all seven gates rendered and the current pilot state displayed as `0/7` and `7 gates open`. Full `npm.cmd run check` also passed.
+- Honest boundary: the seven gates remain external acceptance items: managed PostgreSQL migration, off-host restore, real signed-device pilot, repeated multi-client operations, hosted monitoring, AI provider evaluation and media malware scanning. Real device connectivity remains intentionally out of scope for this step.
+
+### Current Honest Score After Step 84
+
+- Production operations readiness: **65%**. No score increase is claimed from the blocker overview.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Step 82 - WiFi Device Connection Contract Reserved
 
 - Score before: **65%**. Score after: **65%**. A normalized connection profile and tested ingestion contract prepare the system for hardware; they do not prove that a customer's WiFi, vendor cloud or broker is reachable.
