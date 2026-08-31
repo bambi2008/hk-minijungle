@@ -1209,6 +1209,8 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Operator view added: the Ops homepage now renders a seven-gate go-live overview from the production evidence ledger. Each gate shows its owner, next required action and current state (`Verified`, `Awaiting review`, `Rejected`, `Expired` or `Unverified`).
 - Single source of truth: the overview is driven by `/api/production/evidence`; it does not infer readiness from local smoke tests, reserved device interfaces, simulator data or configuration placeholders. A direct link takes the operator to the evidence ledger for submission and independent review.
 - Browser evidence: the isolated Playwright Ops UI smoke passed with all seven gates rendered and the current pilot state displayed as `0/7` and `7 gates open`. Full `npm.cmd run check` also passed.
+- Staging deployment: commit `db8de99` is running as image `dr-forest/ops:staging-db8de99` in `dr-forest-ops-staging` behind `https://ops.dr-forest.net`. The public page rendered the seven-gate overview and the public readiness endpoint returned `200`.
+- Bridge safety verification: `api.qiaoshenedu.com` returned `200`; the Caddy, bridge app and core app container start timestamps remained unchanged. Only the DR FOREST staging container was replaced; the previous image remains as `dr-forest-ops-staging-prev-db8de99` for rollback.
 - Honest boundary: the seven gates remain external acceptance items: managed PostgreSQL migration, off-host restore, real signed-device pilot, repeated multi-client operations, hosted monitoring, AI provider evaluation and media malware scanning. Real device connectivity remains intentionally out of scope for this step.
 
 ### Current Honest Score After Step 84
