@@ -12,6 +12,10 @@ for (const file of [
   "app.js",
   "p2-growth.js",
   "styles.css",
+  "case-feedback.js",
+  "case-feedback.css",
+  "case-review.html",
+  "case-review.js",
   "PUBLIC_PHOTO_TEST_GUIDE.md"
 ]) {
   await copyFile(resolve(root, file), resolve(output, file));

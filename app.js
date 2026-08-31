@@ -302,6 +302,7 @@ let latestMatchedPathology = [];
 let latestAssistantAdvice = null;
 let latestAssistantAdviceSignature = "";
 let latestVisionResult = null;
+let latestVisionImageData = null;
 let publicPhotoFixtures = null;
 let publicPhotoServerRecords = null;
 let publicPhotoCaptureContext = null;
@@ -348,12 +349,12 @@ const uiCopy = {
     careModeAria: "起步方式",
     careDefaultMessage: "選擇起步方式，FiveCrop 只給你下一個該做的動作。",
     privacyInline: "預設保護隱私",
-    photoPrivacyDetail: "FiveCrop 只會為本次診斷上傳壓縮後的植物照片。預設不會用於模型訓練，你也可以隨時刪除本機病例資料。",
+    photoPrivacyDetail: "植物照片會先壓縮再送交視覺模型分析。只有你保存糾錯時，才會另外存入私有雲端病例供複查；模型改進需另行自願授權，可在病例內撤回或刪除。",
     whyTitle: "為什麼這樣判斷",
     followupHelp: "用同一角度拍攝，方便我們比較變化。",
     diagnosisPrivacy: "照片只用於本次診斷",
     privacyLabel: "隱私",
-    diagnosisPrivacyDetail: "只有啟用視覺分析時，FiveCrop 才會發送壓縮後的植物照片。原圖不會存入病例，也不會預設用於模型訓練。",
+    diagnosisPrivacyDetail: "診斷使用壓縮照片。保存糾錯會將壓縮照片與記錄私有保存供複查；未另行同意且經人工核實的案例，不會列入訓練候選。",
     takePhoto: "拍照",
     retakePhoto: "重新拍照",
     careConfirm: "我今天會照做",
@@ -397,12 +398,12 @@ const uiCopy = {
     careModeAria: "Start type",
     careDefaultMessage: "Pick a start type and FiveCrop will keep the next action simple.",
     privacyInline: "Private by default",
-    photoPrivacyDetail: "FiveCrop uploads a compressed plant photo only for diagnosis. It is not used for model training by default, and you can delete local case data at any time.",
+    photoPrivacyDetail: "A compressed photo is sent for vision analysis. Saving a correction also stores it privately for follow-up. Model improvement requires separate optional consent, which you can withdraw in the case.",
     whyTitle: "Why we think this",
     followupHelp: "Use the same angle so we can compare.",
     diagnosisPrivacy: "Photos are used only for this diagnosis",
     privacyLabel: "Privacy",
-    diagnosisPrivacyDetail: "FiveCrop sends a compressed plant photo only when vision analysis is enabled. Original photos are not saved in the case or used for model training by default.",
+    diagnosisPrivacyDetail: "Diagnosis uses compressed photos. Saving feedback stores the photo privately for follow-up. Only separately consented, manually verified cases may become training candidates.",
     takePhoto: "Take a photo",
     retakePhoto: "Retake photo",
     careConfirm: "I’ll do this today",
@@ -4804,64 +4805,26 @@ function renderCustomerTrustAndPrivacy(state = getFormState(), findings = latest
       : realVisionRequired
         ? "真实视觉服务未返回结果时，FiveCrop 会停止诊断，不会用本地规则冒充真实识别。"
         : "当前会先用本地规则；只有配置真实视觉模型并上传照片时，才会发送压缩后的植物照片。";
-    customerPrivacyCopy.textContent = `${uploadText} FiveCrop 不保存原图进病例，也不会默认把照片用于训练或改进模型；清除本机记录会删除这个浏览器里的照片预览、基线和复查记录。`;
+    customerPrivacyCopy.textContent = `${uploadText} 保存纠错时，会额外将压缩照片与记录私有保存到云端；模型改进需单独自愿授权。云端病例请在“我的复查”中删除，清除本机数据不会删除云端病例。`;
   }
 }
 
 function customerMobileResultModel(state = getFormState()) {
-  const models = {
-    tomato: {
-      risk: "Flower drop from heat stress",
-      action: "Move the light 10 cm higher",
-      followup: "Come back in 3 days",
-      evidence: [
-        ["Flower photo", "Flowers are visible in your image."],
-        ["Visible flower drop", "Dropped blossoms suggest heat stress."],
-        ["Next photo: same angle", "Helps us compare what changes."]
-      ]
-    },
-    basil: {
-      risk: "Leggy growth from low light",
-      action: "Move the light closer and pinch the top",
-      followup: "Come back in 7 days",
-      evidence: [
-        ["Whole-plant photo", "The full stem shape is visible."],
-        ["Long internodes", "Wide leaf spacing points to low light."],
-        ["Next photo: side view", "We will compare new compact growth."]
-      ]
-    },
-    rosemary: {
-      risk: "Root stress from staying too wet",
-      action: "Pause watering and increase airflow",
-      followup: "Come back in 48 hours",
-      evidence: [
-        ["Root-zone photo", "The wet growing surface is visible."],
-        ["Drooping growth", "Soft tips can follow low root oxygen."],
-        ["Next photo: root zone", "We will check whether it is drying."]
-      ]
-    },
-    strawberry: {
-      risk: "Wet crown and weak pollination",
-      action: "Dry the crown and hand-pollinate today",
-      followup: "Come back in 3 days",
-      evidence: [
-        ["Flower photo", "The flower centre is readable."],
-        ["Crown moisture", "Water is sitting near the crown."],
-        ["Next photo: same flower", "We will look for early fruit set."]
-      ]
-    },
-    pepper: {
-      risk: "Flower drop from heat swings",
-      action: "Stabilize heat and gently pollinate",
-      followup: "Come back in 5 days",
-      evidence: [
-        ["Flower photo", "The flower cluster is visible."],
-        ["Dropped blossoms", "Recent flowers are not holding."],
-        ["Next photo: young fruit", "We will check whether fruit has set."]
-      ]
-    }
+  const top = latestFindings[0];
+  const plan = customerCompactPlanModel(state, latestFindings);
+  const observations = (latestVisionResult?.observations || []).slice(0, 2);
+  const evidence = observations.map((item) => [
+    customerEvidenceLabel(item.label || item.code || "照片觀察"),
+    item.evidence || item.description || "此為照片中的可見線索，仍需結合養護環境。"
+  ]);
+  if (!evidence.length) evidence.push(["判斷依據", top?.why || "拍攝清晰的整株照片，才能開始判斷。"]);
+  evidence.push(["需要複查", "照片只能提供線索，不能單憑外觀確定缺水、缺光等原因。"]);
+  return {
+    risk: top ? `待驗證：${top.title}` : "等待本次照片診斷",
+    action: plan.action || firstSentence(top?.action || "先拍一張清晰的整株照片"),
+    followup: plan.followup || "記錄今天的操作，再安排複查",
+    evidence
   };
-  return models[state.crop] || models.tomato;
 }
 
 function renderCustomerMobileExperience(state = getFormState()) {
@@ -4912,6 +4875,13 @@ function renderCustomerMobileExperience(state = getFormState()) {
   const hasFollowup = ["followup", "followup-panel", "progress"].includes(actionModel.action);
   const baseStage = processing ? "analyzing" : ((needsRealVision || needsCropCheck) && hasPhoto) ? "action" : hasFollowup ? "followup" : (hasPhoto && hasRunSmartDiagnosis ? "action" : "photo");
   const stage = customerEntryMode === "care" && !processing && !needsRealVision && !needsCropCheck && !hasPhoto ? "care" : baseStage;
+  window.FiveCropFeedback?.setContext({
+    ready: hasRunSmartDiagnosis && !needsRealVision && !needsCropCheck && Boolean(uploaded) && !processing,
+    cropKey: state.crop, plantId: activeCustomerCaseId() || getActiveCase(state).id,
+    diagnosis: model.risk, action: model.action,
+    environment: Object.fromEntries(["stage", "medium", "light", "moisture", "growDevice", "lightHours", "temperature", "humidity", "sensorMoisture"].map((key) => [key, state[key]])),
+    receipt: latestVisionResult?.caseReceipt, imageData: latestVisionImageData
+  });
   const stageOrder = { photo: 0, care: 0, analyzing: 0, action: 1, followup: 2 };
 
   customerAppShell.dataset.state = stage;
@@ -4963,7 +4933,7 @@ function renderCustomerMobileExperience(state = getFormState()) {
       '<svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10" cy="10" r="6"/><path d="m14.5 14.5 5 5"/></svg>'
     ];
     customerMobileEvidence.innerHTML = model.evidence.map(([title, detail], index) => `
-      <div><span class="customer-evidence-icon">${icons[index] || icons[2]}</span><strong>${title}</strong><span>${detail}</span></div>
+      <div><span class="customer-evidence-icon">${icons[index] || icons[2]}</span><strong>${escapeMarkup(title)}</strong><span>${escapeMarkup(detail)}</span></div>
     `).join("");
   }
   if (customerStagePhoto) {
@@ -8603,15 +8573,11 @@ function renderCropIdentityBlock(state = getFormState()) {
 }
 
 function resizeImageForVision(dataUrl, maxSize = 1280, quality = 0.78) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const image = new Image();
     image.addEventListener("load", () => {
       const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-      if (scale >= 1) {
-        resolve(dataUrl);
-        return;
-      }
-
+      // Always re-encode, including small photos, so EXIF/location is not uploaded.
       const canvas = document.createElement("canvas");
       canvas.width = Math.max(1, Math.round(image.width * scale));
       canvas.height = Math.max(1, Math.round(image.height * scale));
@@ -8619,7 +8585,7 @@ function resizeImageForVision(dataUrl, maxSize = 1280, quality = 0.78) {
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
       resolve(canvas.toDataURL("image/jpeg", quality));
     });
-    image.addEventListener("error", () => resolve(dataUrl));
+    image.addEventListener("error", () => reject(new Error("無法讀取這張照片")));
     image.src = dataUrl;
   });
 }
@@ -8646,6 +8612,7 @@ function getBaselinePhotoSignals(photoType = null) {
 }
 
 async function analyzePhotoWithVision(dataUrl, file, options = {}) {
+  latestVisionImageData = null;
   const state = getFormState();
   const photoType = options.photoType || requestedPhotoType || state.photoType;
   try {
@@ -8678,6 +8645,7 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const result = await response.json();
     latestVisionResult = result;
+    latestVisionImageData = imageData;
     updateAiPipelineSnapshot(state, { vision: result, photoType, hasImage: true });
     if (result.needsCropVerification || result.cropMismatch) {
       const selected = cropNames[state.crop] || "所选作物";
@@ -8696,6 +8664,7 @@ async function analyzePhotoWithVision(dataUrl, file, options = {}) {
     return result;
   } catch {
     latestVisionResult = null;
+    latestVisionImageData = null;
     return null;
   }
 }

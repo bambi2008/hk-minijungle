@@ -1,0 +1,256 @@
+{
+  "id": "60a0bef1-47e3-4258-a540-ed7d128c814a",
+  "prevId": "00000000-0000-0000-0000-000000000000",
+  "version": "7",
+  "dialect": "postgresql",
+  "tables": {
+    "public.fivecrop_learning_cases": {
+      "name": "fivecrop_learning_cases",
+      "schema": "",
+      "columns": {
+        "sequence": {
+          "name": "sequence",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "owner_hash": {
+          "name": "owner_hash",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "digest": {
+          "name": "digest",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "crop_key": {
+          "name": "crop_key",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "snapshot": {
+          "name": "snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "photo": {
+          "name": "photo",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "photo_ready": {
+          "name": "photo_ready",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        }
+      },
+      "indexes": {
+        "fivecrop_learning_owner_sequence": {
+          "name": "fivecrop_learning_owner_sequence",
+          "columns": [
+            {
+              "expression": "owner_hash",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "fivecrop_learning_cases_id_unique": {
+          "name": "fivecrop_learning_cases_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fivecrop_learning_events": {
+      "name": "fivecrop_learning_events",
+      "schema": "",
+      "columns": {
+        "sequence": {
+          "name": "sequence",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "case_id": {
+          "name": "case_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "digest": {
+          "name": "digest",
+          "type": "varchar(64)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "kind": {
+          "name": "kind",
+          "type": "varchar(20)",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "payload": {
+          "name": "payload",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "photo_ready": {
+          "name": "photo_ready",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "fivecrop_learning_case_events": {
+          "name": "fivecrop_learning_case_events",
+          "columns": [
+            {
+              "expression": "case_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "sequence",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "fivecrop_learning_events_case_id_fivecrop_learning_cases_id_fk": {
+          "name": "fivecrop_learning_events_case_id_fivecrop_learning_cases_id_fk",
+          "tableFrom": "fivecrop_learning_events",
+          "tableTo": "fivecrop_learning_cases",
+          "columnsFrom": [
+            "case_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "fivecrop_learning_events_id_unique": {
+          "name": "fivecrop_learning_events_id_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "id"
+          ]
+        }
+      },
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.fivecrop_learning_limits": {
+      "name": "fivecrop_learning_limits",
+      "schema": "",
+      "columns": {
+        "bucket": {
+          "name": "bucket",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "count": {
+          "name": "count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    }
+  },
+  "enums": {},
+  "schemas": {},
+  "sequences": {},
+  "roles": {},
+  "policies": {},
+  "views": {},
+  "_meta": {
+    "columns": {},
+    "schemas": {},
+    "tables": {}
+  }
+}

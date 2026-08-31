@@ -12,3 +12,5 @@ ios/FiveCrop.xcodeproj/xcuserdata/
 *.xcuserstate
 .vercel
 .env*
+.agents/
+skills-lock.json

@@ -1,6 +1,8 @@
 .env
 .env.*
 .git
+.agents
+skills-lock.json
 .ops-data
 backups
 ios

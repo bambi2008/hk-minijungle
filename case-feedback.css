@@ -1,0 +1,61 @@
+#customer-feedback-root { padding-bottom:calc(110px + env(safe-area-inset-bottom)); }
+.feedback-entry { display:flex; gap:10px; flex-wrap:wrap; margin:20px 22px 6px; }
+.feedback-entry button { border:1px solid #c9d4bb; border-radius:999px; background:#f6f8f0; color:#334929; padding:12px 17px; font:inherit; font-size:14px; min-height:44px; }
+.feedback-entry button:first-child { background:#eee9f5; border-color:#ded3ed; color:#51425d; }
+#customer-feedback-root > .feedback-micro { margin:8px 24px; }
+#customer-feedback-root [hidden] { display:none !important; }
+#feedback-dialog { width:min(94vw,560px); max-height:90dvh; padding:0; border:0; border-radius:26px; background:#fbfbf6; color:#293629; box-shadow:0 20px 80px #17251742; }
+#feedback-dialog::backdrop { background:#18251966; backdrop-filter:blur(3px); }
+.feedback-sheet { padding:26px 24px max(26px,env(safe-area-inset-bottom)); overflow-wrap:anywhere; }
+.feedback-sheet header { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:18px; }
+.feedback-sheet h2 { font-size:24px; line-height:1.3; letter-spacing:-.6px; margin:6px 0 0; }
+.feedback-eyebrow { color:#7b866f; font-size:10px; letter-spacing:1.6px; font-weight:700; }
+#feedback-close { border:0; background:#eaece1; width:40px; height:40px; border-radius:50%; font-size:26px; flex-shrink:0; color:#4a5746; }
+.feedback-sheet fieldset { border:0; padding:0; margin:22px 0; }
+.feedback-sheet legend,.feedback-field { font-size:14px; font-weight:600; }
+.feedback-chips { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+.feedback-chips label { position:relative; }
+.feedback-chips input { position:absolute; opacity:0; width:100%; height:100%; margin:0; cursor:pointer; }
+.feedback-chips span { display:block; padding:12px 14px; border:1px solid #dce1d2; border-radius:14px; background:#fff; font-size:14px; }
+.feedback-chips input:checked+span { color:#fff; border-color:#657752; background:#657752; }
+.feedback-chips input:focus-visible+span { outline:3px solid #a5af95; outline-offset:3px; }
+.feedback-field { display:grid; gap:8px; margin:20px 0; }
+.feedback-field textarea,.feedback-field select,.review-input { box-sizing:border-box; width:100%; padding:13px; border:1px solid #d9dfd0; border-radius:13px; background:white; color:#283824; font:inherit; font-size:16px; }
+.feedback-field textarea { min-height:88px; resize:vertical; font-weight:400; }
+.feedback-consent { padding:14px; border-radius:14px; background:#edf0e5; font-size:12px; line-height:1.7; }
+.feedback-consent p { margin:0 0 12px; }
+.feedback-consent label { display:flex; align-items:flex-start; gap:9px; }
+.feedback-consent input { margin-top:4px; width:19px; height:19px; flex-shrink:0; accent-color:#657752; }
+.feedback-micro { color:#707c69; font-size:12px; line-height:1.6; font-weight:400; }
+.feedback-primary { box-sizing:border-box; width:100%; border:0; border-radius:16px; padding:16px; background:#526943; color:#fff; font:inherit; font-weight:600; margin:12px 0; min-height:50px; }
+.feedback-sheet button:disabled { opacity:.55; }
+#feedback-message { font-size:13px; line-height:1.6; color:#536c42; }
+#feedback-message:empty { display:none; }
+#feedback-message.feedback-error,.feedback-warning { color:#82522c; background:#f8ecdb; padding:12px; border-radius:12px; font-size:13px; line-height:1.6; }
+.feedback-original { padding:16px; border-radius:16px; background:#f0ebf5; font-size:14px; line-height:1.6; }
+.feedback-original > span { display:block; font-size:11px; color:#81758a; }
+.feedback-original p:last-child { margin-bottom:0; }
+.feedback-history-tools { display:flex; align-items:center; gap:12px; font-size:11px; color:#798573; margin-bottom:16px; }
+.feedback-history-tools button,#feedback-more,.feedback-secondary-actions button { border:1px solid #d2d9c9; border-radius:12px; padding:10px 14px; background:transparent; color:#4a5c3e; min-height:44px; font:inherit; font-size:13px; }
+.feedback-case-card { width:100%; display:grid; gap:7px; padding:17px; text-align:left; margin-bottom:10px; background:#fff; border:1px solid #e0e5d9; border-radius:18px; color:#304529; font:inherit; }
+.feedback-case-card span { font-size:12px; color:#7a8471; }
+.feedback-case-card strong { font-size:17px; }
+.feedback-case-card small { font-size:10px; border-radius:6px; background:#eee9f5; color:#665776; padding:4px 7px; font-weight:400; }
+.feedback-empty { text-align:center; font-size:14px; line-height:1.8; color:#87907e; padding:26px 10px; }
+.feedback-case-photo { width:100%; max-height:230px; object-fit:cover; border-radius:16px; margin-bottom:12px; }
+.feedback-timeline { border-left:2px solid #d9e0cd; margin:24px 0 20px 6px; padding-left:16px; }
+.feedback-timeline article { margin-bottom:22px; }
+.feedback-timeline article > span { display:block; font-size:11px; color:#7a886f; }
+.feedback-timeline article strong { display:block; margin:7px 0; }
+.feedback-timeline article p { margin:6px 0; font-size:13px; line-height:1.6; }
+.feedback-secondary-actions { display:flex; flex-wrap:wrap; gap:10px; margin-top:14px; }
+.feedback-secondary-actions #feedback-delete { color:#8c5d4f; }
+.feedback-photo-input { display:grid; gap:12px; padding:14px; border:1px dashed #aab89a; border-radius:13px; font-size:14px; }
+.feedback-photo-input input { max-width:100%; font-size:14px; }
+.feedback-review-note { padding:12px; background:#edf0e5; border-radius:12px; font-size:13px; line-height:1.6; }
+.review-shell { max-width:780px; margin:40px auto; padding:24px; font-family:system-ui,sans-serif; }
+@media(max-width:600px) { #feedback-dialog { width:100%; max-width:100%; max-height:94dvh; margin:auto 0 0; border-radius:26px 26px 0 0; } .feedback-sheet { padding:24px 20px max(26px,env(safe-area-inset-bottom)); } }
+.review-shell { max-width: 780px; margin: auto; padding: 32px 20px; background: #faf9f5; color: #28382c; font: 16px/1.6 -apple-system, BlinkMacSystemFont, sans-serif; }
+.review-shell button { cursor: pointer; font: inherit; }
+.review-shell input:not([type=checkbox]), .review-shell textarea, .review-shell select { width: 100%; box-sizing: border-box; padding: 12px; font: inherit; }
+.review-shell [hidden] { display: none !important; }

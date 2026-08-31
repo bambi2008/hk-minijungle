@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>FiveCrop · 病例核實</title><link rel="stylesheet" href="case-feedback.css?v=20260831"></head>
+<body class="review-shell">
+  <header><p class="feedback-eyebrow">FIVECROP / HUMAN REVIEW</p><h1>讓案例經得起追問</h1><a href="/?mode=expert">返回 Ops</a></header>
+  <p>用戶猜測與改善都不是確診。請對照原照片、環境和複查，寫下支持與排除原因的證據。核實不等於已開始訓練。</p>
+  <form id="review-login"><label class="feedback-field">審核憑證<input type="password" id="review-token" required autocomplete="off"></label><button class="feedback-primary">開啟病例庫</button></form>
+  <p id="review-message" role="status"></p>
+  <section id="review-workspace" hidden><button type="button" id="review-logout">鎖定並清除本頁憑證</button><button type="button" id="review-reload">刷新病例</button><div id="review-list"></div><button type="button" id="review-more" hidden>更早病例</button></section>
+  <section id="review-detail" hidden></section>
+  <script src="case-review.js?v=20260831"></script>
+</body></html>

@@ -15,6 +15,17 @@
     "vercel:build": "node scripts/build-vercel.mjs",
     "ios:generate": "xcodegen generate --spec ios/project.yml --project ios",
     "ios:build": "sh ios/scripts/build-unsigned.sh",
-    "testflight:preflight": "node scripts/testflight-preflight.mjs"
+    "testflight:preflight": "node scripts/testflight-preflight.mjs",
+    "learning:test": "node --test tests/learning.test.mjs",
+    "learning:migrate": "drizzle-kit migrate --config=drizzle.config.mjs",
+    "learning:review-key": "node --env-file=.env.feedback.secrets.local scripts/copy-review-key.mjs"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.1.0",
+    "@vercel/blob": "^2.8.0",
+    "drizzle-orm": "^0.45.2"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }

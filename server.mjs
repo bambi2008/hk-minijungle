@@ -7,6 +7,8 @@ import { DatabaseSync } from "node:sqlite";
 import { buildGoldenPathCases, buildKnowledgeGraphView, flattenKnowledgeGraph, knowledgeGraph } from "./knowledge-graph.mjs";
 import { flattenPathologyLibrary, pathologyLibrary, pathologyStats } from "./pathology-library.mjs";
 import { buildCaseValidationSuite, caseValidationStats } from "./case-validation.mjs";
+import { learningApi } from "./learning-api.mjs";
+import { createVisionReceipt } from "./learning-domain.mjs";
 
 const root = process.cwd();
 const portArgIndex = process.argv.indexOf("--port");
@@ -2636,6 +2638,7 @@ function buildCaseTrendNotificationJobs(cases, existingJobs = [], channels, chan
 const server = createServer(async (req, res) => {
   try {
     const url = new URL(req.url || "/", `http://${host}:${port}`);
+    if (await learningApi(req, res, url)) return;
 
     if (url.pathname === "/api/integrations/status" && req.method === "GET") {
       sendJson(res, 200, await integrationStatusPayload());
@@ -2788,7 +2791,14 @@ const server = createServer(async (req, res) => {
     }
 
     if (url.pathname === "/api/vision/analyze" && req.method === "POST") {
-      sendJson(res, 200, await analyzeVisionPayload(await readJsonBody(req)));
+      const body = await readJsonBody(req);
+      const result = await analyzeVisionPayload(body);
+      result.caseReceipt = createVisionReceipt(body, result, await readEnvValue("FIVECROP_LEARNING_SECRET"));
+      if (!result.caseReceipt) console.warn(JSON.stringify({
+        event: "vision-receipt-unavailable", provider: result.provider, model: result.model,
+        reason: result.aiFallbackReason || (result.needsCropVerification || result.cropMismatch ? "crop-not-confirmed" : "receipt-not-issued")
+      }));
+      sendJson(res, 200, result);
       return;
     }
 
@@ -3053,10 +3063,14 @@ const server = createServer(async (req, res) => {
       return;
     }
 
-    const pathname = url.pathname === "/" ? "/index.html" : url.pathname;
+    const pathname = url.pathname === "/" ? "/index.html" : decodeURIComponent(url.pathname);
+    const publicFiles = new Set(["/index.html", "/app.js", "/p2-growth.js", "/styles.css", "/case-feedback.js", "/case-feedback.css", "/case-review.html", "/case-review.js", "/PUBLIC_PHOTO_TEST_GUIDE.md", "/data/public-photo-fixtures.json"]);
+    if (pathname.split("/").some((part) => part.startsWith(".")) || (!publicFiles.has(pathname) && !/^\/assets\/[\w./-]+\.(jpg|jpeg|png|webp|svg|gif|woff2?)$/i.test(pathname))) {
+      res.writeHead(404); res.end("Not found"); return;
+    }
     const filePath = normalize(join(root, pathname.replace(/^\/+/, "")));
 
-    if (!filePath.startsWith(normalize(root))) {
+    if (!filePath.startsWith(`${normalize(root)}/`)) {
       res.writeHead(403);
       res.end("Forbidden");
       return;
