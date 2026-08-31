@@ -1217,3 +1217,18 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from reserving the WiFi interface.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 83 - WiFi Interface Deployed to Hong Kong Staging
+
+- Score before: **65%**. Score after: **65%**. Staging deployment proves the interface is reachable, not that real customer WiFi devices are transmitting production data.
+- Deployment completed: commit `02bcee9` is running as image `dr-forest/ops:staging-02bcee9` in `dr-forest-ops-staging` behind `https://ops.dr-forest.net`.
+- Public verification: OPS readiness returned `200`; the deployed admin bundle contains the WiFi network transport controls; the admin page is available at `https://ops.dr-forest.net/admin.html`.
+- Bridge regression: `https://api.qiaoshenedu.com/` returned `200`; `qiaoshen-caddy-1`, `qiaoshen-app-1`, `qiaoshen-core-beta-app` and `qiaoshen-core-beta-postgres-1` remained healthy. This deployment replaced only the DR FOREST staging container and did not restart bridge application/database containers.
+- Isolation verification: `dr-forest-postgres-rehearsal` is not connected to `qiaoshen_frontend`; the previous DR FOREST staging image is retained as a stopped rollback container.
+- Honest boundary: staging still uses SQLite/local media and pilot credentials. Real device IDs, customer WiFi access, vendor adapter or MQTT gateway, signed hardware requests, live sensor/camera readings and field evidence remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 83
+
+- Production operations readiness: **65%**. No score increase is claimed from staging deployment.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
