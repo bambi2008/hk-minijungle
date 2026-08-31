@@ -1187,3 +1187,62 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from the isolated full-data rehearsal.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 81 - Admin Device Onboarding Flow Deployed to Staging
+
+- Score before: **65%**. Score after: **65%**. Making device registration available to an administrator removes a product-flow blocker, but does not prove real device connectivity or customer field operations.
+- Deployment completed: commit `46540d0` is running as `dr-forest-ops-staging` on the Hong Kong Lighthouse behind `https://ops.dr-forest.net`.
+- Admin workflow available: platform administrators and FM Leads can register or update device ID, asset/module mapping, protocol, endpoint, physical serial number, manufacturer/model, calibration interval, warranty expiry, service profile note and device-key rotation. Field technicians cannot create or edit registry records.
+- Remote verification: `https://ops.dr-forest.net/api/health/ready` returned `200`; the deployed admin bundle was found; `https://api.qiaoshenedu.com/` returned `200`; the bridge application and database containers remained healthy.
+- Isolation verification: the staging container is the only DR FOREST service on `qiaoshen_frontend`; the private PostgreSQL rehearsal container is not connected to that network. The previous staging container was retained as a stopped rollback container.
+- Honest boundary: this is still pilot staging with SQLite/local media and pilot credentials. The three real device records, signed device credentials, live sensor/camera transport, managed TencentDB PostgreSQL, off-host restore and customer field cycles remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 81
+
+- Production operations readiness: **65%**. No score increase is claimed from the staging deployment or admin workflow.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 84 - Go-Live Blocker Overview in Ops
+
+- Score before: **65%**. Score after: **65%**. Making external blockers visible in one operator view improves execution clarity, but it does not create external evidence.
+- Operator view added: the Ops homepage now renders a seven-gate go-live overview from the production evidence ledger. Each gate shows its owner, next required action and current state (`Verified`, `Awaiting review`, `Rejected`, `Expired` or `Unverified`).
+- Single source of truth: the overview is driven by `/api/production/evidence`; it does not infer readiness from local smoke tests, reserved device interfaces, simulator data or configuration placeholders. A direct link takes the operator to the evidence ledger for submission and independent review.
+- Browser evidence: the isolated Playwright Ops UI smoke passed with all seven gates rendered and the current pilot state displayed as `0/7` and `7 gates open`. Full `npm.cmd run check` also passed.
+- Honest boundary: the seven gates remain external acceptance items: managed PostgreSQL migration, off-host restore, real signed-device pilot, repeated multi-client operations, hosted monitoring, AI provider evaluation and media malware scanning. Real device connectivity remains intentionally out of scope for this step.
+
+### Current Honest Score After Step 84
+
+- Production operations readiness: **65%**. No score increase is claimed from the blocker overview.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 82 - WiFi Device Connection Contract Reserved
+
+- Score before: **65%**. Score after: **65%**. A normalized connection profile and tested ingestion contract prepare the system for hardware; they do not prove that a customer's WiFi, vendor cloud or broker is reachable.
+- Admin preparation completed: the device editor now records `wifi`, delivery protocol, reporting interval, heartbeat interval, payload schema, MQTT topic metadata and the signed OPS ingestion contract. The same normalized profile is returned by both SQLite and PostgreSQL device adapters through the existing `config_json` boundary.
+- Security boundary: TLS is enforced for physical profiles. SSIDs, WiFi passwords, access tokens and private keys are not persisted or returned by the connection profile. Device authentication remains the registered device key plus timestamp, nonce and HMAC signature.
+- Ingestion ports reserved: `POST /api/device-ingestion/readings` for temperature, humidity, CO2 and MC; `POST /api/device-ingestion/camera-captures` for camera data. MQTT-only hardware still needs a vendor cloud adapter or edge gateway to publish the signed HTTPS contract; no MQTT broker is claimed as deployed.
+- Verification completed: device ingestion smoke passed for simulator, WiFi registration, credential non-persistence and camera contract; full `npm.cmd run check` passed. The check continues to report the official **65%** score.
+- Honest boundary: real device IDs, customer WiFi access, vendor protocol credentials, signed hardware requests, live sensor/camera readings and field evidence remain external acceptance gates.
+
+### Current Honest Score After Step 82
+
+- Production operations readiness: **65%**. No score increase is claimed from reserving the WiFi interface.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 83 - WiFi Interface Deployed to Hong Kong Staging
+
+- Score before: **65%**. Score after: **65%**. Staging deployment proves the interface is reachable, not that real customer WiFi devices are transmitting production data.
+- Deployment completed: commit `02bcee9` is running as image `dr-forest/ops:staging-02bcee9` in `dr-forest-ops-staging` behind `https://ops.dr-forest.net`.
+- Public verification: OPS readiness returned `200`; the deployed admin bundle contains the WiFi network transport controls; the admin page is available at `https://ops.dr-forest.net/admin.html`.
+- Bridge regression: `https://api.qiaoshenedu.com/` returned `200`; `qiaoshen-caddy-1`, `qiaoshen-app-1`, `qiaoshen-core-beta-app` and `qiaoshen-core-beta-postgres-1` remained healthy. This deployment replaced only the DR FOREST staging container and did not restart bridge application/database containers.
+- Isolation verification: `dr-forest-postgres-rehearsal` is not connected to `qiaoshen_frontend`; the previous DR FOREST staging image is retained as a stopped rollback container.
+- Honest boundary: staging still uses SQLite/local media and pilot credentials. Real device IDs, customer WiFi access, vendor adapter or MQTT gateway, signed hardware requests, live sensor/camera readings and field evidence remain external acceptance gates. Production operations readiness remains capped at **65%**.
+
+### Current Honest Score After Step 83
+
+- Production operations readiness: **65%**. No score increase is claimed from staging deployment.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

@@ -223,6 +223,30 @@ async function loadModulePage(append = false) {
   renderModulePage(payload, append);
   return payload;
 }
+const goLiveGateMeta = Object.freeze({
+  "full-postgres-migration": { owner: "Platform / cloud", next: "Apply the complete PostgreSQL migration and capture the production preflight report." },
+  "offhost-restore-drill": { owner: "Platform / cloud", next: "Upload an encrypted backup and restore it into a separate database." },
+  "real-device-pilot": { owner: "Device / field", next: "Run one signed sensor reading and one camera capture from physical devices." },
+  "multi-client-pilot": { owner: "FM operations", next: "Complete repeated service cycles for at least two real client accounts." },
+  "monitoring-verified": { owner: "Platform / SRE", next: "Exercise alert delivery, acknowledgement and recovery on the hosted service." },
+  "ai-provider-verified": { owner: "AI / horticulture", next: "Evaluate a real vision provider with labelled captures and human review." },
+  "media-scan-verified": { owner: "Platform / security", next: "Verify the production malware-scanning path for proof and camera media." }
+});
+function goLiveStateLabel(state) { return state === "verified" ? "Verified" : state === "submitted" ? "Awaiting review" : state === "rejected" ? "Rejected" : state === "expired" ? "Expired" : "Unverified"; }
+function renderGoLiveOverview(payload = {}) {
+  const requirements = payload.requirements || [];
+  const verified = Number(payload.verifiedCount || 0);
+  const total = Number(payload.requiredCount || requirements.length);
+  const outstanding = Math.max(0, total - verified);
+  $("#go-live-state").textContent = payload.ready ? "Candidate" : `${outstanding} gate${outstanding === 1 ? "" : "s"} open`;
+  $("#go-live-summary").innerHTML = `<div><strong>${verified}/${total}</strong><span>external gates verified</span><small>Official production readiness remains 65% until all evidence and repeated operations are accepted.</small></div><a class="go-live-link" href="#release-evidence-panel">Open evidence ledger</a>`;
+  $("#go-live-list").innerHTML = requirements.length ? requirements.map((item) => {
+    const state = item.state || "missing";
+    const meta = goLiveGateMeta[item.key] || { owner: "Platform team", next: "Complete and retain dated external evidence." };
+    const detail = item.latest ? `${item.latest.submittedBy || "Unknown submitter"} · observed ${formatTime(item.latest.observedAt)}` : meta.next;
+    return `<article class="go-live-gate ${escapeHtml(state)}"><div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(meta.owner)} · ${escapeHtml(detail)}</span></div><b>${escapeHtml(goLiveStateLabel(state))}</b></article>`;
+  }).join("") : "<p class=\"empty\">No production requirements configured.</p>";
+}
 function renderEvidenceControl(storage, latest = null) { const evidence = storage.evidenceSnapshots || {}; const counts = evidence.counts || {}; const latestMeta = evidence.latestSnapshot || null; evidenceControlState.latestId = latestMeta?.id || null; $("#snapshot-state").textContent = `${Number(counts.snapshots || 0)} stored · ${Number(counts.verified || 0)} verified`; $("#snapshot-summary").innerHTML = latest ? `<div><strong>${escapeHtml(latest.snapshotId)}</strong><span>${escapeHtml(latest.signatureStatus)} · ${escapeHtml(latest.verificationStatus)} · ${escapeHtml(latest.scope)}</span><small>SHA-256 ${escapeHtml(latest.sha256.slice(0, 16))}… · expires ${escapeHtml(latest.expiresAt || "not set")}</small></div>` : latestMeta ? `<div><strong>${escapeHtml(latestMeta.id)}</strong><span>Persisted ledger record · status detail loading</span><small>SHA-256 ${escapeHtml(latestMeta.sha256.slice(0, 16))}…</small></div>` : "<p class=\"empty\">No persisted snapshot yet.</p>"; $("#verify-snapshot").disabled = !evidenceControlState.latestId; }
 function renderReleaseEvidence(payload = {}) {
   releaseEvidenceLedgerState.payload = payload;
@@ -243,6 +267,7 @@ function renderReleaseEvidence(payload = {}) {
     return `<article class="release-evidence-item"><div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.description)}</span><small>${escapeHtml(details)}</small>${artifact}</div><b class="${escapeHtml(state)}">${escapeHtml(state)}</b>${actions}</article>`;
   }).join("") : "<p class=\"empty\">No release evidence requirements configured.</p>";
   if (!$("#release-evidence-observed").value) $("#release-evidence-observed").value = remediationTimeInput(new Date());
+  renderGoLiveOverview(payload);
 }
 function contractActionFor(contract) { if (contract.status === "draft") return "activate"; if (contract.status === "active") return "suspend"; if (contract.status === "suspended") return "resume"; return null; }
 function refreshContractChangeForm() {
