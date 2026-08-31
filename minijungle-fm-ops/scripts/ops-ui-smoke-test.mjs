@@ -42,6 +42,9 @@ async function main() {
       assert(await operations.locator(".go-live-gate").count() === 7, "Operations page did not render the seven production acceptance gates");
       assert((await operations.locator("#go-live-state").textContent()).includes("7 gates open"), "Operations page did not expose the blocked go-live state");
       assert((await operations.locator("#go-live-summary").textContent()).includes("0/7"), "Operations page did not expose the external gate count");
+      assert(await operations.locator(".pilot-check").count() === 7, "Operations page did not render the seven-step pilot checklist");
+      assert((await operations.locator("#pilot-state").textContent()).includes("awaiting data"), "Operations page did not expose the pilot data boundary");
+      assert((await operations.locator("#pilot-checklist").textContent()).includes("Airtable handoff"), "Operations page did not expose the Airtable pilot step");
       assert(await operations.locator(".quality-gate").count() === 4, "Operations page did not render four quality gates");
       await operations.waitForFunction(() => document.querySelector("#health-esg-state")?.textContent !== "Loading", null, { timeout: 10000 });
       assert(await operations.locator(".health-item").count() === 4, "Operations page did not render the explainable health list");

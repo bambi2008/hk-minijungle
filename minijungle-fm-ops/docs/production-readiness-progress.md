@@ -1213,6 +1213,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Bridge safety verification: `api.qiaoshenedu.com` returned `200`; the Caddy, bridge app and core app container start timestamps remained unchanged. Only the DR FOREST staging container was replaced; the previous image remains as `dr-forest-ops-staging-prev-db8de99` for rollback.
 - Honest boundary: the seven gates remain external acceptance items: managed PostgreSQL migration, off-host restore, real signed-device pilot, repeated multi-client operations, hosted monitoring, AI provider evaluation and media malware scanning. Real device connectivity remains intentionally out of scope for this step.
 
+### Step 85 - Three-Module Pilot Launch Checklist
+
+- Score before: **65%**. Score after: **65%**. A pilot checklist improves execution control, but it is not customer field evidence and does not clear any production hard cap.
+- Operator workflow added: the Ops homepage now shows a seven-step internal pilot checklist covering scope, Airtable handoff, route plan, technician capacity, technician evidence, client proof view and ESG baseline.
+- Data-driven status: the checklist reads existing module, route, maintenance-import, workforce, capture and ESG API responses. It distinguishes `Ready` from `Awaiting data`; it does not create a fake pilot run, fake customer record or fake device reading.
+- Hardware boundary preserved: physical telemetry is deliberately excluded from the internal pilot checklist. The WiFi/device interface remains reserved, and live device connectivity is still a separate external acceptance item.
+- Verification completed: the isolated Playwright Ops UI smoke passed with all seven pilot steps rendered and the Airtable data boundary visible. Full `npm.cmd run check` passed again.
+- Honest boundary: selecting the actual three pilot modules, applying an approved Airtable export, completing technician visits, obtaining client review and generating real ESG evidence still require the pilot team and real operating data.
+
+### Current Honest Score After Step 85
+
+- Production operations readiness: **65%**. No score increase is claimed from the pilot checklist.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Current Honest Score After Step 84
 
 - Production operations readiness: **65%**. No score increase is claimed from the blocker overview.
