@@ -4,6 +4,7 @@ import { DatabaseSync } from "node:sqlite";
 import { dirname, join } from "node:path";
 import { readSqliteMasterDataset } from "./ops-master-data-store.mjs";
 import { listSqliteModules } from "./ops-module-store.mjs";
+import { normalizeDeviceConfig, normalizeDeviceConnection, validateDeviceConnection } from "./ops-device-connection.mjs";
 
 export const deviceMigrationVersion = "2026-08-17.device-ingestion-v1";
 export const deviceTypes = ["temperature", "humidity", "co2", "mc", "camera", "gateway"];
@@ -107,6 +108,7 @@ function initialize(db) {
 }
 
 function deviceFromRow(row, secret = null) {
+  const config = parseJson(row.config_json, {});
   return {
     id: row.id,
     clientId: row.client_id,
@@ -118,7 +120,8 @@ function deviceFromRow(row, secret = null) {
     status: row.status,
     endpointUrl: row.endpoint_url || null,
     capabilities: parseJson(row.capabilities_json, []),
-    config: parseJson(row.config_json, {}),
+    config,
+    connection: normalizeDeviceConnection({ protocol: row.protocol, config }),
     metadata: parseJson(row.metadata_json, {}),
     lastSeenAt: row.last_seen_at || null,
     lastIngestedAt: row.last_ingested_at || null,
@@ -173,7 +176,7 @@ async function ensureDeviceRegistrySeeded(dbPath, dataRoot) {
           const deviceConfig = deviceMap[type] || {};
           const id = deviceConfig.sensorId || deviceConfig.deviceId || `${module.id}-${type.toUpperCase()}`;
           const simulatorKey = `drf_sim_${id}`;
-          insert.run(id, module.clientId, module.assetId, module.id, type, `${module.label} ${type} simulator`, "simulator", "pending", hash(simulatorKey), null, JSON.stringify([type]), JSON.stringify({ simulator: true, generated: true }), JSON.stringify({ source: "generated-from-module-device-map", simulatorKeyHint: "drf_sim_<device-id>" }), null, null, now, now);
+          insert.run(id, module.clientId, module.assetId, module.id, type, `${module.label} ${type} simulator`, "simulator", "pending", hash(simulatorKey), null, JSON.stringify([type]), JSON.stringify(normalizeDeviceConfig({ simulator: true, generated: true }, { protocol: "simulator" })), JSON.stringify({ source: "generated-from-module-device-map", simulatorKeyHint: "drf_sim_<device-id>" }), null, null, now, now);
         }
       }
       db.exec("COMMIT");
@@ -227,11 +230,12 @@ export async function registerSqliteDevice(dbPath, dataRoot, input, { rotateKey 
       status: String(input?.status || existing?.status || "pending").trim().toLowerCase(),
       endpointUrl: input?.endpointUrl ? String(input.endpointUrl).trim() : null,
       capabilities: Array.isArray(input?.capabilities) ? input.capabilities : [type],
-      config: input?.config && typeof input.config === "object" ? input.config : {},
+      config: normalizeDeviceConfig(input?.config, { protocol, connection: input?.connection }),
       metadata: input?.metadata && typeof input.metadata === "object" ? input.metadata : {},
       createdAt: existing?.created_at || now,
       updatedAt: now
     };
+    validateDeviceConnection(record.config.connection, { protocol });
     if (!deviceStatuses.includes(record.status)) throw error(`device.status must be one of ${deviceStatuses.join(", ")}`);
     try {
       db.prepare(`
@@ -279,12 +283,14 @@ export async function updateSqliteDevice(dbPath, dataRoot, id, input) {
   const now = new Date().toISOString();
   const secret = input?.rotateKey ? `drf_dev_${randomBytes(24).toString("base64url")}` : null;
   return withDatabase(dbPath, (db) => {
+    const config = normalizeDeviceConfig(input?.config && typeof input.config === "object" ? input.config : existing.config, { protocol, connection: input?.connection });
+    validateDeviceConnection(config.connection, { protocol });
     db.prepare(`
       UPDATE asset_devices
       SET wall_id = ?, module_id = ?, type = ?, label = ?, protocol = ?, status = ?,
           device_key_hash = COALESCE(?, device_key_hash), endpoint_url = ?, capabilities_json = ?, config_json = ?, metadata_json = ?, updated_at = ?
       WHERE id = ?
-    `).run(wall.id, module?.id || null, type, String(input?.label || existing.label).trim(), protocol, status, secret ? hash(secret) : null, input?.endpointUrl === undefined ? existing.endpointUrl : (input.endpointUrl ? String(input.endpointUrl).trim() : null), JSON.stringify(Array.isArray(input?.capabilities) ? input.capabilities : existing.capabilities), JSON.stringify(input?.config && typeof input.config === "object" ? input.config : existing.config), JSON.stringify(input?.metadata && typeof input.metadata === "object" ? input.metadata : existing.metadata), now, id);
+    `).run(wall.id, module?.id || null, type, String(input?.label || existing.label).trim(), protocol, status, secret ? hash(secret) : null, input?.endpointUrl === undefined ? existing.endpointUrl : (input.endpointUrl ? String(input.endpointUrl).trim() : null), JSON.stringify(Array.isArray(input?.capabilities) ? input.capabilities : existing.capabilities), JSON.stringify(config), JSON.stringify(input?.metadata && typeof input.metadata === "object" ? input.metadata : existing.metadata), now, id);
     return { duplicate: false, rotated: Boolean(secret), device: deviceFromRow(db.prepare("SELECT * FROM asset_devices WHERE id = ?").get(id), secret) };
   });
 }

@@ -1202,3 +1202,18 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from the staging deployment or admin workflow.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 82 - WiFi Device Connection Contract Reserved
+
+- Score before: **65%**. Score after: **65%**. A normalized connection profile and tested ingestion contract prepare the system for hardware; they do not prove that a customer's WiFi, vendor cloud or broker is reachable.
+- Admin preparation completed: the device editor now records `wifi`, delivery protocol, reporting interval, heartbeat interval, payload schema, MQTT topic metadata and the signed OPS ingestion contract. The same normalized profile is returned by both SQLite and PostgreSQL device adapters through the existing `config_json` boundary.
+- Security boundary: TLS is enforced for physical profiles. SSIDs, WiFi passwords, access tokens and private keys are not persisted or returned by the connection profile. Device authentication remains the registered device key plus timestamp, nonce and HMAC signature.
+- Ingestion ports reserved: `POST /api/device-ingestion/readings` for temperature, humidity, CO2 and MC; `POST /api/device-ingestion/camera-captures` for camera data. MQTT-only hardware still needs a vendor cloud adapter or edge gateway to publish the signed HTTPS contract; no MQTT broker is claimed as deployed.
+- Verification completed: device ingestion smoke passed for simulator, WiFi registration, credential non-persistence and camera contract; full `npm.cmd run check` passed. The check continues to report the official **65%** score.
+- Honest boundary: real device IDs, customer WiFi access, vendor protocol credentials, signed hardware requests, live sensor/camera readings and field evidence remain external acceptance gates.
+
+### Current Honest Score After Step 82
+
+- Production operations readiness: **65%**. No score increase is claimed from reserving the WiFi interface.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

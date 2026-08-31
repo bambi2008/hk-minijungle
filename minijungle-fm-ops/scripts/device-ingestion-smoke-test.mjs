@@ -72,7 +72,18 @@ async function verifyDevicePorts(baseUrl) {
   });
   assert(registeredTemperature.response.status === 201, "Temperature device registration did not return 201");
   assert(registeredTemperature.body.device.deviceKey, "Temperature device key was not returned once at registration");
+  assert(registeredTemperature.body.device.connection?.transport === "simulator", "Simulator device connection transport was not normalized");
   const temperatureKey = registeredTemperature.body.device.deviceKey;
+
+  const wifiId = `DEVICE-${suffix}-WIFI`;
+  const registeredWifi = await request(baseUrl, "/api/admin/devices", {
+    method: "POST",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({ id: wifiId, wallId: module.assetId, moduleId: module.id, type: "humidity", label: "Smoke WiFi sensor", protocol: "http-push", status: "pending", endpointUrl: "https://ops.example.test/api/device-ingestion/readings", connection: { transport: "wifi", reportingIntervalSeconds: 60, heartbeatIntervalSeconds: 300, payloadSchema: "dr-forest-v1", mqttTopic: "site/module/humidity", ssid: "must-not-persist", password: "must-not-persist" } })
+  });
+  assert(registeredWifi.response.status === 201, "WiFi device registration did not return 201");
+  assert(registeredWifi.body.device.connection?.transport === "wifi" && registeredWifi.body.device.connection.reportingIntervalSeconds === 60, "WiFi connection profile was not persisted");
+  assert(!JSON.stringify(registeredWifi.body).includes("must-not-persist"), "WiFi credentials leaked into the device response");
 
   const deviceList = await request(baseUrl, `/api/devices?moduleId=${encodeURIComponent(module.id)}`, { headers: principalHeaders("fm-lead") });
   assert(deviceList.response.ok, "Device registry list failed");
@@ -100,6 +111,7 @@ async function verifyDevicePorts(baseUrl) {
     body: JSON.stringify({ id: cameraId, wallId: module.assetId, moduleId: module.id, type: "camera", label: "Smoke module camera", protocol: "camera-http", status: "active" })
   });
   assert(registeredCamera.response.status === 201 && registeredCamera.body.device.deviceKey, "Camera device registration did not return a device key");
+  assert(registeredCamera.body.device.connection?.transport === "wifi" && registeredCamera.body.device.connection.ingestionContract === "/api/device-ingestion/camera-captures", "Camera WiFi connection contract was not normalized");
   const cameraKey = registeredCamera.body.device.deviceKey;
 
   const capture = await request(baseUrl, "/api/device-ingestion/camera-captures", {
