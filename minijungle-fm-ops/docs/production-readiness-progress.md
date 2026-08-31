@@ -1220,6 +1220,8 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Data-driven status: the checklist reads existing module, route, maintenance-import, workforce, capture and ESG API responses. It distinguishes `Ready` from `Awaiting data`; it does not create a fake pilot run, fake customer record or fake device reading.
 - Hardware boundary preserved: physical telemetry is deliberately excluded from the internal pilot checklist. The WiFi/device interface remains reserved, and live device connectivity is still a separate external acceptance item.
 - Verification completed: the isolated Playwright Ops UI smoke passed with all seven pilot steps rendered and the Airtable data boundary visible. Full `npm.cmd run check` passed again.
+- Staging deployment completed: pushed commit `d0a2ea8` is running as image `dr-forest/ops:staging-d0a2ea8` in `dr-forest-ops-staging` behind `https://ops.dr-forest.net`. The remote health check returned `ops_ready=200`; the local page check found `Three-module test run`.
+- Deployment safety evidence: the isolated canary returned `ready=200`, page `200` and `pilot=true`; the public browser rendered `pilotState=4 steps awaiting data` with `7` checklist rows and the go-live overview. `ops_https=200` and `bridge_api=200`; Caddy, bridge app and core app start timestamps remained unchanged. The previous staging image is retained as `dr-forest-ops-staging-prev-d0a2ea8` for rollback.
 - Honest boundary: selecting the actual three pilot modules, applying an approved Airtable export, completing technician visits, obtaining client review and generating real ESG evidence still require the pilot team and real operating data.
 
 ### Current Honest Score After Step 85
