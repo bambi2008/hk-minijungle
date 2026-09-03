@@ -10031,11 +10031,19 @@ localeButtons.forEach((button) => {
 customerCameraBtn?.addEventListener("click", (event) => {
   if (event.target === plantPhoto) return;
   event.preventDefault();
+  if (nativeFileCapturePreferred()) {
+    openGuidedPhotoUpload();
+    return;
+  }
   openNativeCamera();
 });
 customerCameraBtn?.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" && event.key !== " ") return;
   event.preventDefault();
+  if (nativeFileCapturePreferred()) {
+    openGuidedPhotoUpload();
+    return;
+  }
   openNativeCamera();
 });
 customerCheckPlantBtn?.addEventListener("click", handleCustomerPrimaryAction);
@@ -10283,6 +10291,11 @@ function nativeCameraSupported() {
   return Boolean(navigator.mediaDevices?.getUserMedia && nativeCameraVideo && nativeCameraCanvas);
 }
 
+function nativeFileCapturePreferred() {
+  const userAgent = String(navigator.userAgent || "");
+  return /FiveCrop-iOS|iPhone|iPad|iPod/i.test(userAgent);
+}
+
 function stopNativeCamera() {
   if (nativeCameraStream) {
     nativeCameraStream.getTracks().forEach((track) => track.stop());
@@ -10344,7 +10357,13 @@ async function captureNativeCameraFrame() {
   await processPlantPhotoDataUrl(dataUrl, { name: `camera-${photoType}-${Date.now()}.jpg` }, { source: "camera" });
 }
 
-quickPhotoBtn.addEventListener("click", openNativeCamera);
+quickPhotoBtn.addEventListener("click", () => {
+  if (document.body.classList.contains("customer-mode") && nativeFileCapturePreferred()) {
+    openGuidedPhotoUpload();
+    return;
+  }
+  openNativeCamera();
+});
 nativeCameraBtn?.addEventListener("click", openNativeCamera);
 nativeCameraShotBtn?.addEventListener("click", captureNativeCameraFrame);
 nativeCameraCloseBtn?.addEventListener("click", stopNativeCamera);
@@ -10355,6 +10374,10 @@ followupLoopUploadBtn.addEventListener("click", openFollowupUpload);
 
 async function runCustomerPrimaryAction(action) {
   if (action === "guided-photo") {
+    if (nativeFileCapturePreferred()) {
+      openGuidedPhotoUpload();
+      return;
+    }
     openNativeCamera();
     return;
   }
