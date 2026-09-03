@@ -1274,7 +1274,9 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Performance boundary: field-service ledger reads now load in the background so the primary operations dashboard and dispatch refresh are not held by the auxiliary ledger request. Ledger failures are surfaced in its own notice area.
 - Reliability test correction: the reliability smoke fixture now accepts a deterministic registration timestamp. This changes test determinism only; the production watchdog policy is unchanged.
 - Verification completed: full `npm.cmd run check` passed, including the updated Playwright Ops UI smoke. The UI smoke validated the form, template endpoint and a valid Airtable-style preview row without importing test data.
-- Deployment status: pending the Step 86 staging deployment and public browser verification.
+- Staging deployment completed: pushed commit `ba9bc9d` is running as image `dr-forest/ops:staging-ba9bc9d` in `dr-forest-ops-staging` behind `https://ops.dr-forest.net`.
+- Deployment safety evidence: the isolated no-network canary passed syntax and `/api/health`; the new container returned local readiness `200`, public readiness `200` and the public browser found the field-service import form, Airtable template link, pilot checklist and go-live overview. The previous staging container is retained as `dr-forest-ops-staging-prev-ba9bc9d` for rollback.
+- Bridge safety verification: `https://api.qiaoshenedu.com/` returned `200`, and the Caddy, bridge app and core app container start timestamps were identical before and after the cutover. Only the DR FOREST staging container was replaced.
 - Honest boundary: an actual Airtable export, real field-service cycles, technician evidence, client review, managed TencentDB PostgreSQL, off-host restore, production identity, signed devices and managed media remain external acceptance gates. Production operations readiness remains **65%**.
 
 ### Current Honest Score After Step 86
