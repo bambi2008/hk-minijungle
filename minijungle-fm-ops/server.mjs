@@ -3397,6 +3397,29 @@ async function handleApi(req, res, pathname) {
       return;
     }
 
+    if (req.method === "GET" && pathname === "/api/admin/imports/field-service/template.csv") {
+      requirePermission(auth, "master.data.import");
+      sendCsv(res, "dr-forest-airtable-field-service-template.csv", "cycle_id,client_id,work_order_id,module_id,technician_id,service_at,status,duration_minutes,proof_refs,outcome,notes\n");
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/admin/field-service/cycles/preview") {
+      requirePermission(auth, "master.data.import");
+      const input = await readJsonBody(req, 2 * 1024 * 1024);
+      const filename = String(input.filename || "airtable-field-service.csv").trim();
+      if (!filename.toLowerCase().endsWith(".csv")) throw validationError("field-service import filename must end with .csv", "FIELD_CYCLE_IMPORT_FILE_INVALID");
+      let normalized;
+      try {
+        normalized = normalizeFieldCycleCsv(input.csv);
+        for (const cycle of normalized.cycles) requireClientAccess(auth, cycle.clientId, "field-service import preview");
+      } catch (error) {
+        if (error.status) throw error;
+        throw validationError(error.message, "FIELD_CYCLE_IMPORT_PARSE_FAILED");
+      }
+      sendJson(res, 200, { filename, ...normalized, gate: validateFieldCycleEvidence({ cycles: normalized.cycles }) });
+      return;
+    }
+
     if (req.method === "GET" && pathname === "/api/admin/imports/maintenance") {
       requirePermission(auth, "master.data.write");
       const url = new URL(req.url, `http://${host}:${port}`);

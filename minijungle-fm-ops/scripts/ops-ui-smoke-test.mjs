@@ -151,6 +151,13 @@ async function main() {
       await operations.waitForFunction(() => document.querySelector("#maintenance-notice")?.textContent.includes("phone route"), null, { timeout: 10000 });
       assert((await operations.locator("#maintenance-plan-list").textContent()).includes("field-tech-show-suite"), "Preventive work order did not persist its technician assignment");
       assert((await operations.locator("#import-state").textContent()).includes("No preview"), "Operations page did not load the maintenance import control");
+      assert(await operations.locator("#field-cycle-import-form").count() === 1, "Operations page did not render the Airtable field-service cycle import control");
+      const fieldCycleTemplate = await fetch(baseUrl + "/api/admin/imports/field-service/template.csv", { headers: { "x-dr-forest-principal": "fm-lead" } });
+      assert(fieldCycleTemplate.ok && (await fieldCycleTemplate.text()).includes("cycle_id,client_id,work_order_id"), "Field-service CSV template endpoint did not return the required columns");
+      const fieldCycleCsv = "cycle_id,client_id,work_order_id,module_id,technician_id,service_at,status,duration_minutes,proof_refs,outcome,notes\nui-cycle-001,show-suite,WO-1047,MJ-HK-021-M01,field-tech-show-suite,2026-08-29T09:00:00+08:00,completed,45,evidence://ui-cycle-001,Completed,UI field-service preview\n";
+      const fieldCyclePreviewResponse = await fetch(baseUrl + "/api/admin/field-service/cycles/preview", { method: "POST", headers: { "Content-Type": "application/json", "x-dr-forest-principal": "fm-lead" }, body: JSON.stringify({ filename: "airtable-ui-cycle.csv", csv: fieldCycleCsv }) });
+      const fieldCyclePreview = await fieldCyclePreviewResponse.json();
+      assert(fieldCyclePreviewResponse.ok && fieldCyclePreview.validRows === 1 && fieldCyclePreview.invalidRows === 0, "Field-service CSV preview did not validate a valid Airtable row");
       const maintenanceCsv = "record_id,wall_id,service_date,status,priority,technician_id,tasks,notes,updated_at\nui-maint-001,MJ-HK-021,2026-08-29,Completed,medium,field-tech-show-suite,Water check;Photo capture,UI import smoke,2026-08-29T09:00:00+08:00\n";
       await operations.locator("#maintenance-import-file").setInputFiles({ name: "airtable-ui-smoke.csv", mimeType: "text/csv", buffer: Buffer.from(maintenanceCsv) });
       await operations.locator("#maintenance-import-preview").click();

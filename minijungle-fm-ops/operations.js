@@ -13,6 +13,7 @@ const deviceCareState = { records: [] };
 const contractState = { overview: null };
 const releaseEvidenceLedgerState = { payload: null };
 const moduleQueryState = { search: "", status: "", cursor: null, total: 0, hasMore: false, items: [] };
+const fieldCycleImportState = { preview: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body.error || `Request failed (${response.status})`); error.code = body.code; error.details = body.details; throw error; } return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -157,6 +158,22 @@ function renderMaintenancePreview(batch) {
   $("#import-state").textContent = `${batch.validCount} valid · ${batch.invalidCount} invalid`;
   $("#maintenance-import-result").innerHTML = `<strong>${escapeHtml(batch.sourceFilename)} · ${escapeHtml(batch.rowCount)} rows</strong><span>${escapeHtml(batch.validCount)} ready to import · ${escapeHtml(batch.invalidCount)} blocked</span>${batch.errors?.length ? `<span class="import-error">${escapeHtml(batch.errors.slice(0, 3).map((item) => `Row ${item.rowNumber}: ${item.messages.join("; ")}`).join(" · "))}</span>` : ""}`;
   $("#maintenance-import-apply").disabled = batch.status === "applied" || Number(batch.invalidCount) > 0;
+}
+function renderFieldServiceCycles(payload = {}) {
+  const cycles = payload.cycles || [];
+  const gate = payload.gate || {};
+  const preview = fieldCycleImportState.preview;
+  let html = "";
+  if (preview) {
+    html = "<strong>" + escapeHtml(preview.filename) + " · " + escapeHtml(preview.totalRows) + " rows</strong><span>" + escapeHtml(preview.validRows) + " valid · " + escapeHtml(preview.invalidRows) + " blocked · " + escapeHtml(preview.gate?.status || "syntax checked") + "</span>";
+    if (preview.errors?.length) html += "<span class=\"import-error\">" + escapeHtml(preview.errors.slice(0, 3).map((item) => "Row " + item.rowNumber + ": " + item.messages.join("; ")).join(" | ")) + "</span>";
+  } else if (cycles.length) {
+    html = "<strong>" + escapeHtml(cycles.length) + " field-service cycle" + (cycles.length === 1 ? "" : "s") + " in ledger</strong><span>Evidence gate: " + escapeHtml(gate.status || "not evaluated") + " · " + escapeHtml(gate.completedCount || 0) + " completed · " + escapeHtml(gate.clientCount || 0) + " clients</span>";
+  } else {
+    html = "<p class=\"empty\">No field-service cycles imported yet.</p>";
+  }
+  $("#field-cycle-import-result").innerHTML = html;
+  $("#field-cycle-import-apply").disabled = !preview || Number(preview.invalidRows) > 0 || Number(preview.validRows) < 1;
 }
 function renderTimeline(timeline = {}) {
   const events = timeline.events || [];
@@ -345,6 +362,14 @@ async function load() {
   if (!$("#esg-period-start").value) $("#esg-period-start").value = localDateValue(new Date(Date.now() - 90 * 86400000));
   if (!$("#esg-observation-at").value) $("#esg-observation-at").value = remediationTimeInput(new Date());
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
+  const fieldCyclesPromise = api("/api/field-service/cycles?limit=100").then((payload) => {
+    renderFieldServiceCycles(payload);
+    return payload;
+  }).catch((error) => {
+    renderFieldServiceCycles();
+    $("#field-cycle-import-notice").textContent = `Field-service ledger unavailable: ${error.message}`;
+    return null;
+  });
   const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle, serviceContracts, releaseEvidence, healthReport, esgLedger, esgObservations] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle"), api("/api/service-contracts"), api("/api/production/evidence"), api("/api/ops/health"), api(`/api/esg/ledger?periodStart=${encodeURIComponent(new Date(`${$("#esg-period-start").value}T00:00:00.000Z`).toISOString())}&periodEnd=${encodeURIComponent(new Date(`${$("#esg-period-end").value}T23:59:59.999Z`).toISOString())}`), api("/api/esg/observations?limit=20")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
@@ -376,6 +401,7 @@ async function load() {
   renderEsgLedger(esgLedger, esgObservations.observations || []);
   renderEsgObservationScope(serviceContracts);
   renderMaintenanceImports(maintenanceImports);
+  void fieldCyclesPromise;
   renderReleaseEvidence(releaseEvidence);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
@@ -520,6 +546,8 @@ $("#contract-change-form").onsubmit = async (event) => {
     await load(); $("#contract-change").open = false; $("#contract-change-note").value = ""; $("#contract-notice").textContent = `${result.change.requestType} request recorded for ${contract.contractNumber}.`;
   } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
 };
+$("#field-cycle-import-form").onsubmit = async (event) => { event.preventDefault(); const file = $("#field-cycle-import-file").files[0]; if (!file) return; const button = $("#field-cycle-import-preview"); button.disabled = true; $("#field-cycle-import-notice").textContent = "Checking field-service rows and client scope…"; try { const csv = await file.text(); const result = await api("/api/admin/field-service/cycles/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, csv }) }); fieldCycleImportState.preview = { ...result, filename: file.name, csv }; renderFieldServiceCycles({ cycles: [], gate: result.gate }); $("#field-cycle-import-notice").textContent = result.invalidRows ? "Preview blocked. Fix every row before applying." : "Preview stored. Apply writes only the validated rows."; } catch (error) { fieldCycleImportState.preview = null; renderFieldServiceCycles(); $("#field-cycle-import-notice").textContent = error.message; } finally { button.disabled = false; } };
+$("#field-cycle-import-apply").onclick = async () => { const preview = fieldCycleImportState.preview; if (!preview?.csv) return; const button = $("#field-cycle-import-apply"); button.disabled = true; $("#field-cycle-import-notice").textContent = "Applying field-service cycles after relationship checks…"; try { const result = await api("/api/admin/field-service/cycles/import", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ filename: preview.filename, csv: preview.csv }) }); fieldCycleImportState.preview = null; await load(); $("#field-cycle-import-notice").textContent = result.total + " field-service cycle" + (result.total === 1 ? "" : "s") + " imported into the operational ledger."; } catch (error) { $("#field-cycle-import-notice").textContent = error.message; button.disabled = false; } };
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-release-evidence-review]");
   if (!button) return;

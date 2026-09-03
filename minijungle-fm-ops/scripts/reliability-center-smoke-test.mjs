@@ -13,7 +13,7 @@ try {
   await seedSqliteReliabilityJobs(dbPath, [
     { jobName: "test-delivery", label: "Test delivery", expectedIntervalSeconds: 60, staleAfterSeconds: 120 },
     { jobName: "test-scan", label: "Test scan", expectedIntervalSeconds: 60, staleAfterSeconds: 120 }
-  ]);
+  ], { registeredAt: at(0) });
 
   const first = await beginSqliteReliabilityRun(dbPath, { id: "RUN-DELIVERY-1", jobName: "test-delivery", ownerId: "worker-a", startedAt: at(0) });
   assert(first.run.status === "running", "Job did not enter running state");

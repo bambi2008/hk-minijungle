@@ -1265,3 +1265,20 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. No score increase is claimed from staging deployment.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 86 - Airtable Field-Service Cycle Import UI
+
+- Score before: **65%**. Score after: **65%**. Bringing the field-service ledger into the Ops UI removes a CLI workflow blocker, but it does not create real service evidence or clear the managed production hard caps.
+- Operator workflow added: Maintenance History now includes a concise field-service cycle import section with a downloadable Airtable CSV template, preview-only validation, client-scope checks and an Apply action that uses the existing relationship-validated import path.
+- Data boundary: preview never writes; Apply validates the current client, work-order and module relationships before persisting. No customer cycle, technician visit, device reading or proof record was fabricated.
+- Performance boundary: field-service ledger reads now load in the background so the primary operations dashboard and dispatch refresh are not held by the auxiliary ledger request. Ledger failures are surfaced in its own notice area.
+- Reliability test correction: the reliability smoke fixture now accepts a deterministic registration timestamp. This changes test determinism only; the production watchdog policy is unchanged.
+- Verification completed: full `npm.cmd run check` passed, including the updated Playwright Ops UI smoke. The UI smoke validated the form, template endpoint and a valid Airtable-style preview row without importing test data.
+- Deployment status: pending the Step 86 staging deployment and public browser verification.
+- Honest boundary: an actual Airtable export, real field-service cycles, technician evidence, client review, managed TencentDB PostgreSQL, off-host restore, production identity, signed devices and managed media remain external acceptance gates. Production operations readiness remains **65%**.
+
+### Current Honest Score After Step 86
+
+- Production operations readiness: **65%**. No score increase is claimed from the import UI or local verification.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
