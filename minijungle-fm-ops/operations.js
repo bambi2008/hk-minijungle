@@ -233,6 +233,28 @@ const goLiveGateMeta = Object.freeze({
   "media-scan-verified": { owner: "Platform / security", next: "Verify the production malware-scanning path for proof and camera media." }
 });
 function goLiveStateLabel(state) { return state === "verified" ? "Verified" : state === "submitted" ? "Awaiting review" : state === "rejected" ? "Rejected" : state === "expired" ? "Expired" : "Unverified"; }
+function pilotCheckStateLabel(state) { return state === "ready" ? "Ready" : state === "deferred" ? "Deferred" : "Awaiting data"; }
+function renderPilotChecklist({ modules = {}, route = {}, maintenanceImports = {}, workforce = {}, captures = {}, esgLedger = {} } = {}) {
+  const moduleTotal = Number(modules.page?.total ?? modules.modules?.length ?? 0);
+  const imports = maintenanceImports.batches || [];
+  const candidates = workforce.candidates || [];
+  const captureBatches = captures.batches || [];
+  const syncedCaptures = captureBatches.filter((item) => item.syncStatus === "synced");
+  const checks = [
+    { label: "Pilot scope", detail: moduleTotal >= 3 ? `${moduleTotal} modules in catalogue · select three in Admin.` : "At least three modules are needed before the pilot can start.", state: moduleTotal >= 3 ? "ready" : "awaiting" },
+    { label: "Airtable handoff", detail: imports.some((item) => item.status === "applied") ? "An applied maintenance import is available for the test run." : "Waiting for the first approved Airtable maintenance export.", state: imports.some((item) => item.status === "applied") ? "ready" : "awaiting" },
+    { label: "Route plan", detail: route.route?.length ? `${route.route.length} route stops are available for assignment.` : "Generate or assign the first pilot route.", state: route.route?.length ? "ready" : "awaiting" },
+    { label: "Technician capacity", detail: candidates.some((item) => item.eligible) ? "At least one eligible technician is available." : "No eligible technician is currently available for the selected date.", state: candidates.some((item) => item.eligible) ? "ready" : "awaiting" },
+    { label: "Technician evidence", detail: captureBatches.length ? `${captureBatches.length} field capture batch${captureBatches.length === 1 ? "" : "es"} recorded.` : "Waiting for the first technician capture.", state: captureBatches.length ? "ready" : "awaiting" },
+    { label: "Client proof view", detail: syncedCaptures.length ? `${syncedCaptures.length} synced capture batch${syncedCaptures.length === 1 ? "" : "es"} can be checked in the client portal.` : "Client proof is waiting for a synced field capture.", state: syncedCaptures.length ? "ready" : "awaiting" },
+    { label: "ESG baseline", detail: esgLedger.status === "complete" ? "The selected period has a complete ESG ledger." : "Generate the ESG period ledger after the pilot evidence is recorded.", state: esgLedger.status === "complete" ? "ready" : "awaiting" }
+  ];
+  const ready = checks.filter((item) => item.state === "ready").length;
+  const waiting = checks.filter((item) => item.state === "awaiting").length;
+  $("#pilot-state").textContent = waiting ? `${waiting} steps awaiting data` : "Ready to run";
+  $("#pilot-summary").innerHTML = `<div><strong>${ready}/${checks.length}</strong><span>pilot steps ready</span><small>${waiting ? "The next inputs are Airtable rows and technician evidence." : "The internal pilot checklist is complete."}</small></div><a class="pilot-link" href="#release-evidence-panel">Production gates stay separate</a>`;
+  $("#pilot-checklist").innerHTML = checks.map((item) => `<article class="pilot-check ${escapeHtml(item.state)}"><div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span></div><b>${escapeHtml(pilotCheckStateLabel(item.state))}</b></article>`).join("");
+}
 function renderGoLiveOverview(payload = {}) {
   const requirements = payload.requirements || [];
   const verified = Number(payload.verifiedCount || 0);
@@ -335,6 +357,7 @@ async function load() {
   $("#reminder-list").innerHTML = reminders.items?.length ? reminders.items.slice(0, 8).map((item) => `<article class="reminder ${item.priority === "high" || item.priority === "critical" ? "urgent" : ""}"><div><strong>${escapeHtml(item.title)}</strong><span>${escapeHtml(item.reason)}</span><small>${escapeHtml(item.due || "Scheduled")}</small></div><a href="${escapeHtml(item.mobileAction?.path || "mobile.html")}">Start</a></article>`).join("") : "<p>No open reminders.</p>";
   $("#route-list").innerHTML = route.route?.length ? route.route.map((stop) => `<article class="route-item"><div><strong>${escapeHtml(stop.assetName || stop.asset?.name || stop.wallId)}</strong><span>${escapeHtml(stop.workOrderId)} · ${escapeHtml(stop.due || "Scheduled")} · ${stop.modules?.length || 0} modules</span></div><a href="mobile.html?workOrderId=${encodeURIComponent(stop.workOrderId)}&wallId=${encodeURIComponent(stop.wallId)}">Open</a></article>`).join("") : "<p>No assigned stops today.</p>";
   renderModulePage(modules);
+  renderPilotChecklist({ modules, route, maintenanceImports, workforce, captures, esgLedger });
   renderAlerts(alerts.alerts || [], route.route || []);
   renderAiQueue(diagnoses.diagnoses || []);
   renderCaptures(captures.batches || []);
