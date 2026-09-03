@@ -10028,7 +10028,16 @@ customerInternalBtn?.addEventListener("click", () => {
 localeButtons.forEach((button) => {
   button.addEventListener("click", () => setLocale(button.dataset.localeOption));
 });
-customerCameraBtn?.addEventListener("click", openNativeCamera);
+customerCameraBtn?.addEventListener("click", (event) => {
+  if (event.target === plantPhoto) return;
+  event.preventDefault();
+  openNativeCamera();
+});
+customerCameraBtn?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" && event.key !== " ") return;
+  event.preventDefault();
+  openNativeCamera();
+});
 customerCheckPlantBtn?.addEventListener("click", handleCustomerPrimaryAction);
 customerBackBtn?.addEventListener("click", resetCustomerPlantDossier);
 customerPrivacyTopBtn?.addEventListener("click", () => {

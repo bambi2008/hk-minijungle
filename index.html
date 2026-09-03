@@ -28,15 +28,16 @@
 
       <div class="customer-app-content">
         <section class="customer-photo-stage" aria-labelledby="customer-photo-title">
-          <button type="button" id="customer-camera-btn" class="customer-photo-frame" aria-label="Take or upload a plant photo">
+          <label id="customer-camera-btn" class="customer-photo-frame" for="plantPhoto" role="button" tabindex="0" aria-label="Take or upload a plant photo">
             <img id="customer-stage-photo" src="assets/tomato-diagnosis-preview.jpg" alt="Dwarf tomato plant beside an apartment window">
+            <input type="file" id="plantPhoto" name="plantPhoto" accept="image/*" capture="environment" class="customer-photo-input">
             <span id="customer-photo-status-label" class="customer-photo-status-label">Example</span>
             <span class="customer-camera-guide" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
             <span id="customer-analysis-state" class="customer-analysis-state" aria-live="polite">
               <span class="customer-analysis-spinner" aria-hidden="true"></span>
               Checking photo quality...
             </span>
-          </button>
+          </label>
           <div class="customer-crop-rail" role="group" aria-label="Choose your crop">
             <button type="button" class="customer-crop-option active" data-crop-choice="tomato" aria-pressed="true"><span class="customer-crop-photo crop-tomato"></span><strong>Tomato</strong></button>
             <button type="button" class="customer-crop-option" data-crop-choice="basil" aria-pressed="false"><span class="customer-crop-photo crop-basil"></span><strong>Basil</strong></button>
@@ -269,7 +270,6 @@
 
         <label class="wide photo-box">
           植株照片
-          <input type="file" id="plantPhoto" name="plantPhoto" accept="image/*" capture="environment" class="native-photo-input">
           <span id="photoHint">上传叶片、花序或根区照片后，系统会自动提取基础线索；也可以直接选择主要困扰。</span>
           <strong id="auto-photo-type-badge" class="auto-photo-type-badge">等待自动识别</strong>
           <img id="photoPreview" alt="植株照片预览">
