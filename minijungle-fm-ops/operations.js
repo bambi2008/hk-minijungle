@@ -13,7 +13,7 @@ const deviceCareState = { records: [] };
 const contractState = { overview: null };
 const releaseEvidenceLedgerState = { payload: null };
 const moduleQueryState = { search: "", status: "", cursor: null, total: 0, hasMore: false, items: [] };
-const fieldCycleImportState = { preview: null };
+const fieldCycleImportState = { preview: null, loaded: false, request: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body.error || `Request failed (${response.status})`); error.code = body.code; error.details = body.details; throw error; } return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -174,6 +174,21 @@ function renderFieldServiceCycles(payload = {}) {
   }
   $("#field-cycle-import-result").innerHTML = html;
   $("#field-cycle-import-apply").disabled = !preview || Number(preview.invalidRows) > 0 || Number(preview.validRows) < 1;
+}
+function refreshFieldServiceCycles(force = false) {
+  if (fieldCycleImportState.request) return fieldCycleImportState.request;
+  if (fieldCycleImportState.loaded && !force) return Promise.resolve();
+  const request = api("/api/field-service/cycles?limit=100").then((payload) => {
+    fieldCycleImportState.loaded = true;
+    renderFieldServiceCycles(payload);
+  }).catch((error) => {
+    renderFieldServiceCycles();
+    $("#field-cycle-import-notice").textContent = "Field-service ledger unavailable: " + error.message;
+  }).finally(() => {
+    if (fieldCycleImportState.request === request) fieldCycleImportState.request = null;
+  });
+  fieldCycleImportState.request = request;
+  return request;
 }
 function renderTimeline(timeline = {}) {
   const events = timeline.events || [];
@@ -352,7 +367,14 @@ function renderServiceContracts(payload = {}) {
     return `<article class="contract-item"><div><strong>${escapeHtml(contract.contractNumber)} · ${escapeHtml(contract.planName)}</strong><span>${escapeHtml(client?.name || contract.clientId)} · ${contract.wallIds.length} asset${contract.wallIds.length === 1 ? "" : "s"}</span><small>${escapeHtml(contract.startDate)} to ${escapeHtml(contract.endDate)} · ${fee}/month · ${contract.visitsPerMonth} visit${contract.visitsPerMonth === 1 ? "" : "s"}</small></div><div><strong>Service ${escapeHtml(contract.serviceWindowStart)}-${escapeHtml(contract.serviceWindowEnd)}</strong><span>Resolution: C ${contract.sla.critical.resolutionHours}h · H ${contract.sla.high.resolutionHours}h · N ${contract.sla.normal.resolutionHours}h · L ${contract.sla.low.resolutionHours}h</span><small>${contract.evidenceRequired ? "Photo and service evidence required" : "Service evidence optional"}</small></div><span class="contract-status ${escapeHtml(contract.effectiveState)}">${escapeHtml(contract.effectiveState)}</span>${actions}</article>`;
   }).join("") : "<p class=\"contract-empty\">No service contracts are recorded.</p>";
 }
-async function load() {
+async function refreshServiceContractPanel() {
+  const payload = await api("/api/service-contracts");
+  renderServiceContracts(payload);
+  renderEsgObservationScope(payload);
+  return payload;
+}
+let dashboardLoad = null;
+async function fetchDashboard() {
   $("#notice").textContent = "";
   if (!$("#workforce-date").value) $("#workforce-date").value = localDateValue();
   if (!$("#maintenance-through-date").value) $("#maintenance-through-date").value = localDateValue(new Date(Date.now() + 30 * 86400000));
@@ -362,14 +384,6 @@ async function load() {
   if (!$("#esg-period-start").value) $("#esg-period-start").value = localDateValue(new Date(Date.now() - 90 * 86400000));
   if (!$("#esg-observation-at").value) $("#esg-observation-at").value = remediationTimeInput(new Date());
   const maintenanceQuery = new URLSearchParams({ fromDate: localDateValue(), throughDate: $("#maintenance-through-date").value });
-  const fieldCyclesPromise = api("/api/field-service/cycles?limit=100").then((payload) => {
-    renderFieldServiceCycles(payload);
-    return payload;
-  }).catch((error) => {
-    renderFieldServiceCycles();
-    $("#field-cycle-import-notice").textContent = `Field-service ledger unavailable: ${error.message}`;
-    return null;
-  });
   const [reminders, route, modules, alerts, diagnoses, captures, notifications, timeline, quality, storage, dispatch, maintenanceImports, workforce, maintenanceCalendar, inventory, reliability, commissioning, deviceLifecycle, serviceContracts, releaseEvidence, healthReport, esgLedger, esgObservations] = await Promise.all([api("/api/mobile/reminders"), api("/api/mobile/route"), api("/api/modules"), api("/api/telemetry/alerts?statuses=open,acknowledged"), api("/api/ai/visual-diagnoses?statuses=queued,running"), api("/api/mobile/capture-batches"), api("/api/notifications?limit=20"), api("/api/ops/timeline?limit=24"), api("/api/ops/quality"), api("/api/storage"), api("/api/remediation/tasks?statuses=open,assigned,in_progress&limit=50"), api("/api/admin/imports/maintenance?limit=5"), api(`/api/workforce/candidates?serviceDate=${encodeURIComponent($("#workforce-date").value)}`), api(`/api/maintenance/calendar?${maintenanceQuery.toString()}`), api("/api/inventory/overview"), api("/api/ops/reliability"), api("/api/commissioning"), api("/api/device-lifecycle"), api("/api/service-contracts"), api("/api/production/evidence"), api("/api/ops/health"), api(`/api/esg/ledger?periodStart=${encodeURIComponent(new Date(`${$("#esg-period-start").value}T00:00:00.000Z`).toISOString())}&periodEnd=${encodeURIComponent(new Date(`${$("#esg-period-end").value}T23:59:59.999Z`).toISOString())}`), api("/api/esg/observations?limit=20")]);
   const open = reminders.counts?.open ?? reminders.items?.length ?? 0;
   $("#open-count").textContent = open;
@@ -401,10 +415,18 @@ async function load() {
   renderEsgLedger(esgLedger, esgObservations.observations || []);
   renderEsgObservationScope(serviceContracts);
   renderMaintenanceImports(maintenanceImports);
-  void fieldCyclesPromise;
   renderReleaseEvidence(releaseEvidence);
   const latest = storage.evidenceSnapshots?.latestSnapshot?.id ? await api(`/api/proof/evidence-snapshots/${encodeURIComponent(storage.evidenceSnapshots.latestSnapshot.id)}`) : null;
   renderEvidenceControl(storage, latest);
+}
+async function load({ refresh = true } = {}) {
+  if (dashboardLoad) {
+    await dashboardLoad;
+    return refresh ? load() : undefined;
+  }
+  const request = fetchDashboard();
+  dashboardLoad = request;
+  try { return await request; } finally { if (dashboardLoad === request) dashboardLoad = null; }
 }
 const aiReviewDialog = $("#ai-review-dialog");
 const remediationDialog = $("#remediation-dialog");
@@ -424,7 +446,7 @@ async function saveDeviceCare(event) {
   const body = profileMode ? { serialNumber: $("#device-care-serial").value.trim(), manufacturer: $("#device-care-manufacturer").value.trim() || null, model: $("#device-care-model").value.trim() || null, calibrationIntervalDays: Number($("#device-care-interval").value), lastCalibratedAt: $("#device-care-last-calibrated").value ? new Date($("#device-care-last-calibrated").value).toISOString() : null, warrantyExpiresAt: $("#device-care-warranty").value ? new Date($("#device-care-warranty").value).toISOString() : null, note: $("#device-care-note").value.trim() || null }
     : { action: $("#device-care-action").value, expectedUpdatedAt: $("#device-care-updated-at").value, workOrderId: $("#device-care-work-order").value.trim() || null, evidenceRef: $("#device-care-evidence").value.trim() || null, replacementDeviceId: $("#device-care-replacement").value.trim() || null, note: $("#device-care-note").value.trim() || null };
   const button = $("#device-care-submit"); button.disabled = true; $("#device-care-error").textContent = "";
-  try { await api(`/api/device-lifecycle/${encodeURIComponent(deviceId)}/${profileMode ? "profile" : "actions"}`, { method: profileMode ? "PUT" : "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); deviceCareDialog.close(); await load(); $("#device-care-notice").textContent = `${deviceId} ${profileMode ? "profile saved" : "action recorded"}.`; } catch (error) { $("#device-care-error").textContent = error.message; } finally { button.disabled = false; }
+  try { await api(`/api/device-lifecycle/${encodeURIComponent(deviceId)}/${profileMode ? "profile" : "actions"}`, { method: profileMode ? "PUT" : "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); deviceCareDialog.close(); await load({ refresh: true }); $("#device-care-notice").textContent = `${deviceId} ${profileMode ? "profile saved" : "action recorded"}.`; } catch (error) { $("#device-care-error").textContent = error.message; } finally { button.disabled = false; }
 }
 function configureRemediationReview(task = null) {
   const pending = task?.reviewStatus === "pending";
@@ -481,7 +503,7 @@ async function saveRemediation(event) {
     const reviewNote = $("#remediation-review-note").value.trim();
     if (!reviewDecision || !reviewNote) { $("#remediation-error").textContent = "Select approve or reject and enter an audit note."; return; }
     const submit = $("#remediation-submit"); submit.disabled = true; $("#remediation-error").textContent = "";
-    try { await api(`/api/remediation/tasks/${encodeURIComponent(taskId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewDecision, reviewNote }) }); remediationDialog.close(); await load(); }
+    try { await api(`/api/remediation/tasks/${encodeURIComponent(taskId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ reviewDecision, reviewNote }) }); remediationDialog.close(); await load({ refresh: true }); }
     catch (error) { $("#remediation-error").textContent = error.message; } finally { submit.disabled = false; }
     return;
   }
@@ -493,14 +515,14 @@ async function saveRemediation(event) {
   const submit = $("#remediation-submit"); submit.disabled = true; $("#remediation-error").textContent = "";
   try {
     await api(taskId ? `/api/remediation/tasks/${encodeURIComponent(taskId)}` : "/api/remediation/tasks", { method: taskId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-    remediationDialog.close(); await load();
+    remediationDialog.close(); await load({ refresh: true });
   } catch (error) { $("#remediation-error").textContent = error.message; } finally { submit.disabled = false; }
 }
 function openAiReview(diagnosis) { aiReviewState.diagnosis = diagnosis; $("#ai-review-id").value = diagnosis.id; $("#ai-review-context").textContent = `${diagnosis.moduleId} · capture ${diagnosis.captureId} · current status ${diagnosis.status}. Manual review is recorded separately from an external provider result.`; $("#ai-review-status").value = "completed"; $("#ai-review-confidence").value = ""; $("#ai-review-provider").value = diagnosis.provider || ""; $("#ai-review-model").value = diagnosis.model || ""; $("#ai-review-note").value = ""; $("#ai-review-error").textContent = ""; aiReviewDialog.showModal(); }
-async function startAiDiagnosis(id) { await api(`/api/ai/visual-diagnoses/${encodeURIComponent(id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "running", provider: "pending-provider", model: "awaiting-callback", result: { stage: "running", evidenceBasis: "Awaiting external AI provider callback." } }) }); await load(); }
-async function saveAiReview(event) { event.preventDefault(); const status = $("#ai-review-status").value; const note = $("#ai-review-note").value.trim(); const confidenceText = $("#ai-review-confidence").value.trim(); const confidence = confidenceText === "" ? null : Number(confidenceText); if (!note) { $("#ai-review-error").textContent = "A result or failure note is required."; return; } if (status === "completed" && (confidence === null || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)) { $("#ai-review-error").textContent = "Completed reviews require confidence from 0 to 1."; return; } const result = { summary: note, reviewedBy: principal, reviewMode: "human-assisted", evidenceBasis: "Provider output or operator review; not an automatic horticulture claim." }; await api(`/api/ai/visual-diagnoses/${encodeURIComponent($("#ai-review-id").value)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, confidence: status === "completed" ? confidence : null, provider: $("#ai-review-provider").value.trim() || "operator-review", model: $("#ai-review-model").value.trim() || "operator-review", result, errorCode: status === "failed" ? "AI_REVIEW_FAILED" : null }) }); aiReviewDialog.close(); await load(); }
-$("#refresh").onclick = () => load().catch((error) => { $("#notice").textContent = error.message; });
-$("#reliability-scan").onclick = async () => { const button=$("#reliability-scan"); button.disabled=true; $("#reliability-notice").textContent="Checking scheduled job freshness…"; try { const result=await api("/api/ops/reliability/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}); renderReliability(result); await load(); $("#reliability-notice").textContent=`Check complete · ${result.scan.opened} opened · ${result.scan.recovered} recovered`; } catch(error){$("#reliability-notice").textContent=error.message;} finally{button.disabled=false;} };
+async function startAiDiagnosis(id) { await api(`/api/ai/visual-diagnoses/${encodeURIComponent(id)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: "running", provider: "pending-provider", model: "awaiting-callback", result: { stage: "running", evidenceBasis: "Awaiting external AI provider callback." } }) }); await load({ refresh: true }); }
+async function saveAiReview(event) { event.preventDefault(); const status = $("#ai-review-status").value; const note = $("#ai-review-note").value.trim(); const confidenceText = $("#ai-review-confidence").value.trim(); const confidence = confidenceText === "" ? null : Number(confidenceText); if (!note) { $("#ai-review-error").textContent = "A result or failure note is required."; return; } if (status === "completed" && (confidence === null || !Number.isFinite(confidence) || confidence < 0 || confidence > 1)) { $("#ai-review-error").textContent = "Completed reviews require confidence from 0 to 1."; return; } const result = { summary: note, reviewedBy: principal, reviewMode: "human-assisted", evidenceBasis: "Provider output or operator review; not an automatic horticulture claim." }; await api(`/api/ai/visual-diagnoses/${encodeURIComponent($("#ai-review-id").value)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status, confidence: status === "completed" ? confidence : null, provider: $("#ai-review-provider").value.trim() || "operator-review", model: $("#ai-review-model").value.trim() || "operator-review", result, errorCode: status === "failed" ? "AI_REVIEW_FAILED" : null }) }); aiReviewDialog.close(); await load({ refresh: true }); }
+$("#refresh").onclick = () => load({ refresh: true }).catch((error) => { $("#notice").textContent = error.message; });
+$("#reliability-scan").onclick = async () => { const button=$("#reliability-scan"); button.disabled=true; $("#reliability-notice").textContent="Checking scheduled job freshness…"; try { const result=await api("/api/ops/reliability/scan",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"}); renderReliability(result); $("#reliability-notice").textContent=`Check complete · ${result.scan.opened} opened · ${result.scan.recovered} recovered`; await load(); } catch(error){$("#reliability-notice").textContent=error.message;} finally{button.disabled=false;} };
 $("#health-recompute").onclick = async () => { const button = $("#health-recompute"); button.disabled = true; $("#health-esg-notice").textContent = "Recomputing evidence-backed health…"; try { const result = await api("/api/ops/health/recompute", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: "{}" }); await load(); $("#health-esg-notice").textContent = `Health recomputed · ${result.summary.scoredAssets}/${result.summary.assets} assets scored.`; } catch (error) { $("#health-esg-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#esg-generate").onclick = async () => { const button = $("#esg-generate"); button.disabled = true; $("#health-esg-notice").textContent = "Generating ESG period ledger…"; try { const body = { periodStart: new Date(`${$("#esg-period-start").value}T00:00:00.000Z`).toISOString(), periodEnd: new Date(`${$("#esg-period-end").value}T23:59:59.999Z`).toISOString() }; const result = await api("/api/esg/ledger/recompute", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); await load(); $("#health-esg-notice").textContent = `ESG ledger saved · ${result.ledger.status} · ${result.ledger.period.periodStart.slice(0, 10)} to ${result.ledger.period.periodEnd.slice(0, 10)}.`; } catch (error) { $("#health-esg-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#esg-observation-form").onsubmit = async (event) => { event.preventDefault(); const button = $("#esg-observation-submit"); button.disabled = true; $("#health-esg-notice").textContent = "Saving structured ESG observation…"; try { const rating = $("#esg-observation-rating").value; const body = { clientId: $("#esg-observation-client").value, wallId: $("#esg-observation-wall").value.trim() || null, moduleId: $("#esg-observation-module").value.trim() || null, category: $("#esg-observation-category").value, rating: rating === "" ? null : Number(rating), observedAt: new Date($("#esg-observation-at").value).toISOString(), note: $("#esg-observation-note").value.trim(), evidenceRef: $("#esg-observation-evidence").value.trim() || null }; await api("/api/esg/observations", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); event.target.reset(); $("#esg-observation-at").value = remediationTimeInput(new Date()); await load(); $("#health-esg-notice").textContent = "Observation saved to the ESG evidence ledger."; } catch (error) { $("#health-esg-notice").textContent = error.message; } finally { button.disabled = false; } };
@@ -532,7 +554,7 @@ $("#contract-form").onsubmit = async (event) => {
   const resolutionHours = { critical: $("#contract-sla-critical").value, high: $("#contract-sla-high").value, normal: $("#contract-sla-normal").value, low: $("#contract-sla-low").value };
   const body = { clientId: $("#contract-client").value, contractNumber: $("#contract-number").value.trim(), planName: $("#contract-plan").value.trim(), startDate: $("#contract-start").value, endDate: $("#contract-end").value, currency: "HKD", monthlyFee: Number($("#contract-fee").value), visitsPerMonth: Number($("#contract-visits").value), serviceWindowStart: $("#contract-window-start").value, serviceWindowEnd: $("#contract-window-end").value, evidenceRequired: $("#contract-evidence").checked, wallIds, note: $("#contract-note").value.trim(), sla: Object.fromEntries(Object.keys(responseHours).map((priority) => [priority, { responseHours: responseHours[priority], resolutionHours: Number(resolutionHours[priority]) }])) };
   const button = $("#contract-submit"); button.disabled = true; $("#contract-notice").textContent = "Creating contract draft…";
-  try { const result = await api("/api/service-contracts", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); await load(); $("#contract-create").open = false; $("#contract-number").value = ""; $("#contract-notice").textContent = `${result.contract.contractNumber} created as draft. Review and activate it when the signed agreement is effective.`; } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
+  try { const result = await api("/api/service-contracts", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); await refreshServiceContractPanel(); $("#contract-create").open = false; $("#contract-number").value = ""; $("#contract-notice").textContent = `${result.contract.contractNumber} created as draft. Review and activate it when the signed agreement is effective.`; } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
 };
 $("#contract-change-form").onsubmit = async (event) => {
   event.preventDefault();
@@ -543,11 +565,12 @@ $("#contract-change-form").onsubmit = async (event) => {
   try {
     const body = { requestType: $("#contract-change-type").value, terms: { planName: $("#contract-change-plan").value.trim(), startDate: $("#contract-change-start").value, endDate: $("#contract-change-end").value, visitsPerMonth: Number($("#contract-change-visits").value) }, note: $("#contract-change-note").value.trim() };
     const result = await api(`/api/service-contracts/${encodeURIComponent(contractId)}/changes`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) });
-    await load(); $("#contract-change").open = false; $("#contract-change-note").value = ""; $("#contract-notice").textContent = `${result.change.requestType} request recorded for ${contract.contractNumber}.`;
+    await refreshServiceContractPanel(); $("#contract-change").open = false; $("#contract-change-note").value = ""; $("#contract-notice").textContent = `${result.change.requestType} request recorded for ${contract.contractNumber}.`;
   } catch (error) { $("#contract-notice").textContent = error.message; } finally { button.disabled = false; }
 };
 $("#field-cycle-import-form").onsubmit = async (event) => { event.preventDefault(); const file = $("#field-cycle-import-file").files[0]; if (!file) return; const button = $("#field-cycle-import-preview"); button.disabled = true; $("#field-cycle-import-notice").textContent = "Checking field-service rows and client scope…"; try { const csv = await file.text(); const result = await api("/api/admin/field-service/cycles/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, csv }) }); fieldCycleImportState.preview = { ...result, filename: file.name, csv }; renderFieldServiceCycles({ cycles: [], gate: result.gate }); $("#field-cycle-import-notice").textContent = result.invalidRows ? "Preview blocked. Fix every row before applying." : "Preview stored. Apply writes only the validated rows."; } catch (error) { fieldCycleImportState.preview = null; renderFieldServiceCycles(); $("#field-cycle-import-notice").textContent = error.message; } finally { button.disabled = false; } };
-$("#field-cycle-import-apply").onclick = async () => { const preview = fieldCycleImportState.preview; if (!preview?.csv) return; const button = $("#field-cycle-import-apply"); button.disabled = true; $("#field-cycle-import-notice").textContent = "Applying field-service cycles after relationship checks…"; try { const result = await api("/api/admin/field-service/cycles/import", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ filename: preview.filename, csv: preview.csv }) }); fieldCycleImportState.preview = null; await load(); $("#field-cycle-import-notice").textContent = result.total + " field-service cycle" + (result.total === 1 ? "" : "s") + " imported into the operational ledger."; } catch (error) { $("#field-cycle-import-notice").textContent = error.message; button.disabled = false; } };
+$("#field-cycle-import").ontoggle = () => { if ($("#field-cycle-import").open) void refreshFieldServiceCycles(); };
+$("#field-cycle-import-apply").onclick = async () => { const preview = fieldCycleImportState.preview; if (!preview?.csv) return; const button = $("#field-cycle-import-apply"); button.disabled = true; $("#field-cycle-import-notice").textContent = "Applying field-service cycles after relationship checks…"; try { const result = await api("/api/admin/field-service/cycles/import", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ filename: preview.filename, csv: preview.csv }) }); fieldCycleImportState.preview = null; await load(); await refreshFieldServiceCycles(true); $("#field-cycle-import-notice").textContent = result.total + " field-service cycle" + (result.total === 1 ? "" : "s") + " imported into the operational ledger."; } catch (error) { $("#field-cycle-import-notice").textContent = error.message; button.disabled = false; } };
 document.addEventListener("click", async (event) => {
   const button = event.target.closest("[data-release-evidence-review]");
   if (!button) return;
@@ -567,7 +590,7 @@ document.addEventListener("click", async (event) => {
     const note = document.querySelector(`[data-contract-change-note="${CSS.escape(changeId)}"]`)?.value.trim();
     if (!note) { $("#contract-notice").textContent = "Enter a review note before deciding a contract change."; return; }
     reviewButton.disabled = true; $("#contract-notice").textContent = `Recording ${reviewButton.dataset.decision}…`;
-    try { await api(`/api/service-contract-changes/${encodeURIComponent(changeId)}/review`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ decision: reviewButton.dataset.decision, expectedContractUpdatedAt: reviewButton.dataset.expectedUpdatedAt, reviewNote: note }) }); await load(); $("#contract-notice").textContent = `Contract change ${reviewButton.dataset.decision}d and version history updated.`; } catch (error) { $("#contract-notice").textContent = error.message; reviewButton.disabled = false; }
+    try { await api(`/api/service-contract-changes/${encodeURIComponent(changeId)}/review`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ decision: reviewButton.dataset.decision, expectedContractUpdatedAt: reviewButton.dataset.expectedUpdatedAt, reviewNote: note }) }); await refreshServiceContractPanel(); $("#contract-notice").textContent = `Contract change ${reviewButton.dataset.decision}d and version history updated.`; } catch (error) { $("#contract-notice").textContent = error.message; reviewButton.disabled = false; }
     return;
   }
   const button = event.target.closest("[data-contract-action]");
@@ -578,7 +601,7 @@ document.addEventListener("click", async (event) => {
   button.disabled = true; $("#contract-notice").textContent = `Recording ${button.dataset.action}…`;
   try {
     const result = await api(`/api/service-contracts/${encodeURIComponent(contractId)}/actions`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ action: button.dataset.action, expectedUpdatedAt: button.dataset.updatedAt, note }) });
-    await load();
+    await refreshServiceContractPanel();
     $("#contract-notice").textContent = `${result.contract.contractNumber} is now ${result.contract.effectiveState}.`;
   } catch (error) { $("#contract-notice").textContent = error.message; button.disabled = false; }
 });
@@ -629,7 +652,7 @@ $("#dispatch-due-at").onchange = () => { if ($("#dispatch-due-at").value) $("#wo
 $("#module-query-form").onsubmit = async (event) => { event.preventDefault(); moduleQueryState.search = $("#module-search").value.trim(); moduleQueryState.status = $("#module-status").value; moduleQueryState.cursor = null; $("#module-query-submit").disabled = true; try { await loadModulePage(false); } catch (error) { $("#module-query-state").textContent = error.message; } finally { $("#module-query-submit").disabled = false; } };
 $("#module-load-more").onclick = async () => { const button = $("#module-load-more"); button.disabled = true; try { await loadModulePage(true); } catch (error) { $("#module-query-state").textContent = error.message; } finally { button.disabled = false; } };
 $("#dispatch-load-more").onclick = () => loadMoreDispatch().catch((error) => { $("#dispatch-notice").textContent = error.message; });
-$("#dispatch-sla-scan").onclick = async () => { const button = $("#dispatch-sla-scan"); button.disabled = true; $("#dispatch-notice").textContent = "Scanning active SLA deadlines…"; try { const result = await api("/api/remediation/sla-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); await load(); $("#dispatch-notice").textContent = `${result.scanned} scanned · ${result.escalated} newly escalated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
+$("#dispatch-sla-scan").onclick = async () => { const button = $("#dispatch-sla-scan"); button.disabled = true; $("#dispatch-notice").textContent = "Scanning active SLA deadlines…"; try { const result = await api("/api/remediation/sla-scan", { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); $("#dispatch-notice").textContent = `${result.scanned} scanned · ${result.escalated} newly escalated`; await load(); } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#dispatch-bulk-form").onsubmit = async (event) => { event.preventDefault(); const taskIds = [...dispatchState.selected]; if (!taskIds.length) { $("#dispatch-notice").textContent = "Select at least one task."; return; } const body = { taskIds, expectedUpdatedAtById: Object.fromEntries(taskIds.map((id) => [id, dispatchState.tasks.find((task) => task.id === id)?.updatedAt])) }; const assignedTo = $("#dispatch-assigned-to").value.trim(); const dueAt = $("#dispatch-due-at").value; const priority = $("#dispatch-priority").value; const status = $("#dispatch-status").value; if (assignedTo) body.assignedTo = assignedTo; if (dueAt) body.dueAt = new Date(dueAt).toISOString(); if (priority) body.priority = priority; if (status) body.status = status; if (Object.keys(body).length === 2) { $("#dispatch-notice").textContent = "Choose an assignment, due time, priority or status."; return; } const button = $("#dispatch-apply"); button.disabled = true; $("#dispatch-notice").textContent = "Applying dispatch update…"; try { const result = await api("/api/remediation/tasks/bulk", { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify(body) }); dispatchState.selected.clear(); await load(); $("#dispatch-notice").textContent = `${result.updated} task${result.updated === 1 ? "" : "s"} updated`; } catch (error) { $("#dispatch-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#maintenance-import-form").onsubmit = async (event) => { event.preventDefault(); const file = $("#maintenance-import-file").files[0]; if (!file) return; const button = $("#maintenance-import-preview"); button.disabled = true; $("#maintenance-import-notice").textContent = "Validating CSV against current asset master data…"; try { const result = await api("/api/admin/imports/maintenance/preview", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ filename: file.name, csv: await file.text() }) }); renderMaintenancePreview(result.batch); $("#maintenance-import-notice").textContent = result.duplicate ? "This exact file was already previewed." : "Preview stored. Apply is enabled only when every row is valid."; await load(); } catch (error) { $("#maintenance-import-notice").textContent = error.message; } finally { button.disabled = false; } };
 $("#maintenance-import-apply").onclick = async () => { const batch = maintenanceImportState.batch; if (!batch) return; const button = $("#maintenance-import-apply"); button.disabled = true; $("#maintenance-import-notice").textContent = "Applying validated maintenance rows…"; try { const result = await api(`/api/admin/imports/maintenance/${encodeURIComponent(batch.id)}/apply`, { method: "POST", headers: { "Content-Type": "application/json" }, body: "{}" }); renderMaintenancePreview(result.batch); await load(); $("#maintenance-import-notice").textContent = `${result.imported} maintenance row${result.imported === 1 ? "" : "s"} imported into work orders.`; } catch (error) { const conflictCount = Number(error.details?.conflictCount || 0); $("#maintenance-import-notice").textContent = conflictCount ? `${error.message} · ${conflictCount} row${conflictCount === 1 ? "" : "s"} need a newer Airtable export.` : error.message; button.disabled = false; } };

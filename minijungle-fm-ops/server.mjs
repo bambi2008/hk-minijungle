@@ -496,6 +496,13 @@ const deviceIngestionRateLimitPerGateway = Math.min(Math.max(Number(process.env.
 const proofMediaRoot = join(runtimeRoot, "proof-media");
 let draining = false;
 let shutdownPromise = null;
+// Pilot SQLite uses one file across bounded stores. Serialize API work until PostgreSQL is enabled.
+let pilotApiQueue = Promise.resolve();
+function enqueuePilotApi(task) {
+  const next = pilotApiQueue.then(task, task);
+  pilotApiQueue = next.catch(() => {});
+  return next;
+}
 
 const types = {
   ".html": "text/html; charset=utf-8",
@@ -1665,6 +1672,7 @@ function serviceContractChangeForAuth(auth,change){if(auth.roleId!=="esg-auditor
 function serviceContractVersionForAuth(auth,version){if(auth.roleId!=="esg-auditor")return version;const terms={...(version.terms||{})};delete terms.monthlyFee;delete terms.currency;return{...version,terms};}
 async function serviceContractOverviewFor(auth){
   const clientIds=auth.clientScope==="all"?null:auth.clientIds;
+  if (!productionMasterDataEnabled()) await ensureServiceContractVersions();
   const [contracts,clients,walls,changeRequests,performance]=await Promise.all([listServiceContracts({clientIds,limit:1000}),readJsonData("clients"),readJsonData("walls"),listServiceContractChanges({clientIds,statuses:["pending"],limit:1000}),readServiceContractPerformance({clientIds})]);
   const scopedClients=clients.filter((item)=>canAccessClient(auth,item.id)); const scopedWalls=walls.filter((item)=>canAccessClient(auth,item.clientId));
   const covered=new Set(contracts.filter((item)=>item.effectiveState==="active").flatMap((item)=>item.wallIds));
@@ -4786,7 +4794,9 @@ const server = createServer(async (req, res) => {
     return;
   }
   if (requestUrl.pathname.startsWith("/api/")) {
-    await handleApi(req, res, requestUrl.pathname);
+    const apiTask = () => handleApi(req, res, requestUrl.pathname);
+    if (productionMasterDataEnabled() || ["/api/health", "/api/health/ready"].includes(requestUrl.pathname)) await apiTask();
+    else await enqueuePilotApi(apiTask);
     return;
   }
 
