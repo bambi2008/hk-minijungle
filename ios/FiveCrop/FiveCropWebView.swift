@@ -1,6 +1,9 @@
+import Foundation
 import SwiftUI
 import UIKit
 import WebKit
+import PhotosUI
+import UniformTypeIdentifiers
 
 struct FiveCropWebView: UIViewRepresentable {
     @ObservedObject var model: FiveCropWebModel
@@ -42,10 +45,11 @@ struct FiveCropWebView: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate {
+    final class Coordinator: NSObject, WKNavigationDelegate, WKUIDelegate, PHPickerViewControllerDelegate {
         private let model: FiveCropWebModel
         weak var webView: WKWebView?
         var lastReloadToken = -1
+        private var pendingFilePickerCompletion: (([URL]?) -> Void)?
 
         init(model: FiveCropWebModel) {
             self.model = model
@@ -119,6 +123,85 @@ struct FiveCropWebView: UIViewRepresentable {
             )
             let isAllowedCameraRequest = type == .camera && AppEnvironment.matchesConfiguredOrigin(snapshot)
             decisionHandler(isAllowedCameraRequest ? .grant : .deny)
+        }
+
+        func webView(
+            _ webView: WKWebView,
+            runOpenPanelWith parameters: WKOpenPanelParameters,
+            initiatedByFrame frame: WKFrameInfo,
+            completionHandler: @escaping ([URL]?) -> Void
+        ) {
+            pendingFilePickerCompletion?(nil)
+            pendingFilePickerCompletion = completionHandler
+
+            var configuration = PHPickerConfiguration(photoLibrary: .shared())
+            configuration.filter = .images
+            configuration.selectionLimit = parameters.allowsMultipleSelection ? 0 : 1
+
+            let picker = PHPickerViewController(configuration: configuration)
+            picker.delegate = self
+            guard let presenter = topViewController(for: webView) else {
+                finishFilePicker(with: nil)
+                return
+            }
+            presenter.present(picker, animated: true)
+        }
+
+        func picker(_ picker: PHPickerViewController, didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+            guard !results.isEmpty else {
+                finishFilePicker(with: nil)
+                return
+            }
+
+            let group = DispatchGroup()
+            var urls = [URL?](repeating: nil, count: results.count)
+            let lock = NSLock()
+
+            for (index, result) in results.enumerated() {
+                group.enter()
+                result.itemProvider.loadDataRepresentation(forTypeIdentifier: UTType.image.identifier) { [weak self] data, _ in
+                    defer { group.leave() }
+                    guard let data,
+                          let self,
+                          let url = self.writePickedImage(data, index: index) else {
+                        return
+                    }
+                    lock.lock()
+                    urls[index] = url
+                    lock.unlock()
+                }
+            }
+
+            group.notify(queue: .main) { [weak self] in
+                self?.finishFilePicker(with: urls.compactMap { $0 })
+            }
+        }
+
+        private func writePickedImage(_ data: Data, index: Int) -> URL? {
+            let url = FileManager.default.temporaryDirectory
+                .appendingPathComponent("fivecrop-photo-\(UUID().uuidString)-\(index).jpg")
+            do {
+                try data.write(to: url, options: .atomic)
+                return url
+            } catch {
+                return nil
+            }
+        }
+
+        private func finishFilePicker(with urls: [URL]?) {
+            let completion = pendingFilePickerCompletion
+            pendingFilePickerCompletion = nil
+            completion?(urls)
+        }
+
+        private func topViewController(for webView: WKWebView) -> UIViewController? {
+            guard let root = webView.window?.rootViewController else { return nil }
+            var current = root
+            while let presented = current.presentedViewController {
+                current = presented
+            }
+            return current
         }
     }
 }

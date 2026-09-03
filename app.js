@@ -10028,7 +10028,7 @@ customerInternalBtn?.addEventListener("click", () => {
 localeButtons.forEach((button) => {
   button.addEventListener("click", () => setLocale(button.dataset.localeOption));
 });
-customerCameraBtn?.addEventListener("click", openGuidedPhotoUpload);
+customerCameraBtn?.addEventListener("click", openNativeCamera);
 customerCheckPlantBtn?.addEventListener("click", handleCustomerPrimaryAction);
 customerBackBtn?.addEventListener("click", resetCustomerPlantDossier);
 customerPrivacyTopBtn?.addEventListener("click", () => {
