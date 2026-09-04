@@ -1287,6 +1287,9 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - UI workflow added: Ops Today now shows a compact Pilot Closeout panel after the pilot checklist. It loads asynchronously, supports an explicit refresh and exposes the claim boundary directly in the panel.
 - Data boundary: counts are filtered through the current principal scope. Stored module configuration, generated IDs, pending device mappings and local smoke fixtures are not treated as installed hardware or customer operations. ESG records remain supplier operational evidence, not assurance.
 - Verification completed: `npm.cmd run check --silent` passed, including policy smoke, API/UI smoke, all existing data-model, device, alert/AI scale, backup/restore and production-gate checks. The new isolated UI smoke returned HTTP `200` with seven reconciliation checks and a visible claim boundary.
+- Staging deployment completed: pushed commit `04d8971` is running as image `dr-forest/ops:staging-04d8971` in `dr-forest-ops-staging` behind `https://ops.dr-forest.net`.
+- Deployment safety evidence: the no-network canary passed; local readiness, public readiness, public page and bridge API returned `200`. The public browser rendered `Attention`, seven reconciliation checks and zero console errors. The previous staging container is retained as `dr-forest-ops-staging-prev-04d8971` for rollback.
+- Bridge safety verification: Caddy, bridge app and core app start timestamps were unchanged across the cutover. Only the DR FOREST staging container was replaced.
 - Honest boundary: the current pilot runtime still uses SQLite/local media and pilot credentials. Real customer cycles, physical WiFi sensor/camera traffic, signed device identity, managed PostgreSQL, off-host restore and repeated multi-client operations remain external acceptance gates. Production operations readiness remains **65%**.
 
 ### Current Honest Score After Step 87
