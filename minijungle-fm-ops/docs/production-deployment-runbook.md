@@ -2,10 +2,12 @@
 
 This runbook is the boundary between the pilot server and real Hong Kong FM operations. A green local smoke test is not a production sign-off.
 
+For the Tencent Cloud Hong Kong path, use `docs/tencent-cloud-production-cutover.md`. It defines the TencentDB/COS endpoint shape, virtual-hosted COS addressing, production container and off-host restore commands.
+
 ## Required external resources
 
 1. Managed PostgreSQL with TLS, point-in-time recovery, daily snapshots and a restricted application role.
-2. S3-compatible object storage for proof/camera media and a separate bucket or account for encrypted backups.
+2. S3-compatible object storage for proof/camera media and a separate bucket or account for encrypted backups. Tencent COS should use `DR_FOREST_OBJECT_STORAGE_STYLE=virtual` with the Hong Kong COS endpoint.
 3. Enterprise OIDC tenant with MFA, groups/roles and client-scope claims. The token must contain a role and, for scoped users, `client_ids`.
 4. A private deployment endpoint with HTTPS, secret manager, log retention, alert routing and health monitoring. `DR_FOREST_DEVICE_SIGNING_SECRET` is a server-side pepper for stored device-key hashes; it is never sent to devices.
 5. Real device/gateway inventory: module IDs, device IDs, calibrated metric units, key rotation owner and network egress policy.
@@ -18,11 +20,11 @@ This runbook is the boundary between the pilot server and real Hong Kong FM oper
 3. Run `node scripts/verify-postgres-migration.mjs` against the same approved source snapshot and destination database. It must report matching table names, ordered columns, row counts, foreign-key coverage, zero orphan relations and a matching source hash.
 4. Verify that the production server's client/asset/work-order/proof/sensor/incident reads are using `postgres-master-data`, then import only an approved tenancy dataset and run relationship validation. An empty production database does not auto-seed demo JSON; do not use demo seed data as live tenancy data.
 5. Keep the explicit master-data import behind the admin permission and run it only before dependent modules/devices are registered. Foreign-key constraints intentionally reject an import that would delete referenced operational records.
-6. Create the S3 buckets with private access, lifecycle rules, server-side encryption and a malware-scanning/quarantine path. Production proof upload/readback uses the signed S3 PUT/GET path; pilot local-vault files must not be treated as production evidence.
+6. Create the S3 buckets with private access, lifecycle rules, server-side encryption and a malware-scanning/quarantine path. Production proof upload/readback uses the signed S3 PUT/GET path; pilot local-vault files must not be treated as production evidence. The app records the scanner callback in `proof_media_scan_results`; a production file download is blocked until its latest result is `clean` and its SHA-256 matches the media ledger.
 7. Provision the environment variables from `.env.production.example` through a secret manager. Never put credentials in the repository or browser bundle.
 8. Start one staging instance with `DR_FOREST_ENV=production`. `/api/health/ready` must be HTTP 200 and list PostgreSQL/S3/OIDC as active backends.
 9. Confirm `/api/health/ready` and `/api/storage` report PostgreSQL for master data, modules, devices, telemetry, alerts, AI diagnosis tasks, mobile capture, proof metadata and reminders. Confirm pilot password sessions are disabled and OIDC is active; any remaining SQLite tables must be explicitly accepted in the release record.
-10. Run an encrypted backup, upload it off-host, then perform `node scripts/restore-runtime.mjs --backup <path> --verify-only` and one isolated restore drill. The SQLite pilot backup uses `VACUUM INTO` for a consistent snapshot and the restore verifier runs `PRAGMA integrity_check`; this is a local consistency guarantee, not a substitute for a managed PostgreSQL backup/restore drill.
+10. Run an encrypted PostgreSQL backup, upload it off-host, then perform `npm.cmd run restore:postgres -- --from-offhost --verify-only` and one isolated restore drill. `npm.cmd run backup:runtime` is monitored and selects the PostgreSQL backup script automatically in production; it also adds `--upload` when needed. The production image includes `pg_dump` and `pg_restore`; the SQLite pilot backup uses `VACUUM INTO` for a consistent snapshot and the restore verifier runs `PRAGMA integrity_check`; neither local check substitutes for a managed PostgreSQL restore drill.
 11. Register a real gateway and camera, send signed readings/captures, verify S3 camera readback, alerts, evidence hashes and client-scope access using a real OIDC user.
 12. Run two repeated service cycles across at least two client accounts. Record sync success, alert response, proof verification, backup recovery and operator time.
 13. Promote only after operations, security and the FM partner sign the acceptance record.
@@ -128,7 +130,11 @@ The FM Lead `operations.html` page now exposes these controls under `ESG snapsho
 
 ## Backup consistency check
 
-`npm.cmd run backup:runtime` records a `2026-08-23.runtime-backup-v2` manifest with `consistency.method: sqlite-vacuum-into` and a source integrity result. `npm.cmd run backup:smoke` copies the current pilot database into an isolated temporary runtime, creates a backup, verifies checksums and restores the database into staging, then checks SQLite integrity before deleting the temporary files. This proves the local backup contract only. Production still requires a managed PostgreSQL backup, off-host retention, encryption-key custody and a dated restore drill.
+`npm.cmd run backup:runtime` is the monitored entry point. Pilot mode records a `2026-08-23.runtime-backup-v2` manifest with `consistency.method: sqlite-vacuum-into`; production mode is fail-closed for this SQLite script and the wrapper launches `backup-postgres-runtime.mjs`, which records a custom-format `pg_dump`, AES-256-GCM encryption, off-host upload and remote readback. A retention policy is recorded in each manifest from `DR_FOREST_BACKUP_RETENTION_DAYS` and `DR_FOREST_BACKUP_RETENTION_COUNT`.
+
+Use `npm.cmd run backup:retention:plan -- --root .\backups` to inspect local backup directories without deleting anything. It is a dry run by default; `--apply` is an explicit local deletion operation and must only be used after reviewing the printed plan. COS retention is a bucket lifecycle rule and must be configured separately in Tencent Cloud; the application does not claim to have applied that remote rule.
+
+`npm.cmd run backup:smoke` copies the current pilot database into an isolated temporary runtime, creates a backup, verifies checksums and restores the database into staging, then checks SQLite integrity before deleting the temporary files. This proves the local backup contract only. Production still requires a managed PostgreSQL backup, off-host retention, encryption-key custody and a dated restore drill.
 
 ## Graceful shutdown and drain
 
@@ -147,7 +153,7 @@ Attach these artifacts to the release:
 
 - `/api/health/ready` response with timestamp and deployment ID.
 - PostgreSQL migration list and foreign-key/relationship report.
-- S3 upload/readback and malware-scan evidence for a real proof image.
+- S3 upload/readback and a scanner callback with `status: clean` for a real proof image. The callback contract is `PUT /api/proof/media-evidence/:id/scan` with `scanId`, `provider`, `status`, `sha256`, `scannedAt` and `recordedBy`; FM Lead/Platform Admin authorization is required until a dedicated scanner principal is provisioned.
 - OIDC login, MFA, role-scope and revoked-session evidence.
 - Signed device request, rejected timestamp, rejected nonce replay and rotated-key evidence.
 - Encrypted off-host backup manifest, checksum and isolated restore log.

@@ -1,8 +1,9 @@
 import { mkdir } from "node:fs/promises";
 import { DatabaseSync } from "node:sqlite";
 import { dirname } from "node:path";
+import { normalizeProofMediaScan, proofMediaScanSummary } from "./ops-media-scan-policy.mjs";
 
-export const proofMediaMigrationVersion = "2026-08-17.proof-media-v2";
+export const proofMediaMigrationVersion = "2026-09-04.proof-media-v3";
 
 const acceptedContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const acceptedStatuses = new Set(["intent-created", "registered", "verified", "rejected"]);
@@ -139,6 +140,27 @@ function initializeProofMediaDatabase(db) {
 
     CREATE INDEX IF NOT EXISTS idx_proof_media_links_entity
       ON proof_media_links(entity_type, entity_id);
+
+    CREATE TABLE IF NOT EXISTS proof_media_scan_results (
+      id TEXT PRIMARY KEY,
+      media_id TEXT NOT NULL,
+      scan_id TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      status TEXT NOT NULL CHECK (status IN ('pending', 'clean', 'quarantined', 'error')),
+      sha256 TEXT NOT NULL,
+      scanned_at TEXT NOT NULL,
+      recorded_by TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      created_at TEXT NOT NULL,
+      UNIQUE (media_id, scan_id),
+      FOREIGN KEY (media_id) REFERENCES proof_media_objects(id) ON UPDATE CASCADE ON DELETE CASCADE
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_proof_media_scan_media_time
+      ON proof_media_scan_results(media_id, scanned_at DESC, id ASC);
+
+    CREATE INDEX IF NOT EXISTS idx_proof_media_scan_status
+      ON proof_media_scan_results(status, scanned_at DESC);
   `);
 
   const columns = new Set(db.prepare("PRAGMA table_info(proof_media_objects)").all().map((row) => row.name));
@@ -195,7 +217,22 @@ function normalizeIntent(input) {
   return media;
 }
 
-function objectFromRow(row, links = []) {
+function scanFromRow(row) {
+  return {
+    id: row.id,
+    mediaId: row.media_id,
+    scanId: row.scan_id,
+    provider: row.provider,
+    status: row.status,
+    sha256: row.sha256,
+    scannedAt: row.scanned_at,
+    recordedBy: row.recorded_by,
+    note: row.note || "",
+    createdAt: row.created_at
+  };
+}
+
+function objectFromRow(row, links = [], scan = null) {
   return {
     id: row.id,
     clientId: row.client_id,
@@ -225,6 +262,8 @@ function objectFromRow(row, links = []) {
       byteSize: row.byte_size,
       hashAlgorithm: "sha256"
     },
+    scan: scan || null,
+    scanStatus: proofMediaScanSummary(scan).status,
     links
   };
 }
@@ -278,7 +317,15 @@ function readObjectById(db, mediaId) {
     ORDER BY entity_type ASC, entity_id ASC
   `).all(mediaId).map(linkFromRow);
 
-  return objectFromRow(row, links);
+  const scan = db.prepare(`
+    SELECT *
+    FROM proof_media_scan_results
+    WHERE media_id = ?
+    ORDER BY scanned_at DESC, created_at DESC, id ASC
+    LIMIT 1
+  `).get(mediaId);
+
+  return objectFromRow(row, links, scan ? scanFromRow(scan) : null);
 }
 
 function uploadInstructions(media) {
@@ -432,6 +479,37 @@ export async function registerSqliteProofMediaEvidence(dbPath, input) {
   });
 }
 
+export async function recordSqliteProofMediaScan(dbPath, mediaId, input) {
+  return withDatabase(dbPath, (db) => {
+    const existing = readObjectById(db, mediaId);
+    if (!existing) throw notFoundError(mediaId);
+    if (existing.uploadStatus === "intent-created") {
+      throw proofMediaError(409, "proof media must be registered before scanning", "PROOF_MEDIA_NOT_REGISTERED");
+    }
+    if (!["registered", "verified", "rejected"].includes(existing.uploadStatus)) {
+      throw validationError(`Unsupported proof media status: ${existing.uploadStatus}`);
+    }
+
+    const scan = normalizeProofMediaScan(input, existing.sha256);
+    const prior = db.prepare(`
+      SELECT *
+      FROM proof_media_scan_results
+      WHERE media_id = ? AND scan_id = ?
+    `).get(mediaId, scan.scanId);
+    if (prior) return { duplicate: true, object: readObjectById(db, mediaId), scan: scanFromRow(prior) };
+
+    const id = input?.id ? requireString(input.id, "scan.id") : `PMS-${sanitizePathPart(mediaId)}-${sanitizePathPart(scan.scanId)}`;
+    const createdAt = new Date().toISOString();
+    db.prepare(`
+      INSERT INTO proof_media_scan_results (
+        id, media_id, scan_id, provider, status, sha256, scanned_at, recorded_by, note, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `).run(id, mediaId, scan.scanId, scan.provider, scan.status, scan.sha256, scan.scannedAt, scan.recordedBy, scan.note, createdAt);
+    const stored = db.prepare("SELECT * FROM proof_media_scan_results WHERE id = ?").get(id);
+    return { duplicate: false, object: readObjectById(db, mediaId), scan: scanFromRow(stored) };
+  });
+}
+
 export async function markSqliteProofMediaStorageProvider(dbPath, mediaId, storageProvider) {
   return withDatabase(dbPath, (db) => {
     const existing = readObjectById(db, mediaId);
@@ -501,7 +579,15 @@ export async function listSqliteProofMediaObjects(dbPath) {
       linksByMedia.set(link.mediaId, [...(linksByMedia.get(link.mediaId) || []), link]);
     }
 
-    return rows.map((row) => objectFromRow(row, linksByMedia.get(row.id) || []));
+    const scanRows = db.prepare(`
+      SELECT *
+      FROM proof_media_scan_results
+      ORDER BY media_id ASC, scanned_at DESC, created_at DESC, id ASC
+    `).all().map(scanFromRow);
+    const scansByMedia = new Map();
+    for (const scan of scanRows) if (!scansByMedia.has(scan.mediaId)) scansByMedia.set(scan.mediaId, scan);
+
+    return rows.map((row) => objectFromRow(row, linksByMedia.get(row.id) || [], scansByMedia.get(row.id) || null));
   });
 }
 
@@ -511,7 +597,7 @@ export async function readSqliteProofMediaStorageHealth(dbPath) {
       SELECT name
       FROM sqlite_master
       WHERE type = 'table'
-        AND name IN ('proof_media_objects', 'proof_media_links')
+        AND name IN ('proof_media_objects', 'proof_media_links', 'proof_media_scan_results')
       ORDER BY name ASC
     `).all();
     const count = (table) => db.prepare(`SELECT COUNT(*) AS count FROM ${table}`).get().count;
@@ -525,6 +611,13 @@ export async function readSqliteProofMediaStorageHealth(dbPath) {
       FROM proof_media_objects
       WHERE sha256 IS NOT NULL
         AND length(sha256) = 64
+    `).get().count;
+    const scanCount = db.prepare("SELECT COUNT(*) AS count FROM proof_media_scan_results").get().count;
+    const scanStatusCount = (status) => db.prepare("SELECT COUNT(*) AS count FROM proof_media_scan_results WHERE status = ?").get(status).count;
+    const unscanned = db.prepare(`
+      SELECT COUNT(*) AS count
+      FROM proof_media_objects media
+      WHERE NOT EXISTS (SELECT 1 FROM proof_media_scan_results scan WHERE scan.media_id = media.id)
     `).get().count;
     const latestObject = db.prepare(`
       SELECT id, upload_status, created_at
@@ -546,7 +639,13 @@ export async function readSqliteProofMediaStorageHealth(dbPath) {
         intentCreated: statusCount("intent-created"),
         registered: statusCount("registered"),
         verified: statusCount("verified"),
-        rejected: statusCount("rejected")
+        rejected: statusCount("rejected"),
+        mediaScanResults: scanCount,
+        scanPending: scanStatusCount("pending"),
+        scanClean: scanStatusCount("clean"),
+        scanQuarantined: scanStatusCount("quarantined"),
+        scanErrors: scanStatusCount("error"),
+        unscanned
       },
       hashCoverage: {
         mediaObjectsWithSha256: withSha

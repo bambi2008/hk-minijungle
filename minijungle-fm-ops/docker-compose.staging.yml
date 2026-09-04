@@ -1,0 +1,28 @@
+name: dr-forest-staging
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.staging
+    environment:
+      DR_FOREST_ENV: pilot
+      HOST: 0.0.0.0
+      PORT: 8010
+      DR_FOREST_RUNTIME_DIR: /app/.ops-data
+      DR_FOREST_RUNTIME_DB_PATH: /app/.ops-data/ops-runtime.sqlite
+    ports:
+      - "127.0.0.1:8010:8010"
+    volumes:
+      - dr_forest_staging_runtime:/app/.ops-data
+      - dr_forest_staging_backups:/app/backups
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  dr_forest_staging_runtime:
+  dr_forest_staging_backups:

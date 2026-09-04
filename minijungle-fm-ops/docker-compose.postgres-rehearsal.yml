@@ -1,0 +1,25 @@
+name: dr-forest-postgres-rehearsal
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: dr_forest_ops_staging
+      POSTGRES_USER: ops_staging
+      POSTGRES_PASSWORD: ${DR_FOREST_STAGING_DB_PASSWORD:?Set DR_FOREST_STAGING_DB_PASSWORD in .env.staging}
+    ports:
+      - "127.0.0.1:55432:5432"
+    volumes:
+      - dr_forest_postgres_rehearsal:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ops_staging -d dr_forest_ops_staging"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  dr_forest_postgres_rehearsal:

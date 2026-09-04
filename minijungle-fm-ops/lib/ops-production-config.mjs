@@ -5,6 +5,7 @@ export const productionConfigVersion = "2026-08-23.production-gate-v3";
 const REQUIRED_PRODUCTION_CONFIG = [
   ["DR_FOREST_DATABASE_URL", "managed relational database URL"],
   ["DR_FOREST_OBJECT_STORAGE_ENDPOINT", "S3-compatible object storage endpoint"],
+  ["DR_FOREST_OBJECT_STORAGE_STYLE", "object storage addressing style"],
   ["DR_FOREST_OBJECT_STORAGE_BUCKET", "proof and camera media bucket"],
   ["DR_FOREST_OBJECT_STORAGE_ACCESS_KEY", "object storage access key"],
   ["DR_FOREST_OBJECT_STORAGE_SECRET_KEY", "object storage secret key"],
@@ -45,6 +46,7 @@ export function productionConfigReport() {
   const databaseUrl = clean(process.env.DR_FOREST_DATABASE_URL);
   const objectEndpoint = clean(process.env.DR_FOREST_OBJECT_STORAGE_ENDPOINT);
   const backupDestination = clean(process.env.DR_FOREST_BACKUP_DESTINATION);
+  const objectStorageStyle = clean(process.env.DR_FOREST_OBJECT_STORAGE_STYLE).toLowerCase();
   const idpIssuer = clean(process.env.DR_FOREST_IDP_ISSUER);
   const origins = clean(process.env.DR_FOREST_ALLOWED_ORIGINS);
   const checks = REQUIRED_PRODUCTION_CONFIG.map(([name, description]) => {
@@ -58,6 +60,11 @@ export function productionConfigReport() {
     if (name === "DR_FOREST_OBJECT_STORAGE_ENDPOINT") {
       valid = isHttpsUrl(value);
       detail = valid ? "https endpoint" : "must be an https URL";
+    }
+    if (name === "DR_FOREST_OBJECT_STORAGE_STYLE") {
+      const cosEndpoint = isHttpsUrl(objectEndpoint) && (() => { try { return new URL(objectEndpoint).hostname.toLowerCase().endsWith(".myqcloud.com"); } catch { return false; } })();
+      valid = ["virtual", "path"].includes(value.toLowerCase()) && (!cosEndpoint || value.toLowerCase() === "virtual");
+      detail = valid ? (cosEndpoint ? "virtual-hosted COS addressing" : "supported S3 addressing") : (cosEndpoint ? "Tencent COS requires virtual-hosted addressing" : "must be virtual or path");
     }
     if (name === "DR_FOREST_BACKUP_DESTINATION") {
       valid = /^(s3|https):\/\//i.test(value);
@@ -125,6 +132,10 @@ export function productionConfigReport() {
     deviceSecurity: {
       requestSigning: production ? "hmac-required" : "shared-key-compatible",
       replayWindowSeconds: Number(process.env.DR_FOREST_DEVICE_REPLAY_WINDOW_SECONDS || 300)
+    },
+    objectStorage: {
+      provider: clean(process.env.DR_FOREST_OBJECT_STORAGE_PROVIDER).toLowerCase() || (objectEndpoint.toLowerCase().includes(".myqcloud.com") ? "cos" : "s3"),
+      addressingStyle: objectStorageStyle || "auto"
     }
   };
 }

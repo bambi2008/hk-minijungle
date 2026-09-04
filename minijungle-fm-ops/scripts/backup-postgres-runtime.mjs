@@ -3,6 +3,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildPostgresBackupManifest, encryptBackupFile, listPgRestoreArchive, runPgDump, assertPostgresToolsAvailable, verifyOffHostBackupReadback } from "../lib/ops-postgres-backup.mjs";
 import { uploadBackupTree } from "../lib/ops-object-storage.mjs";
+import { readBackupRetentionPolicy } from "../lib/ops-backup-retention-policy.mjs";
 
 function option(name, fallback = "") { const index = process.argv.indexOf(name); return index >= 0 ? String(process.argv[index + 1] || "").trim() : fallback; }
 function required(value, label) { if (!String(value || "").trim()) throw new Error(`${label} is required`); return String(value).trim(); }
@@ -23,7 +24,7 @@ export async function main() {
   await rm(archive, { force: true });
   const manifest = buildPostgresBackupManifest({ source: dump.source, archive: dump, encryptedArchive: encrypted, archiveEntries: archiveCheck.entries });
   const manifestPath = join(outputRoot, "manifest.json");
-  await writeFile(manifestPath, `${JSON.stringify({ ...manifest, tools }, null, 2)}\n`, "utf8");
+  await writeFile(manifestPath, `${JSON.stringify({ ...manifest, tools, retentionPolicy: readBackupRetentionPolicy() }, null, 2)}\n`, "utf8");
   let offHost = null;
   if (process.argv.includes("--upload")) {
     const destination = required(process.env.DR_FOREST_BACKUP_DESTINATION, "DR_FOREST_BACKUP_DESTINATION");

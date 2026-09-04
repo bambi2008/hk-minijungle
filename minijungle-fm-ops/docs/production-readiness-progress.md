@@ -1266,6 +1266,22 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
 
+### Step 89 - Media Scan Gate, Backup Lifecycle and Production Backup Routing
+
+- Score before: **65%**. Score after: **65%**. These changes close code-level safety gaps, but no score increase is claimed because no real scanner callback, Tencent COS lifecycle configuration, managed PostgreSQL backup, off-host readback or isolated restore drill was executed from this workspace.
+- Media safety added: `proof_media_scan_results` is an append-only table in SQLite and PostgreSQL with a media foreign key, scanner ID, provider, status, scanned timestamp, operator and SHA-256. `PUT /api/proof/media-evidence/:id/scan` records the external scanner contract; production media downloads require the latest status to be `clean` and still recheck object bytes against the ledger.
+- Production backup routing corrected: `npm.cmd run backup:runtime` now launches the PostgreSQL custom-format backup in production, automatically adds `--upload`, and the direct SQLite backup script fails closed when `DR_FOREST_ENV=production`. Local pilot backup behavior remains unchanged.
+- Backup lifecycle added: manifests carry `DR_FOREST_BACKUP_RETENTION_DAYS` and `DR_FOREST_BACKUP_RETENTION_COUNT`; `npm.cmd run backup:retention:plan` produces a reviewable local retention plan and only deletes when the operator explicitly passes `--apply`. COS bucket lifecycle configuration remains an external Tencent Cloud task and is not inferred from this plan.
+- Production preflight strengthened: `proof_media_scan_results` and migration `2026-09-04.postgres-proof-media-scan-v1` are now required PostgreSQL readiness checks. Migration runner smoke now expects 21 numbered migrations.
+- Verification completed: syntax checks, media scan contract smoke, retention policy smoke, API scan-route smoke and the existing test suite are the required checks for this step. Docker is still unavailable on this workstation, so no real PostgreSQL/COS execution was claimed.
+- Honest boundary: the application still has no real scanner service identity, customer media scan evidence, TencentDB connection, COS bucket lifecycle export, off-host archive, isolated restore report or real customer operating data. Production operations readiness remains **65%**.
+
+### Current Honest Score After Step 89
+
+- Production operations readiness: **65%**. The code-level production boundary is stricter; external evidence is still absent.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
 ### Step 86 - Airtable Field-Service Cycle Import UI
 
 - Score before: **65%**. Score after: **65%**. Bringing the field-service ledger into the Ops UI removes a CLI workflow blocker, but it does not create real service evidence or clear the managed production hard caps.
@@ -1295,5 +1311,21 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 ### Current Honest Score After Step 87
 
 - Production operations readiness: **65%**. No score increase is claimed from the import UI, reconciliation panel or local verification.
+- Architecture scaffold readiness: approximately **99%**, not the official score.
+- Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 88 - TencentDB/COS Production Path Hardening v1
+
+- Score before: **65%**. Score after: **65%**. The production database and off-host recovery hard cap remains active because no TencentDB instance or isolated restore drill was executed from this workspace.
+- COS integration hardened: S3-compatible requests now support explicit `virtual` or `path` addressing. Tencent COS is auto-detected when the endpoint is under `myqcloud.com`, defaults to virtual-hosted addressing, and production configuration rejects path-style addressing for COS.
+- COS verification added: `npm.cmd run probe:cos` performs a signed PUT, GET byte/hash comparison and DELETE against the configured bucket without setting any production evidence marker. The local contract smoke covers generic path-style compatibility and the Hong Kong COS virtual-hosted target shape.
+- Production image hardened: `Dockerfile` now installs the PostgreSQL client package so `pg_dump` and `pg_restore` are available for encrypted PostgreSQL backup and isolated restore commands inside the deployment image.
+- Deployment contract added: `docker-compose.production.example.yml` and `docs/tencent-cloud-production-cutover.md` define separate TencentDB, COS media and COS backup resources, secret boundaries, migration, probe, backup, remote-readback and isolated-restore commands.
+- Verification completed: object-storage contract smoke, COS target resolution, production-gate smoke, PostgreSQL backup-tooling smoke and local SQLite backup/restore smoke passed. Docker is not installed on this workstation, so the PostgreSQL container rehearsal was not run here.
+- Honest boundary: no TencentDB credentials, COS credentials, real proof image upload, COS malware-scan evidence, off-host archive, isolated restore target or production cutover was executed. The existing DR FOREST staging and Bridge Shen services were not changed.
+
+### Current Honest Score After Step 88
+
+- Production operations readiness: **65%**. The code path is more deployable, but external cloud execution and dated recovery evidence are still required.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

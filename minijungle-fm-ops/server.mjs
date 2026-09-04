@@ -405,6 +405,7 @@ import {
   createSqliteProofMediaIntent,
   listSqliteProofMediaObjects,
   markSqliteProofMediaStorageProvider,
+  recordSqliteProofMediaScan,
   readSqliteProofMediaObject,
   readSqliteProofMediaStorageHealth,
   registerSqliteProofMediaEvidence,
@@ -414,11 +415,13 @@ import {
   createPostgresProofMediaIntent,
   listPostgresProofMediaObjects,
   markPostgresProofMediaStorageProvider,
+  recordPostgresProofMediaScan,
   readPostgresProofMediaObject,
   readPostgresProofMediaStorageHealth,
   registerPostgresProofMediaEvidence,
   verifyPostgresProofMediaEvidence
 } from "./lib/ops-postgres-proof-media-store.mjs";
+import { mediaScanPolicyVersion, mediaScanStatuses } from "./lib/ops-media-scan-policy.mjs";
 import {
   createSqliteEvidenceSnapshot,
   listSqliteEvidenceSnapshots,
@@ -1090,6 +1093,12 @@ async function markProofMediaStorageProvider(mediaId, provider) {
   return productionMasterDataEnabled()
     ? markPostgresProofMediaStorageProvider(runtimeDbPath, mediaId, provider)
     : markSqliteProofMediaStorageProvider(runtimeDbPath, mediaId, provider);
+}
+
+async function recordProofMediaScan(mediaId, input) {
+  return productionMasterDataEnabled()
+    ? recordPostgresProofMediaScan(runtimeDbPath, mediaId, input)
+    : recordSqliteProofMediaScan(runtimeDbPath, mediaId, input);
 }
 
 async function verifyProofMediaEvidence(mediaId, input) {
@@ -2350,7 +2359,8 @@ function proofMediaUploadPolicy() {
     requiredIntegrity: ["sha256", "byteSize", "objectKey"],
     supportedSources: ["technician-mobile", "robotic-care", "fm-admin", "client-approved-upload"],
     storageProvider: production ? "s3-compatible" : "dr-forest-local-vault",
-    productionNote: production ? "Production bytes are uploaded to the configured private S3-compatible bucket; malware scanning and retention evidence remain release-gated." : "Pilot storage writes verified bytes to a local server vault. Production switches to S3-compatible storage after the production gate passes."
+    scan: { policyVersion: mediaScanPolicyVersion, requiredBeforeDownload: production, statuses: mediaScanStatuses },
+    productionNote: production ? "Production bytes are uploaded to the configured private S3-compatible bucket; an explicit clean scan result is required before download." : "Pilot storage writes verified bytes to a local server vault. Production switches to S3-compatible storage after the production gate passes."
   };
 }
 
@@ -2682,7 +2692,7 @@ async function handleApi(req, res, pathname) {
           runtime: { database: runtimeStorage.backend, migrations: runtimeStorage.migrations.length },
           masterData: { backend: masterDataStorage.source, foreignKeyIssues: masterDataStorage.relationshipIntegrity.foreignKeyIssues },
           mobileCapture: { batches: mobileCaptureStorage.counts.captureBatches, foreignKeyIssues: mobileCaptureStorage.relationshipIntegrity.foreignKeyIssues },
-          proofMedia: { backend: proofMediaStorage.backend, objects: proofMediaStorage.counts.mediaObjects, foreignKeyIssues: proofMediaStorage.relationshipIntegrity.foreignKeyIssues },
+          proofMedia: { backend: proofMediaStorage.backend, objects: proofMediaStorage.counts.mediaObjects, scans: proofMediaStorage.counts.mediaScanResults, unscanned: proofMediaStorage.counts.unscanned, cleanScans: proofMediaStorage.counts.scanClean, quarantinedScans: proofMediaStorage.counts.scanQuarantined, foreignKeyIssues: proofMediaStorage.relationshipIntegrity.foreignKeyIssues },
           telemetry: { historyRows: telemetryStorage.counts.sensorReadingHistory, healthSnapshots: telemetryStorage.counts.healthScoreSnapshots },
           modules: { count: moduleStorage.counts.modules, foreignKeyIssues: moduleStorage.relationshipIntegrity.foreignKeyIssues },
           reminders: { actions: reminderStorage.counts.actions },
@@ -4638,6 +4648,9 @@ async function handleApi(req, res, pathname) {
       if (!["registered", "verified", "rejected"].includes(media.uploadStatus)) {
         throw validationError("proof media file is not uploaded", "PROOF_MEDIA_NOT_UPLOADED");
       }
+      if (productionConfigReport().production && media.scanStatus !== "clean") {
+        throw apiError(409, "proof media requires a clean malware scan before download", "PROOF_MEDIA_SCAN_REQUIRED");
+      }
       const stored = media.storageProvider === "s3-compatible"
         ? await getS3Object({ bucket: process.env.DR_FOREST_OBJECT_STORAGE_BUCKET, key: media.objectKey })
         : { bytes: await readLocalProofMedia(media) };
@@ -4684,6 +4697,43 @@ async function handleApi(req, res, pathname) {
         object,
         event
       });
+      return;
+    }
+
+    const proofMediaScanMatch = pathname.match(/^\/api\/proof\/media-evidence\/([^/]+)\/scan$/);
+    if (req.method === "PUT" && proofMediaScanMatch) {
+      requirePermission(auth, "proof.media.verify");
+      const mediaId = decodeURIComponent(proofMediaScanMatch[1]);
+      const existing = await readProofMediaObject(mediaId);
+      if (!existing) throw validationError("proof media object must exist before scanning", "PROOF_MEDIA_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "proof media scan recording");
+      const input = await readJsonBody(req);
+      const result = await recordProofMediaScan(mediaId, {
+        ...input,
+        recordedBy: input.recordedBy || auth.name
+      });
+      const event = result.duplicate ? null : normalizeOpsEvent({
+        type: `proof.media.scan.${result.scan.status}`,
+        actor: auth.name,
+        entityType: "proof-media",
+        entityId: result.object.id,
+        clientId: result.object.clientId,
+        wallId: result.object.wallId,
+        source: "proof-media-scan-callback",
+        note: `Proof media ${result.object.filename} received a ${result.scan.status} scan result from ${result.scan.provider}.`,
+        payload: {
+          principalId: auth.id,
+          mediaId: result.object.id,
+          scanId: result.scan.scanId,
+          provider: result.scan.provider,
+          status: result.scan.status,
+          sha256: result.scan.sha256,
+          scannedAt: result.scan.scannedAt,
+          recordedBy: result.scan.recordedBy
+        }
+      });
+      if (event) await appendOpsEvent(event);
+      sendJson(res, result.duplicate ? 200 : 201, { ...result, event, policyVersion: mediaScanPolicyVersion });
       return;
     }
 

@@ -4,11 +4,14 @@ import { DatabaseSync } from "node:sqlite";
 import { basename, dirname, join, resolve } from "node:path";
 import { productionConfigReport } from "../lib/ops-production-config.mjs";
 import { uploadBackupTree } from "../lib/ops-object-storage.mjs";
+import { readBackupRetentionPolicy } from "../lib/ops-backup-retention-policy.mjs";
 
 const projectRoot = process.cwd();
 const runtimeRoot = resolve(process.env.DR_FOREST_RUNTIME_DIR || join(projectRoot, ".ops-data"));
 const databasePath = resolve(process.env.DR_FOREST_RUNTIME_DB_PATH || join(runtimeRoot, "ops-runtime.sqlite"));
 const backupRoot = resolve(process.env.DR_FOREST_BACKUP_DIR || join(projectRoot, "backups"));
+const production = productionConfigReport();
+if (production.production) throw new Error("PRODUCTION_POSTGRES_BACKUP_REQUIRED: use the monitored backup command, which runs pg_dump and uploads the PostgreSQL archive");
 
 function arg(name) {
   const index = process.argv.indexOf(name);
@@ -57,6 +60,7 @@ const manifest = {
   createdAt: new Date().toISOString(),
   source: { runtimeRoot, databasePath },
   consistency: { method: "sqlite-vacuum-into", sourceIntegrity },
+  retentionPolicy: readBackupRetentionPolicy(),
   files: [{ path: basename(backupDb), bytes: (await stat(backupDb)).size, sha256: await sha256(backupDb) }]
 };
 try {
@@ -68,7 +72,6 @@ try {
   }
 } catch (error) { if (error?.code !== "ENOENT") throw error; }
 
-const production = productionConfigReport();
 const encrypt = production.production || process.argv.includes("--encrypt");
 if (encrypt) {
   const key = encryptionKey();

@@ -193,7 +193,7 @@ async function verifyApi(baseUrl) {
   assert(initialStorage.body.releaseEvidence.relationshipIntegrity.foreignKeyIssues === 0, "Release evidence foreign keys should remain intact");
   assert(initialStorage.body.remediation.counts.total === 0, "Remediation task table should start empty in test mode");
   assert(initialStorage.body.remediation.relationshipIntegrity.workOrderScopeIssues === 0, "Remediation work-order scope check should start clean");
-  assert(initialStorage.body.proofMedia.migrationVersion === "2026-08-17.proof-media-v2", "Storage endpoint did not expose proof media migration");
+  assert(initialStorage.body.proofMedia.migrationVersion === "2026-09-04.proof-media-v3", "Storage endpoint did not expose proof media migration");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_objects"), "Storage endpoint did not expose proof media objects table");
   assert(initialStorage.body.proofMedia.tables.includes("proof_media_links"), "Storage endpoint did not expose proof media links table");
   assert(initialStorage.body.proofMedia.counts.mediaObjects === 0, "Proof media objects should start empty in test mode");
@@ -1106,6 +1106,22 @@ async function verifyApi(baseUrl) {
   assert(duplicateMediaRegister.body.duplicate === true, "Duplicate proof media registration should be marked duplicate");
   assert(duplicateMediaRegister.body.event === null, "Duplicate proof media registration should not create a second event");
 
+  const mediaScan = await fetchJson(`${baseUrl}api/proof/media-evidence/PM-9001/scan`, {
+    method: "PUT",
+    headers: jsonHeaders("fm-lead"),
+    body: JSON.stringify({
+      scanId: "PILOT-SCAN-9001",
+      provider: "pilot-malware-scanner",
+      status: "clean",
+      sha256: proofMedia.sha256,
+      scannedAt: "2026-07-15T09:24:00.000Z",
+      note: "Pilot contract scan result recorded for the uploaded file."
+    })
+  });
+  assert(mediaScan.response.status === 201, "FM lead should be able to record a proof media scan result");
+  assert(mediaScan.body.object.scanStatus === "clean" && mediaScan.body.scan.status === "clean", "Proof media scan result did not become the latest clean status");
+  assert(mediaScan.body.event.type === "proof.media.scan.clean", "Proof media scan did not create an audit event");
+
   const viewerDeniedMediaVerify = await fetchJson(`${baseUrl}api/proof/media-evidence/PM-9001/verify`, {
     method: "PUT",
     headers: jsonHeaders("client-show-suite"),
@@ -1137,6 +1153,7 @@ async function verifyApi(baseUrl) {
   assert(clientMediaVault.body.objects[0].id === "PM-9001", "Client-scoped proof media vault returned wrong object");
   assert(clientMediaVault.body.objects[0].uploadStatus === "verified", "Client-scoped proof media vault did not expose verified status");
   assert(clientMediaVault.body.objects[0].integrity.sha256 === proofMedia.sha256, "Client-scoped proof media vault did not expose SHA-256 integrity");
+  assert(clientMediaVault.body.objects[0].scanStatus === "clean", "Client-scoped proof media vault did not expose the clean scan status");
 
   const clientEventsAfterProofMedia = await fetchJson(`${baseUrl}api/ops-events`, {
     headers: principalHeaders("client-show-suite")
@@ -1145,10 +1162,11 @@ async function verifyApi(baseUrl) {
   assert(clientEventsAfterProofMedia.body.events.some((event) => event.type === "proof.media.verified"), "Client-scoped events did not include proof media verification");
 
   const storageAfterProofMedia = await fetchJson(`${baseUrl}api/storage`);
-  assert(storageAfterProofMedia.body.counts.opsEvents === 17, "Proof media, telemetry and reminder events were not retained in ops event log");
+  assert(storageAfterProofMedia.body.counts.opsEvents === 18, "Proof media, telemetry and reminder events were not retained in ops event log");
   assert(storageAfterProofMedia.body.proofMedia.counts.mediaObjects === 1, "Proof media object count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.counts.mediaLinks === 5, "Proof media link count did not persist");
   assert(storageAfterProofMedia.body.proofMedia.counts.verified === 1, "Proof media verified count did not persist");
+  assert(storageAfterProofMedia.body.proofMedia.counts.mediaScanResults === 1 && storageAfterProofMedia.body.proofMedia.counts.scanClean === 1, "Proof media scan result did not persist");
   assert(storageAfterProofMedia.body.proofMedia.hashCoverage.mediaObjectsWithSha256 === 1, "Proof media hash coverage did not persist");
   assert(storageAfterProofMedia.body.proofMedia.relationshipIntegrity.foreignKeyIssues === 0, "Proof media FK check found issues");
 

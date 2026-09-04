@@ -1,9 +1,11 @@
 import { getPostgresPool } from "./ops-postgres-store.mjs";
+import { normalizeProofMediaScan, proofMediaScanSummary } from "./ops-media-scan-policy.mjs";
 
-export const postgresProofMediaMigrationVersion = "2026-08-19.postgres-proof-media-v1";
+export const postgresProofMediaMigrationVersion = "2026-09-04.postgres-proof-media-v2";
 const acceptedContentTypes = new Set(["image/jpeg", "image/png", "image/webp", "application/pdf"]);
 const acceptedStatuses = new Set(["intent-created", "registered", "verified", "rejected"]);
 const verificationStatuses = new Set(["verified", "rejected"]);
+
 function proofMediaError(status, message, code) { const error = new Error(message); error.status = status; error.code = code; return error; }
 function validationError(message) { return proofMediaError(400, message, "PROOF_MEDIA_VALIDATION_ERROR"); }
 function notFoundError(id) { return proofMediaError(404, `Proof media object not found: ${id}`, "PROOF_MEDIA_NOT_FOUND"); }
@@ -12,17 +14,163 @@ function positiveInteger(value, field) { const number = Number(value); if (!Numb
 function requireSha256(value) { const sha256 = requireString(value, "sha256").toLowerCase(); if (!/^[a-f0-9]{64}$/.test(sha256)) throw validationError("sha256 must be a 64-character lowercase or uppercase hex digest"); return sha256; }
 function parseJson(value, fallback) { if (value && typeof value === "object") return value; try { return JSON.parse(value || ""); } catch { return fallback; } }
 function sanitize(value) { return String(value || "file").trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 80) || "file"; }
-function objectFromRow(row, links = []) { return { id: row.id, clientId: row.client_id, wallId: row.wall_id, moduleId: row.module_id || null, workorderId: row.workorder_id, proofRecordId: row.proof_record_id || null, captureBatchId: row.capture_batch_id || null, captureItemId: row.capture_item_id || null, category: row.category, filename: row.filename, contentType: row.content_type, byteSize: Number(row.byte_size), sha256: row.sha256, objectKey: row.object_key, storageProvider: row.storage_provider, uploadStatus: row.upload_status, createdAt: row.created_at, uploadedAt: row.uploaded_at || null, verifiedAt: row.verified_at || null, verifiedBy: row.verified_by || null, verificationNote: row.verification_note || "", source: row.source, metadata: parseJson(row.metadata_json, {}), integrity: { sha256: row.sha256, byteSize: Number(row.byte_size), hashAlgorithm: "sha256" }, links }; }
-function linkFromRow(row) { return { id: row.id, mediaId: row.media_id, entityType: row.entity_type, entityId: row.entity_id, clientId: row.client_id, relation: row.relation, createdAt: row.created_at }; }
-function linksForMedia(media) { const links = [{ entityType: "wall", entityId: media.wallId, relation: "captures" }, { entityType: "workorder", entityId: media.workorderId, relation: "evidence-for" }]; if (media.moduleId) links.push({ entityType: "module", entityId: media.moduleId, relation: "captures" }); if (media.proofRecordId) links.push({ entityType: "proof", entityId: media.proofRecordId, relation: "supports" }); if (media.captureBatchId) links.push({ entityType: "mobile-capture-batch", entityId: media.captureBatchId, relation: "derived-from" }); if (media.captureItemId) links.push({ entityType: "mobile-capture-item", entityId: media.captureItemId, relation: "derived-from" }); return links.map((link) => ({ ...link, id: `${media.id}:${link.entityType}:${link.entityId}`, mediaId: media.id, clientId: media.clientId, createdAt: media.createdAt })); }
-async function initialize(pool) { await pool.query(`CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL); CREATE TABLE IF NOT EXISTS proof_media_objects (id TEXT PRIMARY KEY,client_id TEXT NOT NULL,wall_id TEXT NOT NULL,module_id TEXT,workorder_id TEXT NOT NULL,proof_record_id TEXT,capture_batch_id TEXT,capture_item_id TEXT,category TEXT NOT NULL,filename TEXT NOT NULL,content_type TEXT NOT NULL,byte_size BIGINT NOT NULL,sha256 TEXT NOT NULL,object_key TEXT NOT NULL UNIQUE,storage_provider TEXT NOT NULL,upload_status TEXT NOT NULL,created_at TEXT NOT NULL,uploaded_at TEXT,verified_at TEXT,verified_by TEXT,verification_note TEXT,source TEXT NOT NULL,metadata_json TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_pg_proof_media_client ON proof_media_objects(client_id); CREATE INDEX IF NOT EXISTS idx_pg_proof_media_wall ON proof_media_objects(wall_id); CREATE INDEX IF NOT EXISTS idx_pg_proof_media_status ON proof_media_objects(upload_status); CREATE INDEX IF NOT EXISTS idx_pg_proof_media_sha256 ON proof_media_objects(sha256); CREATE TABLE IF NOT EXISTS proof_media_links (id TEXT PRIMARY KEY,media_id TEXT NOT NULL REFERENCES proof_media_objects(id) ON UPDATE CASCADE ON DELETE CASCADE,entity_type TEXT NOT NULL,entity_id TEXT NOT NULL,client_id TEXT NOT NULL,relation TEXT NOT NULL,created_at TEXT NOT NULL); CREATE INDEX IF NOT EXISTS idx_pg_proof_media_links_media ON proof_media_links(media_id); INSERT INTO schema_migrations (version,applied_at) VALUES ($1,NOW()) ON CONFLICT(version) DO NOTHING;`, [postgresProofMediaMigrationVersion]); }
-async function readObject(pool, id) { const objectResult = await pool.query("SELECT * FROM proof_media_objects WHERE id=$1", [id]); if (!objectResult.rows[0]) return null; const links = await pool.query("SELECT * FROM proof_media_links WHERE media_id=$1 ORDER BY entity_type ASC,entity_id ASC", [id]); return objectFromRow(objectResult.rows[0], links.rows.map(linkFromRow)); }
-function normalizeIntent(input) { const media = { id: requireString(input?.id, "media.id"), clientId: requireString(input?.clientId, "media.clientId"), wallId: requireString(input?.wallId, "media.wallId"), moduleId: input?.moduleId ? String(input.moduleId).trim() : null, workorderId: requireString(input?.workorderId, "media.workorderId"), proofRecordId: input?.proofRecordId ? String(input.proofRecordId).trim() : null, captureBatchId: input?.captureBatchId ? String(input.captureBatchId).trim() : null, captureItemId: input?.captureItemId ? String(input.captureItemId).trim() : null, category: input?.category ? String(input.category).trim() : "site-proof", filename: requireString(input?.filename, "media.filename"), contentType: requireString(input?.contentType, "media.contentType").toLowerCase(), byteSize: positiveInteger(input?.byteSize, "media.byteSize"), sha256: requireSha256(input?.sha256), storageProvider: input?.storageProvider ? String(input.storageProvider).trim() : "dr-forest-local-vault", uploadStatus: "intent-created", createdAt: new Date().toISOString(), uploadedAt: null, verifiedAt: null, verifiedBy: null, verificationNote: "", source: input?.source ? String(input.source).trim() : "technician-mobile", metadata: input?.metadata && typeof input.metadata === "object" ? input.metadata : {} }; if (!acceptedContentTypes.has(media.contentType)) throw validationError(`media.contentType must be one of ${Array.from(acceptedContentTypes).join(", ")}`); media.objectKey = input?.objectKey ? String(input.objectKey).trim() : ["dr-forest-proof",sanitize(media.clientId),sanitize(media.wallId),sanitize(media.workorderId),`${sanitize(media.id)}-${sanitize(media.filename)}`].join("/"); return media; }
+
+function scanFromRow(row) {
+  return { id: row.id, mediaId: row.media_id, scanId: row.scan_id, provider: row.provider, status: row.status, sha256: row.sha256, scannedAt: row.scanned_at?.toISOString?.() || row.scanned_at, recordedBy: row.recorded_by, note: row.note || "", createdAt: row.created_at?.toISOString?.() || row.created_at };
+}
+
+function objectFromRow(row, links = [], scan = null) {
+  return {
+    id: row.id, clientId: row.client_id, wallId: row.wall_id, moduleId: row.module_id || null, workorderId: row.workorder_id,
+    proofRecordId: row.proof_record_id || null, captureBatchId: row.capture_batch_id || null, captureItemId: row.capture_item_id || null,
+    category: row.category, filename: row.filename, contentType: row.content_type, byteSize: Number(row.byte_size), sha256: row.sha256,
+    objectKey: row.object_key, storageProvider: row.storage_provider, uploadStatus: row.upload_status,
+    createdAt: row.created_at?.toISOString?.() || row.created_at, uploadedAt: row.uploaded_at?.toISOString?.() || row.uploaded_at || null,
+    verifiedAt: row.verified_at?.toISOString?.() || row.verified_at || null, verifiedBy: row.verified_by || null,
+    verificationNote: row.verification_note || "", source: row.source, metadata: parseJson(row.metadata_json, {}),
+    integrity: { sha256: row.sha256, byteSize: Number(row.byte_size), hashAlgorithm: "sha256" },
+    scan: scan || null, scanStatus: proofMediaScanSummary(scan).status, links
+  };
+}
+
+function linkFromRow(row) { return { id: row.id, mediaId: row.media_id, entityType: row.entity_type, entityId: row.entity_id, clientId: row.client_id, relation: row.relation, createdAt: row.created_at?.toISOString?.() || row.created_at }; }
+function linksForMedia(media) {
+  const links = [{ entityType: "wall", entityId: media.wallId, relation: "captures" }, { entityType: "workorder", entityId: media.workorderId, relation: "evidence-for" }];
+  if (media.moduleId) links.push({ entityType: "module", entityId: media.moduleId, relation: "captures" });
+  if (media.proofRecordId) links.push({ entityType: "proof", entityId: media.proofRecordId, relation: "supports" });
+  if (media.captureBatchId) links.push({ entityType: "mobile-capture-batch", entityId: media.captureBatchId, relation: "derived-from" });
+  if (media.captureItemId) links.push({ entityType: "mobile-capture-item", entityId: media.captureItemId, relation: "derived-from" });
+  return links.map((link) => ({ ...link, id: `${media.id}:${link.entityType}:${link.entityId}`, mediaId: media.id, clientId: media.clientId, createdAt: media.createdAt }));
+}
+
+async function initialize(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS schema_migrations (version TEXT PRIMARY KEY, applied_at TIMESTAMPTZ NOT NULL);
+    CREATE TABLE IF NOT EXISTS proof_media_objects (
+      id TEXT PRIMARY KEY, client_id TEXT NOT NULL, wall_id TEXT NOT NULL, module_id TEXT, workorder_id TEXT NOT NULL,
+      proof_record_id TEXT, capture_batch_id TEXT, capture_item_id TEXT, category TEXT NOT NULL, filename TEXT NOT NULL,
+      content_type TEXT NOT NULL, byte_size BIGINT NOT NULL CHECK (byte_size > 0), sha256 TEXT NOT NULL, object_key TEXT NOT NULL UNIQUE,
+      storage_provider TEXT NOT NULL, upload_status TEXT NOT NULL CHECK (upload_status IN ('intent-created', 'registered', 'verified', 'rejected')),
+      created_at TIMESTAMPTZ NOT NULL, uploaded_at TIMESTAMPTZ, verified_at TIMESTAMPTZ, verified_by TEXT, verification_note TEXT,
+      source TEXT NOT NULL, metadata_json TEXT NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_client ON proof_media_objects(client_id);
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_wall ON proof_media_objects(wall_id);
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_workorder ON proof_media_objects(workorder_id);
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_status ON proof_media_objects(upload_status);
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_sha256 ON proof_media_objects(sha256);
+    CREATE TABLE IF NOT EXISTS proof_media_links (
+      id TEXT PRIMARY KEY, media_id TEXT NOT NULL REFERENCES proof_media_objects(id) ON UPDATE CASCADE ON DELETE CASCADE,
+      entity_type TEXT NOT NULL, entity_id TEXT NOT NULL, client_id TEXT NOT NULL, relation TEXT NOT NULL, created_at TIMESTAMPTZ NOT NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_links_media ON proof_media_links(media_id);
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_links_entity ON proof_media_links(entity_type, entity_id);
+    CREATE TABLE IF NOT EXISTS proof_media_scan_results (
+      id TEXT PRIMARY KEY, media_id TEXT NOT NULL REFERENCES proof_media_objects(id) ON UPDATE CASCADE ON DELETE CASCADE,
+      scan_id TEXT NOT NULL, provider TEXT NOT NULL, status TEXT NOT NULL CHECK (status IN ('pending', 'clean', 'quarantined', 'error')),
+      sha256 TEXT NOT NULL, scanned_at TIMESTAMPTZ NOT NULL, recorded_by TEXT NOT NULL, note TEXT NOT NULL DEFAULT '',
+      created_at TIMESTAMPTZ NOT NULL, UNIQUE (media_id, scan_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_scan_media_time ON proof_media_scan_results(media_id, scanned_at DESC, id ASC);
+    CREATE INDEX IF NOT EXISTS idx_pg_proof_media_scan_status ON proof_media_scan_results(status, scanned_at DESC);
+    INSERT INTO schema_migrations (version, applied_at) VALUES ($1, NOW()) ON CONFLICT(version) DO NOTHING;
+  `, [postgresProofMediaMigrationVersion]);
+}
+
+async function readObject(pool, id) {
+  const objectResult = await pool.query("SELECT * FROM proof_media_objects WHERE id=$1", [id]);
+  if (!objectResult.rows[0]) return null;
+  const [links, scan] = await Promise.all([
+    pool.query("SELECT * FROM proof_media_links WHERE media_id=$1 ORDER BY entity_type ASC,entity_id ASC", [id]),
+    pool.query("SELECT * FROM proof_media_scan_results WHERE media_id=$1 ORDER BY scanned_at DESC,created_at DESC,id ASC LIMIT 1", [id])
+  ]);
+  return objectFromRow(objectResult.rows[0], links.rows.map(linkFromRow), scan.rows[0] ? scanFromRow(scan.rows[0]) : null);
+}
+
+function normalizeIntent(input) {
+  const media = {
+    id: requireString(input?.id, "media.id"), clientId: requireString(input?.clientId, "media.clientId"), wallId: requireString(input?.wallId, "media.wallId"),
+    moduleId: input?.moduleId ? String(input.moduleId).trim() : null, workorderId: requireString(input?.workorderId, "media.workorderId"),
+    proofRecordId: input?.proofRecordId ? String(input.proofRecordId).trim() : null, captureBatchId: input?.captureBatchId ? String(input.captureBatchId).trim() : null,
+    captureItemId: input?.captureItemId ? String(input.captureItemId).trim() : null, category: input?.category ? String(input.category).trim() : "site-proof",
+    filename: requireString(input?.filename, "media.filename"), contentType: requireString(input?.contentType, "media.contentType").toLowerCase(),
+    byteSize: positiveInteger(input?.byteSize, "media.byteSize"), sha256: requireSha256(input?.sha256),
+    storageProvider: input?.storageProvider ? String(input.storageProvider).trim() : "dr-forest-local-vault", uploadStatus: "intent-created",
+    createdAt: new Date().toISOString(), uploadedAt: null, verifiedAt: null, verifiedBy: null, verificationNote: "",
+    source: input?.source ? String(input.source).trim() : "technician-mobile", metadata: input?.metadata && typeof input.metadata === "object" ? input.metadata : {}
+  };
+  if (!acceptedContentTypes.has(media.contentType)) throw validationError(`media.contentType must be one of ${Array.from(acceptedContentTypes).join(", ")}`);
+  media.objectKey = input?.objectKey ? String(input.objectKey).trim() : ["dr-forest-proof", sanitize(media.clientId), sanitize(media.wallId), sanitize(media.workorderId), `${sanitize(media.id)}-${sanitize(media.filename)}`].join("/");
+  return media;
+}
+
 function uploadInstructions(media) { return { provider: media.storageProvider, method: "POST", putUrl: `/api/proof/media-evidence/${encodeURIComponent(media.id)}/upload`, objectKey: media.objectKey, headers: { "content-type": media.contentType, "x-drf-sha256": media.sha256 }, expiresAt: new Date(Date.now() + 15 * 60 * 1000).toISOString(), note: media.storageProvider === "s3-compatible" ? "Server validates bytes and writes to the configured private object store." : "Pilot local metadata intent." }; }
-export async function createPostgresProofMediaIntent(dbPath, input) { const pool = getPostgresPool(); await initialize(pool); const media = normalizeIntent(input); const existing = await readObject(pool, media.id); if (existing) return { duplicate: true, object: existing, upload: uploadInstructions(existing) }; const client = await pool.connect(); try { await client.query("BEGIN"); await client.query("INSERT INTO proof_media_objects (id,client_id,wall_id,module_id,workorder_id,proof_record_id,capture_batch_id,capture_item_id,category,filename,content_type,byte_size,sha256,object_key,storage_provider,upload_status,created_at,uploaded_at,verified_at,verified_by,verification_note,source,metadata_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)", [media.id,media.clientId,media.wallId,media.moduleId,media.workorderId,media.proofRecordId,media.captureBatchId,media.captureItemId,media.category,media.filename,media.contentType,media.byteSize,media.sha256,media.objectKey,media.storageProvider,media.uploadStatus,media.createdAt,media.uploadedAt,media.verifiedAt,media.verifiedBy,media.verificationNote,media.source,JSON.stringify(media.metadata)]); for (const link of linksForMedia(media)) await client.query("INSERT INTO proof_media_links (id,media_id,entity_type,entity_id,client_id,relation,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)", [link.id,link.mediaId,link.entityType,link.entityId,link.clientId,link.relation,link.createdAt]); await client.query("COMMIT"); const object = await readObject(pool, media.id); return { duplicate: false, object, upload: uploadInstructions(object) }; } catch (caught) { await client.query("ROLLBACK"); if (caught?.code === "23505") { const object = await readObject(pool, media.id); if (object) return { duplicate: true, object, upload: uploadInstructions(object) }; } throw caught; } finally { client.release(); } }
-export async function registerPostgresProofMediaEvidence(dbPath, input) { const pool = getPostgresPool(); await initialize(pool); const mediaId = requireString(input?.id, "media.id"); const existing = await readObject(pool, mediaId); if (!existing) throw notFoundError(mediaId); const sha256 = requireSha256(input?.sha256); const byteSize = positiveInteger(input?.byteSize, "media.byteSize"); if (sha256 !== existing.sha256) throw proofMediaError(400, "uploaded sha256 does not match the upload intent", "PROOF_MEDIA_HASH_MISMATCH"); if (byteSize !== existing.byteSize) throw proofMediaError(400, "uploaded byteSize does not match the upload intent", "PROOF_MEDIA_SIZE_MISMATCH"); if (["registered","verified","rejected"].includes(existing.uploadStatus)) return { duplicate: true, object: existing }; const result = await pool.query("UPDATE proof_media_objects SET upload_status='registered',uploaded_at=$1 WHERE id=$2 RETURNING *", [input?.uploadedAt || new Date().toISOString(), mediaId]); return { duplicate: false, object: await readObject(pool, result.rows[0].id) }; }
+
+export async function createPostgresProofMediaIntent(dbPath, input) {
+  const pool = getPostgresPool(); await initialize(pool); const media = normalizeIntent(input); const existing = await readObject(pool, media.id);
+  if (existing) return { duplicate: true, object: existing, upload: uploadInstructions(existing) };
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("INSERT INTO proof_media_objects (id,client_id,wall_id,module_id,workorder_id,proof_record_id,capture_batch_id,capture_item_id,category,filename,content_type,byte_size,sha256,object_key,storage_provider,upload_status,created_at,uploaded_at,verified_at,verified_by,verification_note,source,metadata_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)", [media.id, media.clientId, media.wallId, media.moduleId, media.workorderId, media.proofRecordId, media.captureBatchId, media.captureItemId, media.category, media.filename, media.contentType, media.byteSize, media.sha256, media.objectKey, media.storageProvider, media.uploadStatus, media.createdAt, media.uploadedAt, media.verifiedAt, media.verifiedBy, media.verificationNote, media.source, JSON.stringify(media.metadata)]);
+    for (const link of linksForMedia(media)) await client.query("INSERT INTO proof_media_links (id,media_id,entity_type,entity_id,client_id,relation,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)", [link.id, link.mediaId, link.entityType, link.entityId, link.clientId, link.relation, link.createdAt]);
+    await client.query("COMMIT"); const object = await readObject(pool, media.id); return { duplicate: false, object, upload: uploadInstructions(object) };
+  } catch (caught) { await client.query("ROLLBACK"); if (caught?.code === "23505") { const object = await readObject(pool, media.id); if (object) return { duplicate: true, object, upload: uploadInstructions(object) }; } throw caught; } finally { client.release(); }
+}
+
+export async function registerPostgresProofMediaEvidence(dbPath, input) {
+  const pool = getPostgresPool(); await initialize(pool); const mediaId = requireString(input?.id, "media.id"); const existing = await readObject(pool, mediaId); if (!existing) throw notFoundError(mediaId);
+  const sha256 = requireSha256(input?.sha256); const byteSize = positiveInteger(input?.byteSize, "media.byteSize");
+  if (sha256 !== existing.sha256) throw proofMediaError(400, "uploaded sha256 does not match the upload intent", "PROOF_MEDIA_HASH_MISMATCH");
+  if (byteSize !== existing.byteSize) throw proofMediaError(400, "uploaded byteSize does not match the upload intent", "PROOF_MEDIA_SIZE_MISMATCH");
+  if (["registered", "verified", "rejected"].includes(existing.uploadStatus)) return { duplicate: true, object: existing };
+  const result = await pool.query("UPDATE proof_media_objects SET upload_status='registered',uploaded_at=$1 WHERE id=$2 RETURNING *", [input?.uploadedAt || new Date().toISOString(), mediaId]);
+  return { duplicate: false, object: await readObject(pool, result.rows[0].id) };
+}
+
+export async function recordPostgresProofMediaScan(dbPath, mediaId, input) {
+  const pool = getPostgresPool(); await initialize(pool); const existing = await readObject(pool, mediaId); if (!existing) throw notFoundError(mediaId);
+  if (existing.uploadStatus === "intent-created") throw proofMediaError(409, "proof media must be registered before scanning", "PROOF_MEDIA_NOT_REGISTERED");
+  if (!acceptedStatuses.has(existing.uploadStatus)) throw validationError(`Unsupported proof media status: ${existing.uploadStatus}`);
+  const scan = normalizeProofMediaScan(input, existing.sha256); const id = input?.id ? requireString(input.id, "scan.id") : `PMS-${sanitize(mediaId)}-${sanitize(scan.scanId)}`;
+  const result = await pool.query("INSERT INTO proof_media_scan_results (id,media_id,scan_id,provider,status,sha256,scanned_at,recorded_by,note,created_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) ON CONFLICT (media_id,scan_id) DO NOTHING RETURNING *", [id, mediaId, scan.scanId, scan.provider, scan.status, scan.sha256, scan.scannedAt, scan.recordedBy, scan.note, new Date().toISOString()]);
+  if (!result.rows[0]) { const prior = await pool.query("SELECT * FROM proof_media_scan_results WHERE media_id=$1 AND scan_id=$2", [mediaId, scan.scanId]); return { duplicate: true, object: await readObject(pool, mediaId), scan: scanFromRow(prior.rows[0]) }; }
+  return { duplicate: false, object: await readObject(pool, mediaId), scan: scanFromRow(result.rows[0]) };
+}
+
 export async function markPostgresProofMediaStorageProvider(dbPath, mediaId, storageProvider) { const pool = getPostgresPool(); await initialize(pool); const existing = await readObject(pool, mediaId); if (!existing) throw notFoundError(mediaId); await pool.query("UPDATE proof_media_objects SET storage_provider=$1 WHERE id=$2", [String(storageProvider), mediaId]); return readObject(pool, mediaId); }
-export async function verifyPostgresProofMediaEvidence(dbPath, mediaId, input) { const pool = getPostgresPool(); await initialize(pool); const existing = await readObject(pool, mediaId); if (!existing) throw notFoundError(mediaId); const status = requireString(input?.status, "verification.status"); if (!verificationStatuses.has(status)) throw validationError(`verification.status must be one of ${Array.from(verificationStatuses).join(", ")}`); if (!acceptedStatuses.has(existing.uploadStatus)) throw validationError(`Unsupported proof media status: ${existing.uploadStatus}`); if (existing.uploadStatus === "intent-created") throw proofMediaError(409, "proof media must be registered before verification", "PROOF_MEDIA_NOT_REGISTERED"); await pool.query("UPDATE proof_media_objects SET upload_status=$1,verified_at=$2,verified_by=$3,verification_note=$4 WHERE id=$5", [status,input?.verifiedAt || new Date().toISOString(),requireString(input?.verifiedBy, "verification.verifiedBy"),input?.note ? String(input.note).trim() : "",mediaId]); return readObject(pool, mediaId); }
+export async function verifyPostgresProofMediaEvidence(dbPath, mediaId, input) { const pool = getPostgresPool(); await initialize(pool); const existing = await readObject(pool, mediaId); if (!existing) throw notFoundError(mediaId); const status = requireString(input?.status, "verification.status"); if (!verificationStatuses.has(status)) throw validationError(`verification.status must be one of ${Array.from(verificationStatuses).join(", ")}`); if (!acceptedStatuses.has(existing.uploadStatus)) throw validationError(`Unsupported proof media status: ${existing.uploadStatus}`); if (existing.uploadStatus === "intent-created") throw proofMediaError(409, "proof media must be registered before verification", "PROOF_MEDIA_NOT_REGISTERED"); await pool.query("UPDATE proof_media_objects SET upload_status=$1,verified_at=$2,verified_by=$3,verification_note=$4 WHERE id=$5", [status, input?.verifiedAt || new Date().toISOString(), requireString(input?.verifiedBy, "verification.verifiedBy"), input?.note ? String(input.note).trim() : "", mediaId]); return readObject(pool, mediaId); }
 export async function readPostgresProofMediaObject(dbPath, mediaId) { const pool = getPostgresPool(); await initialize(pool); return readObject(pool, mediaId); }
-export async function listPostgresProofMediaObjects(dbPath) { const pool = getPostgresPool(); await initialize(pool); const rows = await pool.query("SELECT * FROM proof_media_objects ORDER BY created_at DESC,id ASC"); const links = await pool.query("SELECT * FROM proof_media_links ORDER BY media_id ASC,entity_type ASC,entity_id ASC"); const linksByMedia = new Map(); for (const link of links.rows.map(linkFromRow)) linksByMedia.set(link.mediaId, [...(linksByMedia.get(link.mediaId) || []), link]); return rows.rows.map((row) => objectFromRow(row, linksByMedia.get(row.id) || [])); }
-export async function readPostgresProofMediaStorageHealth(dbPath) { const pool = getPostgresPool(); await initialize(pool); const [objects,links,status,hashes,latest,checks] = await Promise.all([pool.query("SELECT COUNT(*)::int AS count FROM proof_media_objects"),pool.query("SELECT COUNT(*)::int AS count FROM proof_media_links"),pool.query("SELECT upload_status,COUNT(*)::int AS count FROM proof_media_objects GROUP BY upload_status ORDER BY upload_status"),pool.query("SELECT COUNT(*)::int AS count FROM proof_media_objects WHERE sha256 IS NOT NULL AND length(sha256)=64"),pool.query("SELECT id,upload_status,created_at FROM proof_media_objects ORDER BY created_at DESC,id ASC LIMIT 1"),pool.query("SELECT COUNT(*)::int AS count FROM proof_media_links l LEFT JOIN proof_media_objects o ON o.id=l.media_id WHERE o.id IS NULL")]); const statusCounts = Object.fromEntries(status.rows.map((row) => [row.upload_status, Number(row.count)])); return { backend: "postgresql", migrationVersion: postgresProofMediaMigrationVersion, source: "proof-media-metadata-ledger", storageProvider: "s3-compatible", tables: ["proof_media_objects","proof_media_links"], counts: { mediaObjects: Number(objects.rows[0].count), mediaLinks: Number(links.rows[0].count), intentCreated: statusCounts["intent-created"] || 0, registered: statusCounts.registered || 0, verified: statusCounts.verified || 0, rejected: statusCounts.rejected || 0 }, hashCoverage: { mediaObjectsWithSha256: Number(hashes.rows[0].count) }, latestObject: latest.rows[0] ? { id: latest.rows[0].id, uploadStatus: latest.rows[0].upload_status, createdAt: latest.rows[0].created_at } : null, relationshipIntegrity: { foreignKeysEnabled: true, foreignKeyIssues: Number(checks.rows[0].count) } }; }
+
+export async function listPostgresProofMediaObjects(dbPath) {
+  const pool = getPostgresPool(); await initialize(pool);
+  const [rows, links, scans] = await Promise.all([
+    pool.query("SELECT * FROM proof_media_objects ORDER BY created_at DESC,id ASC"),
+    pool.query("SELECT * FROM proof_media_links ORDER BY media_id ASC,entity_type ASC,entity_id ASC"),
+    pool.query("SELECT * FROM proof_media_scan_results ORDER BY media_id ASC,scanned_at DESC,created_at DESC,id ASC")
+  ]);
+  const linksByMedia = new Map(); for (const link of links.rows.map(linkFromRow)) linksByMedia.set(link.mediaId, [...(linksByMedia.get(link.mediaId) || []), link]);
+  const scansByMedia = new Map(); for (const scan of scans.rows.map(scanFromRow)) if (!scansByMedia.has(scan.mediaId)) scansByMedia.set(scan.mediaId, scan);
+  return rows.rows.map((row) => objectFromRow(row, linksByMedia.get(row.id) || [], scansByMedia.get(row.id) || null));
+}
+
+export async function readPostgresProofMediaStorageHealth(dbPath) {
+  const pool = getPostgresPool(); await initialize(pool);
+  const [objects, links, status, hashes, scans, scanStatus, unscanned, latest, checks] = await Promise.all([
+    pool.query("SELECT COUNT(*)::int AS count FROM proof_media_objects"), pool.query("SELECT COUNT(*)::int AS count FROM proof_media_links"),
+    pool.query("SELECT upload_status,COUNT(*)::int AS count FROM proof_media_objects GROUP BY upload_status ORDER BY upload_status"),
+    pool.query("SELECT COUNT(*)::int AS count FROM proof_media_objects WHERE sha256 IS NOT NULL AND length(sha256)=64"),
+    pool.query("SELECT COUNT(*)::int AS count FROM proof_media_scan_results"), pool.query("SELECT status,COUNT(*)::int AS count FROM proof_media_scan_results GROUP BY status ORDER BY status"),
+    pool.query("SELECT COUNT(*)::int AS count FROM proof_media_objects media WHERE NOT EXISTS (SELECT 1 FROM proof_media_scan_results scan WHERE scan.media_id=media.id)"),
+    pool.query("SELECT id,upload_status,created_at FROM proof_media_objects ORDER BY created_at DESC,id ASC LIMIT 1"),
+    pool.query("SELECT COUNT(*)::int AS count FROM proof_media_links l LEFT JOIN proof_media_objects o ON o.id=l.media_id WHERE o.id IS NULL")
+  ]);
+  const statusCounts = Object.fromEntries(status.rows.map((row) => [row.upload_status, Number(row.count)])); const scanCounts = Object.fromEntries(scanStatus.rows.map((row) => [row.status, Number(row.count)]));
+  return {
+    backend: "postgresql", migrationVersion: postgresProofMediaMigrationVersion, source: "proof-media-metadata-ledger", storageProvider: "s3-compatible",
+    tables: ["proof_media_objects", "proof_media_links", "proof_media_scan_results"],
+    counts: { mediaObjects: Number(objects.rows[0].count), mediaLinks: Number(links.rows[0].count), intentCreated: statusCounts["intent-created"] || 0, registered: statusCounts.registered || 0, verified: statusCounts.verified || 0, rejected: statusCounts.rejected || 0, mediaScanResults: Number(scans.rows[0].count), scanPending: scanCounts.pending || 0, scanClean: scanCounts.clean || 0, scanQuarantined: scanCounts.quarantined || 0, scanErrors: scanCounts.error || 0, unscanned: Number(unscanned.rows[0].count) },
+    hashCoverage: { mediaObjectsWithSha256: Number(hashes.rows[0].count) }, latestObject: latest.rows[0] ? { id: latest.rows[0].id, uploadStatus: latest.rows[0].upload_status, createdAt: latest.rows[0].created_at?.toISOString?.() || latest.rows[0].created_at } : null,
+    relationshipIntegrity: { foreignKeysEnabled: true, foreignKeyIssues: Number(checks.rows[0].count) }
+  };
+}

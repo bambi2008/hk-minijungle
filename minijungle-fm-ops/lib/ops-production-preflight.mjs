@@ -24,6 +24,7 @@ const requiredTables = [
   "mobile_capture_items",
   "proof_media_objects",
   "proof_media_links",
+  "proof_media_scan_results",
   "ops_notification_outbox",
   "ops_remediation_tasks",
   "ops_job_leases",
@@ -98,6 +99,7 @@ const requiredMigrations = [
   "2026-09-08.postgres-release-evidence-ledger-v1",
   "2026-08-29.postgres-health-esg-operational-ledger-v1",
   "2026-08-29.postgres-field-service-cycles-v1"
+  ,"2026-09-04.postgres-proof-media-scan-v1"
 ];
 
 function clean(value) { return String(value || "").trim(); }

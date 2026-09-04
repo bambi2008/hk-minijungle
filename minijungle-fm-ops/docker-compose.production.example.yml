@@ -1,0 +1,27 @@
+name: dr-forest-production
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.production
+    environment:
+      DR_FOREST_ENV: production
+      HOST: 0.0.0.0
+      PORT: 8010
+      DR_FOREST_RUNTIME_DIR: /app/.ops-data
+    ports:
+      - "127.0.0.1:8010:8010"
+    volumes:
+      - dr_forest_production_runtime:/app/.ops-data
+      - dr_forest_production_backups:/app/backups
+    init: true
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  dr_forest_production_runtime:
+  dr_forest_production_backups:

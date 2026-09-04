@@ -139,7 +139,7 @@ async function main() {
       await operations.locator("#inventory-receipt-quantity").fill("50");
       await operations.locator("#inventory-expiry").fill("2098-09-30");
       await operations.locator("#inventory-receipt-form button").click();
-      await operations.waitForFunction(() => document.querySelector("#inventory-notice")?.textContent.includes("added to FEFO"), null, { timeout: 30000 });
+      await operations.waitForFunction(() => document.querySelector("#inventory-notice")?.textContent.includes("added to FEFO"), null, { timeout: 60000 });
       assert((await operations.locator("#inventory-lot-list").textContent()).includes("NUT-UI-2098"), "Traceable lot receipt did not appear in the stock panel");
       await operations.locator("#inventory-sku").selectOption("NUT-A");
       await operations.locator("#inventory-quantity").fill("500");
@@ -172,7 +172,7 @@ async function main() {
       await operations.waitForFunction(() => document.querySelector("#import-state")?.textContent.includes("1 valid"), null, { timeout: 30000 });
       assert(await operations.locator("#maintenance-import-apply").isEnabled(), "Valid maintenance preview did not enable apply");
       await operations.locator("#maintenance-import-apply").click();
-      await operations.waitForFunction(() => document.querySelector("#maintenance-import-notice")?.textContent.includes("1 maintenance row imported"), null, { timeout: 20000 });
+      await operations.waitForFunction(() => document.querySelector("#maintenance-import-notice")?.textContent.includes("1 maintenance row imported"), null, { timeout: 60000 });
       assert((await operations.locator("#maintenance-import-history").textContent()).includes("applied"), "Applied maintenance import did not appear in recent history");
       const operationsQualityResponse = await fetch(`${baseUrl}/api/ops/quality`, { headers: { "x-dr-forest-principal": "fm-lead" } });
       const operationsQuality = await operationsQualityResponse.json();

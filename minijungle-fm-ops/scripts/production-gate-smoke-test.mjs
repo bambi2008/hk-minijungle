@@ -3,7 +3,7 @@ import { assertProductionReady, productionConfigReport } from "../lib/ops-produc
 const original = new Map(Object.keys(process.env).map((key) => [key, process.env[key]]));
 function clearProductionKeys() {
   for (const key of [
-    "DR_FOREST_DATABASE_URL", "DR_FOREST_OBJECT_STORAGE_ENDPOINT", "DR_FOREST_OBJECT_STORAGE_BUCKET",
+    "DR_FOREST_DATABASE_URL", "DR_FOREST_OBJECT_STORAGE_ENDPOINT", "DR_FOREST_OBJECT_STORAGE_STYLE", "DR_FOREST_OBJECT_STORAGE_BUCKET",
     "DR_FOREST_OBJECT_STORAGE_ACCESS_KEY", "DR_FOREST_OBJECT_STORAGE_SECRET_KEY", "DR_FOREST_STORAGE_BACKEND",
     "DR_FOREST_PROOF_MEDIA_BACKEND", "DR_FOREST_BACKUP_DESTINATION", "DR_FOREST_BACKUP_ENCRYPTION_KEY",
     "DR_FOREST_IDP_ISSUER", "DR_FOREST_IDP_JWKS_URL", "DR_FOREST_IDP_AUDIENCE", "DR_FOREST_ALLOWED_ORIGINS",
@@ -18,6 +18,13 @@ try {
   process.env.DR_FOREST_ENV = "production";
   const blocked = productionConfigReport();
   if (blocked.ready || blocked.failures.length < 10) throw new Error("Production gate did not fail closed with missing dependencies");
+  process.env.DR_FOREST_OBJECT_STORAGE_ENDPOINT = "https://cos.ap-hongkong.myqcloud.com";
+  process.env.DR_FOREST_OBJECT_STORAGE_STYLE = "path";
+  const cosPathStyle = productionConfigReport().checks.find((item) => item.name === "DR_FOREST_OBJECT_STORAGE_STYLE");
+  if (cosPathStyle?.valid) throw new Error("Tencent COS production configuration must reject path-style addressing");
+  process.env.DR_FOREST_OBJECT_STORAGE_STYLE = "virtual";
+  const cosVirtualStyle = productionConfigReport().checks.find((item) => item.name === "DR_FOREST_OBJECT_STORAGE_STYLE");
+  if (!cosVirtualStyle?.valid) throw new Error("Tencent COS production configuration must accept virtual-hosted addressing");
   let threw = false;
   try { assertProductionReady(); } catch (error) { threw = error.code === "PRODUCTION_CONFIG_INCOMPLETE"; }
   if (!threw) throw new Error("assertProductionReady did not reject incomplete production configuration");

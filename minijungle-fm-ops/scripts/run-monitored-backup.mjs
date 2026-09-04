@@ -21,7 +21,10 @@ if (!lease.acquired) {
   let run = null;
   try {
     run = (await storage.begin(runtimeDbPath, { jobName: "runtime-backup", ownerId, details: { production } })).run;
-    const child = spawn(process.execPath, [join(process.cwd(), "scripts", "backup-runtime.mjs"), ...process.argv.slice(2)], { cwd: process.cwd(), env: process.env, stdio: "inherit" });
+    const backupScript = production ? "backup-postgres-runtime.mjs" : "backup-runtime.mjs";
+    const backupArgs = [...process.argv.slice(2)];
+    if (production && !backupArgs.includes("--upload")) backupArgs.push("--upload");
+    const child = spawn(process.execPath, [join(process.cwd(), "scripts", backupScript), ...backupArgs], { cwd: process.cwd(), env: process.env, stdio: "inherit" });
     const exitCode = await new Promise((resolve, reject) => { child.once("error", reject); child.once("exit", (code) => resolve(code ?? 1)); });
     await storage.finish(runtimeDbPath, run.id, exitCode === 0 ? { status: "succeeded", result: { exitCode } } : { status: "failed", result: { exitCode }, error: `Backup process exited with code ${exitCode}` });
     process.exitCode = exitCode;
