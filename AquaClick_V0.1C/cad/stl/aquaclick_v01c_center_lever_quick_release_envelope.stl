@@ -1,0 +1,86 @@
+solid center_lever_quick_release_envelope
+  facet normal 0 0 1
+    outer loop
+      vertex -46 -19 -22
+      vertex 46 -19 -22
+      vertex 46 19 -22
+    endloop
+  endfacet
+  facet normal 0 0 1
+    outer loop
+      vertex -46 -19 -22
+      vertex 46 19 -22
+      vertex -46 19 -22
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex -46 -19 22
+      vertex 46 19 22
+      vertex 46 -19 22
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex -46 -19 22
+      vertex -46 19 22
+      vertex 46 19 22
+    endloop
+  endfacet
+  facet normal 0 1 0
+    outer loop
+      vertex -46 -19 -22
+      vertex -46 -19 22
+      vertex 46 -19 22
+    endloop
+  endfacet
+  facet normal 0 1 0
+    outer loop
+      vertex -46 -19 -22
+      vertex 46 -19 22
+      vertex 46 -19 -22
+    endloop
+  endfacet
+  facet normal -1 0 0
+    outer loop
+      vertex 46 -19 -22
+      vertex 46 -19 22
+      vertex 46 19 22
+    endloop
+  endfacet
+  facet normal -1 0 0
+    outer loop
+      vertex 46 -19 -22
+      vertex 46 19 22
+      vertex 46 19 -22
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 46 19 -22
+      vertex 46 19 22
+      vertex -46 19 22
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 46 19 -22
+      vertex -46 19 22
+      vertex -46 19 -22
+    endloop
+  endfacet
+  facet normal 1 0 -0
+    outer loop
+      vertex -46 19 -22
+      vertex -46 19 22
+      vertex -46 -19 22
+    endloop
+  endfacet
+  facet normal 1 0 0
+    outer loop
+      vertex -46 19 -22
+      vertex -46 -19 22
+      vertex -46 -19 -22
+    endloop
+  endfacet
+endsolid center_lever_quick_release_envelope

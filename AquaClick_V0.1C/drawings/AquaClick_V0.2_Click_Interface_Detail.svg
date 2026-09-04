@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#fbfaf7"/>
+  <text x="60" y="70" font-family="Arial" font-size="34" font-weight="700">AquaClick V0.2 - Click interface detail</text>
+  
+  <rect x="210" y="170" width="380" height="330" rx="18" fill="#dff3ed" stroke="#197a75" stroke-width="5"/>
+  <rect x="660" y="170" width="380" height="330" rx="18" fill="#f3f0fa" stroke="#4c3d72" stroke-width="5"/>
+  <circle cx="565" cy="260" r="24" fill="#111827"/>
+  <circle cx="685" cy="260" r="24" fill="#111827"/>
+  <path d="M570 395 L640 395 L660 430 L590 430 Z" fill="#ffe8c7" stroke="#b16a00" stroke-width="4"/>
+  <path d="M660 395 L730 395 L710 430 L640 430 Z" fill="#ffe8c7" stroke="#b16a00" stroke-width="4"/>
+  <rect x="580" y="515" width="240" height="42" rx="12" fill="#fff" stroke="#c44736" stroke-width="4"/>
+  <line x1="615" y1="170" x2="615" y2="557" stroke="#c44736" stroke-width="5" stroke-dasharray="12 8"/>
+  <text x="270" y="135" font-family="Arial" font-size="24" font-weight="700">wet assembly side</text>
+  <text x="725" y="135" font-family="Arial" font-size="24" font-weight="700">dry base side</text>
+  <text x="520" y="230" font-family="Arial" font-size="22">magnet alignment</text>
+  <text x="500" y="382" font-family="Arial" font-size="22">mechanical latch faces</text>
+  <text x="835" y="550" font-family="Arial" font-size="22">gasket / labyrinth boundary</text>
+  <text x="150" y="650" font-family="Arial" font-size="22">Layer 1: magnets locate and create premium feel.</text>
+  <text x="150" y="690" font-family="Arial" font-size="22">Layer 2: mechanical lock handles retention and pet/child misuse.</text>
+  <text x="150" y="730" font-family="Arial" font-size="22">Layer 3: gasket/labyrinth protects dry electronics from rinse water and food dust.</text>
+  
+  <line x1="210" y1="805" x2="1040" y2="805" stroke="#1f2933" stroke-width="2"/>
+  <path d="M210 805 l10 -6 l0 12 z" fill="#1f2933"/>
+  <path d="M1040 805 l-10 -6 l0 12 z" fill="#1f2933"/>
+  <text x="445" y="790" font-family="Arial" font-size="22">interface envelope draft: width TBD after teardown</text>
+
+
+</svg>

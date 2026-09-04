@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#fbfaf7"/>
+  <text x="60" y="70" font-family="Arial" font-size="34" font-weight="700">AquaClick V0.2 - washable food path detail</text>
+  
+  <path d="M250 150 L820 150 L760 410 Q560 520 330 430 Z" fill="#e9f8f4" stroke="#197a75" stroke-width="5"/>
+  <path d="M330 430 Q610 500 720 330" fill="none" stroke="#0f766e" stroke-width="8"/>
+  <circle cx="730" cy="418" r="58" fill="#fff" stroke="#c44736" stroke-width="5"/>
+  <rect x="760" y="396" width="330" height="86" rx="12" fill="#eef2f7" stroke="#2d3b52" stroke-width="4"/>
+  <rect x="800" y="418" width="250" height="42" rx="7" fill="#fff" stroke="#197a75" stroke-width="3"/>
+  <rect x="905" y="500" width="210" height="92" rx="18" fill="#fff4d6" stroke="#b16a00" stroke-width="4"/>
+  <text x="260" y="120" font-family="Arial" font-size="22">removable hopper</text>
+  <text x="620" y="350" font-family="Arial" font-size="22">removable rotor</text>
+  <text x="815" y="390" font-family="Arial" font-size="22">washable liner</text>
+  <text x="915" y="625" font-family="Arial" font-size="22">removable bowl/tray</text>
+  
+  <line x1="800" y1="700" x2="1050" y2="700" stroke="#1f2933" stroke-width="2"/>
+  <path d="M800 700 l10 -6 l0 12 z" fill="#1f2933"/>
+  <path d="M1050 700 l-10 -6 l0 12 z" fill="#1f2933"/>
+  <text x="805" y="685" font-family="Arial" font-size="22">liner inner width: 24 / 30 mm</text>
+
+  
+  <line x1="1130" y1="418" x2="1130" y2="460" stroke="#1f2933" stroke-width="2"/>
+  <path d="M1130 418 l10 -6 l0 12 z" fill="#1f2933"/>
+  <path d="M1130 460 l-10 -6 l0 12 z" fill="#1f2933"/>
+  <text x="1160" y="447" font-family="Arial" font-size="22">inner height: 22 / 24 mm</text>
+
+  <text x="90" y="765" font-family="Arial" font-size="21">Design rule: food-contact path comes out as a passive washable assembly.</text>
+  <text x="90" y="805" font-family="Arial" font-size="21">No dishwasher claim yet; V1 claim remains rinse / soak / hand-wash unless tested.</text>
+
+</svg>

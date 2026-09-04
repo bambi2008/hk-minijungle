@@ -1,0 +1,5 @@
+id,mechanism,strength,risk,aquaclick_decision
+M-FEED-01,segmented portion wheel,"simple, mature, portion repeatable","may trap residue, fixed portion granularity",benchmark as baseline
+M-FEED-02,flexible vane rotor,"tolerates irregular kibble better, familiar feeder pattern",silicone deformation and cleaning residue must be tested,prototype A/B/C only as adaptation
+M-FEED-03,auger assist,good for metering certain dry foods,"harder to clean, more crevices, higher torque path risk",secondary only if rotor fails
+M-FEED-04,gravity gate / flap,lowest complexity,poor small-dose precision and bridging risk,use only as low-cost reference

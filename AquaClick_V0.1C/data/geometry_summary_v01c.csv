@@ -1,0 +1,8 @@
+diameter_mm,fill_z_mm,gross_volume_l,height_mm,inner_h_mm,inner_w_mm,length_mm,max_floor_angle_deg,min_floor_angle_deg,part,stl,usable_volume_l
+,242.0,4.821810790739299,,,,,28.14224414455449,24.370975101723346,od180,aquaclick_v01c_od180_eccentric_hopper.stl,4.591810790739299
+,242.0,5.10031070182536,,,,,27.632333762796133,24.03609151409117,od185,aquaclick_v01c_od185_eccentric_hopper.stl,4.85031070182536
+58.4,,,28.0,,,,,,rotor_A_dynamic_envelope,aquaclick_v01c_rotor_A_dynamic_envelope.stl,
+64.8,,,30.0,,,,,,rotor_B_dynamic_envelope,aquaclick_v01c_rotor_B_dynamic_envelope.stl,
+71.2,,,32.0,,,,,,rotor_C_dynamic_envelope,aquaclick_v01c_rotor_C_dynamic_envelope.stl,
+,,,,22.0,24.0,82.0,,,chute_liner_standard,aquaclick_v01c_chute_liner_standard.stl,
+,,,,24.0,30.0,88.0,,,chute_liner_wide,aquaclick_v01c_chute_liner_wide.stl,

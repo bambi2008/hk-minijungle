@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#fbfaf7"/>
+  <text x="60" y="70" font-family="Arial" font-size="34" font-weight="700">AquaClick V0.1C - eccentric compound hopper section</text>
+  
+  <path d="M310 150 L1090 150 L970 650 Q700 760 430 650 Z" fill="#e9f3f0" stroke="#1e3d3a" stroke-width="4"/>
+  <path d="M430 650 Q775 700 910 470 Q945 405 990 360" fill="none" stroke="#197a75" stroke-width="8"/>
+  <circle cx="970" cy="520" r="46" fill="#fff" stroke="#c44736" stroke-width="5"/>
+  <text x="120" y="210" font-family="Arial" font-size="24">OD 180 / 185 mm variants</text>
+  <text x="120" y="250" font-family="Arial" font-size="24">Offset outlet center: X +38 mm, Y -18 mm</text>
+  <text x="120" y="290" font-family="Arial" font-size="24">Lowest floor: Z 16 mm; high floor: Z 78 mm</text>
+  <text x="120" y="330" font-family="Arial" font-size="24">Digital check only: real kibble flow still requires EVT</text>
+  <line x1="970" y1="520" x2="1180" y2="520" stroke="#c44736" stroke-width="3"/>
+  <text x="1190" y="528" font-family="Arial" font-size="22">rotor inlet</text>
+
+</svg>

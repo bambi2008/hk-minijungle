@@ -1,0 +1,17 @@
+id,area,v1_decision,status,reason
+V1-MUST-01,Food path,Removable circuit-free food cassette,Must do,Core product promise
+V1-MUST-02,Wet/dry boundary,No electronics in food-contact cassette,Must do,Makes washing credible
+V1-MUST-03,Cleaning,Hopper dispensing member chute liner and bowl/tray removable,Must do,Covers full dirty path
+V1-MUST-04,Drive,Detachable coupler between dry motor and wet cassette,Must do,Allows motor to stay dry
+V1-MUST-05,Connection,Magnetic alignment plus mechanical latch,Must do,Feel plus safety retention
+V1-MUST-06,Detection,Cassette-present and lock-state detection,Must do,Prevents unsafe operation
+V1-MUST-07,Detection,Cassette-present and lock-state detection,Must do,Prevents unsafe operation
+V1-MUST-08,Feeding,Mature dispensing mechanism adapted from competitor patterns,Must do,Avoids unnecessary invention
+V1-MUST-09,Reliability,Local schedule works without internet,Must do,Category reliability baseline
+V1-MUST-10,Cleaning,Food cassette removal workflow under 60 seconds,Must do,Makes the core promise visible and believable
+V1-SIMPLE-01,App,Basic schedule manual feed status cleaning reminder,Simplify,Not differentiation
+V1-SIMPLE-02,Camera,Optional dry module or dummy crowdfunding module,Simplify,Not required for core promise
+V1-RESERVE-01,Modules,Reserve Click interface but no open ecosystem,Reserve,Keep future path without launch complexity
+V1-LATER-01,Identity,No RFID microchip or AI multi-cat control in 1.0,Postpone,High complexity and not core 1.0
+V1-LATER-02,Wet food,No wet food support in 1.0,Postpone,Very different hygiene and cooling requirements
+V1-NO-01,Claims,No dishwasher safe waterproof anti-jam universal claims,Do not claim,Requires validation

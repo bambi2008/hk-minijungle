@@ -1,0 +1,19 @@
+rotor,window,channel,minimum_pass_axis_mm_proxy,status,note
+A,A,standard,17.1,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+A,A,wide,17.1,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+A,B,standard,19.6,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+A,B,wide,19.6,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+A,C,standard,20.0,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+A,C,wide,22.0,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+B,A,standard,16.7,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+B,A,wide,16.7,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+B,B,standard,19.2,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+B,B,wide,19.2,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+B,C,standard,20.0,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+B,C,wide,22.0,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+C,A,standard,16.3,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+C,A,wide,16.3,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+C,B,standard,18.8,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+C,B,wide,18.8,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+C,C,standard,20.0,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.
+C,C,wide,22.0,PASS_15MM_PROXY,Proxy only. Irregular freeze-dried food must be EVT tested.

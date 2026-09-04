@@ -1,0 +1,6 @@
+id,risk,impact,mitigation,status
+R-P0-001,Eccentric hopper slope is digital-only,Food bridging or stagnant zones,EVT flow test with 5-15 mm kibble and <=20% freeze-dried mix,Open
+R-P0-002,Rigid rotor envelope is not silicone deformation,False clearance confidence,Prototype flexible rotor and inspect crumb rate / jam rate,Open
+R-P0-003,Chute liner snap tabs are placeholders,OEM DFM may require geometry changes,"OEM review with material, draft, tool split and latch force",Open
+R-P0-004,Magnet cannot be safety lock,Pet/child accidental release,Mechanical lock retention and misuse test,Open
+R-P1-001,Load cell force path is envelope only,Weight drift or overload damage,Bench fixture with 2 kg load-cell and overload stops,Open

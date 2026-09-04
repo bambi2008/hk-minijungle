@@ -1,0 +1,86 @@
+solid dual_side_quick_release_envelope
+  facet normal 0 0 1
+    outer loop
+      vertex -63 -14 -17
+      vertex 63 -14 -17
+      vertex 63 14 -17
+    endloop
+  endfacet
+  facet normal 0 0 1
+    outer loop
+      vertex -63 -14 -17
+      vertex 63 14 -17
+      vertex -63 14 -17
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex -63 -14 17
+      vertex 63 14 17
+      vertex 63 -14 17
+    endloop
+  endfacet
+  facet normal 0 0 -1
+    outer loop
+      vertex -63 -14 17
+      vertex -63 14 17
+      vertex 63 14 17
+    endloop
+  endfacet
+  facet normal 0 1 0
+    outer loop
+      vertex -63 -14 -17
+      vertex -63 -14 17
+      vertex 63 -14 17
+    endloop
+  endfacet
+  facet normal 0 1 0
+    outer loop
+      vertex -63 -14 -17
+      vertex 63 -14 17
+      vertex 63 -14 -17
+    endloop
+  endfacet
+  facet normal -1 0 0
+    outer loop
+      vertex 63 -14 -17
+      vertex 63 -14 17
+      vertex 63 14 17
+    endloop
+  endfacet
+  facet normal -1 0 0
+    outer loop
+      vertex 63 -14 -17
+      vertex 63 14 17
+      vertex 63 14 -17
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 63 14 -17
+      vertex 63 14 17
+      vertex -63 14 17
+    endloop
+  endfacet
+  facet normal 0 -1 0
+    outer loop
+      vertex 63 14 -17
+      vertex -63 14 17
+      vertex -63 14 -17
+    endloop
+  endfacet
+  facet normal 1 0 -0
+    outer loop
+      vertex -63 14 -17
+      vertex -63 14 17
+      vertex -63 -14 17
+    endloop
+  endfacet
+  facet normal 1 0 0
+    outer loop
+      vertex -63 14 -17
+      vertex -63 -14 17
+      vertex -63 -14 -17
+    endloop
+  endfacet
+endsolid dual_side_quick_release_envelope

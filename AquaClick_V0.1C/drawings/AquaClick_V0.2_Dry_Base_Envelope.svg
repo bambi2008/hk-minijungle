@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#fbfaf7"/>
+  <text x="60" y="70" font-family="Arial" font-size="34" font-weight="700">AquaClick V0.2 - dry base envelope</text>
+  
+  <rect x="230" y="180" width="820" height="460" rx="28" fill="#f3f0fa" stroke="#4c3d72" stroke-width="5"/>
+  <circle cx="470" cy="360" r="70" fill="#fff" stroke="#4c3d72" stroke-width="4"/>
+  <rect x="620" y="285" width="250" height="150" rx="12" fill="#eef2f7" stroke="#2d3b52" stroke-width="4"/>
+  <rect x="390" y="520" width="430" height="65" rx="16" fill="#fff4d6" stroke="#b16a00" stroke-width="4"/>
+  <rect x="910" y="265" width="80" height="210" rx="12" fill="#dff3ed" stroke="#197a75" stroke-width="4"/>
+  <text x="410" y="360" font-family="Arial" font-size="22">motor</text>
+  <text x="680" y="360" font-family="Arial" font-size="22">PCB / power</text>
+  <text x="470" y="560" font-family="Arial" font-size="22">load-cell protected path</text>
+  <text x="885" y="500" font-family="Arial" font-size="22">module bay / contacts</text>
+  <text x="145" y="110" font-family="Arial" font-size="24" font-weight="700">Dry base must survive food dust nearby, but is not washable.</text>
+  
+  <line x1="230" y1="720" x2="1050" y2="720" stroke="#1f2933" stroke-width="2"/>
+  <path d="M230 720 l10 -6 l0 12 z" fill="#1f2933"/>
+  <path d="M1050 720 l-10 -6 l0 12 z" fill="#1f2933"/>
+  <text x="440" y="705" font-family="Arial" font-size="22">base footprint TBD after competitor teardown</text>
+
+  <text x="125" y="790" font-family="Arial" font-size="21">No wet-zone electronics. Smart modules remain dry or independently sealed.</text>
+
+</svg>

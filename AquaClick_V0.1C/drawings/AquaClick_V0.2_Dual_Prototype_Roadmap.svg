@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#fbfaf7"/>
+  <text x="60" y="70" font-family="Arial" font-size="34" font-weight="700">AquaClick V0.2 - dual prototype roadmap</text>
+  
+  <rect x="90" y="180" width="530" height="470" rx="20" fill="#e9f8f4" stroke="#197a75" stroke-width="5"/>
+  <rect x="780" y="180" width="530" height="470" rx="20" fill="#f3f0fa" stroke="#4c3d72" stroke-width="5"/>
+  <text x="145" y="245" font-family="Arial" font-size="30" font-weight="700">Prototype A</text>
+  <text x="145" y="285" font-family="Arial" font-size="24">Engineering feeder mule</text>
+  <text x="830" y="245" font-family="Arial" font-size="30" font-weight="700">Prototype B</text>
+  <text x="830" y="285" font-family="Arial" font-size="24">Click experience model</text>
+  <text x="145" y="360" font-family="Arial" font-size="22">- mature feed mechanism</text>
+  <text x="145" y="405" font-family="Arial" font-size="22">- washable wet assembly</text>
+  <text x="145" y="450" font-family="Arial" font-size="22">- dry motor boundary</text>
+  <text x="145" y="495" font-family="Arial" font-size="22">- real food tests</text>
+  <text x="830" y="360" font-family="Arial" font-size="22">- magnetic alignment feel</text>
+  <text x="830" y="405" font-family="Arial" font-size="22">- mechanical latch click</text>
+  <text x="830" y="450" font-family="Arial" font-size="22">- dummy smart modules</text>
+  <text x="830" y="495" font-family="Arial" font-size="22">- crowdfunding demo story</text>
+  <line x1="620" y1="415" x2="780" y2="415" stroke="#1f2933" stroke-width="5"/>
+  <path d="M780 415 l-18 -12 l0 24 z" fill="#1f2933"/>
+  <text x="605" y="710" font-family="Arial" font-size="24" font-weight="700">Integrate only after both gates pass</text>
+
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="900" viewBox="0 0 1400 900">
+  <rect width="1400" height="900" fill="#fbfaf7"/>
+  <text x="60" y="70" font-family="Arial" font-size="34" font-weight="700">AquaClick V0.2 - general arrangement wet/dry section</text>
+  
+  <rect x="250" y="110" width="500" height="470" rx="18" fill="#dff3ed" stroke="#197a75" stroke-width="5"/>
+  <path d="M300 160 L700 160 L650 470 Q500 550 350 470 Z" fill="#f8fffd" stroke="#197a75" stroke-width="4"/>
+  <circle cx="620" cy="470" r="42" fill="#fff" stroke="#c44736" stroke-width="5"/>
+  <rect x="375" y="585" width="360" height="110" rx="18" fill="#f3f0fa" stroke="#4c3d72" stroke-width="5"/>
+  <rect x="805" y="250" width="260" height="190" rx="16" fill="#eef2f7" stroke="#2d3b52" stroke-width="4"/>
+  <rect x="805" y="500" width="260" height="120" rx="16" fill="#fff4d6" stroke="#b16a00" stroke-width="4"/>
+  <line x1="250" y1="575" x2="1090" y2="575" stroke="#c44736" stroke-width="7" stroke-dasharray="16 10"/>
+  <text x="270" y="95" font-family="Arial" font-size="24" font-weight="700">WET ZONE: no PCB / no motor / no wiring</text>
+  <text x="385" y="745" font-family="Arial" font-size="24" font-weight="700">DRY BASE: motor + PCB + power</text>
+  <text x="820" y="235" font-family="Arial" font-size="22">Click smart module bay</text>
+  <text x="820" y="490" font-family="Arial" font-size="22">bowl / load path</text>
+  <text x="780" y="570" font-family="Arial" font-size="22" fill="#c44736">wash boundary</text>
+  
+  <line x1="250" y1="815" x2="750" y2="815" stroke="#1f2933" stroke-width="2"/>
+  <path d="M250 815 l10 -6 l0 12 z" fill="#1f2933"/>
+  <path d="M750 815 l-10 -6 l0 12 z" fill="#1f2933"/>
+  <text x="365" y="800" font-family="Arial" font-size="22">hopper OD target: 180 / 185 mm</text>
+
+  
+  <line x1="1130" y1="110" x2="1130" y2="695" stroke="#1f2933" stroke-width="2"/>
+  <path d="M1130 110 l10 -6 l0 12 z" fill="#1f2933"/>
+  <path d="M1130 695 l-10 -6 l0 12 z" fill="#1f2933"/>
+  <text x="1160" y="405" font-family="Arial" font-size="22">overall height target <= 305 mm</text>
+
+  <text x="80" y="835" font-family="Arial" font-size="18">Engineering communication drawing only. Not mold data or production drawing.</text>
+
+</svg>
