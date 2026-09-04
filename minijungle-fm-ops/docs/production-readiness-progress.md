@@ -1279,8 +1279,18 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Bridge safety verification: `https://api.qiaoshenedu.com/` returned `200`, and the Caddy, bridge app and core app container start timestamps were identical before and after the cutover. Only the DR FOREST staging container was replaced.
 - Honest boundary: an actual Airtable export, real field-service cycles, technician evidence, client review, managed TencentDB PostgreSQL, off-host restore, production identity, signed devices and managed media remain external acceptance gates. Production operations readiness remains **65%**.
 
-### Current Honest Score After Step 86
+### Step 87 - Pilot Operations Reconciliation / Closeout Control v1
 
-- Production operations readiness: **65%**. No score increase is claimed from the import UI or local verification.
+- Score before: **65%**. Score after: **65%**. This is an operator-control improvement, not field evidence, customer acceptance or a production gate clearance.
+- Read-only API added: `GET /api/ops/pilot-reconciliation` combines the server-scoped quality summary, Airtable field-service ledger, mobile capture batches, ESG period ledger and persisted evidence snapshot list.
+- Closeout model added: seven checks cover module master data, field-service cycles, technician evidence, sensor/camera signals, exceptions/remediation, ESG baseline and evidence snapshot verification. Every check returns a state of `ready`, `attention` or `awaiting-data`, plus a next action.
+- UI workflow added: Ops Today now shows a compact Pilot Closeout panel after the pilot checklist. It loads asynchronously, supports an explicit refresh and exposes the claim boundary directly in the panel.
+- Data boundary: counts are filtered through the current principal scope. Stored module configuration, generated IDs, pending device mappings and local smoke fixtures are not treated as installed hardware or customer operations. ESG records remain supplier operational evidence, not assurance.
+- Verification completed: `npm.cmd run check --silent` passed, including policy smoke, API/UI smoke, all existing data-model, device, alert/AI scale, backup/restore and production-gate checks. The new isolated UI smoke returned HTTP `200` with seven reconciliation checks and a visible claim boundary.
+- Honest boundary: the current pilot runtime still uses SQLite/local media and pilot credentials. Real customer cycles, physical WiFi sensor/camera traffic, signed device identity, managed PostgreSQL, off-host restore and repeated multi-client operations remain external acceptance gates. Production operations readiness remains **65%**.
+
+### Current Honest Score After Step 87
+
+- Production operations readiness: **65%**. No score increase is claimed from the import UI, reconciliation panel or local verification.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.

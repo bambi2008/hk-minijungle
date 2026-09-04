@@ -380,6 +380,7 @@ import {
   normalizeEsgObservation,
   operationalHealthMethodVersion
 } from "./lib/ops-health-esg-policy.mjs";
+import { buildPilotReconciliation } from "./lib/ops-pilot-reconciliation-policy.mjs";
 import {
   createPostgresEsgObservation,
   ensurePostgresHealthEsgSchema,
@@ -1489,6 +1490,9 @@ async function buildOperationsQuality(auth) {
       openRemediationTasks: remediationTasks.length,
       unassignedRemediationTasks: remediationTasks.filter((task) => !task.assignedTo).length,
       fieldEvidenceBatches: scopedCaptures.length,
+      openSensorAlerts: alerts.length,
+      queuedAiDiagnoses: diagnoses.length,
+      openIncidents: Number(portfolio.counts.openIncidents || 0),
       activeExceptions,
       overdueExceptions,
       verifiedMedia: Number(proofStorage.counts?.verified || 0),
@@ -1498,6 +1502,25 @@ async function buildOperationsQuality(auth) {
     moduleReadiness: moduleReadiness.slice(0, 20),
     warnings: gates.filter((gate) => ["blocked", "partial", "attention", "overdue"].includes(gate.status)).map((gate) => `${gate.label}: ${gate.detail}`)
   };
+}
+
+async function buildPilotReconciliationFor(auth) {
+  const clientIds = auth.clientScope === "all" ? null : auth.clientIds;
+  const [quality, fieldCycles, captures, esgLedger, evidenceSnapshots] = await Promise.all([
+    buildOperationsQuality(auth),
+    listFieldServiceCycles({ clientIds, limit: 1000 }),
+    listMobileCaptureBatches(),
+    buildEsgLedgerFor(auth, {}),
+    listEvidenceSnapshots({ limit: 100 })
+  ]);
+  return buildPilotReconciliation({
+    quality,
+    fieldCycles,
+    captures: filterByClientScope(auth, captures, (batch) => batch.clientId),
+    esgLedger,
+    evidenceSnapshots: evidenceSnapshots.filter((snapshot) => canAccessEvidenceSnapshot(auth, snapshot)),
+    scope: auth.clientScope === "all" ? "all" : "client-scoped"
+  });
 }
 
 function filterStateMap(auth, map, entityType, resolveEntityClientId) {
@@ -4066,6 +4089,12 @@ async function handleApi(req, res, pathname) {
     if (req.method === "GET" && pathname === "/api/ops/quality") {
       requirePermission(auth, "storage.read");
       sendJson(res, 200, await buildOperationsQuality(auth));
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/ops/pilot-reconciliation") {
+      requirePermission(auth, "storage.read");
+      sendJson(res, 200, await buildPilotReconciliationFor(auth));
       return;
     }
 

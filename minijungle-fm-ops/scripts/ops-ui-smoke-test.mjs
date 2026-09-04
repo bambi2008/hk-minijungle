@@ -39,12 +39,18 @@ async function main() {
       await operations.locator("#module-query-submit").click();
       await operations.waitForFunction(() => document.querySelector("#module-query-state")?.textContent.includes("12 of 12 modules"), null, { timeout: 30000 });
       await operations.waitForFunction(() => document.querySelector("#quality-state")?.textContent !== "Loading", null, { timeout: 30000 });
+      await operations.waitForFunction(() => document.querySelector("#pilot-reconciliation-state")?.textContent !== "Loading", null, { timeout: 30000 });
       assert(await operations.locator(".go-live-gate").count() === 7, "Operations page did not render the seven production acceptance gates");
       assert((await operations.locator("#go-live-state").textContent()).includes("7 gates open"), "Operations page did not expose the blocked go-live state");
       assert((await operations.locator("#go-live-summary").textContent()).includes("0/7"), "Operations page did not expose the external gate count");
       assert(await operations.locator(".pilot-check").count() === 7, "Operations page did not render the seven-step pilot checklist");
       assert((await operations.locator("#pilot-state").textContent()).includes("awaiting data"), "Operations page did not expose the pilot data boundary");
       assert((await operations.locator("#pilot-checklist").textContent()).includes("Airtable handoff"), "Operations page did not expose the Airtable pilot step");
+      assert(await operations.locator(".pilot-reconciliation-check").count() === 7, "Operations page did not render seven pilot reconciliation checks");
+      assert((await operations.locator("#pilot-reconciliation-summary").textContent()).includes("modules in scope"), "Operations page did not render reconciliation summary");
+      assert((await operations.locator("#pilot-reconciliation-notice").textContent()).includes("does not certify"), "Reconciliation panel must expose its claim boundary");
+      const reconciliationApi = await operations.evaluate(async () => { const response = await fetch("/api/ops/pilot-reconciliation", { headers: { "x-dr-forest-principal": "fm-lead" }, cache: "no-store" }); return { status: response.status, body: await response.json() }; });
+      assert(reconciliationApi.status === 200 && reconciliationApi.body.mode === "pilot-reconciliation" && reconciliationApi.body.checks.length === 7, "Pilot reconciliation API contract failed");
       assert(await operations.locator(".quality-gate").count() === 4, "Operations page did not render four quality gates");
       await operations.waitForFunction(() => document.querySelector("#health-esg-state")?.textContent !== "Loading", null, { timeout: 30000 });
       assert(await operations.locator(".health-item").count() === 4, "Operations page did not render the explainable health list");

@@ -14,6 +14,7 @@ const contractState = { overview: null };
 const releaseEvidenceLedgerState = { payload: null };
 const moduleQueryState = { search: "", status: "", cursor: null, total: 0, hasMore: false, items: [] };
 const fieldCycleImportState = { preview: null, loaded: false, request: null };
+const pilotReconciliationState = { payload: null, request: null };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body.error || `Request failed (${response.status})`); error.code = body.code; error.details = body.details; throw error; } return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -286,6 +287,35 @@ function renderPilotChecklist({ modules = {}, route = {}, maintenanceImports = {
   $("#pilot-state").textContent = waiting ? `${waiting} steps awaiting data` : "Ready to run";
   $("#pilot-summary").innerHTML = `<div><strong>${ready}/${checks.length}</strong><span>pilot steps ready</span><small>${waiting ? "The next inputs are Airtable rows and technician evidence." : "The internal pilot checklist is complete."}</small></div><a class="pilot-link" href="#release-evidence-panel">Production gates stay separate</a>`;
   $("#pilot-checklist").innerHTML = checks.map((item) => `<article class="pilot-check ${escapeHtml(item.state)}"><div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span></div><b>${escapeHtml(pilotCheckStateLabel(item.state))}</b></article>`).join("");
+}
+function pilotReconciliationStateLabel(state) { return state === "ready" ? "Candidate" : state === "attention" ? "Attention" : "Awaiting data"; }
+function renderPilotReconciliation(payload = {}) {
+  const summary = payload.summary || {};
+  const state = payload.status || "awaiting-data";
+  $("#pilot-reconciliation-state").textContent = pilotReconciliationStateLabel(state);
+  $("#pilot-reconciliation-summary").innerHTML = [
+    [`${Number(summary.readyChecks || 0)}/${Number(summary.totalChecks || 0)}`, "checks ready"],
+    [Number(summary.modules || 0), "modules in scope"],
+    [`${Number(summary.syncedCaptureBatches || 0)}/${Number(summary.captureBatches || 0)}`, "capture batches synced"],
+    [`${Number(summary.modulesWithFreshTelemetry || 0)}/${Number(summary.modules || 0)}`, "modules with fresh telemetry"],
+    [`${Number(summary.modulesWithFreshCamera || 0)}/${Number(summary.modules || 0)}`, "cameras fresh"],
+    [escapeHtml(summary.esgLedgerStatus || "not-generated"), "ESG ledger"]
+  ].map(([value, label]) => `<div><strong>${value}</strong><span>${escapeHtml(label)}</span></div>`).join("");
+  $("#pilot-reconciliation-list").innerHTML = (payload.checks || []).map((item) => `<article class="pilot-reconciliation-check ${escapeHtml(item.state)}"><div><strong>${escapeHtml(item.label)}</strong><span>${escapeHtml(item.detail)}</span><small>Next: ${escapeHtml(item.next)}</small></div><b>${escapeHtml(pilotReconciliationStateLabel(item.state))}</b></article>`).join("") || "<p class=\"empty\">No reconciliation checks returned.</p>";
+  $("#pilot-reconciliation-notice").textContent = payload.claimBoundary || "Pilot closeout control only.";
+}
+async function refreshPilotReconciliation(force = false) {
+  if (pilotReconciliationState.request && !force) return pilotReconciliationState.request;
+  const request = api("/api/ops/pilot-reconciliation");
+  pilotReconciliationState.request = request;
+  try {
+    const payload = await request;
+    pilotReconciliationState.payload = payload;
+    renderPilotReconciliation(payload);
+    return payload;
+  } finally {
+    if (pilotReconciliationState.request === request) pilotReconciliationState.request = null;
+  }
 }
 function renderGoLiveOverview(payload = {}) {
   const requirements = payload.requirements || [];
@@ -676,4 +706,5 @@ document.addEventListener("click", async (event) => {
   } catch (error) { $("#maintenance-notice").textContent = error.message; button.disabled = false; }
 });
 document.addEventListener("click", async (event) => { const aiStart = event.target.closest("[data-ai-start]"); const aiReview = event.target.closest("[data-ai-review]"); const remediationCreate = event.target.closest("[data-remediation-create]"); const remediationEdit = event.target.closest("[data-remediation-edit]"); if (aiStart) { aiStart.disabled = true; try { await startAiDiagnosis(aiStart.dataset.aiStart); } catch (error) { $("#notice").textContent = error.message; aiStart.disabled = false; } return; } if (aiReview) { const diagnosis = aiReviewState.diagnoses.find((item) => item.id === aiReview.dataset.aiReview); if (diagnosis) openAiReview(diagnosis); return; } if (remediationCreate) { const item = remediationState.moduleItems.find((candidate) => candidate.moduleId === remediationCreate.dataset.remediationCreate); if (item) openRemediationCreate(item); return; } if (remediationEdit) { const item = remediationState.moduleItems.find((candidate) => candidate.moduleId === remediationEdit.dataset.remediationModule); if (item?.remediationTask) openRemediationEdit(item, item.remediationTask); return; } const button = event.target.closest("[data-alert-status]"); if (!button) return; button.disabled = true; try { await api(`/api/telemetry/alerts/${encodeURIComponent(button.dataset.alertStatus)}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: button.dataset.nextStatus, resolutionNote: "Handled from Today operations queue." }) }); await load(); } catch (error) { $("#notice").textContent = error.message; button.disabled = false; } });
-load().catch((error) => { $("#notice").textContent = error.message; });
+$("#pilot-reconciliation-refresh").onclick = async () => { const button = $("#pilot-reconciliation-refresh"); button.disabled = true; $("#pilot-reconciliation-notice").textContent = "Refreshing scoped closeout data…"; try { await refreshPilotReconciliation(true); } catch (error) { $("#pilot-reconciliation-notice").textContent = error.message; } finally { button.disabled = false; } };
+load().then(() => refreshPilotReconciliation()).catch((error) => { $("#notice").textContent = error.message; });
