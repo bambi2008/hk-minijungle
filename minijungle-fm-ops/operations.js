@@ -15,6 +15,7 @@ const releaseEvidenceLedgerState = { payload: null };
 const moduleQueryState = { search: "", status: "", cursor: null, total: 0, hasMore: false, items: [] };
 const fieldCycleImportState = { preview: null, loaded: false, request: null };
 const pilotReconciliationState = { payload: null, request: null };
+const clientFeedbackState = { payload: null, request: null, sequence: 0 };
 function escapeHtml(value) { return String(value ?? "").replace(/[&<>\"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;" }[char])); }
 async function api(path, options = {}) { const response = await fetch(path, { ...options, cache: "no-store", headers: { ...headers, ...(options.headers || {}) }, credentials: "include" }); const body = await response.json().catch(() => ({})); if (!response.ok) { const error = new Error(body.error || `Request failed (${response.status})`); error.code = body.code; error.details = body.details; throw error; } return body; }
 function formatTime(value) { const date = new Date(value); return Number.isNaN(date.getTime()) ? String(value || "Unknown time") : date.toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }); }
@@ -175,6 +176,26 @@ function renderFieldServiceCycles(payload = {}) {
   }
   $("#field-cycle-import-result").innerHTML = html;
   $("#field-cycle-import-apply").disabled = !preview || Number(preview.invalidRows) > 0 || Number(preview.validRows) < 1;
+}
+function renderClientFeedback(payload = {}) {
+  clientFeedbackState.payload = payload;
+  const summary = payload.summary || {};
+  const open = Number(summary.open || 0);
+  $("#client-feedback-state").textContent = `${open} open · ${Number(summary.followUpOpen || 0)} follow-up`;
+  $("#client-feedback-summary").innerHTML = `<div><strong>${summary.averageRating === null || summary.averageRating === undefined ? "--" : escapeHtml(summary.averageRating)}</strong><span>average client rating / 客戶平均評分</span><small>${Number(summary.submitted || 0)} new · ${Number(summary.acknowledged || 0)} acknowledged · ${Number(summary.closed || 0)} closed</small></div>`;
+  const feedback = payload.feedback || [];
+  $("#client-feedback-list").innerHTML = feedback.length ? feedback.slice(0, 30).map((item) => {
+    const actionable = item.status !== "closed";
+    const controls = actionable ? `<div class="client-feedback-actions"><input data-client-feedback-note="${escapeHtml(item.id)}" aria-label="Review note for ${escapeHtml(item.serviceRef)}" placeholder="Required review note" maxlength="500"><button type="button" data-client-feedback-review="${escapeHtml(item.id)}" data-feedback-decision="${item.status === "submitted" ? "acknowledge" : "close"}" data-feedback-updated-at="${escapeHtml(item.updatedAt)}">${item.status === "submitted" ? "Acknowledge" : "Close"}</button></div>` : "";
+    return `<article class="client-feedback-item"><div><strong>${escapeHtml(item.clientId)} · ${escapeHtml(item.serviceRef)} · ${escapeHtml(item.rating)}/5</strong><span>${escapeHtml(item.comment)}</span><small>${escapeHtml(item.outcome.replaceAll("_", " "))} · ${escapeHtml(item.submittedBy)} · ${escapeHtml(formatTime(item.submittedAt))}</small>${item.reviewNote ? `<small>Review: ${escapeHtml(item.reviewNote)}</small>` : ""}</div><div><b class="client-feedback-status ${item.status === "closed" ? "closed" : item.followUpRequired ? "follow-up" : ""}">${escapeHtml(item.status)}</b>${controls}</div></article>`;
+  }).join("") : "<p class=\"empty\">No client feedback in scope.</p>";
+}
+function refreshClientFeedback(force = false) {
+  if (clientFeedbackState.request && !force) return clientFeedbackState.request;
+  const sequence = ++clientFeedbackState.sequence;
+  const request = api("/api/service-feedback?limit=50").then((payload) => { if (sequence === clientFeedbackState.sequence) renderClientFeedback(payload); return payload; }).catch((error) => { if (sequence === clientFeedbackState.sequence) { $("#client-feedback-state").textContent = "Unavailable"; $("#client-feedback-notice").textContent = `Feedback unavailable: ${error.message}`; } throw error; }).finally(() => { if (clientFeedbackState.request === request) clientFeedbackState.request = null; });
+  clientFeedbackState.request = request;
+  return request;
 }
 function refreshFieldServiceCycles(force = false) {
   if (fieldCycleImportState.request) return fieldCycleImportState.request;
@@ -443,6 +464,7 @@ async function fetchDashboard() {
   renderServiceContracts(serviceContracts);
   renderOperationalHealth(healthReport);
   renderEsgLedger(esgLedger, esgObservations.observations || []);
+  void refreshClientFeedback().catch(() => {});
   renderEsgObservationScope(serviceContracts);
   renderMaintenanceImports(maintenanceImports);
   renderReleaseEvidence(releaseEvidence);
@@ -690,6 +712,15 @@ $("#persist-snapshot").onclick = async () => { const button = $("#persist-snapsh
 $("#verify-snapshot").onclick = async () => { const button = $("#verify-snapshot"); if (!evidenceControlState.latestId) return; button.disabled = true; $("#snapshot-notice").textContent = "Verifying latest snapshot…"; try { const result = await api(`/api/proof/evidence-snapshots/${encodeURIComponent(evidenceControlState.latestId)}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ note: "Reviewed from FM Lead evidence control." }) }); $("#snapshot-notice").textContent = `${result.snapshotId} verification: ${result.verificationStatus}`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = !evidenceControlState.latestId; } };
 $("#sweep-snapshots").onclick = async () => { const button = $("#sweep-snapshots"); button.disabled = true; $("#snapshot-notice").textContent = "Running retention sweep…"; try { const result = await api("/api/proof/evidence-snapshots/retention-sweep", { method: "POST" }); $("#snapshot-notice").textContent = `Retention sweep complete · ${Number(result.expiredCount || 0)} expired`; await load(); } catch (error) { $("#snapshot-notice").textContent = error.message; } finally { button.disabled = false; } };
 document.addEventListener("click", async (event) => {
+  const feedbackButton = event.target.closest("[data-client-feedback-review]");
+  if (feedbackButton) {
+    const feedbackId = feedbackButton.dataset.clientFeedbackReview;
+    const note = document.querySelector(`[data-client-feedback-note="${CSS.escape(feedbackId)}"]`)?.value.trim();
+    if (!note) { $("#client-feedback-notice").textContent = "Enter a review note before updating client feedback."; return; }
+    feedbackButton.disabled = true; $("#client-feedback-notice").textContent = `Recording ${feedbackButton.dataset.feedbackDecision}…`;
+    try { await api(`/api/service-feedback/${encodeURIComponent(feedbackId)}/review`, { method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": crypto.randomUUID() }, body: JSON.stringify({ decision: feedbackButton.dataset.feedbackDecision, expectedUpdatedAt: feedbackButton.dataset.feedbackUpdatedAt, reviewNote: note }) }); await refreshClientFeedback(true); $("#client-feedback-notice").textContent = `Client feedback ${feedbackButton.dataset.feedbackDecision}d.`; } catch (error) { $("#client-feedback-notice").textContent = error.message; feedbackButton.disabled = false; }
+    return;
+  }
   const deviceCare = event.target.closest("[data-device-care]");
   if (deviceCare) { const record = deviceCareState.records.find((item) => item.deviceId === deviceCare.dataset.deviceCare); if (record) openDeviceCare(record); return; }
   const button = event.target.closest("[data-maintenance-assign]");

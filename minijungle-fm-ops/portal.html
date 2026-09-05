@@ -16,7 +16,7 @@
 
     <section class="portal-intro">
       <div><p class="eyebrow">CLIENT / AUDITOR PORTAL</p><h1 id="portal-title">Living asset evidence</h1><p id="portal-scope">Read-only service evidence for your scoped portfolio / 只讀服務證據</p></div>
-      <div class="read-only">READ ONLY<br><span>只讀檢視</span></div>
+      <div class="read-only">READ-ONLY EVIDENCE<br><span>證據只讀 · FEEDBACK ENABLED / 可提交回饋</span></div>
     </section>
 
     <section class="summary" aria-label="Portfolio summary">
@@ -29,6 +29,8 @@
     </section>
 
     <section class="panel"><div class="panel-heading"><div><p class="eyebrow">SERVICE CONTRACTS / 服務合約</p><h2>Plan and SLA status</h2></div><span id="portal-contract-state" class="muted">Loading</span></div><div id="portal-contract-performance" class="portal-contract-performance"></div><div id="portal-contract-list" class="portal-contract-list" aria-live="polite"></div></section>
+
+    <section class="panel feedback-panel"><div class="panel-heading"><div><p class="eyebrow">SERVICE FEEDBACK / 服務回饋</p><h2>Close the service loop</h2></div><span id="feedback-state" class="muted">Loading</span></div><div id="feedback-summary" class="feedback-summary" aria-live="polite"></div><div id="feedback-list" class="feedback-list" aria-live="polite"></div><div id="feedback-form-panel" class="feedback-form-panel"><form id="feedback-form"><div class="feedback-fields"><label>Service reference<input id="feedback-service-ref" required maxlength="200" placeholder="Work order or visit reference"></label><label>Rating<select id="feedback-rating" required><option value="5">5 · Excellent</option><option value="4">4 · Good</option><option value="3">3 · Acceptable</option><option value="2">2 · Needs improvement</option><option value="1">1 · Poor</option></select></label><label>Outcome<select id="feedback-outcome" required><option value="satisfied">Satisfied</option><option value="partially_satisfied">Partially satisfied</option><option value="follow_up_required">Follow-up required</option></select></label></div><label>Comment<textarea id="feedback-comment" rows="3" required maxlength="1000" placeholder="What should the FM team know about this service visit?"></textarea><span class="feedback-check"><input id="feedback-follow-up" type="checkbox"> Request a follow-up / 需要跟進</span><div class="feedback-actions"><button id="feedback-submit" type="submit">Send feedback</button></div></form></div><p id="feedback-notice" class="notice" aria-live="polite"></p></section>
 
     <section class="panel portal-esg-panel"><div class="panel-heading"><div><p class="eyebrow">ESG OPERATIONAL LEDGER / ESG 營運賬本</p><h2>Measured service evidence</h2></div><span id="portal-esg-state" class="muted">Loading</span></div><div id="portal-esg-summary" class="portal-esg-summary" aria-live="polite"></div><div id="portal-esg-metric-list" class="portal-esg-metric-list" aria-live="polite"></div><ul id="portal-esg-gaps" class="portal-esg-gaps"></ul></section>
 

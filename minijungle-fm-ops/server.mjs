@@ -448,6 +448,21 @@ import {
   listPostgresFieldServiceCycles,
   readPostgresFieldServiceStorageHealth
 } from "./lib/ops-postgres-field-service-store.mjs";
+import {
+  createSqliteClientServiceFeedback,
+  listSqliteClientServiceFeedback,
+  readSqliteClientServiceFeedback,
+  readSqliteClientServiceFeedbackHealth,
+  reviewSqliteClientServiceFeedback
+} from "./lib/ops-client-feedback-store.mjs";
+import {
+  createPostgresClientServiceFeedback,
+  listPostgresClientServiceFeedback,
+  readPostgresClientServiceFeedback,
+  readPostgresClientServiceFeedbackHealth,
+  reviewPostgresClientServiceFeedback
+} from "./lib/ops-postgres-client-feedback-store.mjs";
+import { summarizeClientServiceFeedback } from "./lib/ops-client-feedback-policy.mjs";
 import { normalizeFieldCycleCsv } from "./lib/ops-field-cycle-import.mjs";
 import { validateFieldCycleEvidence } from "./lib/ops-field-cycle-evidence.mjs";
 import { normalizeEvidenceRetention } from "./lib/ops-evidence-integrity.mjs";
@@ -1064,6 +1079,11 @@ async function readFieldServiceStorageHealth(){
   await listModules();
   return productionMasterDataEnabled()?readPostgresFieldServiceStorageHealth(runtimeDbPath):readSqliteFieldServiceStorageHealth(runtimeDbPath);
 }
+async function createClientServiceFeedback(input) { return productionMasterDataEnabled() ? createPostgresClientServiceFeedback(runtimeDbPath, input) : createSqliteClientServiceFeedback(runtimeDbPath, input); }
+async function listClientServiceFeedback(options = {}) { return productionMasterDataEnabled() ? listPostgresClientServiceFeedback(runtimeDbPath, options) : listSqliteClientServiceFeedback(runtimeDbPath, options); }
+async function readClientServiceFeedback(id) { return productionMasterDataEnabled() ? readPostgresClientServiceFeedback(runtimeDbPath, id) : readSqliteClientServiceFeedback(runtimeDbPath, id); }
+async function reviewClientServiceFeedback(id, input) { return productionMasterDataEnabled() ? reviewPostgresClientServiceFeedback(runtimeDbPath, id, input) : reviewSqliteClientServiceFeedback(runtimeDbPath, id, input); }
+async function readClientServiceFeedbackHealth() { await readMasterDataHealth(); return productionMasterDataEnabled() ? readPostgresClientServiceFeedbackHealth(runtimeDbPath) : readSqliteClientServiceFeedbackHealth(runtimeDbPath); }
 
 async function createProofMediaIntent(input) {
   return productionMasterDataEnabled()
@@ -2683,6 +2703,7 @@ async function handleApi(req, res, pathname) {
           readHealthEsgStorageHealth(),
           readFieldServiceStorageHealth()
         ]);
+        const clientFeedbackStorage = await readClientServiceFeedbackHealth();
         const ready = production.ready;
         sendJson(res, ready ? 200 : 503, {
           status: ready ? "ready" : "not-ready",
@@ -2703,6 +2724,7 @@ async function handleApi(req, res, pathname) {
           evidenceSnapshots: { count: evidenceSnapshotStorage.counts.snapshots, verified: evidenceSnapshotStorage.counts.verified, unsigned: evidenceSnapshotStorage.counts.unsigned, expired: evidenceSnapshotStorage.counts.expired, migrationVersion: evidenceSnapshotStorage.migrationVersion },
           healthEsg: { observations: healthEsgStorage.counts.observations, ledgers: healthEsgStorage.counts.ledgers, healthSnapshots: healthEsgStorage.counts.healthSnapshots, foreignKeyIssues: healthEsgStorage.relationshipIntegrity.foreignKeyIssues, migrationVersion: healthEsgStorage.migrationVersion },
           fieldService: { cycles: fieldServiceStorage.counts.total, completed: fieldServiceStorage.counts.completed, exceptions: fieldServiceStorage.counts.exceptions, clients: fieldServiceStorage.counts.clients, foreignKeyIssues: fieldServiceStorage.relationshipIntegrity.foreignKeyIssues, migrationVersion: fieldServiceStorage.migrationVersion },
+          clientFeedback: { total: clientFeedbackStorage.counts.total, open: clientFeedbackStorage.counts.open, followUpOpen: clientFeedbackStorage.counts.followUpOpen, averageRating: clientFeedbackStorage.counts.averageRating, foreignKeyIssues: clientFeedbackStorage.relationshipIntegrity.foreignKeyIssues, migrationVersion: clientFeedbackStorage.migrationVersion },
           operationalLimits: [
             ...(ready ? [] : production.failures.map((item) => `${item.name}: ${item.detail}`)),
             ...(production.production ? [] : [
@@ -3882,6 +3904,7 @@ async function handleApi(req, res, pathname) {
         readHealthEsgStorageHealth(),
         readFieldServiceStorageHealth()
       ]);
+      const clientFeedbackStorage = await readClientServiceFeedbackHealth();
       const [maintenancePlanningStorage, inventoryStorage,serviceContractStorage] = await Promise.all([readMaintenancePlanningHealth(), readInventoryHealth(),readServiceContractHealth()]);
       sendJson(res, 200, {
         generatedAt: new Date().toISOString(),
@@ -3908,8 +3931,59 @@ async function handleApi(req, res, pathname) {
         ,serviceContracts:serviceContractStorage,
         releaseEvidence: releaseEvidenceStorage,
         healthEsg: healthEsgStorage,
-        fieldService: fieldServiceStorage
+        fieldService: fieldServiceStorage,
+        clientFeedback: clientFeedbackStorage
       });
+      return;
+    }
+
+    if (req.method === "GET" && pathname === "/api/service-feedback") {
+      requirePermission(auth, "client.feedback.read");
+      const url = new URL(req.url, `http://${host}:${port}`);
+      const clientId = String(url.searchParams.get("clientId") || "").trim();
+      if (clientId) requireClientAccess(auth, clientId, "service feedback list");
+      const clientIds = clientId ? [clientId] : (auth.clientScope === "all" ? null : auth.clientIds);
+      const statuses = String(url.searchParams.get("statuses") || "").split(",").map((value) => value.trim()).filter(Boolean);
+      const feedback = await listClientServiceFeedback({ clientIds, statuses: statuses.length ? statuses : null, limit: url.searchParams.get("limit") || 100 });
+      sendJson(res, 200, { generatedAt: new Date().toISOString(), feedback, summary: summarizeClientServiceFeedback(feedback), scope: auth.clientScope === "all" ? "all" : "client-scoped" });
+      return;
+    }
+
+    if (req.method === "POST" && pathname === "/api/service-feedback") {
+      requirePermission(auth, "client.feedback.write");
+      const input = await readJsonBody(req);
+      const clientId = String(input.clientId || "").trim();
+      requireClientAccess(auth, clientId, "service feedback submission");
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: "client-service-feedback-create", commandKey, payload: input, execute: async (requestHash) => {
+        const result = await createClientServiceFeedback({ ...input, id: `FB-${requestHash.slice(0, 20)}`, source: auth.roleId === "client-viewer" ? "portal" : "ops", submittedBy: auth.id });
+        let event = null;
+        if (!result.duplicate) {
+          event = normalizeOpsEvent({ id: `OPS-FB-${requestHash.slice(0, 20)}`, type: "client.service-feedback.submitted", actor: auth.name, entityType: "client-service-feedback", entityId: result.feedback.id, clientId: result.feedback.clientId, source: "client-feedback", note: `Service feedback received for ${result.feedback.serviceRef}.`, payload: { principalId: auth.id, serviceRef: result.feedback.serviceRef, rating: result.feedback.rating, outcome: result.feedback.outcome, followUpRequired: result.feedback.followUpRequired } });
+          await appendOpsEvent(event);
+        }
+        return { ...result, event };
+      }});
+      sendJson(res, response.duplicate ? 200 : 201, response);
+      return;
+    }
+
+    const serviceFeedbackReviewMatch = pathname.match(/^\/api\/service-feedback\/([^/]+)\/review$/);
+    if (req.method === "POST" && serviceFeedbackReviewMatch) {
+      requirePermission(auth, "client.feedback.review");
+      const id = decodeURIComponent(serviceFeedbackReviewMatch[1]);
+      const existing = await readClientServiceFeedback(id);
+      if (!existing) throw apiError(404, "service feedback not found", "CLIENT_FEEDBACK_NOT_FOUND");
+      requireClientAccess(auth, existing.clientId, "service feedback review");
+      const input = await readJsonBody(req);
+      const commandKey = String(req.headers["idempotency-key"] || "").trim();
+      const response = await runIdempotentInventoryCommand({ auth, scope: `client-service-feedback-review:${id}`, commandKey, payload: input, execute: async (requestHash) => {
+        const result = await reviewClientServiceFeedback(id, { ...input, reviewedBy: auth.id });
+        const event = normalizeOpsEvent({ id: `OPS-FB-REV-${requestHash.slice(0, 20)}`, type: `client.service-feedback.${result.feedback.status}`, actor: auth.name, entityType: "client-service-feedback", entityId: id, clientId: existing.clientId, source: "client-feedback", note: `Service feedback ${id} moved to ${result.feedback.status}.`, payload: { principalId: auth.id, decision: input.decision, reviewNote: result.feedback.reviewNote } });
+        await appendOpsEvent(event);
+        return { ...result, event };
+      }});
+      sendJson(res, 200, response);
       return;
     }
 

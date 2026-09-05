@@ -90,6 +90,9 @@ const roleDefinitions = {
       ,"device.lifecycle.read"
       ,"device.lifecycle.write"
       ,"device.lifecycle.field"
+      ,"client.feedback.read"
+      ,"client.feedback.write"
+      ,"client.feedback.review"
     ],
     actionTypes: ["*"]
   },
@@ -130,6 +133,7 @@ const roleDefinitions = {
       ,"commissioning.install"
       ,"device.lifecycle.read"
       ,"device.lifecycle.field"
+      ,"client.feedback.read"
     ],
     actionTypes: [
       "workorder.complete",
@@ -160,6 +164,8 @@ const roleDefinitions = {
       ,"contracts.read"
       ,"health.score.read"
       ,"esg.ledger.read"
+      ,"client.feedback.read"
+      ,"client.feedback.write"
     ],
     actionTypes: []
   },
@@ -189,6 +195,7 @@ const roleDefinitions = {
       ,"esg.ledger.read"
       ,"esg.observations.read"
       ,"production.evidence.read"
+      ,"client.feedback.read"
     ],
     actionTypes: []
   }

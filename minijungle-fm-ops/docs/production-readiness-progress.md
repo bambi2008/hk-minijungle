@@ -1329,3 +1329,12 @@ Scoring is governed by `docs/progress-scoring-governance.md`. If architecture sc
 - Production operations readiness: **65%**. The code path is more deployable, but external cloud execution and dated recovery evidence are still required.
 - Architecture scaffold readiness: approximately **99%**, not the official score.
 - Investor-demo readiness: separate and higher; it must not be used as evidence of 1,000+ module production operations.
+
+### Step 89 - Client Service Feedback Loop
+
+- Score before: **65%**. Score after: **65%**. A local feedback workflow does not clear the real customer-service-cycle gate.
+- Client Portal now provides a scoped service-feedback form for a work-order or visit reference, rating, outcome, follow-up flag and comment. Client scope is resolved from the server-side portfolio authorization response.
+- Ops Today now shows the feedback queue and summary. FM lead review requires a note, enforces separation of duties and uses optimistic concurrency. Acknowledge and close actions append auditable operations timeline events.
+- SQLite and PostgreSQL adapters share the same validation contract, table shape, foreign-key relationship, indexes, migration markers and health reporting. Migration `021_client_service_feedback.sql` is included in the PostgreSQL schema runner contract.
+- Verification added: policy/store smoke covers invalid rating, idempotent create, scope filtering, stale review rejection and closeout. The Playwright UI smoke covers client portal submission followed by FM acknowledge and close.
+- Honest boundary: no real customer has submitted feedback in this workspace, no Airtable service-cycle import has been used as customer confirmation, and no production deployment or independent client acceptance is claimed. The production score remains **65%**.

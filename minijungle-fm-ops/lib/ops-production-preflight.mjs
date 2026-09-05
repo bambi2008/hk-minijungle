@@ -65,7 +65,8 @@ const requiredTables = [
   "ops_release_evidence_events",
   "ops_esg_observations",
   "ops_esg_period_ledgers",
-  "ops_field_service_cycles"
+  "ops_field_service_cycles",
+  "ops_client_service_feedback"
 ];
 
 const requiredMigrations = [
@@ -98,7 +99,8 @@ const requiredMigrations = [
   "2026-09-04.postgres-device-lifecycle-v1",
   "2026-09-08.postgres-release-evidence-ledger-v1",
   "2026-08-29.postgres-health-esg-operational-ledger-v1",
-  "2026-08-29.postgres-field-service-cycles-v1"
+  "2026-08-29.postgres-field-service-cycles-v1",
+  "2026-09-04.postgres-client-service-feedback-v1"
   ,"2026-09-04.postgres-proof-media-scan-v1"
 ];
 

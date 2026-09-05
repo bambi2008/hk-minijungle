@@ -1531,6 +1531,23 @@ async function verifyApi(baseUrl) {
   assert(esgLedgerClient.response.ok && esgLedgerClient.body.evidenceRefs.includes(esgObservation.body.observation.id), "Client ledger should expose the same scoped evidence reference");
   const healthEsgStorage = await fetchJson(`${baseUrl}api/storage`, { headers: principalHeaders("fm-lead") });
   assert(healthEsgStorage.response.ok && healthEsgStorage.body.healthEsg.counts.healthSnapshots >= 1 && healthEsgStorage.body.healthEsg.counts.observations === 1 && healthEsgStorage.body.healthEsg.counts.ledgers === 1, "Storage health should expose health and ESG persistence counts");
+  assert(healthEsgStorage.body.clientFeedback.migrationVersion === "2026-09-04.client-service-feedback-v1" && healthEsgStorage.body.clientFeedback.counts.total === 0 && healthEsgStorage.body.clientFeedback.relationshipIntegrity.foreignKeyIssues === 0, "Storage health should expose an empty client feedback ledger with intact relationships");
+  const feedbackHeaders = { ...jsonHeaders("client-show-suite"), "Idempotency-Key": "client-feedback-api-smoke-001" };
+  const feedbackBody = { clientId: "show-suite", serviceRef: "WO-1047", rating: 4, outcome: "follow_up_required", followUpRequired: true, comment: "Please confirm the next plant-care visit window." };
+  const feedbackCreate = await fetchJson(`${baseUrl}api/service-feedback`, { method: "POST", headers: feedbackHeaders, body: JSON.stringify(feedbackBody) });
+  assert(feedbackCreate.response.status === 201 && feedbackCreate.body.feedback.clientId === "show-suite" && feedbackCreate.body.feedback.status === "submitted", "Client viewer should submit scoped service feedback");
+  const feedbackReplay = await fetchJson(`${baseUrl}api/service-feedback`, { method: "POST", headers: feedbackHeaders, body: JSON.stringify(feedbackBody) });
+  assert(feedbackReplay.response.ok && feedbackReplay.body.duplicate === true, "Client feedback submission should be idempotent");
+  const feedbackList = await fetchJson(`${baseUrl}api/service-feedback?clientId=show-suite`, { headers: principalHeaders("client-show-suite") });
+  assert(feedbackList.response.ok && feedbackList.body.feedback.length === 1 && feedbackList.body.summary.followUpOpen === 1, "Client viewer should read only its feedback scope");
+  const feedbackCrossScope = await fetchJson(`${baseUrl}api/service-feedback?clientId=central-office`, { headers: principalHeaders("client-show-suite") });
+  assert(feedbackCrossScope.response.status === 403, "Client viewer should not read another client's feedback");
+  const feedbackClientReviewDenied = await fetchJson(`${baseUrl}api/service-feedback/${encodeURIComponent(feedbackCreate.body.feedback.id)}/review`, { method: "POST", headers: { ...jsonHeaders("client-show-suite"), "Idempotency-Key": "client-feedback-review-denied" }, body: JSON.stringify({ decision: "acknowledge", expectedUpdatedAt: feedbackCreate.body.feedback.updatedAt, reviewNote: "Client cannot review its own feedback" }) });
+  assert(feedbackClientReviewDenied.response.status === 403, "Client viewer should not review service feedback");
+  const feedbackReview = await fetchJson(`${baseUrl}api/service-feedback/${encodeURIComponent(feedbackCreate.body.feedback.id)}/review`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "client-feedback-review-api-smoke-001" }, body: JSON.stringify({ decision: "acknowledge", expectedUpdatedAt: feedbackCreate.body.feedback.updatedAt, reviewNote: "FM reviewed and scheduled the follow-up window." }) });
+  assert(feedbackReview.response.ok && feedbackReview.body.feedback.status === "acknowledged", "FM lead should acknowledge client feedback");
+  const feedbackClose = await fetchJson(`${baseUrl}api/service-feedback/${encodeURIComponent(feedbackCreate.body.feedback.id)}/review`, { method: "POST", headers: { ...jsonHeaders("fm-lead"), "Idempotency-Key": "client-feedback-close-api-smoke-001" }, body: JSON.stringify({ decision: "close", expectedUpdatedAt: feedbackReview.body.feedback.updatedAt, reviewNote: "Follow-up window confirmed with the client." }) });
+  assert(feedbackClose.response.ok && feedbackClose.body.feedback.status === "closed", "FM lead should close client feedback after follow-up");
 }
 
 async function main() {
