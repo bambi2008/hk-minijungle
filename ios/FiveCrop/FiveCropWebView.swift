@@ -125,6 +125,7 @@ struct FiveCropWebView: UIViewRepresentable {
             decisionHandler(isAllowedCameraRequest ? .grant : .deny)
         }
 
+        @available(iOS 18.4, *)
         func webView(
             _ webView: WKWebView,
             runOpenPanelWith parameters: WKOpenPanelParameters,
