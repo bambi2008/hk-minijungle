@@ -1763,11 +1763,11 @@ function validChoice(value, choices, fallback) {
 
 function cropIdentityTerms(cropKey) {
   return {
-    tomato: ["serrated", "compound", "hairy stem", "truss", "yellow flower"],
-    basil: ["opposite leaves", "paired leaves", "oval leaves", "soft herb", "square stem"],
-    rosemary: ["needle", "narrow leaves", "woody stem", "upright sprig"],
-    strawberry: ["trifoliate", "three leaflets", "runner", "crown", "white flower"],
-    pepper: ["smooth oval leaves", "white flower", "pepper flower", "young pepper"]
+    tomato: ["serrated", "compound", "hairy stem", "truss", "yellow flower", "番茄", "西红柿", "复叶", "锯齿", "黄色花", "幼果", "花序", "毛茎"],
+    basil: ["opposite leaves", "paired leaves", "oval leaves", "soft herb", "square stem", "罗勒", "九层塔", "对生叶", "对生", "卵形叶", "柔软草本", "方茎", "方形茎"],
+    rosemary: ["needle", "narrow leaves", "woody stem", "upright sprig", "迷迭香", "针状", "针叶", "狭长叶", "木质茎", "直立枝条"],
+    strawberry: ["trifoliate", "three leaflets", "runner", "crown", "white flower", "草莓", "三出复叶", "三小叶", "匍匐茎", "冠部", "白花"],
+    pepper: ["smooth oval leaves", "white flower", "pepper flower", "young pepper", "辣椒", "平滑卵形叶", "卵形叶", "白花", "辣椒花", "幼椒", "青椒"]
   }[cropKey] || [];
 }
 
