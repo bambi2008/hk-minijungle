@@ -1,0 +1,80 @@
+"tab.companion" = "Companion";
+"tab.care" = "Care";
+"tab.memories" = "Memories";
+
+"status.aliveWithYou" = "Alive with you";
+"status.demo" = "Demo companion";
+"status.searching" = "Looking nearby";
+"status.connecting" = "Waking up";
+"status.needsAttention" = "Needs attention";
+"status.offline" = "Resting offline";
+
+"pairing.eyebrow" = "MEET YOUR COMPANION";
+"pairing.productImage" = "Front view of the sage-green Plant Monster device";
+"pairing.title" = "Wake it up.";
+"pairing.body" = "Bring your iPhone close. Plant Monster will share light, temperature, air humidity, touch and motion with you.";
+"pairing.start" = "Find my Plant Monster";
+"pairing.waiting" = "Waiting for Bluetooth";
+"pairing.searching" = "Looking nearby…";
+"pairing.connecting" = "Saying hello…";
+"pairing.demo" = "Explore in demo mode";
+"pairing.privacy" = "Bluetooth starts only when you tap the button.";
+
+"companion.title" = "It knows\nyou’re here.";
+"companion.body" = "Touch the face. The feeling travels to your Plant Monster.";
+"companion.touchTitle" = "Touch\nreceived.";
+"companion.touchBody" = "A small answer from the creature beside your plant.";
+"companion.petAction" = "Pet Plant Monster";
+"companion.petHint" = "Sends a gentle touch response to the connected creature.";
+
+"care.findLight" = "Find the light.";
+"care.lessLight" = "A softer place.";
+"care.warmUp" = "A little warmer.";
+"care.coolDown" = "Keep it cooler.";
+"care.comfortable" = "It feels settled.";
+"care.detail.lowLight" = "Move it toward soft, indirect light and check again in a few minutes.";
+"care.detail.bright" = "The light is intense. Try a calmer position away from direct sun.";
+"care.detail.cold" = "The air around it is cool. Find a stable place away from drafts.";
+"care.detail.hot" = "The air around it is warm. Give it shade and a little space.";
+"care.detail.good" = "Light and temperature are sitting in a comfortable range.";
+"care.checkIn" = "CHECK IN 12 MIN";
+"care.remember" = "Remember this moment";
+
+"sensor.temperature" = "TEMPERATURE";
+"sensor.airHumidity" = "AIR HUMIDITY";
+"sensor.lightLux" = "LIGHT · LUX";
+
+"memories.eyebrow" = "SMALL MOMENTS";
+"memories.title" = "You were here.";
+"memories.filter" = "Time range";
+"memories.today" = "Today";
+"memories.week" = "7 days";
+"memories.all" = "All";
+"memory.sawLight" = "Found a softer light";
+"memory.savedLight" = "Saved this light";
+"memory.youWereHere" = "You were here";
+"memory.pickedUp" = "Picked up together";
+
+"device.openSettings" = "Opens connection and feedback settings.";
+"device.title" = "Your creature";
+"device.connection" = "Connection";
+"device.status" = "Status";
+"device.haptics" = "Haptic feedback";
+"device.forget" = "Forget this Plant Monster";
+"device.forgetFootnote" = "You can pair it again at any time.";
+
+"expression.idle" = "Plant Monster is quietly watching";
+"expression.comfortable" = "Plant Monster feels comfortable";
+"expression.findLight" = "Plant Monster is looking for light";
+"expression.tooBright" = "Plant Monster finds the light too bright";
+"expression.sleeping" = "Plant Monster is sleeping";
+"expression.cold" = "Plant Monster feels cold";
+"expression.hot" = "Plant Monster feels hot";
+"expression.thirsty" = "Plant Monster reports that it is thirsty";
+"expression.watered" = "Plant Monster reports that it was watered";
+"expression.pickedUp" = "Plant Monster was picked up";
+"expression.dizzy" = "Plant Monster feels dizzy";
+"expression.winking" = "Plant Monster is winking";
+"expression.enjoyingTouch" = "Plant Monster is enjoying your touch";
+"expression.annoyed" = "Plant Monster feels annoyed";
+"expression.pollinating" = "Plant Monster is pollinating";

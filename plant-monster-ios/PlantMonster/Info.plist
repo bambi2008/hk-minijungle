@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>Plant Monster</string>
+	<key>NSBluetoothAlwaysUsageDescription</key>
+	<string>Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, light, touch, and motion updates.</string>
+	<key>NSBluetoothPeripheralUsageDescription</key>
+	<string>Plant Monster uses Bluetooth to connect to your creature.</string>
+	<key>UILaunchScreen</key>
+	<dict>
+		<key>UIColorName</key>
+		<string>PMSage</string>
+	</dict>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+	</array>
+</dict>
+</plist>

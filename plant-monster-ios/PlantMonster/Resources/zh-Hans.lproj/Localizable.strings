@@ -1,0 +1,80 @@
+"tab.companion" = "陪伴";
+"tab.care" = "照护";
+"tab.memories" = "记忆";
+
+"status.aliveWithYou" = "正在陪着你";
+"status.demo" = "体验模式";
+"status.searching" = "正在附近寻找";
+"status.connecting" = "正在醒来";
+"status.needsAttention" = "需要看一眼";
+"status.offline" = "离线休息中";
+
+"pairing.eyebrow" = "遇见你的伙伴";
+"pairing.productImage" = "鼠尾草绿色植灵兽设备正面图";
+"pairing.title" = "唤醒它。";
+"pairing.body" = "把 iPhone 靠近一些。植灵兽会把光照、温度、空气湿度、触摸和运动状态告诉你。";
+"pairing.start" = "寻找我的植灵兽";
+"pairing.waiting" = "等待蓝牙";
+"pairing.searching" = "正在附近寻找…";
+"pairing.connecting" = "正在打招呼…";
+"pairing.demo" = "先体验一下";
+"pairing.privacy" = "只有在你点击按钮后才会启动蓝牙。";
+
+"companion.title" = "它知道\n你在这里。";
+"companion.body" = "轻触这张脸，这份感觉会传到你的植灵兽。";
+"companion.touchTitle" = "收到\n触摸。";
+"companion.touchBody" = "这是植物旁边那个小家伙给你的回应。";
+"companion.petAction" = "摸摸植灵兽";
+"companion.petHint" = "向已连接的植灵兽发送一次轻柔触摸。";
+
+"care.findLight" = "去找一点光。";
+"care.lessLight" = "换个柔和的位置。";
+"care.warmUp" = "再暖一点。";
+"care.coolDown" = "让它凉快些。";
+"care.comfortable" = "它待得很安稳。";
+"care.detail.lowLight" = "把它移到柔和的散射光附近，几分钟后再看看。";
+"care.detail.bright" = "这里的光有些强，试试离开直射阳光。";
+"care.detail.cold" = "周围空气偏凉，换到温度稳定、没有穿堂风的位置。";
+"care.detail.hot" = "周围空气偏热，给它一点遮阴和空间。";
+"care.detail.good" = "当前光照与温度都处在舒适范围。";
+"care.checkIn" = "12 分钟后再看";
+"care.remember" = "记住这一刻";
+
+"sensor.temperature" = "温度";
+"sensor.airHumidity" = "空气湿度";
+"sensor.lightLux" = "光照 · LUX";
+
+"memories.eyebrow" = "微小的时刻";
+"memories.title" = "你来过这里。";
+"memories.filter" = "时间范围";
+"memories.today" = "今天";
+"memories.week" = "7 天";
+"memories.all" = "全部";
+"memory.sawLight" = "找到了更柔和的光";
+"memory.savedLight" = "记住了这里的光";
+"memory.youWereHere" = "你来过这里";
+"memory.pickedUp" = "一起被抱了起来";
+
+"device.openSettings" = "打开连接与触感反馈设置。";
+"device.title" = "你的植灵兽";
+"device.connection" = "连接";
+"device.status" = "状态";
+"device.haptics" = "触感反馈";
+"device.forget" = "忘记这只植灵兽";
+"device.forgetFootnote" = "之后随时都可以重新配对。";
+
+"expression.idle" = "植灵兽正在安静地看着";
+"expression.comfortable" = "植灵兽感觉很舒服";
+"expression.findLight" = "植灵兽正在寻找光线";
+"expression.tooBright" = "植灵兽觉得光线太强";
+"expression.sleeping" = "植灵兽正在睡觉";
+"expression.cold" = "植灵兽觉得冷";
+"expression.hot" = "植灵兽觉得热";
+"expression.thirsty" = "植灵兽明确报告它口渴了";
+"expression.watered" = "植灵兽明确报告它已经浇水";
+"expression.pickedUp" = "植灵兽被抱了起来";
+"expression.dizzy" = "植灵兽有点晕";
+"expression.winking" = "植灵兽正在眨眼";
+"expression.enjoyingTouch" = "植灵兽喜欢你的触摸";
+"expression.annoyed" = "植灵兽有点不耐烦";
+"expression.pollinating" = "植灵兽正在授粉";
