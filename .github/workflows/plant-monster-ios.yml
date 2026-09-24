@@ -31,7 +31,7 @@ jobs:
         working-directory: plant-monster-ios
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Show Xcode version
         run: xcodebuild -version
@@ -43,13 +43,29 @@ jobs:
         run: xcodegen generate
 
       - name: Compile simulator build
-        run: >-
-          xcodebuild build
-          -project PlantMonster.xcodeproj
-          -scheme PlantMonster
-          -configuration Debug
-          -destination "generic/platform=iOS Simulator"
-          CODE_SIGNING_ALLOWED=NO
+        shell: bash
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project PlantMonster.xcodeproj \
+            -scheme PlantMonster \
+            -configuration Debug \
+            -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/plant-monster-xcodebuild.log"
+          build_status=${PIPESTATUS[0]}
+          if [[ "$build_status" -ne 0 ]]; then
+            errors=$(grep -E "(^|[[:space:]])(error|fatal error):" "$RUNNER_TEMP/plant-monster-xcodebuild.log" | tail -80 || true)
+            {
+              echo "### Xcode compile errors"
+              echo '```text'
+              printf '%s\n' "${errors:-No compiler error lines were detected; inspect the failing build step.}"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            while IFS= read -r line; do
+              [[ -n "$line" ]] && echo "::error::$line"
+            done <<< "$errors"
+            exit "$build_status"
+          fi
 
   testflight:
     name: Upload to TestFlight
@@ -67,7 +83,7 @@ jobs:
       ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Validate release secrets
         shell: bash
