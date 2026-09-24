@@ -19,3 +19,5 @@
 - Run VoiceOver, Dynamic Type (including accessibility sizes), Reduce Motion, light/dark appearance, and Simplified Chinese checks.
 - Visually compare Pairing, Companion, Touch, Care, and Memories against the approved V3 design board on at least one 6.1-inch and one compact iPhone.
 - Test Bluetooth denied, Bluetooth off, device out of range, and interrupted connection states.
+- Run the GitHub Actions unsigned compile job and resolve all Xcode 26 diagnostics.
+- Complete the signed archive/upload job after the Apple Team ID and App Store Connect API secrets are configured.

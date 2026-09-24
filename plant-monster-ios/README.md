@@ -34,6 +34,10 @@ The iOS Simulator automatically uses mock telemetry. A physical iPhone uses Core
 
 Until UUIDs are supplied, a physical iPhone can discover and connect to a device advertising a name containing `Plant Monster`, `PlantMonster`, or `ZhiLingShou`, but it cannot subscribe to telemetry.
 
+## TestFlight
+
+The repository includes a macOS 26 / Xcode 26 GitHub Actions workflow for unsigned compilation and authenticated TestFlight upload. Complete the one-time Apple and GitHub secret setup in `TESTFLIGHT_SETUP.md`, then run the workflow manually.
+
 ## Product truth
 
 - `rh` is relative **air humidity**, never soil moisture.
@@ -43,4 +47,3 @@ Until UUIDs are supplied, a physical iPhone can discover and connect to a device
 ## Current validation boundary
 
 This source package was assembled and statically checked on Windows. Native compilation, Swift unit tests, VoiceOver, Bluetooth, and iPhone layout verification require macOS/Xcode and remain release gates; see `VERIFICATION.md`.
-
