@@ -55,15 +55,18 @@ jobs:
           build_status=${PIPESTATUS[0]}
           if [[ "$build_status" -ne 0 ]]; then
             errors=$(grep -E "(^|[[:space:]])(error|fatal error):" "$RUNNER_TEMP/plant-monster-xcodebuild.log" | tail -80 || true)
+            diagnostic="${errors:-$(tail -100 "$RUNNER_TEMP/plant-monster-xcodebuild.log")}"
             {
               echo "### Xcode compile errors"
               echo '```text'
-              printf '%s\n' "${errors:-No compiler error lines were detected; inspect the failing build step.}"
+              printf '%s\n' "$diagnostic"
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
-            while IFS= read -r line; do
-              [[ -n "$line" ]] && echo "::error::$line"
-            done <<< "$errors"
+            diagnostic="${diagnostic:0:7000}"
+            diagnostic="${diagnostic//'%'/'%25'}"
+            diagnostic="${diagnostic//$'\r'/'%0D'}"
+            diagnostic="${diagnostic//$'\n'/'%0A'}"
+            echo "::error title=Xcode compile failed::$diagnostic"
             exit "$build_status"
           fi
 
