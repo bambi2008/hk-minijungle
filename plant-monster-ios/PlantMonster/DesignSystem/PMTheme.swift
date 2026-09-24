@@ -17,7 +17,7 @@ extension Color {
 }
 
 struct PMDisplayText: ViewModifier {
-    @ScaledMetric(relativeTo: .largeTitle) private var size: CGFloat
+    @ScaledMetric(relativeTo: .largeTitle) private var size: CGFloat = 48
     let color: Color
 
     init(size: CGFloat = 48, color: Color) {
@@ -38,4 +38,3 @@ extension View {
         modifier(PMDisplayText(size: size, color: color))
     }
 }
-
