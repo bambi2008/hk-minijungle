@@ -72,7 +72,9 @@ jobs:
 
   testflight:
     name: Upload to TestFlight
-    if: github.event_name == 'workflow_dispatch' && inputs.upload_testflight
+    if: >-
+      (github.event_name == 'workflow_dispatch' && inputs.upload_testflight) ||
+      (github.event_name == 'push' && contains(github.event.head_commit.message, '[testflight]'))
     needs: build
     runs-on: macos-26
     environment: testflight
