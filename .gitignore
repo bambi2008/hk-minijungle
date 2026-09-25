@@ -14,3 +14,4 @@ ios/FiveCrop.xcodeproj/xcuserdata/
 .env*
 .agents/
 skills-lock.json
+.testflight-signing/
