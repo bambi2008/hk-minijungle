@@ -11,58 +11,49 @@ struct PlantMonsterTurntableView: View {
     @State private var dragOriginFrame = 0
     @State private var isDragging = false
 
-    var expression: PlantExpression?
     var hapticsEnabled = true
     var controlColor: Color = .pmAubergine
     var onTap: (() -> Void)?
 
     var body: some View {
-        VStack(spacing: 10) {
-            ZStack {
-                turntableFrame
+        ZStack(alignment: .bottom) {
+            turntableFrame
+                .transaction { transaction in
+                    // Sprite-sheet offsets must snap. Animating the offset exposes
+                    // neighbouring cells and looks like overlapping products.
+                    transaction.animation = nil
+                }
 
-                if let expression, frameIndex == 0 {
-                    GeometryReader { proxy in
-                        OLEDExpressionView(expression: expression, width: proxy.size.width * 0.28)
-                            .position(x: proxy.size.width * 0.5, y: proxy.size.height * 0.34)
-                            .transition(.opacity)
-                            .allowsHitTesting(false)
-                    }
+            HStack(spacing: 5) {
+                ForEach(0..<Self.frameCount, id: \.self) { index in
+                    Capsule()
+                        .fill(controlColor.opacity(index == frameIndex ? 0.9 : 0.24))
+                        .frame(width: index == frameIndex ? 18 : 5, height: 5)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: frameIndex)
                 }
             }
-            .aspectRatio(1, contentMode: .fit)
-            .contentShape(Rectangle())
-            .gesture(rotationGesture)
-            .simultaneousGesture(
-                TapGesture().onEnded { onTap?() }
-            )
-
-            HStack(spacing: 2) {
-                Button {
-                    step(by: -1)
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
-                }
-                .accessibilityLabel(Text("turntable.previous"))
-
-                Label("turntable.dragHint", systemImage: "hand.draw")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(controlColor.opacity(0.76))
-                    .frame(maxWidth: .infinity)
-
-                Button {
-                    step(by: 1)
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
-                }
-                .accessibilityLabel(Text("turntable.next"))
-            }
-            .foregroundStyle(controlColor)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 14)
+            .frame(height: 30)
             .background(.ultraThinMaterial, in: Capsule())
+            .padding(.bottom, 4)
+            .opacity(isDragging ? 0.58 : 1)
+
+            Label("turntable.dragHint", systemImage: "hand.draw")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(controlColor.opacity(0.78))
+                .padding(.horizontal, 12)
+                .frame(height: 30)
+                .background(.ultraThinMaterial, in: Capsule())
+                .padding(.bottom, 42)
+                .opacity(isDragging ? 0 : 1)
         }
+        .aspectRatio(1, contentMode: .fit)
+        .scaleEffect(isDragging && !reduceMotion ? 1.012 : 1)
+        .contentShape(Rectangle())
+        .gesture(rotationGesture)
+        .simultaneousGesture(
+            TapGesture().onEnded { onTap?() }
+        )
         .accessibilityElement(children: .contain)
         .accessibilityLabel(Text("turntable.accessibilityLabel"))
         .accessibilityValue(Text(angleAccessibilityValue))
@@ -74,7 +65,7 @@ struct PlantMonsterTurntableView: View {
             @unknown default: break
             }
         }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.12), value: frameIndex)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isDragging)
     }
 
     private var turntableFrame: some View {
@@ -100,7 +91,7 @@ struct PlantMonsterTurntableView: View {
                     isDragging = true
                     dragOriginFrame = frameIndex
                 }
-                let delta = Int((-value.translation.width / 30).rounded(.towardZero))
+                let delta = Int((-value.translation.width / 24).rounded(.towardZero))
                 setFrame(dragOriginFrame + delta)
             }
             .onEnded { _ in

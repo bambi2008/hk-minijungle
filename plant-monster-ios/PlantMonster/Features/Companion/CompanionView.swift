@@ -30,11 +30,12 @@ struct CompanionView: View {
                     Spacer(minLength: 34)
 
                     ZStack {
+                        StageSpotlightView()
+
                         if model.isTouchActive {
                             TouchRippleView()
                         }
                         PlantMonsterTurntableView(
-                            expression: model.currentExpression,
                             hapticsEnabled: model.hapticsEnabled,
                             controlColor: .pmBone,
                             onTap: model.pet
