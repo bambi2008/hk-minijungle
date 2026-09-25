@@ -19,13 +19,6 @@ targets:
       - path: PlantMonster
         excludes:
           - Info.plist
-          - PrivacyInfo.xcprivacy
-          - Assets.xcassets
-          - Resources
-    resources:
-      - path: PlantMonster/Assets.xcassets
-      - path: PlantMonster/Resources
-      - path: PlantMonster/PrivacyInfo.xcprivacy
     info:
       path: PlantMonster/Info.plist
       properties:
