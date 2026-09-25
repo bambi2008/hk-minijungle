@@ -4,9 +4,13 @@ struct CompanionView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showsDeviceSheet = false
+    @State private var handledCareScrollRequest = 0
     @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 50
 
     let onForgetDevice: () -> Void
+    var careScrollRequest = 0
+
+    private let careSectionID = "companion-care-section"
 
     var body: some View {
         ZStack {
@@ -16,52 +20,27 @@ struct CompanionView: View {
                 PMBackgroundView()
             }
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    Button {
-                        showsDeviceSheet = true
-                    } label: {
-                        AliveStatusView(text: model.connectionLabel)
-                            .frame(minHeight: PMTheme.minimumTapTarget, alignment: .leading)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        companionSection
+                            .frame(minHeight: 720, alignment: .topLeading)
+
+                        CareSectionContent()
+                            .id(careSectionID)
+                            .padding(.top, 54)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(Text("device.openSettings"))
-
-                    Spacer(minLength: 34)
-
-                    ZStack {
-                        StageSpotlightView()
-
-                        if model.isTouchActive {
-                            TouchRippleView()
-                        }
-                        PlantMonsterTurntableView(
-                            hapticsEnabled: model.hapticsEnabled,
-                            controlColor: .pmBone,
-                            onTap: model.pet
-                        )
-                    }
-                    .frame(maxWidth: 370)
-                    .frame(maxWidth: .infinity)
-
-                    Spacer(minLength: 36)
-
-                    Text(LocalizedStringKey(model.touchTitleKey))
-                        .font(.system(size: titleSize, weight: .semibold))
-                        .tracking(-1.25)
-                        .foregroundStyle(model.isTouchActive ? Color.pmBone : Color.pmBone)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(LocalizedStringKey(model.touchBodyKey))
-                        .font(.body)
-                        .foregroundStyle(Color.pmBone.opacity(0.76))
-                        .lineSpacing(4)
-                        .padding(.top, 14)
-
-                    Spacer(minLength: 36)
+                    .padding(.horizontal, PMTheme.pagePadding)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .padding(.horizontal, PMTheme.pagePadding)
-                .frame(maxWidth: .infinity, minHeight: 720, alignment: .topLeading)
+                .task(id: careScrollRequest) {
+                    guard careScrollRequest > handledCareScrollRequest else { return }
+                    handledCareScrollRequest = careScrollRequest
+                    await Task.yield()
+                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.55)) {
+                        proxy.scrollTo(careSectionID, anchor: .top)
+                    }
+                }
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: model.isTouchActive)
@@ -70,6 +49,52 @@ struct CompanionView: View {
             DeviceSheet(onForgetDevice: onForgetDevice)
                 .presentationDetents([.medium])
                 .presentationDragIndicator(.visible)
+        }
+    }
+
+    private var companionSection: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Button {
+                showsDeviceSheet = true
+            } label: {
+                AliveStatusView(text: model.connectionLabel)
+                    .frame(minHeight: PMTheme.minimumTapTarget, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(Text("device.openSettings"))
+
+            Spacer(minLength: 34)
+
+            ZStack {
+                StageSpotlightView()
+
+                if model.isTouchActive {
+                    TouchRippleView()
+                }
+                PlantMonsterTurntableView(
+                    hapticsEnabled: model.hapticsEnabled,
+                    controlColor: .pmBone,
+                    onTap: model.pet
+                )
+            }
+            .frame(maxWidth: 370)
+            .frame(maxWidth: .infinity)
+
+            Spacer(minLength: 36)
+
+            Text(LocalizedStringKey(model.touchTitleKey))
+                .font(.system(size: titleSize, weight: .semibold))
+                .tracking(-1.25)
+                .foregroundStyle(Color.pmBone)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(LocalizedStringKey(model.touchBodyKey))
+                .font(.body)
+                .foregroundStyle(Color.pmBone.opacity(0.76))
+                .lineSpacing(4)
+                .padding(.top, 14)
+
+            Spacer(minLength: 36)
         }
     }
 }

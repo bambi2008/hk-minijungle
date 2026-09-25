@@ -23,11 +23,29 @@ struct AppRootView: View {
 
 private struct MainTabView: View {
     @State private var selection = 0
+    @State private var careScrollRequest = 0
     let onForgetDevice: () -> Void
 
+    private var routedSelection: Binding<Int> {
+        Binding(
+            get: { selection },
+            set: { nextSelection in
+                if nextSelection == 1 {
+                    selection = 0
+                    careScrollRequest += 1
+                } else {
+                    selection = nextSelection
+                }
+            }
+        )
+    }
+
     var body: some View {
-        TabView(selection: $selection) {
-            CompanionView(onForgetDevice: onForgetDevice)
+        TabView(selection: routedSelection) {
+            CompanionView(
+                onForgetDevice: onForgetDevice,
+                careScrollRequest: careScrollRequest
+            )
                 .tabItem {
                     Label("tab.companion", systemImage: "sparkles")
                 }
@@ -54,4 +72,3 @@ private struct MainTabView: View {
     AppRootView()
         .environmentObject(AppModel(client: MockPlantMonsterBLEClient()))
 }
-
