@@ -110,8 +110,8 @@ jobs:
             fi
           done
 
-      - name: Install XcodeGen
-        run: brew install xcodegen
+      - name: Install XcodeGen and OpenSSL
+        run: brew install xcodegen openssl@3
 
       - name: Generate Xcode project
         run: xcodegen generate
@@ -132,18 +132,33 @@ jobs:
 
           keychain_path="$RUNNER_TEMP/plant-monster-signing.keychain-db"
           keychain_password="$(uuidgen)"
-          certificate_path="$RUNNER_TEMP/plant-monster-distribution.p12"
+          certificate_bundle_path="$RUNNER_TEMP/plant-monster-distribution.p12"
+          signing_pem_path="$RUNNER_TEMP/plant-monster-distribution.pem"
+          compatible_bundle_path="$RUNNER_TEMP/plant-monster-distribution-compatible.p12"
+          compatible_bundle_password="github-actions-temporary"
           profile_path="$RUNNER_TEMP/PlantMonster.mobileprovision"
           profile_plist="$RUNNER_TEMP/PlantMonsterProfile.plist"
+          openssl_bin="$(brew --prefix openssl@3)/bin/openssl"
 
           security create-keychain -p "$keychain_password" "$keychain_path"
           security set-keychain-settings -lut 21600 "$keychain_path"
           security unlock-keychain -p "$keychain_password" "$keychain_path"
           security list-keychains -d user -s "$keychain_path"
 
-          printf '%s' "$IOS_DISTRIBUTION_P12_BASE64" | base64 -D > "$certificate_path"
-          security import "$certificate_path" \
-            -P "" \
+          printf '%s' "$IOS_DISTRIBUTION_P12_BASE64" | base64 -D > "$certificate_bundle_path"
+          "$openssl_bin" pkcs12 \
+            -in "$certificate_bundle_path" \
+            -nodes \
+            -passin pass: \
+            -out "$signing_pem_path"
+          "$openssl_bin" pkcs12 \
+            -export \
+            -legacy \
+            -in "$signing_pem_path" \
+            -out "$compatible_bundle_path" \
+            -passout "pass:$compatible_bundle_password"
+          security import "$compatible_bundle_path" \
+            -P "$compatible_bundle_password" \
             -A \
             -t cert \
             -f pkcs12 \
