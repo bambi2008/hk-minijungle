@@ -20,6 +20,13 @@
 "pairing.demo" = "先体验一下";
 "pairing.privacy" = "只有在你点击按钮后才会启动蓝牙。";
 
+"turntable.dragHint" = "拖动查看全貌";
+"turntable.previous" = "向左转动植灵兽";
+"turntable.next" = "向右转动植灵兽";
+"turntable.accessibilityLabel" = "可转动的完整植灵兽产品视图";
+"turntable.accessibilityHint" = "左右拖动或使用调整手势查看不同角度，轻触正面与植灵兽互动。";
+"turntable.angleValue" = "第 %1$d 个视角，共 %2$d 个";
+
 "companion.title" = "它知道\n你在这里。";
 "companion.body.connected" = "轻触这张脸，把这份感觉传给你的植灵兽。";
 "companion.body.demo" = "轻触这张脸，预览互动效果。连接后才会发送给植灵兽。";

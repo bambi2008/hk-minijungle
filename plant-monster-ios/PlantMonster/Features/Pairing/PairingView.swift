@@ -16,19 +16,16 @@ struct PairingView: View {
                         .foregroundStyle(Color.pmAubergine.opacity(0.72))
                         .padding(.top, 20)
 
-                    Image("plant-monster-product")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 330)
+                    PlantMonsterTurntableView(hapticsEnabled: model.hapticsEnabled)
+                        .frame(maxWidth: 360)
                         .frame(maxWidth: .infinity)
-                        .padding(.top, 10)
-                        .accessibilityLabel(Text("pairing.productImage"))
+                        .padding(.top, 6)
 
                     Text("pairing.title")
                         .font(.system(size: titleSize, weight: .semibold))
                         .tracking(-1)
                         .foregroundStyle(Color.pmAubergine)
-                        .padding(.top, 10)
+                        .padding(.top, 18)
 
                     Text("pairing.body")
                         .font(.body)

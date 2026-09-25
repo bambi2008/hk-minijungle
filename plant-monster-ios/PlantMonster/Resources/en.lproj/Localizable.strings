@@ -20,6 +20,13 @@
 "pairing.demo" = "Explore in demo mode";
 "pairing.privacy" = "Bluetooth starts only when you tap the button.";
 
+"turntable.dragHint" = "Drag to see every side";
+"turntable.previous" = "Rotate Plant Monster left";
+"turntable.next" = "Rotate Plant Monster right";
+"turntable.accessibilityLabel" = "Rotatable full Plant Monster product view";
+"turntable.accessibilityHint" = "Drag left or right, or use the adjustable action, to see each angle. Tap the front to interact.";
+"turntable.angleValue" = "View %1$d of %2$d";
+
 "companion.title" = "It knows\nyou’re here.";
 "companion.body.connected" = "Touch the face to send the feeling to your Plant Monster.";
 "companion.body.demo" = "Touch the face to preview the interaction. It sends only after you connect.";

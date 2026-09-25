@@ -18,6 +18,7 @@ Reference: `design/plant-monster-ios-typography-refined-board-v3.png`
 - Air humidity and planting-substrate moisture are shown as separate readings; missing substrate data is shown as unavailable rather than estimated.
 - Motion is expressed as a current, human-readable state plus the last detected movement, while preserving the binary sensor contract.
 - Face-touch copy distinguishes demo, sending, device-confirmed, unconfirmed, and unavailable states; only a firmware `T02` response is described as received.
+- The opening and companion screens use an eight-angle product turntable: direct drag, 44pt arrow alternatives, VoiceOver adjustable actions, optional cardinal-angle haptics, and Reduce Motion support.
 
 ## Native visual QA still required
 

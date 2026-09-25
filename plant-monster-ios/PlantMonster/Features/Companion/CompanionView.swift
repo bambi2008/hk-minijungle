@@ -27,23 +27,23 @@ struct CompanionView: View {
                     .buttonStyle(.plain)
                     .accessibilityHint(Text("device.openSettings"))
 
-                    Spacer(minLength: 88)
+                    Spacer(minLength: 34)
 
-                    Button(action: model.pet) {
-                        ZStack {
-                            if model.isTouchActive {
-                                TouchRippleView()
-                            }
-                            OLEDExpressionView(expression: model.currentExpression, width: 176)
+                    ZStack {
+                        if model.isTouchActive {
+                            TouchRippleView()
                         }
-                        .frame(maxWidth: .infinity, minHeight: 210)
-                        .contentShape(Rectangle())
+                        PlantMonsterTurntableView(
+                            expression: model.currentExpression,
+                            hapticsEnabled: model.hapticsEnabled,
+                            controlColor: .pmBone,
+                            onTap: model.pet
+                        )
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(Text("companion.petAction"))
-                    .accessibilityHint(Text("companion.petHint"))
+                    .frame(maxWidth: 370)
+                    .frame(maxWidth: .infinity)
 
-                    Spacer(minLength: 74)
+                    Spacer(minLength: 36)
 
                     Text(LocalizedStringKey(model.touchTitleKey))
                         .font(.system(size: titleSize, weight: .semibold))

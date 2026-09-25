@@ -5,6 +5,7 @@ Native SwiftUI prototype for 植灵兽 / Plant Monster. It turns an ESP32-C3 Sup
 ## Included
 
 - Pairing experience that requests Bluetooth only after a user action.
+- Product-first entry and companion screens with an eight-angle, drag-controlled Plant Monster turntable and accessible arrow controls.
 - Companion home with the real 15-expression OLED asset set and a tactile pet response.
 - Care view for temperature, relative air humidity, planting-substrate moisture, light, and motion state.
 - Memories view for touch, light, and motion moments.
