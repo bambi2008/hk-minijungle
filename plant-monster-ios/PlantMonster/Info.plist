@@ -27,7 +27,7 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBluetoothAlwaysUsageDescription</key>
-	<string>Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, light, touch, and motion updates.</string>
+	<string>Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, substrate moisture, light, touch, and motion updates.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Plant Monster uses Bluetooth to connect to your creature.</string>
 	<key>UILaunchStoryboardName</key>

@@ -2,6 +2,16 @@ import Combine
 import Foundation
 import UIKit
 
+enum TouchDeliveryState: Equatable, Sendable {
+    case idle
+    case sending
+    case delivered
+    case sentWithoutReply
+    case preview
+    case unavailable
+    case receivedOnDevice
+}
+
 @MainActor
 final class AppModel: ObservableObject {
     @Published private(set) var connectionState: PlantMonsterConnectionState = .disconnected
@@ -9,10 +19,14 @@ final class AppModel: ObservableObject {
     @Published private(set) var currentExpression: PlantExpression = .idleMean
     @Published private(set) var memories: [MemoryEvent] = MemoryEvent.samples
     @Published private(set) var isTouchActive = false
+    @Published private(set) var touchDeliveryState: TouchDeliveryState = .idle
+    @Published private(set) var lastMotionDetectedAt: Date?
     @Published var hapticsEnabled = true
 
     private let client: any PlantMonsterBLEClient
     private var expressionResetTask: Task<Void, Never>?
+    private var deliveryTimeoutTask: Task<Void, Never>?
+    private var deliveryResetTask: Task<Void, Never>?
     private var previousTelemetry = PlantTelemetry.sample
     private var isDemoActive = false
 
@@ -55,6 +69,52 @@ final class AppModel: ObservableObject {
         return String(localized: "care.detail.good")
     }
 
+    var motionTitle: String {
+        telemetry.isMoving
+            ? String(localized: "motion.moving")
+            : String(localized: "motion.still")
+    }
+
+    var motionDetail: String {
+        if telemetry.isMoving {
+            return String(localized: "motion.detectedNow")
+        }
+        guard let lastMotionDetectedAt else {
+            return String(localized: "motion.notDetected")
+        }
+        let relative = lastMotionDetectedAt.formatted(.relative(presentation: .named))
+        return String(format: String(localized: "motion.lastDetected"), relative)
+    }
+
+    var touchTitleKey: String {
+        switch touchDeliveryState {
+        case .idle: "companion.title"
+        case .sending: "companion.sendingTitle"
+        case .delivered: "companion.deliveredTitle"
+        case .sentWithoutReply: "companion.sentTitle"
+        case .preview: "companion.previewTitle"
+        case .unavailable: "companion.unavailableTitle"
+        case .receivedOnDevice: "companion.deviceTouchTitle"
+        }
+    }
+
+    var touchBodyKey: String {
+        switch touchDeliveryState {
+        case .sending: "companion.sendingBody"
+        case .delivered: "companion.deliveredBody"
+        case .sentWithoutReply: "companion.sentBody"
+        case .preview: "companion.previewBody"
+        case .unavailable: "companion.unavailableBody"
+        case .receivedOnDevice: "companion.deviceTouchBody"
+        case .idle:
+            switch connectionState {
+            case .connected: "companion.body.connected"
+            case .demo: "companion.body.demo"
+            default: "companion.body.offline"
+            }
+        }
+    }
+
     func startPairing() {
         isDemoActive = false
         client.startPairing()
@@ -66,6 +126,7 @@ final class AppModel: ObservableObject {
         connectionState = .demo
         telemetry = .sample
         currentExpression = .idleMean
+        touchDeliveryState = .idle
     }
 
     func disconnect() {
@@ -89,7 +150,33 @@ final class AppModel: ObservableObject {
     }
 
     func pet() {
+        showTouchMoment(memoryTitle: String(localized: "memory.youWereHere"))
+
+        switch connectionState {
+        case .connected:
+            touchDeliveryState = .sending
+            do {
+                try client.send(.showExpression(.pet))
+                waitForTouchConfirmation()
+            } catch {
+                touchDeliveryState = .unavailable
+                scheduleDeliveryReset()
+                playNotificationHaptic(.error)
+            }
+        case .demo:
+            touchDeliveryState = .preview
+            scheduleDeliveryReset()
+        default:
+            touchDeliveryState = .unavailable
+            scheduleDeliveryReset()
+            playNotificationHaptic(.warning)
+        }
+    }
+
+    private func showTouchMoment(memoryTitle: String) {
         expressionResetTask?.cancel()
+        deliveryTimeoutTask?.cancel()
+        deliveryResetTask?.cancel()
         isTouchActive = true
         currentExpression = .pet
 
@@ -98,22 +185,47 @@ final class AppModel: ObservableObject {
         }
 
         memories.insert(
-            MemoryEvent(
-                date: .now,
-                title: String(localized: "memory.youWereHere"),
-                kind: .touch,
-                expression: .pet
-            ),
+            MemoryEvent(date: .now, title: memoryTitle, kind: .touch, expression: .pet),
             at: 0
         )
 
-        try? client.send(.showExpression(.pet))
         expressionResetTask = Task { [weak self] in
             try? await Task<Never, Never>.sleep(for: .milliseconds(1_400))
             guard !Task.isCancelled, let self else { return }
             self.isTouchActive = false
             self.currentExpression = self.inferredExpression(from: self.telemetry)
         }
+    }
+
+    private func waitForTouchConfirmation() {
+        deliveryTimeoutTask = Task { [weak self] in
+            try? await Task<Never, Never>.sleep(for: .milliseconds(2_500))
+            guard !Task.isCancelled, let self, self.touchDeliveryState == .sending else { return }
+            self.touchDeliveryState = .sentWithoutReply
+            self.scheduleDeliveryReset()
+        }
+    }
+
+    private func confirmTouchDelivery() {
+        guard touchDeliveryState == .sending else { return }
+        deliveryTimeoutTask?.cancel()
+        touchDeliveryState = .delivered
+        playNotificationHaptic(.success)
+        scheduleDeliveryReset()
+    }
+
+    private func scheduleDeliveryReset() {
+        deliveryResetTask?.cancel()
+        deliveryResetTask = Task { [weak self] in
+            try? await Task<Never, Never>.sleep(for: .seconds(3))
+            guard !Task.isCancelled else { return }
+            self?.touchDeliveryState = .idle
+        }
+    }
+
+    private func playNotificationHaptic(_ type: UINotificationFeedbackGenerator.FeedbackType) {
+        guard hapticsEnabled else { return }
+        UINotificationFeedbackGenerator().notificationOccurred(type)
     }
 
     private func apply(_ telemetry: PlantTelemetry, expression: PlantExpression?) {
@@ -124,11 +236,15 @@ final class AppModel: ObservableObject {
 
         if let expression {
             currentExpression = expression
+            if expression == .pet {
+                confirmTouchDelivery()
+            }
         } else if !isTouchActive {
             currentExpression = inferredExpression(from: telemetry)
         }
 
         if telemetry.isMoving && !wasMoving {
+            lastMotionDetectedAt = telemetry.receivedAt
             memories.insert(
                 MemoryEvent(
                     date: .now,
@@ -141,7 +257,9 @@ final class AppModel: ObservableObject {
         }
 
         if telemetry.isTouched && !wasTouched {
-            pet()
+            showTouchMoment(memoryTitle: String(localized: "memory.deviceTouched"))
+            touchDeliveryState = .receivedOnDevice
+            scheduleDeliveryReset()
         }
     }
 

@@ -15,7 +15,9 @@ Reference: `design/plant-monster-ios-typography-refined-board-v3.png`
 - VoiceOver labels describe visual expressions and the product image.
 - Touch motion respects Reduce Motion; haptics can be disabled in the device sheet.
 - English and Simplified Chinese carry the same 70 localization keys.
-- Air humidity is labeled explicitly and never presented as soil moisture.
+- Air humidity and planting-substrate moisture are shown as separate readings; missing substrate data is shown as unavailable rather than estimated.
+- Motion is expressed as a current, human-readable state plus the last detected movement, while preserving the binary sensor contract.
+- Face-touch copy distinguishes demo, sending, device-confirmed, unconfirmed, and unavailable states; only a firmware `T02` response is described as received.
 
 ## Native visual QA still required
 

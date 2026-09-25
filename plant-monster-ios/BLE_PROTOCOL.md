@@ -17,19 +17,22 @@ The app already owns scanning, connection, service discovery, notifications, com
 ## Provisional telemetry JSON
 
 ```json
-{"t":22.0,"rh":56,"lux":320,"touch":true,"moving":false,"expr":"T02"}
+{"t":22.0,"rh":56,"sm":43,"lux":320,"touch":true,"moving":false,"expr":"T02"}
 ```
 
 | Field | Meaning | Unit |
 |---|---|---|
 | `t` | Ambient temperature | °C |
 | `rh` | Relative air humidity | %RH |
+| `sm` | Planting substrate moisture | % (0–100, calibrated) |
 | `lux` | Illuminance | lux |
 | `touch` | Touch sensor active | boolean |
 | `moving` | Motion sensor active | boolean |
 | `expr` | Optional expression code | G00…P03 |
 
-Air humidity is not soil moisture. The app never derives a watering recommendation from `rh`. `G10` (thirsty) and `G11` (watered) are shown only when the firmware explicitly reports those expressions or a future soil/watering signal is added.
+Air humidity is not substrate moisture. The app never derives a watering recommendation from `rh`. During the firmware transition, `sm` is optional and the app displays an em dash when it is absent. `G10` (thirsty) and `G11` (watered) are shown only when the firmware explicitly reports those expressions or a calibrated substrate-moisture rule is agreed.
+
+`moving` is the minimum motion contract. The app shows the current state and the most recent rising-edge time; no acceleration magnitude is invented when the sensor only reports a boolean.
 
 ## Provisional app command JSON
 
@@ -39,3 +42,4 @@ Air humidity is not soil moisture. The app never derives a watering recommendati
 
 The app sends `T02` after the user pets the OLED face. An optional identify command is `{"command":"identify"}`.
 
+To let the app truthfully say “Plant Monster received it”, firmware must apply the command and then notify telemetry with `"expr":"T02"`. A successful BLE write without that response is shown as “sent, waiting for a response”, not as received.

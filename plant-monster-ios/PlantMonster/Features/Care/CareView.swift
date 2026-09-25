@@ -37,7 +37,14 @@ struct CareView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 42)
 
-                    HStack(alignment: .top, spacing: 12) {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: 12),
+                            GridItem(.flexible(), spacing: 12)
+                        ],
+                        alignment: .leading,
+                        spacing: 18
+                    ) {
                         SensorReadingView(
                             value: model.telemetry.temperatureCelsius.formatted(.number.precision(.fractionLength(0))) + "°",
                             label: "sensor.temperature"
@@ -47,6 +54,10 @@ struct CareView: View {
                             label: "sensor.airHumidity"
                         )
                         SensorReadingView(
+                            value: substrateMoistureValue,
+                            label: "sensor.substrateMoisture"
+                        )
+                        SensorReadingView(
                             value: model.telemetry.lightLux.formatted(.number.precision(.fractionLength(0))),
                             label: "sensor.lightLux"
                         )
@@ -54,6 +65,33 @@ struct CareView: View {
                     .padding(20)
                     .background(Color.pmPaleSage.opacity(0.94))
                     .clipShape(RoundedRectangle(cornerRadius: PMTheme.contentCornerRadius, style: .continuous))
+
+                    HStack(alignment: .top, spacing: 14) {
+                        Image(systemName: model.telemetry.isMoving ? "move.3d" : "circle.dotted")
+                            .font(.title3.weight(.medium))
+                            .foregroundStyle(Color.pmOLEDGreen)
+                            .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
+                            .accessibilityHidden(true)
+
+                        VStack(alignment: .leading, spacing: 5) {
+                            Text("motion.sensorLabel")
+                                .font(.caption)
+                                .foregroundStyle(Color.pmBone.opacity(0.64))
+                            Text(model.motionTitle)
+                                .font(.headline)
+                                .foregroundStyle(Color.pmBone)
+                            Text(model.motionDetail)
+                                .font(.subheadline)
+                                .foregroundStyle(Color.pmBone.opacity(0.72))
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+                    .padding(16)
+                    .background(Color.pmSmokedGlass.opacity(0.76))
+                    .clipShape(RoundedRectangle(cornerRadius: PMTheme.controlCornerRadius, style: .continuous))
+                    .padding(.top, 12)
+                    .accessibilityElement(children: .combine)
 
                     Button("care.remember") {
                         model.recordLightMoment()
@@ -69,5 +107,10 @@ struct CareView: View {
                 .padding(.horizontal, PMTheme.pagePadding)
             }
         }
+    }
+
+    private var substrateMoistureValue: String {
+        guard let value = model.telemetry.substrateMoisturePercent else { return "—" }
+        return value.formatted(.number.precision(.fractionLength(0))) + "%"
     }
 }

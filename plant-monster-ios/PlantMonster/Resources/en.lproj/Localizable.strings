@@ -12,7 +12,7 @@
 "pairing.eyebrow" = "MEET YOUR COMPANION";
 "pairing.productImage" = "Front view of the sage-green Plant Monster device";
 "pairing.title" = "Wake it up.";
-"pairing.body" = "Bring your iPhone close. Plant Monster will share light, temperature, air humidity, touch and motion with you.";
+"pairing.body" = "Bring your iPhone close. Plant Monster will share light, temperature, air humidity, substrate moisture, touch and motion with you.";
 "pairing.start" = "Find my Plant Monster";
 "pairing.waiting" = "Waiting for Bluetooth";
 "pairing.searching" = "Looking nearby…";
@@ -21,11 +21,23 @@
 "pairing.privacy" = "Bluetooth starts only when you tap the button.";
 
 "companion.title" = "It knows\nyou’re here.";
-"companion.body" = "Touch the face. The feeling travels to your Plant Monster.";
-"companion.touchTitle" = "Touch\nreceived.";
-"companion.touchBody" = "A small answer from the creature beside your plant.";
+"companion.body.connected" = "Touch the face to send the feeling to your Plant Monster.";
+"companion.body.demo" = "Touch the face to preview the interaction. It sends only after you connect.";
+"companion.body.offline" = "Connect your Plant Monster to send a touch to it.";
+"companion.sendingTitle" = "Sending\ntouch.";
+"companion.sendingBody" = "Your iPhone is sending this touch to Plant Monster over Bluetooth.";
+"companion.deliveredTitle" = "It felt\nthat.";
+"companion.deliveredBody" = "Plant Monster answered this touch with an expression.";
+"companion.sentTitle" = "Touch\nsent.";
+"companion.sentBody" = "The command was sent, but Plant Monster has not answered yet.";
+"companion.previewTitle" = "A small\npreview.";
+"companion.previewBody" = "Connect a real Plant Monster to send this touch to the device.";
+"companion.unavailableTitle" = "Not there\nyet.";
+"companion.unavailableBody" = "Connect Plant Monster and finish its device protocol, then try again.";
+"companion.deviceTouchTitle" = "It felt\na touch.";
+"companion.deviceTouchBody" = "The touch sensor on Plant Monster just responded.";
 "companion.petAction" = "Pet Plant Monster";
-"companion.petHint" = "Sends a gentle touch response to the connected creature.";
+"companion.petHint" = "Sends a touch when connected; otherwise previews the interaction.";
 
 "care.findLight" = "Find the light.";
 "care.lessLight" = "A softer place.";
@@ -42,7 +54,15 @@
 
 "sensor.temperature" = "TEMPERATURE";
 "sensor.airHumidity" = "AIR HUMIDITY";
+"sensor.substrateMoisture" = "SUBSTRATE MOISTURE";
 "sensor.lightLux" = "LIGHT · LUX";
+
+"motion.sensorLabel" = "MOTION SENSOR";
+"motion.moving" = "Being moved";
+"motion.still" = "Resting still";
+"motion.detectedNow" = "Movement detected just now";
+"motion.notDetected" = "No movement detected since connecting";
+"motion.lastDetected" = "Last detected: %@";
 
 "memories.eyebrow" = "SMALL MOMENTS";
 "memories.title" = "You were here.";
@@ -53,6 +73,7 @@
 "memory.sawLight" = "Found a softer light";
 "memory.savedLight" = "Saved this light";
 "memory.youWereHere" = "You were here";
+"memory.deviceTouched" = "Someone touched Plant Monster";
 "memory.pickedUp" = "Picked up together";
 
 "device.openSettings" = "Opens connection and feedback settings.";

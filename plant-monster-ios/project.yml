@@ -34,7 +34,7 @@ targets:
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true
-        NSBluetoothAlwaysUsageDescription: Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, light, touch, and motion updates.
+        NSBluetoothAlwaysUsageDescription: Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, substrate moisture, light, touch, and motion updates.
         NSBluetoothPeripheralUsageDescription: Plant Monster uses Bluetooth to connect to your creature.
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false

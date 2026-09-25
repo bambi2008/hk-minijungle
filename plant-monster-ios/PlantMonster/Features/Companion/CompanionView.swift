@@ -45,13 +45,13 @@ struct CompanionView: View {
 
                     Spacer(minLength: 74)
 
-                    Text(LocalizedStringKey(model.isTouchActive ? "companion.touchTitle" : "companion.title"))
+                    Text(LocalizedStringKey(model.touchTitleKey))
                         .font(.system(size: titleSize, weight: .semibold))
                         .tracking(-1.25)
                         .foregroundStyle(model.isTouchActive ? Color.pmBone : Color.pmBone)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    Text(LocalizedStringKey(model.isTouchActive ? "companion.touchBody" : "companion.body"))
+                    Text(LocalizedStringKey(model.touchBodyKey))
                         .font(.body)
                         .foregroundStyle(Color.pmBone.opacity(0.76))
                         .lineSpacing(4)
@@ -64,6 +64,7 @@ struct CompanionView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: model.isTouchActive)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.touchDeliveryState)
         .sheet(isPresented: $showsDeviceSheet) {
             DeviceSheet(onForgetDevice: onForgetDevice)
                 .presentationDetents([.medium])

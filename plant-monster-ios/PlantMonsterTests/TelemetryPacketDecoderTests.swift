@@ -3,16 +3,25 @@ import XCTest
 
 final class TelemetryPacketDecoderTests: XCTestCase {
     func testDecodesProvisionalFirmwarePacket() throws {
-        let data = Data(#"{"t":22.4,"rh":56,"lux":320,"touch":true,"moving":false,"expr":"T02"}"#.utf8)
+        let data = Data(#"{"t":22.4,"rh":56,"sm":43,"lux":320,"touch":true,"moving":false,"expr":"T02"}"#.utf8)
 
         let result = try TelemetryPacketDecoder.decode(data)
 
         XCTAssertEqual(result.telemetry.temperatureCelsius, 22.4, accuracy: 0.001)
         XCTAssertEqual(result.telemetry.airHumidityPercent, 56, accuracy: 0.001)
+        XCTAssertEqual(try XCTUnwrap(result.telemetry.substrateMoisturePercent), 43, accuracy: 0.001)
         XCTAssertEqual(result.telemetry.lightLux, 320, accuracy: 0.001)
         XCTAssertTrue(result.telemetry.isTouched)
         XCTAssertFalse(result.telemetry.isMoving)
         XCTAssertEqual(result.expression, .pet)
+    }
+
+    func testAllowsOlderPacketWithoutSubstrateMoisture() throws {
+        let data = Data(#"{"t":22.4,"rh":56,"lux":320}"#.utf8)
+
+        let result = try TelemetryPacketDecoder.decode(data)
+
+        XCTAssertNil(result.telemetry.substrateMoisturePercent)
     }
 
     func testRejectsIncompletePacket() {
@@ -25,4 +34,3 @@ final class TelemetryPacketDecoderTests: XCTestCase {
         XCTAssertEqual(Set(names).count, PlantExpression.allCases.count)
     }
 }
-

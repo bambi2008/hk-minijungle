@@ -52,13 +52,13 @@ final class MockPlantMonsterBLEClient: PlantMonsterBLEClient {
             let sample = PlantTelemetry(
                 temperatureCelsius: 22 + sin(self.tick) * 0.8,
                 airHumidityPercent: 56 + cos(self.tick * 0.7) * 2.5,
+                substrateMoisturePercent: 43 + sin(self.tick * 0.2) * 1.5,
                 lightLux: 92 + sin(self.tick * 0.4) * 18,
                 isTouched: false,
-                isMoving: false,
+                isMoving: Int(self.tick.rounded()) % 9 == 0,
                 receivedAt: .now
             )
             self.delegate?.plantMonsterClient(self, didReceive: sample, expression: nil)
         }
     }
 }
-

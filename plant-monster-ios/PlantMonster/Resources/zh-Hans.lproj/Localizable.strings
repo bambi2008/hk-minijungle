@@ -12,7 +12,7 @@
 "pairing.eyebrow" = "遇见你的伙伴";
 "pairing.productImage" = "鼠尾草绿色植灵兽设备正面图";
 "pairing.title" = "唤醒它。";
-"pairing.body" = "把 iPhone 靠近一些。植灵兽会把光照、温度、空气湿度、触摸和运动状态告诉你。";
+"pairing.body" = "把 iPhone 靠近一些。植灵兽会把光照、温度、空气湿度、基质湿度、触摸和运动状态告诉你。";
 "pairing.start" = "寻找我的植灵兽";
 "pairing.waiting" = "等待蓝牙";
 "pairing.searching" = "正在附近寻找…";
@@ -21,11 +21,23 @@
 "pairing.privacy" = "只有在你点击按钮后才会启动蓝牙。";
 
 "companion.title" = "它知道\n你在这里。";
-"companion.body" = "轻触这张脸，这份感觉会传到你的植灵兽。";
-"companion.touchTitle" = "收到\n触摸。";
-"companion.touchBody" = "这是植物旁边那个小家伙给你的回应。";
+"companion.body.connected" = "轻触这张脸，把这份感觉传给你的植灵兽。";
+"companion.body.demo" = "轻触这张脸，预览互动效果。连接后才会发送给植灵兽。";
+"companion.body.offline" = "连接植灵兽后，就可以把触摸传给它。";
+"companion.sendingTitle" = "正在\n传递。";
+"companion.sendingBody" = "iPhone 正在通过蓝牙把这次触摸发送给植灵兽。";
+"companion.deliveredTitle" = "它\n收到了。";
+"companion.deliveredBody" = "植灵兽已经用表情回应了这次触摸。";
+"companion.sentTitle" = "已经\n发出。";
+"companion.sentBody" = "指令已经发送，但还没有收到植灵兽的回应。";
+"companion.previewTitle" = "这是\n预览。";
+"companion.previewBody" = "连接真实植灵兽后，这次触摸才会发送到设备。";
+"companion.unavailableTitle" = "还没\n传到。";
+"companion.unavailableBody" = "连接植灵兽并完成设备协议设置后再试一次。";
+"companion.deviceTouchTitle" = "它感觉到\n触摸了。";
+"companion.deviceTouchBody" = "植灵兽的触摸感应器刚刚有了反应。";
 "companion.petAction" = "摸摸植灵兽";
-"companion.petHint" = "向已连接的植灵兽发送一次轻柔触摸。";
+"companion.petHint" = "已连接时发送触摸；未连接时只预览互动效果。";
 
 "care.findLight" = "去找一点光。";
 "care.lessLight" = "换个柔和的位置。";
@@ -42,7 +54,15 @@
 
 "sensor.temperature" = "温度";
 "sensor.airHumidity" = "空气湿度";
+"sensor.substrateMoisture" = "基质湿度";
 "sensor.lightLux" = "光照 · LUX";
+
+"motion.sensorLabel" = "运动感应器";
+"motion.moving" = "正在被移动";
+"motion.still" = "安静待着";
+"motion.detectedNow" = "刚刚检测到移动";
+"motion.notDetected" = "连接以来还没有检测到移动";
+"motion.lastDetected" = "上次检测：%@";
 
 "memories.eyebrow" = "微小的时刻";
 "memories.title" = "你来过这里。";
@@ -53,6 +73,7 @@
 "memory.sawLight" = "找到了更柔和的光";
 "memory.savedLight" = "记住了这里的光";
 "memory.youWereHere" = "你来过这里";
+"memory.deviceTouched" = "有人轻触了植灵兽";
 "memory.pickedUp" = "一起被抱了起来";
 
 "device.openSettings" = "打开连接与触感反馈设置。";

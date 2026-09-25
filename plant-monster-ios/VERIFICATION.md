@@ -8,7 +8,8 @@
 - Product cutout and botanical background are present.
 - Every `PlantExpression.assetName` maps to an image set.
 - Localization keys were compared between English and Simplified Chinese.
-- Code review checked that air humidity is not treated as soil moisture.
+- Code review checked that air humidity is not treated as substrate moisture and that older packets remain decodable when `sm` is absent.
+- Touch delivery is only confirmed after the firmware echoes the `T02` expression; a BLE write without reply remains visibly unconfirmed.
 
 ## Required on macOS before calling the build release-ready
 

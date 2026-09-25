@@ -6,7 +6,7 @@ Native SwiftUI prototype for 植灵兽 / Plant Monster. It turns an ESP32-C3 Sup
 
 - Pairing experience that requests Bluetooth only after a user action.
 - Companion home with the real 15-expression OLED asset set and a tactile pet response.
-- Care view for temperature, relative air humidity, and light.
+- Care view for temperature, relative air humidity, planting-substrate moisture, light, and motion state.
 - Memories view for touch, light, and motion moments.
 - English and Simplified Chinese localization.
 - CoreBluetooth implementation plus a simulator mock.
@@ -40,7 +40,7 @@ The repository includes a macOS 26 / Xcode 26 GitHub Actions workflow for unsign
 
 ## Product truth
 
-- `rh` is relative **air humidity**, never soil moisture.
+- `rh` is relative **air humidity**, never substrate moisture; `sm` is the separate substrate-moisture reading.
 - The app does not infer watering needs from air humidity.
 - Thresholds in `AppModel` are provisional UI behavior and must be tuned against the final plant, enclosure, and calibrated sensors.
 
