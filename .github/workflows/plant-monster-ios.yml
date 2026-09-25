@@ -287,3 +287,54 @@ jobs:
             -authenticationKeyPath "$AUTH_KEY_PATH" \
             -authenticationKeyID "$ASC_KEY_ID" \
             -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+
+      - name: Wait for processing and assign internal group
+        env:
+          TESTFLIGHT_APP_ID: "6815591868"
+          TESTFLIGHT_GROUP_NAME: Plant Monster Internal
+        run: node Scripts/sync-testflight.mjs "$GITHUB_RUN_NUMBER"
+
+  sync_testflight:
+    name: Verify TestFlight visibility
+    if: >-
+      github.event_name == 'push' &&
+      contains(github.event.head_commit.message, '[sync-testflight:')
+    runs-on: ubuntu-latest
+    environment: testflight
+    defaults:
+      run:
+        working-directory: plant-monster-ios
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_API_KEY_P8_BASE64: ${{ secrets.ASC_API_KEY_P8_BASE64 }}
+      TESTFLIGHT_APP_ID: "6815591868"
+      TESTFLIGHT_GROUP_NAME: Plant Monster Internal
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+
+      - name: Read target build number
+        shell: bash
+        env:
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        run: |
+          set -euo pipefail
+          build_number="$(printf '%s' "$COMMIT_MESSAGE" | sed -n 's/.*\[sync-testflight:\([0-9][0-9]*\)\].*/\1/p')"
+          if [[ -z "$build_number" ]]; then
+            echo "Commit message must contain [sync-testflight:<build-number>]." >&2
+            exit 1
+          fi
+          echo "TARGET_BUILD_NUMBER=$build_number" >> "$GITHUB_ENV"
+
+      - name: Prepare App Store Connect key
+        shell: bash
+        run: |
+          set -euo pipefail
+          key_path="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
+          printf '%s' "$ASC_API_KEY_P8_BASE64" | base64 -d > "$key_path"
+          chmod 600 "$key_path"
+          echo "AUTH_KEY_PATH=$key_path" >> "$GITHUB_ENV"
+
+      - name: Verify processing and internal group assignment
+        run: node Scripts/sync-testflight.mjs "$TARGET_BUILD_NUMBER"
