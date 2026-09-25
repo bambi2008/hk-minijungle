@@ -58,6 +58,22 @@
 "care.detail.good" = "当前光照与温度都处在舒适范围。";
 "care.checkIn" = "12 分钟后再看";
 "care.remember" = "记住这一刻";
+"care.eyebrow" = "照护 · 02";
+"care.live" = "实时";
+"care.signal.attention" = "需要一点照护";
+"care.signal.steady" = "现在很安稳";
+"care.signal.liveValue" = "此刻";
+"care.signal.liveDetail" = "感应器正在持续陪伴它";
+"care.minutes" = "分钟";
+"care.nextCheck" = "下一次复查";
+"care.environmentTitle" = "它周围的环境";
+"care.environmentDetail" = "四项感应正在持续更新";
+"care.activityTitle" = "今天的动态";
+"care.activityDetail" = "运动感应器记录它被抱起或移动";
+"care.sensor.attention" = "需要留意";
+"care.sensor.steady" = "状态平稳";
+"care.sensor.sensing" = "正在感应";
+"care.sensor.waiting" = "待连接";
 
 "sensor.temperature" = "温度";
 "sensor.airHumidity" = "空气湿度";

@@ -58,6 +58,22 @@
 "care.detail.good" = "Light and temperature are sitting in a comfortable range.";
 "care.checkIn" = "CHECK IN 12 MIN";
 "care.remember" = "Remember this moment";
+"care.eyebrow" = "CARE · 02";
+"care.live" = "LIVE";
+"care.signal.attention" = "A LITTLE CARE";
+"care.signal.steady" = "FEELING SETTLED";
+"care.signal.liveValue" = "Right now";
+"care.signal.liveDetail" = "Its sensors are quietly keeping watch";
+"care.minutes" = "min";
+"care.nextCheck" = "Until the next check";
+"care.environmentTitle" = "The world around it";
+"care.environmentDetail" = "Four sensors, updating continuously";
+"care.activityTitle" = "Today’s movement";
+"care.activityDetail" = "Motion sensing remembers when it is picked up or moved";
+"care.sensor.attention" = "CHECK";
+"care.sensor.steady" = "STEADY";
+"care.sensor.sensing" = "SENSING";
+"care.sensor.waiting" = "WAITING";
 
 "sensor.temperature" = "TEMPERATURE";
 "sensor.airHumidity" = "AIR HUMIDITY";
