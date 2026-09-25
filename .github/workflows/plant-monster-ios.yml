@@ -261,6 +261,21 @@ jobs:
           </plist>
           PLIST
 
+      - name: Validate archived bundle metadata
+        shell: bash
+        run: |
+          set -euo pipefail
+          app_path="$RUNNER_TEMP/PlantMonster.xcarchive/Products/Applications/PlantMonster.app"
+          info_path="$app_path/Info.plist"
+          for key in CFBundleIconName UILaunchStoryboardName UISupportedInterfaceOrientations; do
+            /usr/libexec/PlistBuddy -c "Print :$key" "$info_path"
+          done
+          icon_path="$(find "$app_path" -maxdepth 1 -type f -name 'AppIcon*.png' -print -quit)"
+          if [[ -z "$icon_path" ]]; then
+            echo "The archived app does not contain compiled app icon files." >&2
+            exit 1
+          fi
+
       - name: Upload archive to App Store Connect
         shell: bash
         run: |
