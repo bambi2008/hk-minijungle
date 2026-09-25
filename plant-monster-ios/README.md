@@ -28,12 +28,12 @@ The iOS Simulator automatically uses mock telemetry. A physical iPhone uses Core
 
 ## Connect the ESP32-C3 firmware
 
-1. Open `PlantMonster/Bluetooth/PlantMonsterBLEProfile.swift`.
-2. Add the service, telemetry, and command characteristic UUIDs supplied by the firmware team.
-3. Confirm the packet fields and units in `BLE_PROTOCOL.md`.
-4. Run on a physical iPhone and validate pairing, reconnect, notification cadence, and command writes.
+1. Implement the frozen UUIDs and packet contract in `BLE_PROTOCOL.md`.
+2. Reuse the constants, packet structs, and CRC helper in `FirmwareReference/ESP32C3/PlantMonsterBLEProtocolV1.h`.
+3. Advertise the Plant Monster service UUID and enable `read` + `notify` on telemetry and `write` on commands.
+4. Run on a physical iPhone and validate pairing, reconnect, notification cadence, CRC rejection, and command acknowledgement.
 
-Until UUIDs are supplied, a physical iPhone can discover and connect to a device advertising a name containing `Plant Monster`, `PlantMonster`, or `ZhiLingShou`, but it cannot subscribe to telemetry.
+The V1 wire format stays within the default 20-byte BLE payload. The app only reports a complete connection after the service, both characteristics, and telemetry notifications are ready.
 
 ## TestFlight
 
@@ -47,4 +47,4 @@ The repository includes a macOS 26 / Xcode 26 GitHub Actions workflow for unsign
 
 ## Current validation boundary
 
-This source package was assembled and statically checked on Windows. Native compilation, Swift unit tests, VoiceOver, Bluetooth, and iPhone layout verification require macOS/Xcode and remain release gates; see `VERIFICATION.md`.
+The app is compiled and distributed by the repository's macOS/Xcode workflow. Physical ESP32-C3 interoperability remains a hardware release gate; see `VERIFICATION.md`.

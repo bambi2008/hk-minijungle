@@ -27,6 +27,7 @@ final class AppModel: ObservableObject {
     private var expressionResetTask: Task<Void, Never>?
     private var deliveryTimeoutTask: Task<Void, Never>?
     private var deliveryResetTask: Task<Void, Never>?
+    private var pendingTouchCommandSequence: UInt8?
     private var previousTelemetry = PlantTelemetry.sample
     private var isDemoActive = false
 
@@ -122,6 +123,7 @@ final class AppModel: ObservableObject {
 
     func enterDemoMode() {
         isDemoActive = true
+        resetPendingDelivery()
         client.disconnect()
         connectionState = .demo
         telemetry = .sample
@@ -131,7 +133,15 @@ final class AppModel: ObservableObject {
 
     func disconnect() {
         isDemoActive = false
+        resetPendingDelivery()
         client.disconnect()
+    }
+
+    private func resetPendingDelivery() {
+        pendingTouchCommandSequence = nil
+        deliveryTimeoutTask?.cancel()
+        deliveryResetTask?.cancel()
+        touchDeliveryState = .idle
     }
 
     func recordLightMoment() {
@@ -156,9 +166,10 @@ final class AppModel: ObservableObject {
         case .connected:
             touchDeliveryState = .sending
             do {
-                try client.send(.showExpression(.pet))
+                pendingTouchCommandSequence = try client.send(.showExpression(.pet))
                 waitForTouchConfirmation()
             } catch {
+                pendingTouchCommandSequence = nil
                 touchDeliveryState = .unavailable
                 scheduleDeliveryReset()
                 playNotificationHaptic(.error)
@@ -201,6 +212,7 @@ final class AppModel: ObservableObject {
         deliveryTimeoutTask = Task { [weak self] in
             try? await Task<Never, Never>.sleep(for: .milliseconds(2_500))
             guard !Task.isCancelled, let self, self.touchDeliveryState == .sending else { return }
+            self.pendingTouchCommandSequence = nil
             self.touchDeliveryState = .sentWithoutReply
             self.scheduleDeliveryReset()
         }
@@ -209,6 +221,7 @@ final class AppModel: ObservableObject {
     private func confirmTouchDelivery() {
         guard touchDeliveryState == .sending else { return }
         deliveryTimeoutTask?.cancel()
+        pendingTouchCommandSequence = nil
         touchDeliveryState = .delivered
         playNotificationHaptic(.success)
         scheduleDeliveryReset()
@@ -228,7 +241,9 @@ final class AppModel: ObservableObject {
         UINotificationFeedbackGenerator().notificationOccurred(type)
     }
 
-    private func apply(_ telemetry: PlantTelemetry, expression: PlantExpression?) {
+    private func apply(_ update: PlantMonsterTelemetryUpdate) {
+        let telemetry = update.telemetry
+        let expression = update.expression
         let wasMoving = previousTelemetry.isMoving
         let wasTouched = previousTelemetry.isTouched
         previousTelemetry = telemetry
@@ -236,11 +251,21 @@ final class AppModel: ObservableObject {
 
         if let expression {
             currentExpression = expression
-            if expression == .pet {
-                confirmTouchDelivery()
-            }
         } else if !isTouchActive {
             currentExpression = inferredExpression(from: telemetry)
+        }
+
+        if let acknowledgement = update.acknowledgement,
+           acknowledgement.sequence == pendingTouchCommandSequence {
+            if acknowledgement.status == .applied {
+                confirmTouchDelivery()
+            } else {
+                pendingTouchCommandSequence = nil
+                deliveryTimeoutTask?.cancel()
+                touchDeliveryState = .unavailable
+                playNotificationHaptic(.error)
+                scheduleDeliveryReset()
+            }
         }
 
         if telemetry.isMoving && !wasMoving {
@@ -282,16 +307,21 @@ extension AppModel: PlantMonsterBLEClientDelegate {
         Task { @MainActor [weak self] in
             guard let self, !self.isDemoActive else { return }
             self.connectionState = state
+            if case .connected = state {
+                return
+            }
+            if self.pendingTouchCommandSequence != nil {
+                self.resetPendingDelivery()
+            }
         }
     }
 
     nonisolated func plantMonsterClient(
         _ client: any PlantMonsterBLEClient,
-        didReceive telemetry: PlantTelemetry,
-        expression: PlantExpression?
+        didReceive update: PlantMonsterTelemetryUpdate
     ) {
         Task { @MainActor [weak self] in
-            self?.apply(telemetry, expression: expression)
+            self?.apply(update)
         }
     }
 }

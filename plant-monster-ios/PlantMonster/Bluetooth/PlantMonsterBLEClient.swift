@@ -14,17 +14,6 @@ enum PlantMonsterConnectionState: Equatable, Sendable {
 enum PlantMonsterCommand: Sendable {
     case identify
     case showExpression(PlantExpression)
-
-    var data: Data? {
-        let object: [String: String]
-        switch self {
-        case .identify:
-            object = ["command": "identify"]
-        case let .showExpression(expression):
-            object = ["command": "expression", "value": expression.rawValue]
-        }
-        return try? JSONSerialization.data(withJSONObject: object)
-    }
 }
 
 protocol PlantMonsterBLEClientDelegate: AnyObject {
@@ -34,8 +23,7 @@ protocol PlantMonsterBLEClientDelegate: AnyObject {
     )
     func plantMonsterClient(
         _ client: any PlantMonsterBLEClient,
-        didReceive telemetry: PlantTelemetry,
-        expression: PlantExpression?
+        didReceive update: PlantMonsterTelemetryUpdate
     )
 }
 
@@ -43,7 +31,8 @@ protocol PlantMonsterBLEClient: AnyObject {
     var delegate: (any PlantMonsterBLEClientDelegate)? { get set }
     func startPairing()
     func disconnect()
-    func send(_ command: PlantMonsterCommand) throws
+    @discardableResult
+    func send(_ command: PlantMonsterCommand) throws -> UInt8
 }
 
 enum PlantMonsterBLEClientFactory {
@@ -55,4 +44,3 @@ enum PlantMonsterBLEClientFactory {
 #endif
     }
 }
-

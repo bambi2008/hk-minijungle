@@ -27,6 +27,7 @@ final class CoreBluetoothPlantMonsterClient: NSObject, PlantMonsterBLEClient {
     private var commandCharacteristic: CBCharacteristic?
     private var pairingRequested = false
     private var scanTimeoutWorkItem: DispatchWorkItem?
+    private var nextCommandSequence: UInt8 = 1
 
     init(profile: PlantMonsterBLEProfile) {
         self.profile = profile
@@ -55,20 +56,28 @@ final class CoreBluetoothPlantMonsterClient: NSObject, PlantMonsterBLEClient {
         delegate?.plantMonsterClient(self, didChange: .disconnected)
     }
 
-    func send(_ command: PlantMonsterCommand) throws {
-        guard let data = command.data else { throw PlantMonsterBLEError.invalidCommand }
+    @discardableResult
+    func send(_ command: PlantMonsterCommand) throws -> UInt8 {
         guard let peripheral, let commandCharacteristic else {
             throw PlantMonsterBLEError.commandCharacteristicUnavailable
         }
-        let writeType: CBCharacteristicWriteType
-        if commandCharacteristic.properties.contains(.write) {
-            writeType = .withResponse
-        } else if commandCharacteristic.properties.contains(.writeWithoutResponse) {
-            writeType = .withoutResponse
-        } else {
+        guard commandCharacteristic.properties.contains(.write) else {
             throw PlantMonsterBLEError.commandCharacteristicUnavailable
         }
-        peripheral.writeValue(data, for: commandCharacteristic, type: writeType)
+
+        let sequence = takeNextCommandSequence()
+        let data = try PlantMonsterWireProtocol.encodeCommand(command, sequence: sequence)
+        guard data.count <= peripheral.maximumWriteValueLength(for: .withResponse) else {
+            throw PlantMonsterBLEError.invalidCommand
+        }
+        peripheral.writeValue(data, for: commandCharacteristic, type: .withResponse)
+        return sequence
+    }
+
+    private func takeNextCommandSequence() -> UInt8 {
+        let sequence = nextCommandSequence
+        nextCommandSequence = sequence == UInt8.max ? 1 : sequence + 1
+        return sequence
     }
 
     private func beginScanWhenReady() {
@@ -142,11 +151,6 @@ extension CoreBluetoothPlantMonsterClient: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         scanTimeoutWorkItem?.cancel()
-        let name = peripheral.name ?? "Plant Monster"
-        if profile.serviceUUID == nil {
-            delegate?.plantMonsterClient(self, didChange: .connected(name: name))
-            return
-        }
         delegate?.plantMonsterClient(self, didChange: .discovering)
         peripheral.discoverServices(profile.serviceUUID.map { [$0] })
     }
@@ -204,20 +208,51 @@ extension CoreBluetoothPlantMonsterClient: CBPeripheralDelegate {
             return
         }
 
-        for characteristic in service.characteristics ?? [] {
-            if let telemetryUUID = profile.telemetryCharacteristicUUID,
-               characteristic.uuid == telemetryUUID {
-                peripheral.setNotifyValue(true, for: characteristic)
-            }
-            if let commandUUID = profile.commandCharacteristicUUID,
-               characteristic.uuid == commandUUID {
-                commandCharacteristic = characteristic
-            }
+        guard
+            let telemetryUUID = profile.telemetryCharacteristicUUID,
+            let commandUUID = profile.commandCharacteristicUUID,
+            let telemetry = service.characteristics?.first(where: { $0.uuid == telemetryUUID }),
+            let command = service.characteristics?.first(where: { $0.uuid == commandUUID }),
+            telemetry.properties.contains(.notify),
+            command.properties.contains(.write)
+        else {
+            delegate?.plantMonsterClient(
+                self,
+                didChange: .failed(message: "Plant Monster BLE Protocol V1 is incomplete on this device.")
+            )
+            return
         }
+
+        commandCharacteristic = command
+        peripheral.setNotifyValue(true, for: telemetry)
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didUpdateNotificationStateFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        guard let telemetryUUID = profile.telemetryCharacteristicUUID,
+              characteristic.uuid == telemetryUUID else { return }
+        if let error {
+            delegate?.plantMonsterClient(self, didChange: .failed(message: error.localizedDescription))
+            return
+        }
+        guard characteristic.isNotifying else {
+            delegate?.plantMonsterClient(
+                self,
+                didChange: .failed(message: "Plant Monster telemetry notifications are unavailable.")
+            )
+            return
+        }
+
         delegate?.plantMonsterClient(
             self,
             didChange: .connected(name: peripheral.name ?? "Plant Monster")
         )
+        if characteristic.properties.contains(.read) {
+            peripheral.readValue(for: characteristic)
+        }
     }
 
     func peripheral(
@@ -225,12 +260,24 @@ extension CoreBluetoothPlantMonsterClient: CBPeripheralDelegate {
         didUpdateValueFor characteristic: CBCharacteristic,
         error: Error?
     ) {
+        guard let telemetryUUID = profile.telemetryCharacteristicUUID,
+              characteristic.uuid == telemetryUUID else { return }
         guard error == nil, let data = characteristic.value else { return }
         guard let decoded = try? TelemetryPacketDecoder.decode(data) else { return }
         delegate?.plantMonsterClient(
             self,
-            didReceive: decoded.telemetry,
-            expression: decoded.expression
+            didReceive: decoded
         )
+    }
+
+    func peripheral(
+        _ peripheral: CBPeripheral,
+        didWriteValueFor characteristic: CBCharacteristic,
+        error: Error?
+    ) {
+        guard let commandUUID = profile.commandCharacteristicUUID,
+              characteristic.uuid == commandUUID,
+              let error else { return }
+        delegate?.plantMonsterClient(self, didChange: .failed(message: error.localizedDescription))
     }
 }

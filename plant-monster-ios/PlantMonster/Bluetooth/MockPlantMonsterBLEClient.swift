@@ -6,6 +6,7 @@ final class MockPlantMonsterBLEClient: PlantMonsterBLEClient {
     private var timer: Timer?
     private var connectWorkItem: DispatchWorkItem?
     private var tick = 0.0
+    private var nextCommandSequence: UInt8 = 1
 
     func startPairing() {
         connectWorkItem?.cancel()
@@ -34,14 +35,28 @@ final class MockPlantMonsterBLEClient: PlantMonsterBLEClient {
         delegate?.plantMonsterClient(self, didChange: .disconnected)
     }
 
-    func send(_ command: PlantMonsterCommand) throws {
+    @discardableResult
+    func send(_ command: PlantMonsterCommand) throws -> UInt8 {
+        let sequence = nextCommandSequence
+        nextCommandSequence = sequence == UInt8.max ? 1 : sequence + 1
+
         if case let .showExpression(expression) = command {
-            delegate?.plantMonsterClient(
-                self,
-                didReceive: .sample,
-                expression: expression
-            )
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.18) { [weak self] in
+                guard let self else { return }
+                self.delegate?.plantMonsterClient(
+                    self,
+                    didReceive: PlantMonsterTelemetryUpdate(
+                        telemetry: .sample,
+                        expression: expression,
+                        acknowledgement: PlantMonsterCommandAcknowledgement(
+                            sequence: sequence,
+                            status: .applied
+                        )
+                    )
+                )
+            }
         }
+        return sequence
     }
 
     private func startTelemetry() {
@@ -58,7 +73,14 @@ final class MockPlantMonsterBLEClient: PlantMonsterBLEClient {
                 isMoving: Int(self.tick.rounded()) % 9 == 0,
                 receivedAt: .now
             )
-            self.delegate?.plantMonsterClient(self, didReceive: sample, expression: nil)
+            self.delegate?.plantMonsterClient(
+                self,
+                didReceive: PlantMonsterTelemetryUpdate(
+                    telemetry: sample,
+                    expression: nil,
+                    acknowledgement: nil
+                )
+            )
         }
     }
 }

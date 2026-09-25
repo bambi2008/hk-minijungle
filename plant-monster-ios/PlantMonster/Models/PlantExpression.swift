@@ -21,6 +21,47 @@ enum PlantExpression: String, CaseIterable, Sendable {
         self.init(rawValue: firmwareCode.uppercased())
     }
 
+    init?(protocolID: UInt8) {
+        switch protocolID {
+        case 1: self = .idleMean
+        case 2: self = .sunComfy
+        case 3: self = .findLight
+        case 4: self = .tooBright
+        case 5: self = .sleep
+        case 6: self = .cold
+        case 7: self = .hot
+        case 8: self = .thirsty
+        case 9: self = .watered
+        case 10: self = .pickup
+        case 11: self = .dizzy
+        case 12: self = .wink
+        case 13: self = .pet
+        case 14: self = .annoyed
+        case 15: self = .pollination
+        default: return nil
+        }
+    }
+
+    var protocolID: UInt8 {
+        switch self {
+        case .idleMean: 1
+        case .sunComfy: 2
+        case .findLight: 3
+        case .tooBright: 4
+        case .sleep: 5
+        case .cold: 6
+        case .hot: 7
+        case .thirsty: 8
+        case .watered: 9
+        case .pickup: 10
+        case .dizzy: 11
+        case .wink: 12
+        case .pet: 13
+        case .annoyed: 14
+        case .pollination: 15
+        }
+    }
+
     var assetName: String {
         switch self {
         case .idleMean: "expression-idle-mean"
@@ -61,4 +102,3 @@ enum PlantExpression: String, CaseIterable, Sendable {
         }
     }
 }
-

@@ -1,13 +1,12 @@
 import CoreBluetooth
 
 struct PlantMonsterBLEProfile: Sendable {
-    /// Replace these nil values when the ESP32-C3 firmware team freezes the GATT contract.
-    /// Keeping the UUIDs in one file prevents UI code from depending on transport details.
+    /// Plant Monster BLE Protocol V1. These values are frozen and must match the ESP32-C3 firmware.
     static let production = PlantMonsterBLEProfile(
         advertisedNamePrefixes: ["Plant Monster", "PlantMonster", "ZhiLingShou"],
-        serviceUUIDString: nil,
-        telemetryCharacteristicUUIDString: nil,
-        commandCharacteristicUUIDString: nil
+        serviceUUIDString: "7A3E0001-7E5B-4B7C-A1A0-6C6B504D0001",
+        telemetryCharacteristicUUIDString: "7A3E0002-7E5B-4B7C-A1A0-6C6B504D0001",
+        commandCharacteristicUUIDString: "7A3E0003-7E5B-4B7C-A1A0-6C6B504D0001"
     )
 
     let advertisedNamePrefixes: [String]
@@ -23,4 +22,3 @@ struct PlantMonsterBLEProfile: Sendable {
         commandCharacteristicUUIDString.map(CBUUID.init(string:))
     }
 }
-

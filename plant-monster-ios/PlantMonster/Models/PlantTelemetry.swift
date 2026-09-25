@@ -21,13 +21,19 @@ struct PlantTelemetry: Equatable, Sendable {
 }
 
 enum TelemetryPacketDecoder {
-    /// Provisional firmware contract:
-    /// {"t":22.0,"rh":56,"sm":43,"lux":320,"touch":true,"moving":false,"expr":"T02"}
-    /// Confirm field names and units with the ESP32-C3 firmware team before release.
-    static func decode(_ data: Data) throws -> (telemetry: PlantTelemetry, expression: PlantExpression?) {
+    static func decode(_ data: Data) throws -> PlantMonsterTelemetryUpdate {
+        if data.first == PlantMonsterWireProtocol.magic {
+            return try PlantMonsterWireProtocol.decodeTelemetry(data)
+        }
+
+        return try decodeLegacyJSON(data)
+    }
+
+    /// Temporary migration support for the original JSON prototype.
+    private static func decodeLegacyJSON(_ data: Data) throws -> PlantMonsterTelemetryUpdate {
         let packet = try JSONDecoder().decode(Packet.self, from: data)
-        return (
-            PlantTelemetry(
+        return PlantMonsterTelemetryUpdate(
+            telemetry: PlantTelemetry(
                 temperatureCelsius: packet.temperature,
                 airHumidityPercent: packet.airHumidity,
                 substrateMoisturePercent: packet.substrateMoisture,
@@ -36,7 +42,8 @@ enum TelemetryPacketDecoder {
                 isMoving: packet.moving ?? false,
                 receivedAt: .now
             ),
-            packet.expression.flatMap(PlantExpression.init(firmwareCode:))
+            expression: packet.expression.flatMap(PlantExpression.init(firmwareCode:)),
+            acknowledgement: nil
         )
     }
 
