@@ -170,12 +170,12 @@ struct MemoriesView: View {
         let calendar = Calendar.current
         switch filter {
         case .today:
-            model.memories.filter { calendar.isDateInToday($0.date) }
+            return model.memories.filter { calendar.isDateInToday($0.date) }
         case .week:
             guard let start = calendar.date(byAdding: .day, value: -7, to: .now) else { return model.memories }
             return model.memories.filter { $0.date >= start }
         case .all:
-            model.memories
+            return model.memories
         }
     }
 
