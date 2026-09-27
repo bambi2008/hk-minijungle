@@ -8,7 +8,6 @@ struct CompanionView: View {
     @State private var scrollOffset: CGFloat = 0
     @State private var isTurntableEngaged = false
     @State private var isScrollCueFloating = false
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 50
 
     let onForgetDevice: () -> Void
     var careScrollRequest = 0
@@ -17,61 +16,59 @@ struct CompanionView: View {
 
     private var scrollProgress: CGFloat {
         guard !reduceMotion else { return 0 }
-        return min(max(-scrollOffset / 520, 0), 1)
+        return min(max(-scrollOffset / 620, 0), 1)
     }
 
     var body: some View {
-        ZStack {
-            if model.isTouchActive {
-                Color.pmAubergine.ignoresSafeArea()
-            } else {
-                PMBackgroundView()
-            }
+        GeometryReader { viewport in
+            ZStack {
+                PMBackgroundView(signalStrength: model.isTouchActive ? 1 : 0.34)
 
-            Color.pmAubergine
-                .opacity(Double(scrollProgress * 0.22))
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 0) {
-                        GeometryReader { geometry in
-                            Color.clear.preference(
-                                key: CompanionScrollOffsetKey.self,
-                                value: geometry.frame(in: .named("companionScroll")).minY
-                            )
-                        }
-                        .frame(height: 0)
-
-                        companionSection
-                            .frame(minHeight: 760, alignment: .topLeading)
-
-                        CareSectionContent()
-                            .id(careSectionID)
-                            .padding(.top, 54)
-                            .scrollTransition(.animated(.easeInOut(duration: 0.42)), axis: .vertical) { content, phase in
-                                content
-                                    .opacity(phase.isIdentity ? 1 : 0.42)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.975, anchor: .top)
+                ScrollViewReader { proxy in
+                    ScrollView {
+                        LazyVStack(alignment: .leading, spacing: 0) {
+                            GeometryReader { geometry in
+                                Color.clear.preference(
+                                    key: CompanionScrollOffsetKey.self,
+                                    value: geometry.frame(in: .named("companionScroll")).minY
+                                )
                             }
+                            .frame(height: 0)
+
+                            companionScene
+                                .frame(minHeight: max(viewport.size.height - 24, 720), alignment: .topLeading)
+
+                            CareSectionContent()
+                                .id(careSectionID)
+                                .padding(.top, 26)
+                                .padding(.bottom, 46)
+                                .scrollTransition(
+                                    .animated(.easeInOut(duration: 0.34)),
+                                    axis: .vertical
+                                ) { content, phase in
+                                    content
+                                        .opacity(phase.isIdentity ? 1 : 0.22)
+                                        .scaleEffect(phase.isIdentity ? 1 : 0.96, anchor: .top)
+                                }
+                        }
+                        .padding(.horizontal, PMTheme.pagePadding)
                     }
-                    .padding(.horizontal, PMTheme.pagePadding)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                }
-                .coordinateSpace(name: "companionScroll")
-                .onPreferenceChange(CompanionScrollOffsetKey.self) { scrollOffset = $0 }
-                .task(id: careScrollRequest) {
-                    guard careScrollRequest > handledCareScrollRequest else { return }
-                    handledCareScrollRequest = careScrollRequest
-                    await Task.yield()
-                    withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.55)) {
-                        proxy.scrollTo(careSectionID, anchor: .top)
+                    .scrollIndicators(.hidden)
+                    .coordinateSpace(name: "companionScroll")
+                    .onPreferenceChange(CompanionScrollOffsetKey.self) { scrollOffset = $0 }
+                    .task(id: careScrollRequest) {
+                        guard careScrollRequest > handledCareScrollRequest else { return }
+                        handledCareScrollRequest = careScrollRequest
+                        await Task.yield()
+                        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.52)) {
+                            proxy.scrollTo(careSectionID, anchor: .top)
+                        }
                     }
                 }
             }
         }
-        .animation(reduceMotion ? nil : .easeInOut(duration: 0.3), value: model.isTouchActive)
+        .preferredColorScheme(.dark)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: model.isTouchActive)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.touchDeliveryState)
         .sheet(isPresented: $showsDeviceSheet) {
             DeviceSheet(onForgetDevice: onForgetDevice)
@@ -80,75 +77,130 @@ struct CompanionView: View {
         }
     }
 
-    private var companionSection: some View {
+    private var companionScene: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Button {
-                showsDeviceSheet = true
-            } label: {
-                AliveStatusView(text: model.connectionLabel)
-                    .frame(minHeight: PMTheme.minimumTapTarget, alignment: .leading)
-            }
-            .buttonStyle(.plain)
-            .accessibilityHint(Text("device.openSettings"))
-
-            Spacer(minLength: 34)
+            PMEditorialHeader(
+                section: "editorial.plantMonster",
+                status: model.connectionLabel,
+                actionTitle: "editorial.settings",
+                action: { showsDeviceSheet = true }
+            )
+            .padding(.top, 10)
 
             ZStack {
-                StageSpotlightView(isEngaged: isTurntableEngaged || model.isTouchActive)
-
                 if model.isTouchActive {
-                    TouchRippleView()
+                    PMSignalRingsView(active: true)
+                        .transition(.opacity)
                 }
+
                 PlantMonsterTurntableView(
                     hapticsEnabled: model.hapticsEnabled,
-                    controlColor: .pmBone,
+                    controlColor: .white,
                     onTap: model.pet,
                     onInteractionChanged: { isTurntableEngaged = $0 }
                 )
+                .opacity(model.isTouchActive ? 0.2 : 1)
+                .scaleEffect(model.isTouchActive && !reduceMotion ? 0.86 : 1)
+
+                if model.isTouchActive {
+                    OLEDExpressionView(
+                        expression: model.currentExpression,
+                        width: 280,
+                        tint: .white,
+                        isActive: true
+                    )
+                    .transition(.scale(scale: 0.72).combined(with: .opacity))
+                }
             }
-            .frame(maxWidth: 370)
+            .frame(maxWidth: 390)
             .frame(maxWidth: .infinity)
-            .scaleEffect(1 - scrollProgress * 0.1, anchor: .bottom)
-            .offset(y: scrollProgress * 26)
+            .scaleEffect(1 - scrollProgress * 0.12, anchor: .bottom)
+            .offset(y: scrollProgress * 28)
+            .padding(.top, 8)
 
-            Spacer(minLength: 30)
+            Text(editorialHeadline)
+                .pmEditorialTitle(size: 60)
+                .contentTransition(.opacity)
+                .padding(.top, 4)
 
-            PMChapterLabel(index: "01", title: "companion.chapter", trailingLabel: "companion.live")
-
-            Text(LocalizedStringKey(model.touchTitleKey))
-                .font(.system(size: titleSize, weight: .semibold))
-                .tracking(-1.25)
-                .foregroundStyle(Color.pmBone)
+            Text(editorialBody)
+                .font(.system(.caption, design: .monospaced, weight: .medium))
+                .tracking(2.2)
+                .lineSpacing(5)
+                .foregroundStyle(Color.white.opacity(0.58))
+                .textCase(.uppercase)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 22)
+                .padding(.top, 12)
 
-            Text(LocalizedStringKey(model.touchBodyKey))
-                .font(.body)
-                .foregroundStyle(Color.pmBone.opacity(0.76))
-                .lineSpacing(4)
-                .padding(.top, 14)
+            Button(action: model.pet) {
+                HStack(spacing: 10) {
+                    Image(systemName: model.isTouchActive ? "wave.3.right" : "hand.tap")
+                        .symbolEffect(.pulse, value: model.isTouchActive)
+                    Text(
+                        LocalizedStringKey(
+                            model.isTouchActive
+                                ? "companion.touchActiveAction"
+                                : "companion.touchAction"
+                        )
+                    )
+                }
+                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                .tracking(1.3)
+                .foregroundStyle(model.isTouchActive ? Color.pmInk : Color.white)
+                .frame(maxWidth: .infinity, minHeight: 50)
+                .background(model.isTouchActive ? Color.pmOLEDGreen : Color.white.opacity(0.04))
+                .overlay {
+                    Rectangle().stroke(model.isTouchActive ? Color.pmOLEDGreen : PMTheme.hairline, lineWidth: 1)
+                }
+            }
+            .buttonStyle(PMTactileButtonStyle())
+            .disabled(model.touchDeliveryState == .sending)
+            .padding(.top, 18)
 
-            Spacer(minLength: 26)
+            Spacer(minLength: 24)
 
-            HStack(spacing: 10) {
+            HStack(spacing: 9) {
                 Text("companion.scrollCare")
-                    .font(.caption.weight(.semibold))
-                    .tracking(0.8)
                 Image(systemName: "arrow.down")
-                    .font(.caption.weight(.bold))
                     .offset(y: reduceMotion ? 0 : (isScrollCueFloating ? 3 : -2))
             }
-            .foregroundStyle(Color.pmBone.opacity(0.66))
+            .font(.system(.caption2, design: .monospaced, weight: .medium))
+            .tracking(1.2)
+            .foregroundStyle(Color.white.opacity(0.52))
             .frame(minHeight: PMTheme.minimumTapTarget)
             .accessibilityElement(children: .combine)
             .onAppear {
                 guard !reduceMotion else { return }
-                withAnimation(.easeInOut(duration: 1.15).repeatForever(autoreverses: true)) {
+                withAnimation(.easeInOut(duration: 1.05).repeatForever(autoreverses: true)) {
                     isScrollCueFloating = true
                 }
             }
 
-            Spacer(minLength: 26)
+            PMEditorialFooter(phrase: "companion.footer")
+                .padding(.top, 8)
+                .padding(.bottom, 18)
+        }
+    }
+
+    private var editorialHeadline: LocalizedStringKey {
+        switch model.touchDeliveryState {
+        case .sending: "companion.editorial.sending"
+        case .delivered, .receivedOnDevice: "companion.editorial.received"
+        case .sentWithoutReply: "companion.editorial.sent"
+        case .preview: "companion.editorial.preview"
+        case .unavailable: "companion.editorial.unavailable"
+        case .idle: "companion.editorial.idle"
+        }
+    }
+
+    private var editorialBody: LocalizedStringKey {
+        switch model.touchDeliveryState {
+        case .sending: "companion.editorial.sendingBody"
+        case .delivered, .receivedOnDevice: "companion.editorial.receivedBody"
+        case .sentWithoutReply: "companion.editorial.sentBody"
+        case .preview: "companion.editorial.previewBody"
+        case .unavailable: "companion.editorial.unavailableBody"
+        case .idle: "companion.editorial.idleBody"
         }
     }
 }

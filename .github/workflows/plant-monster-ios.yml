@@ -70,6 +70,61 @@ jobs:
             exit "$build_status"
           fi
 
+      - name: Capture editorial visual QA screens
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/plant-monster-visual-qa"
+
+          device_type="$(xcrun simctl list devicetypes -j | node -e '
+            let input=""; process.stdin.on("data", c => input += c); process.stdin.on("end", () => {
+              const types = JSON.parse(input).devicetypes.filter(item => item.name.includes("iPhone"));
+              const preferred = types.find(item => item.name === "iPhone 16 Pro") ?? types[0];
+              if (!preferred) process.exit(1);
+              process.stdout.write(preferred.identifier);
+            });
+          ')"
+          runtime="$(xcrun simctl list runtimes -j | node -e '
+            let input=""; process.stdin.on("data", c => input += c); process.stdin.on("end", () => {
+              const runtimes = JSON.parse(input).runtimes.filter(item => item.isAvailable && item.platform === "iOS");
+              const selected = runtimes.at(-1);
+              if (!selected) process.exit(1);
+              process.stdout.write(selected.identifier);
+            });
+          ')"
+          udid="$(xcrun simctl create PlantMonsterVisualQA "$device_type" "$runtime")"
+          trap 'xcrun simctl shutdown "$udid" >/dev/null 2>&1 || true; xcrun simctl delete "$udid" >/dev/null 2>&1 || true' EXIT
+
+          xcrun simctl boot "$udid"
+          xcrun simctl bootstatus "$udid" -b
+          xcrun simctl status_bar "$udid" override --time 9:41 --batteryState charged --batteryLevel 100 --wifiBars 3 --cellularBars 4
+
+          app_path="$(find "$HOME/Library/Developer/Xcode/DerivedData" -path '*/Build/Products/Debug-iphonesimulator/PlantMonster.app' -print -quit)"
+          test -n "$app_path"
+          xcrun simctl install "$udid" "$app_path"
+
+          capture() {
+            local name="$1"
+            shift
+            xcrun simctl terminate "$udid" com.hkminijungle.plantmonster >/dev/null 2>&1 || true
+            xcrun simctl launch "$udid" com.hkminijungle.plantmonster "$@"
+            sleep 4
+            xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/plant-monster-visual-qa/${name}.png"
+          }
+
+          capture pairing
+          capture companion -ui-testing
+          capture companion-touch -ui-testing -ui-touch
+          capture care -ui-testing -ui-care
+          capture memories -ui-testing -ui-memories
+
+      - name: Upload editorial visual QA screens
+        uses: actions/upload-artifact@v4
+        with:
+          name: plant-monster-visual-qa
+          path: ${{ runner.temp }}/plant-monster-visual-qa/*.png
+          if-no-files-found: error
+
   testflight:
     name: Upload to TestFlight
     if: >-

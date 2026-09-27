@@ -3,190 +3,227 @@ import SwiftUI
 struct CareView: View {
     var body: some View {
         ZStack {
-            PMBackgroundView()
+            PMBackgroundView(signalStrength: 0.5)
 
             ScrollView {
                 CareSectionContent(showsStatus: true)
                     .padding(.horizontal, PMTheme.pagePadding)
             }
+            .scrollIndicators(.hidden)
         }
+        .preferredColorScheme(.dark)
     }
 }
 
 struct CareSectionContent: View {
+    private enum SensorKind: String, CaseIterable, Identifiable {
+        case temperature
+        case airHumidity
+        case substrateMoisture
+        case light
+
+        var id: Self { self }
+
+        var label: LocalizedStringKey {
+            switch self {
+            case .temperature: "sensor.temperature"
+            case .airHumidity: "sensor.airHumidity"
+            case .substrateMoisture: "sensor.substrateMoisture"
+            case .light: "sensor.lightLux"
+            }
+        }
+
+        var icon: String {
+            switch self {
+            case .temperature: "thermometer.medium"
+            case .airHumidity: "humidity"
+            case .substrateMoisture: "drop"
+            case .light: "sun.max"
+            }
+        }
+    }
+
     @EnvironmentObject private var model: AppModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 44
+    @State private var selectedSensor: SensorKind = .light
 
     var showsStatus = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if showsStatus {
-                AliveStatusView(text: model.connectionLabel)
-                    .frame(minHeight: PMTheme.minimumTapTarget)
-            }
-
-            careSectionMarker
-                .padding(.top, showsStatus ? 30 : 0)
+            PMEditorialHeader(
+                section: "care.editorial.section",
+                status: model.connectionLabel
+            )
+            .padding(.top, showsStatus ? 10 : 0)
 
             Text(model.careHeadline)
-                .font(.system(size: titleSize, weight: .semibold))
-                .tracking(-1.0)
-                .foregroundStyle(Color.pmBone)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 22)
+                .pmEditorialTitle(size: 58)
+                .padding(.top, 18)
+
+            HStack(alignment: .firstTextBaseline, spacing: 10) {
+                Text("12")
+                    .font(.system(size: 30, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.white)
+                    .monospacedDigit()
+                Text("care.minutes")
+                    .font(.system(.headline, design: .monospaced, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.84))
+            }
+            .padding(.top, 16)
 
             Text(model.careDetail)
-                .font(.body)
-                .foregroundStyle(Color.pmBone.opacity(0.78))
-                .lineSpacing(4)
+                .font(.system(.caption, design: .monospaced, weight: .medium))
+                .tracking(1.8)
+                .lineSpacing(5)
+                .foregroundStyle(Color.white.opacity(0.56))
+                .textCase(.uppercase)
                 .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 10)
+
+            EditorialCareStage(
+                expression: model.currentExpression,
+                lightNeedsAttention: lightNeedsAttention
+            )
+            .padding(.top, 26)
+
+            Text("care.editorial.selectSensor")
+                .font(.system(.caption2, design: .monospaced, weight: .medium))
+                .tracking(1.8)
+                .foregroundStyle(Color.white.opacity(0.46))
+                .padding(.top, 28)
+
+            sensorSelector
                 .padding(.top, 12)
 
-            CareSignalStage(
-                expression: model.currentExpression,
-                needsRecheck: needsRecheck
-            )
-            .padding(.top, 28)
+            selectedSensorNarrative
+                .padding(.top, 18)
 
-            sectionHeading(
-                title: "care.environmentTitle",
-                detail: "care.environmentDetail"
-            )
-            .padding(.top, 34)
-
-            sensorStories
-                .padding(.top, 16)
-
-            sectionHeading(
-                title: "care.activityTitle",
-                detail: "care.activityDetail"
-            )
-            .padding(.top, 34)
-
-            MotionTimelineView(
+            MotionSignalView(
                 isMoving: model.telemetry.isMoving,
                 title: model.motionTitle,
                 detail: model.motionDetail
             )
-            .padding(.top, 14)
+            .padding(.top, 26)
 
             Button {
                 model.recordLightMoment()
             } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "bookmark.fill")
-                        .accessibilityHidden(true)
+                HStack {
                     Text("care.remember")
+                    Spacer()
+                    Image(systemName: "bookmark")
                 }
-                .font(.headline)
-                .foregroundStyle(Color.pmBone)
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .background(Color.pmAubergine)
-                .clipShape(RoundedRectangle(cornerRadius: PMTheme.controlCornerRadius, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: PMTheme.controlCornerRadius, style: .continuous)
-                        .stroke(Color.pmBone.opacity(0.14), lineWidth: 1)
-                }
-                .shadow(color: Color.pmAubergine.opacity(0.35), radius: 22, y: 12)
+                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                .tracking(1.4)
+                .foregroundStyle(Color.pmInk)
+                .padding(.horizontal, 18)
+                .frame(maxWidth: .infinity, minHeight: 54)
+                .background(Color.pmOLEDGreen)
             }
             .buttonStyle(PMTactileButtonStyle())
-            .padding(.top, 22)
-            .padding(.bottom, 40)
-        }
-    }
+            .padding(.top, 24)
 
-    private var careSectionMarker: some View {
-        PMChapterLabel(index: "02", title: "care.chapter", trailingLabel: "care.live")
+            PMEditorialFooter(phrase: "care.footer")
+                .padding(.top, 34)
+                .padding(.bottom, 40)
+        }
+        .sensoryFeedback(.selection, trigger: selectedSensor)
     }
 
     @ViewBuilder
-    private var sensorStories: some View {
+    private var sensorSelector: some View {
         if dynamicTypeSize.isAccessibilitySize {
-            VStack(spacing: 12) {
-                sensorCards
+            VStack(spacing: 1) {
+                ForEach(SensorKind.allCases) { sensorButton($0) }
             }
         } else {
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    sensorCards
-                }
-                .scrollTargetLayout()
+            HStack(spacing: 1) {
+                ForEach(SensorKind.allCases) { sensorButton($0) }
             }
-            .contentMargins(.horizontal, 0, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
-            .accessibilityLabel(Text("care.sensorCarousel"))
         }
     }
 
-    @ViewBuilder
-    private var sensorCards: some View {
-        sensorCard(
-            value: model.telemetry.temperatureCelsius.formatted(.number.precision(.fractionLength(0))) + "°",
-            label: "sensor.temperature",
-            systemImage: "thermometer.medium",
-            status: temperatureNeedsAttention ? "care.sensor.attention" : "care.sensor.steady",
-            needsAttention: temperatureNeedsAttention
-        )
-        sensorCard(
-            value: model.telemetry.airHumidityPercent.formatted(.number.precision(.fractionLength(0))) + "%",
-            label: "sensor.airHumidity",
-            systemImage: "humidity.fill",
-            status: "care.sensor.sensing"
-        )
-        sensorCard(
-            value: substrateMoistureValue,
-            label: "sensor.substrateMoisture",
-            systemImage: "drop.fill",
-            status: model.telemetry.substrateMoisturePercent == nil
-                ? "care.sensor.waiting"
-                : "care.sensor.sensing"
-        )
-        sensorCard(
-            value: model.telemetry.lightLux.formatted(.number.precision(.fractionLength(0))),
-            label: "sensor.lightLux",
-            systemImage: "sun.max.fill",
-            status: lightNeedsAttention ? "care.sensor.attention" : "care.sensor.steady",
-            needsAttention: lightNeedsAttention
-        )
+    private func sensorButton(_ sensor: SensorKind) -> some View {
+        Button {
+            selectedSensor = sensor
+        } label: {
+            VStack(spacing: 9) {
+                Image(systemName: sensor.icon)
+                    .font(.title3.weight(.medium))
+                    .symbolRenderingMode(.hierarchical)
+                Text(sensorValue(sensor))
+                    .font(.system(.headline, design: .monospaced, weight: .medium))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.68)
+                Text(sensor.label)
+                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .tracking(0.5)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.center)
+            }
+            .foregroundStyle(selectedSensor == sensor ? Color.pmInk : Color.white.opacity(0.72))
+            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 104 : 118)
+            .padding(.horizontal, 4)
+            .background(selectedSensor == sensor ? Color.pmOLEDGreen : Color.black.opacity(0.32))
+            .overlay {
+                Rectangle().stroke(PMTheme.hairline, lineWidth: selectedSensor == sensor ? 0 : 1)
+            }
+        }
+        .buttonStyle(PMTactileButtonStyle())
+        .accessibilityAddTraits(selectedSensor == sensor ? .isSelected : [])
     }
 
-    private func sensorCard(
-        value: String,
-        label: LocalizedStringKey,
-        systemImage: String,
-        status: LocalizedStringKey,
-        needsAttention: Bool = false
-    ) -> some View {
-        SensorReadingView(
-            value: value,
-            label: label,
-            systemImage: systemImage,
-            status: status,
-            needsAttention: needsAttention
-        )
-        .frame(width: dynamicTypeSize.isAccessibilitySize ? nil : 252)
-        .scrollTransition(.animated(.easeInOut(duration: 0.3)), axis: .horizontal) { content, phase in
-            content
-                .opacity(phase.isIdentity ? 1 : 0.68)
-                .scaleEffect(phase.isIdentity ? 1 : 0.94)
+    private var selectedSensorNarrative: some View {
+        HStack(alignment: .top, spacing: 16) {
+            Rectangle()
+                .fill(Color.pmOLEDGreen)
+                .frame(width: 2, height: 54)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(selectedSensor.label)
+                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                    .tracking(1.3)
+                    .foregroundStyle(Color.pmOLEDGreen)
+                Text(sensorNarrative(selectedSensor))
+                    .font(.body)
+                    .foregroundStyle(Color.white.opacity(0.78))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .contentTransition(.opacity)
+        .animation(.easeInOut(duration: 0.2), value: selectedSensor)
+    }
+
+    private func sensorValue(_ sensor: SensorKind) -> String {
+        switch sensor {
+        case .temperature:
+            model.telemetry.temperatureCelsius.formatted(.number.precision(.fractionLength(0))) + "°"
+        case .airHumidity:
+            model.telemetry.airHumidityPercent.formatted(.number.precision(.fractionLength(0))) + "%"
+        case .substrateMoisture:
+            model.telemetry.substrateMoisturePercent.map {
+                $0.formatted(.number.precision(.fractionLength(0))) + "%"
+            } ?? "—"
+        case .light:
+            model.telemetry.lightLux.formatted(.number.precision(.fractionLength(0)))
         }
     }
 
-    private func sectionHeading(title: LocalizedStringKey, detail: LocalizedStringKey) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(title)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(Color.pmBone)
-            Text(detail)
-                .font(.subheadline)
-                .foregroundStyle(Color.pmBone.opacity(0.62))
+    private func sensorNarrative(_ sensor: SensorKind) -> LocalizedStringKey {
+        switch sensor {
+        case .temperature:
+            temperatureNeedsAttention ? "care.sensorNarrative.temperatureAttention" : "care.sensorNarrative.temperatureSteady"
+        case .airHumidity:
+            "care.sensorNarrative.airHumidity"
+        case .substrateMoisture:
+            model.telemetry.substrateMoisturePercent == nil
+                ? "care.sensorNarrative.substrateWaiting"
+                : "care.sensorNarrative.substrate"
+        case .light:
+            lightNeedsAttention ? "care.sensorNarrative.lightAttention" : "care.sensorNarrative.lightSteady"
         }
-    }
-
-    private var needsRecheck: Bool {
-        temperatureNeedsAttention || lightNeedsAttention
     }
 
     private var temperatureNeedsAttention: Bool {
@@ -196,188 +233,116 @@ struct CareSectionContent: View {
     private var lightNeedsAttention: Bool {
         model.telemetry.lightLux < 150 || model.telemetry.lightLux > 1_200
     }
-
-    private var substrateMoistureValue: String {
-        guard let value = model.telemetry.substrateMoisturePercent else { return "—" }
-        return value.formatted(.number.precision(.fractionLength(0))) + "%"
-    }
 }
 
-private struct CareSignalStage: View {
+private struct EditorialCareStage: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isPulsing = false
+    @State private var scanPosition: CGFloat = -0.45
     let expression: PlantExpression
-    let needsRecheck: Bool
+    let lightNeedsAttention: Bool
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .fill(
-                    LinearGradient(
-                        colors: [
-                            Color.pmAubergine.opacity(0.96),
-                            Color.pmSmokedGlass.opacity(0.96)
-                        ],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
+            Rectangle()
+                .fill(Color.black.opacity(0.5))
+                .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+
+            LinearGradient(
+                colors: [.clear, Color.white.opacity(lightNeedsAttention ? 0.24 : 0.1), .clear],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .offset(x: scanPosition * 180)
+            .blendMode(.screen)
+            .clipped()
+
+            VStack(alignment: .trailing, spacing: 8) {
+                Image(systemName: lightNeedsAttention ? "sun.min" : "sun.max")
+                    .font(.title2.weight(.light))
+                    .foregroundStyle(lightNeedsAttention ? Color.pmOLEDGreen : Color.white)
+                    .symbolEffect(.pulse, options: .repeating, value: lightNeedsAttention)
+
+                Path { path in
+                    path.move(to: CGPoint(x: 0, y: 0))
+                    path.addLine(to: CGPoint(x: -72, y: 92))
+                }
+                .stroke(
+                    lightNeedsAttention ? Color.pmOLEDGreen.opacity(0.72) : Color.white.opacity(0.2),
+                    style: StrokeStyle(lineWidth: 1, dash: [4, 7])
                 )
-
-            Circle()
-                .fill(Color.pmOLEDGreen.opacity(0.18))
-                .frame(width: 190, height: 190)
-                .blur(radius: 34)
-                .scaleEffect(isPulsing ? 1.16 : 0.92)
-                .opacity(isPulsing ? 0.72 : 1)
-                .offset(x: 50, y: -58)
-                .accessibilityHidden(true)
-
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .center, spacing: 18) {
-                    signalCopy
-                    Spacer(minLength: 4)
-                    expressionView
-                }
-
-                VStack(alignment: .leading, spacing: 24) {
-                    signalCopy
-                    expressionView
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
+                .frame(width: 76, height: 96)
             }
-            .padding(22)
+            .padding(20)
+            .accessibilityHidden(true)
+
+            OLEDExpressionView(
+                expression: expression,
+                width: 286,
+                tint: .white,
+                isActive: lightNeedsAttention
+            )
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+            .padding(18)
         }
-        .frame(minHeight: 214)
-        .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 30, style: .continuous)
-                .stroke(Color.pmBone.opacity(0.14), lineWidth: 1)
-        }
-        .shadow(color: .black.opacity(0.18), radius: 28, y: 16)
-        .accessibilityElement(children: .combine)
+        .frame(minHeight: 230)
         .onAppear {
             guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 3.2).repeatForever(autoreverses: true)) {
-                isPulsing = true
+            withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) {
+                scanPosition = 0.5
             }
-        }
-    }
-
-    private var signalCopy: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label(
-                needsRecheck ? "care.signal.attention" : "care.signal.steady",
-                systemImage: needsRecheck ? "sun.min.fill" : "leaf.fill"
-            )
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(needsRecheck ? Color.pmOLEDGreen : Color.pmBone.opacity(0.72))
-
-            if needsRecheck {
-                HStack(alignment: .firstTextBaseline, spacing: 7) {
-                    Text("12")
-                        .font(.system(size: 62, weight: .medium, design: .rounded))
-                        .monospacedDigit()
-                    Text("care.minutes")
-                        .font(.headline)
-                }
-                .foregroundStyle(Color.pmBone)
-
-                Text("care.nextCheck")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.pmBone.opacity(0.62))
-            } else {
-                Text("care.signal.liveValue")
-                    .font(.system(.largeTitle, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Color.pmBone)
-
-                Text("care.signal.liveDetail")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.pmBone.opacity(0.62))
-            }
-        }
-    }
-
-    private var expressionView: some View {
-        ZStack {
-            Circle()
-                .stroke(Color.pmOLEDGreen.opacity(0.18), lineWidth: 1)
-                .frame(width: 152, height: 152)
-                .overlay {
-                    Circle()
-                        .stroke(Color.pmOLEDGreen.opacity(0.08), lineWidth: 18)
-                }
-                .accessibilityHidden(true)
-
-            OLEDExpressionView(expression: expression, width: 132)
         }
     }
 }
 
-private struct MotionTimelineView: View {
+private struct MotionSignalView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var isPulsing = false
+    @State private var pulse = false
     let isMoving: Bool
     let title: String
     let detail: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 15) {
-            VStack(spacing: 7) {
-                ZStack {
-                    if isMoving {
-                        Circle()
-                            .stroke(Color.pmOLEDGreen.opacity(0.42), lineWidth: 1)
-                            .frame(width: 34, height: 34)
-                            .scaleEffect(isPulsing ? 1.72 : 1)
-                            .opacity(isPulsing ? 0 : 0.82)
-                    }
-
+        HStack(spacing: 18) {
+            ZStack {
+                ForEach(0..<3, id: \.self) { index in
                     Circle()
-                        .fill(Color.pmOLEDGreen.opacity(0.16))
-                        .frame(width: 34, height: 34)
-                    Image(systemName: isMoving ? "move.3d" : "circle.dotted")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.pmOLEDGreen)
+                        .stroke(Color.pmOLEDGreen.opacity(0.44 - Double(index) * 0.1), lineWidth: 1)
+                        .frame(width: 34 + CGFloat(index * 18), height: 34 + CGFloat(index * 18))
+                        .scaleEffect(isMoving && pulse && !reduceMotion ? 1.22 : 0.82)
+                        .opacity(isMoving && pulse ? 0.08 : 0.74)
                 }
 
-                Capsule()
-                    .fill(Color.pmBone.opacity(0.14))
-                    .frame(width: 1, height: 38)
+                Image(systemName: isMoving ? "move.3d" : "circle.dotted")
+                    .foregroundStyle(Color.pmOLEDGreen)
             }
+            .frame(width: 78, height: 78)
             .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 5) {
                 Text("motion.sensorLabel")
-                    .font(.caption.weight(.semibold))
-                    .tracking(0.7)
+                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                    .tracking(1.2)
                     .foregroundStyle(Color.pmOLEDGreen)
                 Text(title)
                     .font(.headline)
-                    .foregroundStyle(Color.pmBone)
+                    .foregroundStyle(Color.white)
                 Text(detail)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.pmBone.opacity(0.68))
+                    .font(.caption)
+                    .foregroundStyle(Color.white.opacity(0.58))
                     .fixedSize(horizontal: false, vertical: true)
             }
 
             Spacer(minLength: 0)
         }
-        .padding(18)
-        .background(Color.pmSmokedGlass.opacity(0.72))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color.pmBone.opacity(0.12), lineWidth: 1)
-        }
+        .padding(.vertical, 16)
+        .overlay(alignment: .top) { Rectangle().fill(PMTheme.hairline).frame(height: 1) }
+        .overlay(alignment: .bottom) { Rectangle().fill(PMTheme.hairline).frame(height: 1) }
         .accessibilityElement(children: .combine)
         .task(id: isMoving) {
-            guard isMoving, !reduceMotion else {
-                isPulsing = false
-                return
-            }
-            isPulsing = false
-            withAnimation(.easeOut(duration: 1.15).repeatForever(autoreverses: false)) {
-                isPulsing = true
+            pulse = false
+            guard isMoving, !reduceMotion else { return }
+            withAnimation(.easeOut(duration: 1).repeatForever(autoreverses: false)) {
+                pulse = true
             }
         }
     }

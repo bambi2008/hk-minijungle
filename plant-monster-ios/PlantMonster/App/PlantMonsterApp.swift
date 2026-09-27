@@ -8,8 +8,7 @@ struct PlantMonsterApp: App {
         WindowGroup {
             AppRootView()
                 .environmentObject(model)
-                .tint(.pmAubergine)
+                .tint(.pmOLEDGreen)
         }
     }
 }
-

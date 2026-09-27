@@ -2,45 +2,68 @@ import SwiftUI
 
 struct PairingView: View {
     @EnvironmentObject private var model: AppModel
-    @ScaledMetric(relativeTo: .largeTitle) private var titleSize: CGFloat = 44
 
     var body: some View {
         ZStack {
-            PMBackgroundView()
-            Color.pmPaleSage.opacity(0.78).ignoresSafeArea()
+            PMBackgroundView(signalStrength: isBusy ? 0.82 : 0.36)
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("pairing.eyebrow")
-                        .font(.caption.weight(.semibold))
-                        .tracking(1.4)
-                        .foregroundStyle(Color.pmAubergine.opacity(0.72))
-                        .padding(.top, 20)
+                    PMEditorialHeader(
+                        section: "pairing.editorial.section",
+                        status: model.connectionLabel,
+                        actionTitle: "pairing.skip",
+                        action: model.enterDemoMode
+                    )
+                    .padding(.top, 10)
 
-                    ZStack {
-                        StageSpotlightView(isEngaged: isBusy)
-
-                        PlantMonsterTurntableView(hapticsEnabled: model.hapticsEnabled)
-                    }
-                        .frame(maxWidth: 360)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 6)
-
-                    Text("pairing.title")
-                        .font(.system(size: titleSize, weight: .semibold))
-                        .tracking(-1)
-                        .foregroundStyle(Color.pmAubergine)
+                    Text("pairing.editorial.headline")
+                        .pmEditorialTitle(size: 60)
                         .padding(.top, 18)
 
-                    Text("pairing.body")
-                        .font(.body)
-                        .foregroundStyle(Color.pmAubergine.opacity(0.72))
-                        .lineSpacing(4)
-                        .padding(.top, 12)
+                    Text("pairing.editorial.subtitle")
+                        .font(.system(.caption2, design: .monospaced, weight: .medium))
+                        .tracking(2.3)
+                        .foregroundStyle(Color.white.opacity(0.52))
+                        .textCase(.uppercase)
+                        .padding(.top, 9)
+
+                    ZStack {
+                        PMRadarView(active: isBusy)
+                            .padding(16)
+
+                        PlantMonsterTurntableView(
+                            hapticsEnabled: model.hapticsEnabled,
+                            controlColor: .white
+                        )
+                    }
+                    .frame(maxWidth: 390)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 10)
+
+                    VStack(spacing: 8) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 8, weight: .bold))
+                                .foregroundStyle(Color.pmOLEDGreen)
+                                .symbolEffect(.pulse, options: .repeating, value: isBusy)
+                            Text(pairingStatusTitle)
+                        }
+                        .font(.system(.caption, design: .monospaced, weight: .semibold))
+                        .tracking(1.8)
+                        .foregroundStyle(Color.white.opacity(0.74))
+
+                        Text("pairing.editorial.searchingFor")
+                            .font(.system(.caption2, design: .monospaced, weight: .medium))
+                            .tracking(2.4)
+                            .foregroundStyle(Color.white.opacity(0.48))
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
 
                     if case let .failed(message) = model.connectionState {
-                        Label(message, systemImage: "exclamationmark.circle.fill")
-                            .font(.footnote)
+                        Label(message, systemImage: "exclamationmark.triangle")
+                            .font(.caption)
                             .foregroundStyle(.red)
                             .padding(.top, 14)
                     }
@@ -48,38 +71,36 @@ struct PairingView: View {
                     Button(action: model.startPairing) {
                         HStack(spacing: 10) {
                             if isBusy {
-                                ProgressView()
-                                    .tint(.pmBone)
+                                ProgressView().tint(.pmInk)
                             }
                             Text(primaryButtonTitle)
-                                .font(.headline)
+                            Spacer()
+                            Image(systemName: "arrow.right")
                         }
-                        .frame(maxWidth: .infinity, minHeight: 54)
+                        .font(.system(.caption, design: .monospaced, weight: .bold))
+                        .tracking(1.3)
+                        .foregroundStyle(Color.pmInk)
+                        .padding(.horizontal, 18)
+                        .frame(maxWidth: .infinity, minHeight: 56)
+                        .background(Color.pmOLEDGreen)
                     }
                     .buttonStyle(PMTactileButtonStyle())
-                    .foregroundStyle(Color.pmBone)
-                    .background(Color.pmAubergine)
-                    .clipShape(RoundedRectangle(cornerRadius: PMTheme.controlCornerRadius, style: .continuous))
                     .disabled(isBusy)
-                    .padding(.top, 28)
-
-                    Button("pairing.demo", action: model.enterDemoMode)
-                        .font(.subheadline.weight(.semibold))
-                        .frame(maxWidth: .infinity, minHeight: PMTheme.minimumTapTarget)
-                        .padding(.top, 8)
-                        .buttonStyle(PMTactileButtonStyle())
+                    .padding(.top, 22)
 
                     Text("pairing.privacy")
-                        .font(.caption)
-                        .foregroundStyle(Color.pmAubergine.opacity(0.58))
+                        .font(.system(.caption2, design: .monospaced))
+                        .foregroundStyle(Color.white.opacity(0.42))
                         .frame(maxWidth: .infinity)
                         .multilineTextAlignment(.center)
-                        .padding(.top, 6)
-                        .padding(.bottom, 28)
+                        .padding(.top, 12)
+                        .padding(.bottom, 26)
                 }
                 .padding(.horizontal, PMTheme.pagePadding)
             }
+            .scrollIndicators(.hidden)
         }
+        .preferredColorScheme(.dark)
     }
 
     private var isBusy: Bool {
@@ -96,6 +117,10 @@ struct PairingView: View {
         case .connecting, .discovering: "pairing.connecting"
         default: "pairing.start"
         }
+    }
+
+    private var pairingStatusTitle: LocalizedStringKey {
+        isBusy ? primaryButtonTitle : "pairing.editorial.ready"
     }
 }
 

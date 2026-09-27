@@ -9,6 +9,10 @@
 "status.needsAttention" = "需要看一眼";
 "status.offline" = "离线休息中";
 
+"editorial.live" = "实时";
+"editorial.plantMonster" = "植灵兽";
+"editorial.settings" = "设置";
+
 "pairing.eyebrow" = "遇见你的伙伴";
 "pairing.productImage" = "鼠尾草绿色植灵兽设备正面图";
 "pairing.title" = "唤醒它。";
@@ -19,6 +23,12 @@
 "pairing.connecting" = "正在打招呼…";
 "pairing.demo" = "先体验一下";
 "pairing.privacy" = "只有在你点击按钮后才会启动蓝牙。";
+"pairing.editorial.section" = "配对";
+"pairing.editorial.headline" = "配对 / 01";
+"pairing.editorial.subtitle" = "让它认出你。";
+"pairing.editorial.ready" = "准备开始识别";
+"pairing.editorial.searchingFor" = "正在寻找植灵兽……";
+"pairing.skip" = "跳过";
 
 "turntable.dragHint" = "按住它，左右拖动";
 "turntable.previous" = "向左转动植灵兽";
@@ -48,6 +58,21 @@
 "companion.chapter" = "陪伴";
 "companion.live" = "实时回应";
 "companion.scrollCare" = "向上滑，看看它感受到的世界";
+"companion.editorial.idle" = "它看见你。";
+"companion.editorial.sending" = "触摸传递中。";
+"companion.editorial.received" = "触摸已收到。";
+"companion.editorial.sent" = "触摸已发出。";
+"companion.editorial.preview" = "它回应了。";
+"companion.editorial.unavailable" = "还没有连上。";
+"companion.editorial.idleBody" = "一个有感知的植物伙伴。";
+"companion.editorial.sendingBody" = "信号正从你的手指传向植灵兽。";
+"companion.editorial.receivedBody" = "它感觉到了你，也用表情回应了你。";
+"companion.editorial.sentBody" = "信号已经离开手机，正在等待它的回应。";
+"companion.editorial.previewBody" = "这是互动预览；连接后感觉会真正传到设备。";
+"companion.editorial.unavailableBody" = "连接植灵兽以后再把这份感觉传给它。";
+"companion.touchAction" = "轻触，让它感觉到你";
+"companion.touchActiveAction" = "触摸信号正在回响";
+"companion.footer" = "你的存在\n会改变它。";
 
 "care.findLight" = "去找一点光。";
 "care.lessLight" = "换个柔和的位置。";
@@ -79,6 +104,16 @@
 "care.sensor.waiting" = "待连接";
 "care.chapter" = "感知与照护";
 "care.sensorCarousel" = "植灵兽环境感应数据，可左右滑动";
+"care.editorial.section" = "照护";
+"care.editorial.selectSensor" = "轻触一项感应，听它说";
+"care.footer" = "自然\n会回应。";
+"care.sensorNarrative.temperatureAttention" = "周围温度正在偏离舒适范围，换一个更稳定的位置。";
+"care.sensorNarrative.temperatureSteady" = "温度平稳，它可以安静地待在这里。";
+"care.sensorNarrative.airHumidity" = "空气湿度是它此刻呼吸的环境，不等同于种植基质湿度。";
+"care.sensorNarrative.substrateWaiting" = "连接支持基质探头的植灵兽后，这里会显示真实数据。";
+"care.sensorNarrative.substrate" = "这是根系附近种植基质的湿度，与空气湿度分别测量。";
+"care.sensorNarrative.lightAttention" = "光照需要调整；跟随上方光线指引，再过几分钟回来看看。";
+"care.sensorNarrative.lightSteady" = "当前光线温和，适合继续待在这里。";
 
 "sensor.temperature" = "温度";
 "sensor.airHumidity" = "空气湿度";
@@ -98,6 +133,14 @@
 "memories.today" = "今天";
 "memories.week" = "7 天";
 "memories.all" = "全部";
+"memories.editorial.section" = "记忆";
+"memories.editorial.subtitle" = "一些更安静、更明亮的时刻。";
+"memories.editorial.todayCount" = "今天 / %02d";
+"memories.edit" = "编辑";
+"memories.done" = "完成";
+"memories.deleteSelected" = "删除选中的记忆";
+"memories.empty" = "这里还很安静。触摸植灵兽，或在照护页记住一刻。";
+"memories.tapToClose" = "轻触收起";
 "memory.sawLight" = "找到了更柔和的光";
 "memory.savedLight" = "记住了这里的光";
 "memory.youWereHere" = "你来过这里";

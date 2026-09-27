@@ -4,9 +4,13 @@ struct AppRootView: View {
     @AppStorage("plantMonster.hasCompletedPairing") private var hasCompletedPairing = false
     @EnvironmentObject private var model: AppModel
 
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing")
+    }
+
     var body: some View {
         Group {
-            if hasCompletedPairing {
+            if hasCompletedPairing || isUITesting {
                 MainTabView {
                     model.disconnect()
                     hasCompletedPairing = false
@@ -18,13 +22,27 @@ struct AppRootView: View {
         .onChange(of: model.isReady) { _, isReady in
             if isReady { hasCompletedPairing = true }
         }
+        .task {
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ui-touch") {
+                model.prepareTouchPreviewForUITesting()
+            }
+#endif
+        }
     }
 }
 
 private struct MainTabView: View {
-    @State private var selection = 0
-    @State private var careScrollRequest = 0
+    @State private var selection: Int
+    @State private var careScrollRequest: Int
     let onForgetDevice: () -> Void
+
+    init(onForgetDevice: @escaping () -> Void) {
+        self.onForgetDevice = onForgetDevice
+        let arguments = ProcessInfo.processInfo.arguments
+        _selection = State(initialValue: arguments.contains("-ui-memories") ? 2 : 0)
+        _careScrollRequest = State(initialValue: arguments.contains("-ui-care") ? 1 : 0)
+    }
 
     private var routedSelection: Binding<Int> {
         Binding(
@@ -63,8 +81,9 @@ private struct MainTabView: View {
                 }
                 .tag(2)
         }
-        .tint(.pmAubergine)
-        .toolbarBackground(.thinMaterial, for: .tabBar)
+        .tint(.pmOLEDGreen)
+        .toolbarColorScheme(.dark, for: .tabBar)
+        .toolbarBackground(Color.pmInk.opacity(0.94), for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
         .sensoryFeedback(.selection, trigger: selection)
         .sensoryFeedback(.selection, trigger: careScrollRequest)

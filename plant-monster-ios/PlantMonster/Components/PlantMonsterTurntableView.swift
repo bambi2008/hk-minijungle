@@ -15,72 +15,87 @@ struct PlantMonsterTurntableView: View {
     @State private var dragFrameDelta = 0
 
     var hapticsEnabled = true
-    var controlColor: Color = .pmAubergine
+    var controlColor: Color = .white
     var onTap: (() -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
 
     var body: some View {
-        ZStack(alignment: .bottomLeading) {
+        ZStack {
+            PMRadarView(active: isDragging)
+                .padding(28)
+
             interactiveProduct
+                .padding(.horizontal, 12)
+                .padding(.bottom, 38)
 
-            HStack(spacing: 10) {
-                turnButton(systemImage: "chevron.left", label: "turntable.previous") {
-                    step(by: -1)
+            VStack(spacing: 0) {
+                Spacer()
+
+                HStack(spacing: 12) {
+                    turnButton(systemImage: "chevron.left", label: "turntable.previous") {
+                        step(by: -1)
+                    }
+
+                    VStack(spacing: 7) {
+                        HStack(spacing: 4) {
+                            ForEach(0..<Self.frameCount, id: \.self) { index in
+                                Capsule()
+                                    .fill(index == frameIndex ? Color.pmOLEDGreen : controlColor.opacity(0.18))
+                                    .frame(width: index == frameIndex ? 20 : 5, height: 2)
+                            }
+                        }
+
+                        Text(String(format: "%02d  /  %02d", frameIndex + 1, Self.frameCount))
+                            .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                            .tracking(1.1)
+                            .foregroundStyle(controlColor.opacity(0.72))
+                            .contentTransition(.numericText(value: Double(frameIndex)))
+                    }
+                    .frame(maxWidth: .infinity)
+
+                    turnButton(systemImage: "chevron.right", label: "turntable.next") {
+                        step(by: 1)
+                    }
                 }
-
-                turnButton(systemImage: "chevron.right", label: "turntable.next") {
-                    step(by: 1)
-                }
-
-                Spacer(minLength: 8)
-
-                Text(String(format: "%02d / %02d", frameIndex + 1, Self.frameCount))
-                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                    .foregroundStyle(controlColor.opacity(0.8))
-                    .monospacedDigit()
-                    .padding(.horizontal, 12)
-                    .frame(minHeight: PMTheme.minimumTapTarget)
-                    .background(.thinMaterial, in: Capsule())
-                    .contentTransition(.numericText(value: Double(frameIndex)))
-                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: frameIndex)
             }
-            .padding(.horizontal, 10)
-            .padding(.bottom, 6)
 
             if !hasExploredTurntable && !isDragging {
-                Label("turntable.dragHint", systemImage: "hand.draw.fill")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(controlColor.opacity(0.82))
-                    .padding(.horizontal, 14)
-                    .frame(minHeight: 38)
-                    .background(.thinMaterial, in: Capsule())
-                    .padding(.leading, 10)
-                    .padding(.bottom, 58)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .allowsHitTesting(false)
+                VStack {
+                    Spacer()
+                    Label("turntable.dragHint", systemImage: "hand.draw")
+                        .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                        .tracking(1.1)
+                        .foregroundStyle(controlColor.opacity(0.76))
+                        .padding(.bottom, 64)
+                }
+                .transition(.opacity)
+                .allowsHitTesting(false)
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: hasExploredTurntable)
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isDragging)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hasExploredTurntable)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isDragging)
     }
 
     private var interactiveProduct: some View {
-        let normalizedDrag = max(-1, min(1, dragOffset / 140))
+        let normalizedDrag = max(-1, min(1, dragOffset / 100))
 
         return turntableFrame
             .transaction { transaction in
-                // Sprite-sheet offsets must snap. Animating the crop exposes
-                // neighbouring cells and looks like overlapping products.
                 transaction.animation = nil
             }
-            .offset(x: dragOffset * 0.12)
+            .offset(x: dragOffset * 0.07)
             .rotation3DEffect(
-                .degrees(reduceMotion ? 0 : Double(normalizedDrag * 6)),
+                .degrees(reduceMotion ? 0 : Double(normalizedDrag * 10)),
                 axis: (x: 0, y: 1, z: 0),
-                perspective: 0.55
+                perspective: 0.48
             )
-            .scaleEffect(isDragging && !reduceMotion ? 1.018 : 1)
+            .scaleEffect(isDragging && !reduceMotion ? 1.045 : 1)
+            .shadow(
+                color: isDragging ? Color.pmOLEDGreen.opacity(0.34) : Color.black.opacity(0.58),
+                radius: isDragging ? 32 : 20,
+                y: isDragging ? 0 : 14
+            )
             .contentShape(Rectangle())
             .gesture(rotationGesture)
             .simultaneousGesture(TapGesture().onEnded { handleTap() })
@@ -114,7 +129,7 @@ struct PlantMonsterTurntableView: View {
     }
 
     private var rotationGesture: some Gesture {
-        DragGesture(minimumDistance: 8)
+        DragGesture(minimumDistance: 4)
             .updating($dragOffset) { value, state, transaction in
                 transaction.animation = nil
                 state = value.translation.width
@@ -126,9 +141,12 @@ struct PlantMonsterTurntableView: View {
                     dragFrameDelta = 0
                     hasExploredTurntable = true
                     onInteractionChanged?(true)
+                    if hapticsEnabled {
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
                 }
 
-                let delta = Int((-value.translation.width / 82).rounded(.towardZero))
+                let delta = Int((-value.translation.width / 48).rounded(.towardZero))
                 guard delta != dragFrameDelta else { return }
                 dragFrameDelta = delta
                 setFrame(dragOriginFrame + delta)
@@ -138,7 +156,7 @@ struct PlantMonsterTurntableView: View {
                 onInteractionChanged?(false)
 
                 let projected = value.predictedEndTranslation.width
-                if dragFrameDelta == 0, abs(projected) > 64 {
+                if dragFrameDelta == 0, abs(projected) > 44 {
                     setFrame(
                         dragOriginFrame + (projected < 0 ? 1 : -1),
                         alwaysPlayHaptic: true
@@ -158,10 +176,12 @@ struct PlantMonsterTurntableView: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(controlColor.opacity(0.84))
+                .font(.caption.weight(.bold))
+                .foregroundStyle(controlColor.opacity(0.82))
                 .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
-                .background(.thinMaterial, in: Circle())
+                .overlay {
+                    Rectangle().stroke(PMTheme.hairline, lineWidth: 1)
+                }
         }
         .buttonStyle(PMTactileButtonStyle())
         .accessibilityLabel(Text(label))

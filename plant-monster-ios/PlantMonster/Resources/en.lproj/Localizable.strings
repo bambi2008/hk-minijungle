@@ -9,6 +9,10 @@
 "status.needsAttention" = "Needs attention";
 "status.offline" = "Resting offline";
 
+"editorial.live" = "LIVE";
+"editorial.plantMonster" = "PLANT MONSTER";
+"editorial.settings" = "SETTINGS";
+
 "pairing.eyebrow" = "MEET YOUR COMPANION";
 "pairing.productImage" = "Front view of the sage-green Plant Monster device";
 "pairing.title" = "Wake it up.";
@@ -19,6 +23,12 @@
 "pairing.connecting" = "Saying hello…";
 "pairing.demo" = "Explore in demo mode";
 "pairing.privacy" = "Bluetooth starts only when you tap the button.";
+"pairing.editorial.section" = "PAIR";
+"pairing.editorial.headline" = "PAIR / 01";
+"pairing.editorial.subtitle" = "LET IT RECOGNISE YOU.";
+"pairing.editorial.ready" = "READY TO RECOGNISE";
+"pairing.editorial.searchingFor" = "SEARCHING FOR PLANT MONSTER…";
+"pairing.skip" = "SKIP";
 
 "turntable.dragHint" = "Hold and drag to turn";
 "turntable.previous" = "Rotate Plant Monster left";
@@ -48,6 +58,21 @@
 "companion.chapter" = "COMPANION";
 "companion.live" = "LIVE RESPONSE";
 "companion.scrollCare" = "Scroll up to feel its world";
+"companion.editorial.idle" = "IT SEES YOU.";
+"companion.editorial.sending" = "SENDING TOUCH.";
+"companion.editorial.received" = "TOUCH RECEIVED.";
+"companion.editorial.sent" = "TOUCH SENT.";
+"companion.editorial.preview" = "IT ANSWERED.";
+"companion.editorial.unavailable" = "NOT CONNECTED.";
+"companion.editorial.idleBody" = "A LIVING PLANT AWARENESS COMPANION.";
+"companion.editorial.sendingBody" = "THE SIGNAL IS MOVING FROM YOUR FINGER TO PLANT MONSTER.";
+"companion.editorial.receivedBody" = "IT FELT YOU AND ANSWERED WITH AN EXPRESSION.";
+"companion.editorial.sentBody" = "THE SIGNAL LEFT YOUR PHONE AND IS WAITING FOR A REPLY.";
+"companion.editorial.previewBody" = "THIS IS A PREVIEW. CONNECT TO SEND THE FEELING TO THE DEVICE.";
+"companion.editorial.unavailableBody" = "CONNECT PLANT MONSTER BEFORE SENDING THIS FEELING.";
+"companion.touchAction" = "TOUCH — LET IT FEEL YOU";
+"companion.touchActiveAction" = "THE TOUCH SIGNAL IS ECHOING";
+"companion.footer" = "PRESENCE\nCHANGES THINGS.";
 
 "care.findLight" = "Find the light.";
 "care.lessLight" = "A softer place.";
@@ -79,6 +104,16 @@
 "care.sensor.waiting" = "WAITING";
 "care.chapter" = "SENSE & CARE";
 "care.sensorCarousel" = "Plant Monster environment readings. Swipe horizontally.";
+"care.editorial.section" = "CARE";
+"care.editorial.selectSensor" = "TAP A SENSE TO HEAR WHAT IT KNOWS";
+"care.footer" = "NATURE\nRESPONDS.";
+"care.sensorNarrative.temperatureAttention" = "The temperature is leaving its comfortable range. Find a steadier place.";
+"care.sensorNarrative.temperatureSteady" = "The temperature is stable. It can stay quietly here.";
+"care.sensorNarrative.airHumidity" = "Air humidity describes the space it breathes in. It is not substrate moisture.";
+"care.sensorNarrative.substrateWaiting" = "Connect a Plant Monster with a substrate probe to see a real reading here.";
+"care.sensorNarrative.substrate" = "This is moisture around the roots, measured separately from air humidity.";
+"care.sensorNarrative.lightAttention" = "The light needs a change. Follow the guide above and check back in a few minutes.";
+"care.sensorNarrative.lightSteady" = "The light is soft and steady enough to stay here.";
 
 "sensor.temperature" = "TEMPERATURE";
 "sensor.airHumidity" = "AIR HUMIDITY";
@@ -98,6 +133,14 @@
 "memories.today" = "Today";
 "memories.week" = "7 days";
 "memories.all" = "All";
+"memories.editorial.section" = "MEMORIES";
+"memories.editorial.subtitle" = "A QUIETER, BRIGHTER COLLECTION OF MOMENTS.";
+"memories.editorial.todayCount" = "TODAY / %02d";
+"memories.edit" = "EDIT";
+"memories.done" = "DONE";
+"memories.deleteSelected" = "DELETE SELECTED MEMORIES";
+"memories.empty" = "It is quiet here. Touch Plant Monster or remember a moment in Care.";
+"memories.tapToClose" = "TAP TO CLOSE";
 "memory.sawLight" = "Found a softer light";
 "memory.savedLight" = "Saved this light";
 "memory.youWereHere" = "You were here";

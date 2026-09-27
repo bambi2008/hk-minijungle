@@ -159,6 +159,25 @@ final class AppModel: ObservableObject {
         }
     }
 
+    func deleteMemories(withIDs ids: Set<UUID>) {
+        guard !ids.isEmpty else { return }
+        memories.removeAll { ids.contains($0.id) }
+        if hapticsEnabled {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
+    }
+
+#if DEBUG
+    func prepareTouchPreviewForUITesting() {
+        enterDemoMode()
+        expressionResetTask?.cancel()
+        deliveryResetTask?.cancel()
+        isTouchActive = true
+        currentExpression = .pet
+        touchDeliveryState = .preview
+    }
+#endif
+
     func pet() {
         showTouchMoment(memoryTitle: String(localized: "memory.youWereHere"))
 

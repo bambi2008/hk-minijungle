@@ -1,10 +1,12 @@
 import SwiftUI
 
 enum PMTheme {
-    static let pagePadding: CGFloat = 24
-    static let contentCornerRadius: CGFloat = 28
-    static let controlCornerRadius: CGFloat = 18
+    static let pagePadding: CGFloat = 20
+    static let contentCornerRadius: CGFloat = 0
+    static let controlCornerRadius: CGFloat = 0
     static let minimumTapTarget: CGFloat = 44
+    static let hairline = Color.white.opacity(0.22)
+    static let mutedInk = Color.white.opacity(0.58)
 }
 
 extension Color {
@@ -14,6 +16,7 @@ extension Color {
     static let pmSmokedGlass = Color("PMSmokedGlass")
     static let pmBone = Color("PMBone")
     static let pmOLEDGreen = Color("PMOLEDGreen")
+    static let pmInk = Color(red: 0.018, green: 0.024, blue: 0.02)
 }
 
 struct PMDisplayText: ViewModifier {
@@ -44,10 +47,10 @@ struct PMTactileButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
-            .opacity(configuration.isPressed ? 0.82 : 1)
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.955 : 1)
+            .opacity(configuration.isPressed ? 0.72 : 1)
             .animation(
-                reduceMotion ? nil : .snappy(duration: 0.22, extraBounce: 0.04),
+                reduceMotion ? nil : .snappy(duration: 0.18, extraBounce: 0.08),
                 value: configuration.isPressed
             )
     }
@@ -80,5 +83,29 @@ struct PMChapterLabel: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+}
+
+struct PMEditorialTitle: ViewModifier {
+    @ScaledMetric(relativeTo: .largeTitle) private var size: CGFloat = 58
+
+    init(size: CGFloat = 58) {
+        _size = ScaledMetric(wrappedValue: size, relativeTo: .largeTitle)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: size, weight: .black, design: .default))
+            .tracking(-2.1)
+            .textCase(.uppercase)
+            .foregroundStyle(Color.white)
+            .lineSpacing(-7)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+}
+
+extension View {
+    func pmEditorialTitle(size: CGFloat = 58) -> some View {
+        modifier(PMEditorialTitle(size: size))
     }
 }
