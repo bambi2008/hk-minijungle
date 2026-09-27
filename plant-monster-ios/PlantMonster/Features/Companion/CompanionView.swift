@@ -20,6 +20,10 @@ struct CompanionView: View {
         return min(max(-scrollOffset / 620, 0), 1)
     }
 
+    private var hasLeftImmersiveCover: Bool {
+        scrollOffset < -72
+    }
+
     var body: some View {
         GeometryReader { viewport in
             ZStack {
@@ -46,11 +50,15 @@ struct CompanionView: View {
                             }
                             .frame(height: 0)
 
-                            companionScene
-                                .frame(minHeight: max(viewport.size.height - 24, 720), alignment: .topLeading)
+                            immersiveCreatureScene(in: viewport.size)
+
+                            companionNarrative
+                                .padding(.horizontal, PMTheme.pagePadding)
+                                .padding(.top, 28)
 
                             CareSectionContent()
                                 .id(careSectionID)
+                                .padding(.horizontal, PMTheme.pagePadding)
                                 .padding(.top, 26)
                                 .padding(.bottom, 46)
                                 .scrollTransition(
@@ -62,7 +70,6 @@ struct CompanionView: View {
                                         .scaleEffect(phase.isIdentity ? 1 : 0.96, anchor: .top)
                                 }
                         }
-                        .padding(.horizontal, PMTheme.pagePadding)
                     }
                     .scrollIndicators(.hidden)
                     .coordinateSpace(name: "companionScroll")
@@ -79,6 +86,8 @@ struct CompanionView: View {
             }
         }
         .preferredColorScheme(.dark)
+        .statusBarHidden(!hasLeftImmersiveCover)
+        .toolbar(hasLeftImmersiveCover ? .visible : .hidden, for: .tabBar)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.28), value: model.isTouchActive)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: model.touchDeliveryState)
         .sheet(isPresented: $showsDeviceSheet) {
@@ -88,7 +97,36 @@ struct CompanionView: View {
         }
     }
 
-    private var companionScene: some View {
+    private func immersiveCreatureScene(in viewport: CGSize) -> some View {
+        ZStack {
+            Color.pmInk
+
+            PlantMonsterTurntableView(
+                hapticsEnabled: model.hapticsEnabled,
+                controlColor: .white,
+                showsChrome: false,
+                onTap: model.pet,
+                onInteractionChanged: { isTurntableEngaged = $0 },
+                onInteractionProgress: { interactionProgress = $0 }
+            )
+            .frame(width: min(viewport.width * 0.96, 470))
+            .scaleEffect(1 - scrollProgress * 0.08)
+            .offset(
+                x: interactionProgress * 4,
+                y: -max(viewport.safeAreaInsets.top * 0.22, 8) + scrollProgress * 24
+            )
+            .shadow(
+                color: model.isTouchActive ? Color.pmOLEDGreen.opacity(0.28) : .clear,
+                radius: 42
+            )
+        }
+        .frame(maxWidth: .infinity)
+        .frame(height: max(viewport.height, 700))
+        .clipped()
+        .accessibilityLabel(Text("turntable.accessibilityLabel"))
+    }
+
+    private var companionNarrative: some View {
         VStack(alignment: .leading, spacing: 0) {
             PMEditorialHeader(
                 section: "editorial.plantMonster",
@@ -96,45 +134,12 @@ struct CompanionView: View {
                 actionTitle: "editorial.settings",
                 action: { showsDeviceSheet = true }
             )
-            .padding(.top, 10)
             .offset(x: -interactionProgress * 3)
-
-            ZStack {
-                if model.isTouchActive {
-                    PMSignalRingsView(active: true)
-                        .transition(.opacity)
-                }
-
-                PlantMonsterTurntableView(
-                    hapticsEnabled: model.hapticsEnabled,
-                    controlColor: .white,
-                    onTap: model.pet,
-                    onInteractionChanged: { isTurntableEngaged = $0 },
-                    onInteractionProgress: { interactionProgress = $0 }
-                )
-                .opacity(model.isTouchActive ? 0.2 : 1)
-                .scaleEffect(model.isTouchActive && !reduceMotion ? 0.86 : 1)
-
-                if model.isTouchActive {
-                    OLEDExpressionView(
-                        expression: model.currentExpression,
-                        width: 280,
-                        tint: .white,
-                        isActive: true
-                    )
-                    .transition(.scale(scale: 0.72).combined(with: .opacity))
-                }
-            }
-            .frame(maxWidth: 390)
-            .frame(maxWidth: .infinity)
-            .scaleEffect(1 - scrollProgress * 0.12, anchor: .bottom)
-            .offset(y: scrollProgress * 28)
-            .padding(.top, 8)
 
             Text(editorialHeadline)
                 .pmEditorialTitle(size: 60)
                 .contentTransition(.opacity)
-                .padding(.top, 4)
+                .padding(.top, 34)
                 .offset(x: interactionProgress * 11)
                 .shadow(
                     color: model.isTouchActive ? Color.pmOLEDGreen.opacity(0.34) : .clear,

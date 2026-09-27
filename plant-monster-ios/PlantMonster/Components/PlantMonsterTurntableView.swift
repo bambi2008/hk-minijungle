@@ -17,6 +17,7 @@ struct PlantMonsterTurntableView: View {
 
     var hapticsEnabled = true
     var controlColor: Color = .white
+    var showsChrome = true
     var onTap: (() -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
     var onInteractionProgress: ((CGFloat) -> Void)?
@@ -25,45 +26,49 @@ struct PlantMonsterTurntableView: View {
         ZStack {
             StageSpotlightView(isEngaged: isDragging)
 
-            PMRadarView(active: isDragging)
-                .padding(28)
+            if showsChrome {
+                PMRadarView(active: isDragging)
+                    .padding(28)
+            }
 
             interactiveProduct
-                .padding(.horizontal, 12)
-                .padding(.bottom, 38)
+                .padding(.horizontal, showsChrome ? 12 : 0)
+                .padding(.bottom, showsChrome ? 38 : 0)
 
-            VStack(spacing: 0) {
-                Spacer()
+            if showsChrome {
+                VStack(spacing: 0) {
+                    Spacer()
 
-                HStack(spacing: 12) {
-                    turnButton(systemImage: "chevron.left", label: "turntable.previous") {
-                        step(by: -1)
-                    }
-
-                    VStack(spacing: 7) {
-                        HStack(spacing: 4) {
-                            ForEach(0..<Self.frameCount, id: \.self) { index in
-                                Capsule()
-                                    .fill(index == frameIndex ? Color.pmOLEDGreen : controlColor.opacity(0.18))
-                                    .frame(width: index == frameIndex ? 20 : 5, height: 2)
-                            }
+                    HStack(spacing: 12) {
+                        turnButton(systemImage: "chevron.left", label: "turntable.previous") {
+                            step(by: -1)
                         }
 
-                        Text(String(format: "%02d  /  %02d", frameIndex + 1, Self.frameCount))
-                            .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                            .tracking(1.1)
-                            .foregroundStyle(controlColor.opacity(0.72))
-                            .contentTransition(.numericText(value: Double(frameIndex)))
-                    }
-                    .frame(maxWidth: .infinity)
+                        VStack(spacing: 7) {
+                            HStack(spacing: 4) {
+                                ForEach(0..<Self.frameCount, id: \.self) { index in
+                                    Capsule()
+                                        .fill(index == frameIndex ? Color.pmOLEDGreen : controlColor.opacity(0.18))
+                                        .frame(width: index == frameIndex ? 20 : 5, height: 2)
+                                }
+                            }
 
-                    turnButton(systemImage: "chevron.right", label: "turntable.next") {
-                        step(by: 1)
+                            Text(String(format: "%02d  /  %02d", frameIndex + 1, Self.frameCount))
+                                .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                                .tracking(1.1)
+                                .foregroundStyle(controlColor.opacity(0.72))
+                                .contentTransition(.numericText(value: Double(frameIndex)))
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        turnButton(systemImage: "chevron.right", label: "turntable.next") {
+                            step(by: 1)
+                        }
                     }
                 }
             }
 
-            if !hasExploredTurntable && !isDragging {
+            if showsChrome && !hasExploredTurntable && !isDragging {
                 VStack {
                     Spacer()
                     Label("turntable.dragHint", systemImage: "hand.draw")
