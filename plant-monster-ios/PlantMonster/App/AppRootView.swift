@@ -24,8 +24,11 @@ struct AppRootView: View {
         }
         .task {
 #if DEBUG
-            if ProcessInfo.processInfo.arguments.contains("-ui-touch") {
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-ui-touch") {
                 model.prepareTouchPreviewForUITesting()
+            } else if arguments.contains("-ui-testing") {
+                model.enterDemoMode()
             }
 #endif
         }

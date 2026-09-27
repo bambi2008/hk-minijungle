@@ -174,7 +174,7 @@ final class AppModel: ObservableObject {
         deliveryResetTask?.cancel()
         isTouchActive = true
         currentExpression = .pet
-        touchDeliveryState = .preview
+        touchDeliveryState = .delivered
     }
 #endif
 

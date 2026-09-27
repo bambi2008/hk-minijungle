@@ -176,9 +176,8 @@ struct CompanionView: View {
                 }
             }
 
-            PMEditorialFooter(phrase: "companion.footer")
-                .padding(.top, 8)
-                .padding(.bottom, 18)
+            Color.clear
+                .frame(height: 18)
         }
     }
 
