@@ -2,17 +2,14 @@ import SwiftUI
 
 struct CareView: View {
     var body: some View {
-        GeometryReader { viewport in
-            ZStack {
-                PMBackgroundView(signalStrength: 0.5)
+        ZStack {
+            PMBackgroundView(signalStrength: 0.5)
 
-                ScrollView {
-                    CareSectionContent(showsStatus: true)
-                        .padding(.horizontal, PMTheme.pagePadding)
-                        .frame(width: viewport.size.width, alignment: .leading)
-                }
-                .scrollIndicators(.hidden)
+            ScrollView {
+                CareSectionContent(showsStatus: true)
+                    .padding(.horizontal, PMTheme.pagePadding)
             }
+            .scrollIndicators(.hidden)
         }
         .preferredColorScheme(.dark)
     }

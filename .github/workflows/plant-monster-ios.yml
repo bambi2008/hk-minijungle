@@ -126,6 +126,7 @@ jobs:
             capture "companion-sunglasses-${frame}" -ui-testing -ui-sunglasses "-ui-turntable-frame=${frame}"
           done
           capture care -ui-testing -ui-care
+          test "$(stat -f%z "$RUNNER_TEMP/plant-monster-visual-qa/care.png")" -gt 100000
           capture memories -ui-testing -ui-memories
 
       - name: Upload editorial visual QA screens
