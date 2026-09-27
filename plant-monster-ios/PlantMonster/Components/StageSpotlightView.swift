@@ -18,8 +18,6 @@ struct StageSpotlightView: View {
             let sparkleYs: [CGFloat] = [0.31, 0.22, 0.54, 0.61]
 
             ZStack {
-                Color.black
-
                 SpotlightBeam()
                     .fill(
                         LinearGradient(
@@ -35,14 +33,14 @@ struct StageSpotlightView: View {
                     .frame(width: width * 0.54, height: height * 0.88)
                     .blur(radius: 17)
                     .rotationEffect(
-                        .degrees(hasEntered ? (isRoaming ? 13 : 9) : -28),
+                        .degrees(hasEntered ? (isRoaming ? 26 : 12) : -34),
                         anchor: .top
                     )
                     .offset(
-                        x: hasEntered ? (isRoaming ? -width * 0.09 : -width * 0.13) : -width * 0.62,
+                        x: hasEntered ? (isRoaming ? -width * 0.19 : -width * 0.12) : -width * 0.68,
                         y: -height * 0.12
                     )
-                    .opacity(hasEntered ? 0.72 : 0)
+                    .opacity(hasEntered ? 0.88 : 0)
                     .blendMode(.screen)
 
                 SpotlightBeam()
@@ -60,14 +58,14 @@ struct StageSpotlightView: View {
                     .frame(width: width * 0.54, height: height * 0.88)
                     .blur(radius: 17)
                     .rotationEffect(
-                        .degrees(hasEntered ? (isRoaming ? -13 : -9) : 28),
+                        .degrees(hasEntered ? (isRoaming ? -26 : -12) : 34),
                         anchor: .top
                     )
                     .offset(
-                        x: hasEntered ? (isRoaming ? width * 0.09 : width * 0.13) : width * 0.62,
+                        x: hasEntered ? (isRoaming ? width * 0.19 : width * 0.12) : width * 0.68,
                         y: -height * 0.12
                     )
-                    .opacity(hasEntered ? 0.72 : 0)
+                    .opacity(hasEntered ? 0.88 : 0)
                     .blendMode(.screen)
 
                 SpotlightBeam()
@@ -117,7 +115,7 @@ struct StageSpotlightView: View {
 
                 ForEach(0..<4, id: \.self) { index in
                     Image(systemName: "sparkle")
-                        .font(.system(size: index.isMultiple(of: 2) ? 16 : 10, weight: .semibold))
+                        .font(.system(size: index.isMultiple(of: 2) ? 24 : 16, weight: .semibold))
                         .foregroundStyle(index == 2 ? Color.pmOLEDGreen : Color.pmBone)
                         .shadow(color: Color.white.opacity(0.6), radius: 7)
                         .position(
@@ -125,7 +123,7 @@ struct StageSpotlightView: View {
                             y: height * sparkleYs[index]
                         )
                         .scaleEffect(sparklesVisible ? 1 : 0.2)
-                        .opacity(sparklesVisible ? (isRoaming ? 0.34 : 0.82) : 0)
+                        .opacity(sparklesVisible ? (isRoaming ? 0.72 : 0.9) : 0)
                 }
 
                 Circle()
