@@ -152,6 +152,8 @@
 "device.connection" = "Connection";
 "device.status" = "Status";
 "device.haptics" = "Haptic feedback";
+"device.soundscape" = "Ambient soundscape";
+"device.soundscapeFootnote" = "A quiet generative score that follows the app and respects Silent mode.";
 "device.forget" = "Forget this Plant Monster";
 "device.forgetFootnote" = "You can pair it again at any time.";
 

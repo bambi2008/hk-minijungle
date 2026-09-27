@@ -215,6 +215,7 @@ private struct CompanionScrollOffsetKey: PreferenceKey {
 private struct DeviceSheet: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("plantMonster.soundscapeEnabled") private var soundscapeEnabled = true
     let onForgetDevice: () -> Void
 
     var body: some View {
@@ -223,6 +224,14 @@ private struct DeviceSheet: View {
                 Section("device.connection") {
                     LabeledContent("device.status", value: model.connectionLabel)
                     Toggle("device.haptics", isOn: $model.hapticsEnabled)
+                }
+
+                Section {
+                    Toggle(isOn: $soundscapeEnabled) {
+                        Label("device.soundscape", systemImage: "waveform")
+                    }
+                } footer: {
+                    Text("device.soundscapeFootnote")
                 }
 
                 Section {

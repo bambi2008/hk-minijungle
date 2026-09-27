@@ -152,6 +152,8 @@
 "device.connection" = "连接";
 "device.status" = "状态";
 "device.haptics" = "触感反馈";
+"device.soundscape" = "环境声景";
+"device.soundscapeFootnote" = "低音量生成式配乐，会跟随 App 状态并尊重静音模式。";
 "device.forget" = "忘记这只植灵兽";
 "device.forgetFootnote" = "之后随时都可以重新配对。";
 

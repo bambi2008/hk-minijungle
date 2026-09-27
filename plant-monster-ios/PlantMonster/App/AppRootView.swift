@@ -2,7 +2,10 @@ import SwiftUI
 
 struct AppRootView: View {
     @AppStorage("plantMonster.hasCompletedPairing") private var hasCompletedPairing = false
+    @AppStorage("plantMonster.soundscapeEnabled") private var soundscapeEnabled = true
+    @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var soundscape: AmbientSoundscapeController
 
     private var isUITesting: Bool {
         ProcessInfo.processInfo.arguments.contains("-ui-testing")
@@ -22,6 +25,12 @@ struct AppRootView: View {
         .onChange(of: model.isReady) { _, isReady in
             if isReady { hasCompletedPairing = true }
         }
+        .onChange(of: soundscapeEnabled) { _, _ in
+            updateSoundscape()
+        }
+        .onChange(of: scenePhase) { _, _ in
+            updateSoundscape()
+        }
         .task {
 #if DEBUG
             let arguments = ProcessInfo.processInfo.arguments
@@ -31,7 +40,14 @@ struct AppRootView: View {
                 model.enterDemoMode()
             }
 #endif
+            updateSoundscape()
         }
+    }
+
+    private func updateSoundscape() {
+        soundscape.setEnabled(
+            soundscapeEnabled && scenePhase == .active && !isUITesting
+        )
     }
 }
 
@@ -100,4 +116,5 @@ private struct MainTabView: View {
 #Preview {
     AppRootView()
         .environmentObject(AppModel(client: MockPlantMonsterBLEClient()))
+        .environmentObject(AmbientSoundscapeController())
 }
