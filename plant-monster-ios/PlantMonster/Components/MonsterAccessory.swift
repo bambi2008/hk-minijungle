@@ -46,7 +46,7 @@ struct MonsterAccessoryOverlay: View {
                         )
                     )
                     .frame(width: side * 0.34, height: side * 0.12)
-                    .scaleEffect(x: pose.horizontalScale, y: 1)
+                    .scaleEffect(x: pose.horizontalScale, y: pose.verticalScale)
                     .rotation3DEffect(
                         .degrees(pose.yaw),
                         axis: (x: 0, y: 1, z: 0),
@@ -74,11 +74,15 @@ struct MonsterAccessoryOverlay: View {
 
     private var pose: AccessoryPose {
         switch frameIndex {
-        case 0: AccessoryPose(x: -0.018, y: 0, horizontalScale: 1, yaw: 0, roll: 0, opacity: 1)
-        case 1: AccessoryPose(x: -0.07, y: -0.004, horizontalScale: 0.72, yaw: -38, roll: -2, opacity: 0.96)
-        case 2: AccessoryPose(x: -0.12, y: 0.002, horizontalScale: 0.28, yaw: -68, roll: -3, opacity: 0.62)
-        case 6: AccessoryPose(x: 0.105, y: 0.002, horizontalScale: 0.28, yaw: 68, roll: 3, opacity: 0.62)
-        case 7: AccessoryPose(x: 0.058, y: -0.004, horizontalScale: 0.72, yaw: 38, roll: 2, opacity: 0.96)
+        // Each pose is registered to the visible glass in the corresponding
+        // turntable render. Side views need a much larger horizontal travel
+        // than a generic 3D transform because the front glass moves to the
+        // outer silhouette of the product as the body turns.
+        case 0: AccessoryPose(x: -0.010, y: -0.004, horizontalScale: 1, verticalScale: 1, yaw: 0, roll: 0, opacity: 1)
+        case 1: AccessoryPose(x: -0.062, y: -0.006, horizontalScale: 0.92, verticalScale: 0.98, yaw: -18, roll: -1.5, opacity: 0.98)
+        case 2: AccessoryPose(x: -0.305, y: -0.002, horizontalScale: 0.50, verticalScale: 0.92, yaw: -60, roll: -2.5, opacity: 0.82)
+        case 6: AccessoryPose(x: 0.305, y: -0.002, horizontalScale: 0.50, verticalScale: 0.92, yaw: 60, roll: 2.5, opacity: 0.82)
+        case 7: AccessoryPose(x: 0.070, y: -0.006, horizontalScale: 0.92, verticalScale: 0.98, yaw: 18, roll: 1.5, opacity: 0.98)
         default: .hidden
         }
     }
@@ -88,6 +92,7 @@ private struct AccessoryPose {
     let x: CGFloat
     let y: CGFloat
     let horizontalScale: CGFloat
+    let verticalScale: CGFloat
     let yaw: Double
     let roll: Double
     let opacity: Double
@@ -96,6 +101,7 @@ private struct AccessoryPose {
         x: 0,
         y: 0,
         horizontalScale: 0,
+        verticalScale: 0,
         yaw: 0,
         roll: 0,
         opacity: 0

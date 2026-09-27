@@ -87,6 +87,11 @@ struct PlantMonsterTurntableView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hasExploredTurntable)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isDragging)
         .onAppear {
+#if DEBUG
+            if let debugFrame = Self.debugFrameIndex {
+                frameIndex = debugFrame
+            }
+#endif
             guard !reduceMotion else {
                 hasMadeEntrance = true
                 return
@@ -264,6 +269,17 @@ struct PlantMonsterTurntableView: View {
         let offsets: [CGFloat] = [-0.064, -0.040, -0.053, -0.042, -0.060, -0.030, -0.021, -0.026]
         return offsets[frameIndex]
     }
+
+#if DEBUG
+    private static var debugFrameIndex: Int? {
+        let prefix = "-ui-turntable-frame="
+        guard let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix(prefix) }),
+              let requested = Int(argument.dropFirst(prefix.count)) else {
+            return nil
+        }
+        return min(max(requested, 0), frameCount - 1)
+    }
+#endif
 
     private func handleTap() {
         if isFaceVisible {
