@@ -1,31 +1,23 @@
 # Verification status
 
-## Completed on this host
+## Completed
 
-- Asset catalog JSON parsed successfully.
-- `Info.plist` and `PrivacyInfo.xcprivacy` parsed as XML.
-- All 15 authoritative OLED expression PNGs are present.
-- Product cutout and botanical background are present.
-- Every `PlantExpression.assetName` maps to an image set.
-- Localization keys were compared between English and Simplified Chinese.
-- English and Simplified Chinese each contain 119 matching localization keys.
-- The new interaction source was reviewed for 44pt control alternatives, front-only touch delivery, Reduce Motion, Reduce Transparency, Dynamic Type fallback, and VoiceOver turntable adjustment.
-- Code review checked that air humidity is not treated as substrate moisture and that older packets remain decodable when `sm` is absent.
-- BLE Protocol V1 freezes the service and characteristic UUIDs, 20-byte telemetry packet, 8-byte command packet, CRC-8/ATM, expression IDs, and command acknowledgement flow.
-- Touch delivery is only confirmed after an `applied` acknowledgement matches the pending command sequence; a GATT write or unrelated expression does not count as confirmation.
-- GitHub Actions has compiled and signed prior TestFlight builds with Xcode 26.
+- GitHub Actions Build 22 compiled with Xcode 26, archived with App Store signing, uploaded to App Store Connect, finished processing, and was assigned to the `Plant Monster Internal` TestFlight group.
+- GitHub Actions Build 23 recompiled the final source and captured Pairing, Companion idle, confirmed Touch, Care, and Memories on an iPhone 16 Pro simulator.
+- The five native captures are 1206 × 2622 pixels and the visual comparison against the approved black editorial board passed. See `design-qa.md`.
+- The idle and confirmed-touch captures prove a full-stage change: product visibility, OLED expression scale, green signal rings and glow, headline, body copy, and primary action all change.
+- Asset catalog JSON parsed successfully. All 15 OLED expression PNGs, the real product cutout, turntable frames, and botanical background are present.
+- English and Simplified Chinese each contain 161 matching localization keys.
+- Air humidity and planting-substrate moisture remain distinct. Missing substrate data is displayed as unavailable rather than inferred.
+- The movement sensor retains its binary protocol state, event memory, and visible last-detected message.
+- BLE Protocol V1 retains the frozen service/characteristic UUIDs, telemetry and command packets, CRC-8/ATM, expression IDs, sequence matching, acknowledgement, and timeout behavior.
+- Touch is only described as delivered after a matching `applied` acknowledgement. Offline and demo actions remain explicitly labelled as preview or unavailable.
+- The product can be rotated through eight authored views by direct drag, arrow controls, or VoiceOver adjustable actions. Side and rear taps return to front rather than sending a face touch.
 
-## Required on macOS before calling the build release-ready
+## Remaining physical-device validation
 
-- Generate the Xcode project and compile with warnings treated as errors.
-- Run `PlantMonsterTests`.
-- Exercise pairing and reconnect on a physical iPhone with the ESP32-C3 SuperMini.
-- Flash firmware using `FirmwareReference/ESP32C3/PlantMonsterBLEProtocolV1.h` and verify the frozen V1 UUIDs and packets end to end.
-- Verify valid packets, bad CRC rejection, unavailable substrate moisture, command sequence wrap, duplicate acknowledgements, and acknowledgement timeout.
-- Run VoiceOver, Dynamic Type (including accessibility sizes), Reduce Motion, light/dark appearance, and Simplified Chinese checks.
-- On a physical iPhone, confirm direct turntable drag follows the finger, all eight angles settle cleanly, side/rear taps return to front, and no OLED image is superimposed over non-front angles.
-- Confirm the horizontal sensor carousel does not steal the Companion page's vertical scroll, and confirm the vertical sensor fallback at accessibility text sizes.
-- Visually compare Pairing, Companion, Touch, Care, and Memories against the approved V3 design board and the new LARQ-informed interaction direction on at least one 6.1-inch and one compact iPhone.
-- Test Bluetooth denied, Bluetooth off, device out of range, and interrupted connection states.
-- Run the GitHub Actions compile job and `PlantMonsterTests`; resolve all Xcode 26 diagnostics.
-- Complete the signed archive/upload job after the Apple Team ID and App Store Connect API secrets are configured.
+- Install TestFlight Build 22 on a physical iPhone and verify horizontal turntable drag, settle cadence, arrow controls, touch-stage transition, native haptics, and upward scrolling into Care.
+- Pair to the ESP32-C3 SuperMini and verify reconnect, live temperature, air humidity, planting-substrate moisture, light, touch, and motion data end to end.
+- Verify valid packets, bad CRC rejection, unavailable substrate moisture, sequence wrap, duplicate acknowledgements, acknowledgement timeout, Bluetooth denied/off, device out of range, and interrupted connection.
+- Run VoiceOver, accessibility Dynamic Type sizes, Reduce Motion, Simplified Chinese, and compact-iPhone layout checks on hardware.
+- Run `PlantMonsterTests` on macOS; the current workflow compiles the app but does not execute the unit-test target.
