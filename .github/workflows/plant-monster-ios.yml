@@ -125,7 +125,7 @@ jobs:
           for frame in 2 6; do
             capture "companion-sunglasses-${frame}" -ui-testing -ui-sunglasses "-ui-turntable-frame=${frame}"
           done
-          capture care -ui-testing -ui-care
+          capture care -ui-testing -ui-care-section
           test "$(stat -f%z "$RUNNER_TEMP/plant-monster-visual-qa/care.png")" -gt 100000
           capture memories -ui-testing -ui-memories
 

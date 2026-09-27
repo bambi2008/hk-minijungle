@@ -106,6 +106,11 @@ struct CompanionView: View {
                             proxy.scrollTo(narrativeSectionID, anchor: .top)
                             return
                         }
+                        if ProcessInfo.processInfo.arguments.contains("-ui-care-section") {
+                            await Task.yield()
+                            proxy.scrollTo(careSectionID, anchor: .top)
+                            return
+                        }
 #endif
                         guard careScrollRequest > handledCareScrollRequest else { return }
                         handledCareScrollRequest = careScrollRequest
