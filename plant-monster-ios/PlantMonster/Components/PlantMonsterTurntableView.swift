@@ -7,65 +7,94 @@ struct PlantMonsterTurntableView: View {
     private static let columns = 4
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("plantMonster.hasExploredTurntable") private var hasExploredTurntable = false
+    @GestureState private var dragOffset: CGFloat = 0
     @State private var frameIndex = 0
-    @State private var dragOriginFrame = 0
     @State private var isDragging = false
+    @State private var dragOriginFrame = 0
+    @State private var dragFrameDelta = 0
 
     var hapticsEnabled = true
     var controlColor: Color = .pmAubergine
     var onTap: (() -> Void)?
+    var onInteractionChanged: ((Bool) -> Void)?
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            turntableFrame
-                .transaction { transaction in
-                    // Sprite-sheet offsets must snap. Animating the offset exposes
-                    // neighbouring cells and looks like overlapping products.
-                    transaction.animation = nil
+        ZStack(alignment: .bottomLeading) {
+            interactiveProduct
+
+            HStack(spacing: 10) {
+                turnButton(systemImage: "chevron.left", label: "turntable.previous") {
+                    step(by: -1)
                 }
 
-            HStack(spacing: 5) {
-                ForEach(0..<Self.frameCount, id: \.self) { index in
-                    Capsule()
-                        .fill(controlColor.opacity(index == frameIndex ? 0.9 : 0.24))
-                        .frame(width: index == frameIndex ? 18 : 5, height: 5)
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: frameIndex)
+                turnButton(systemImage: "chevron.right", label: "turntable.next") {
+                    step(by: 1)
                 }
+
+                Spacer(minLength: 8)
+
+                Text(String(format: "%02d / %02d", frameIndex + 1, Self.frameCount))
+                    .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                    .foregroundStyle(controlColor.opacity(0.8))
+                    .monospacedDigit()
+                    .padding(.horizontal, 12)
+                    .frame(minHeight: PMTheme.minimumTapTarget)
+                    .background(.thinMaterial, in: Capsule())
+                    .contentTransition(.numericText(value: Double(frameIndex)))
+                    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: frameIndex)
             }
-            .padding(.horizontal, 14)
-            .frame(height: 30)
-            .background(.ultraThinMaterial, in: Capsule())
-            .padding(.bottom, 4)
-            .opacity(isDragging ? 0.58 : 1)
+            .padding(.horizontal, 10)
+            .padding(.bottom, 6)
 
-            Label("turntable.dragHint", systemImage: "hand.draw")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(controlColor.opacity(0.78))
-                .padding(.horizontal, 12)
-                .frame(height: 30)
-                .background(.ultraThinMaterial, in: Capsule())
-                .padding(.bottom, 42)
-                .opacity(isDragging ? 0 : 1)
+            if !hasExploredTurntable && !isDragging {
+                Label("turntable.dragHint", systemImage: "hand.draw.fill")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(controlColor.opacity(0.82))
+                    .padding(.horizontal, 14)
+                    .frame(minHeight: 38)
+                    .background(.thinMaterial, in: Capsule())
+                    .padding(.leading, 10)
+                    .padding(.bottom, 58)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .allowsHitTesting(false)
+            }
         }
         .aspectRatio(1, contentMode: .fit)
-        .scaleEffect(isDragging && !reduceMotion ? 1.012 : 1)
-        .contentShape(Rectangle())
-        .gesture(rotationGesture)
-        .simultaneousGesture(
-            TapGesture().onEnded { onTap?() }
-        )
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel(Text("turntable.accessibilityLabel"))
-        .accessibilityValue(Text(angleAccessibilityValue))
-        .accessibilityHint(Text("turntable.accessibilityHint"))
-        .accessibilityAdjustableAction { direction in
-            switch direction {
-            case .increment: step(by: 1)
-            case .decrement: step(by: -1)
-            @unknown default: break
-            }
-        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: hasExploredTurntable)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isDragging)
+    }
+
+    private var interactiveProduct: some View {
+        let normalizedDrag = max(-1, min(1, dragOffset / 140))
+
+        return turntableFrame
+            .transaction { transaction in
+                // Sprite-sheet offsets must snap. Animating the crop exposes
+                // neighbouring cells and looks like overlapping products.
+                transaction.animation = nil
+            }
+            .offset(x: dragOffset * 0.12)
+            .rotation3DEffect(
+                .degrees(reduceMotion ? 0 : Double(normalizedDrag * 6)),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: 0.55
+            )
+            .scaleEffect(isDragging && !reduceMotion ? 1.018 : 1)
+            .contentShape(Rectangle())
+            .gesture(rotationGesture)
+            .simultaneousGesture(TapGesture().onEnded { handleTap() })
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("turntable.accessibilityLabel"))
+            .accessibilityValue(Text(angleAccessibilityValue))
+            .accessibilityHint(Text("turntable.accessibilityHint"))
+            .accessibilityAdjustableAction { direction in
+                switch direction {
+                case .increment: step(by: 1)
+                case .decrement: step(by: -1)
+                @unknown default: break
+                }
+            }
     }
 
     private var turntableFrame: some View {
@@ -85,18 +114,57 @@ struct PlantMonsterTurntableView: View {
     }
 
     private var rotationGesture: some Gesture {
-        DragGesture(minimumDistance: 6)
+        DragGesture(minimumDistance: 8)
+            .updating($dragOffset) { value, state, transaction in
+                transaction.animation = nil
+                state = value.translation.width
+            }
             .onChanged { value in
                 if !isDragging {
                     isDragging = true
                     dragOriginFrame = frameIndex
+                    dragFrameDelta = 0
+                    hasExploredTurntable = true
+                    onInteractionChanged?(true)
                 }
-                let delta = Int((-value.translation.width / 24).rounded(.towardZero))
+
+                let delta = Int((-value.translation.width / 82).rounded(.towardZero))
+                guard delta != dragFrameDelta else { return }
+                dragFrameDelta = delta
                 setFrame(dragOriginFrame + delta)
             }
-            .onEnded { _ in
+            .onEnded { value in
                 isDragging = false
+                onInteractionChanged?(false)
+
+                let projected = value.predictedEndTranslation.width
+                if dragFrameDelta == 0, abs(projected) > 64 {
+                    setFrame(
+                        dragOriginFrame + (projected < 0 ? 1 : -1),
+                        alwaysPlayHaptic: true
+                    )
+                } else if hapticsEnabled, dragFrameDelta != 0 {
+                    UISelectionFeedbackGenerator().selectionChanged()
+                }
+
+                dragFrameDelta = 0
             }
+    }
+
+    private func turnButton(
+        systemImage: String,
+        label: LocalizedStringKey,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.bold))
+                .foregroundStyle(controlColor.opacity(0.84))
+                .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
+                .background(.thinMaterial, in: Circle())
+        }
+        .buttonStyle(PMTactileButtonStyle())
+        .accessibilityLabel(Text(label))
     }
 
     private var angleAccessibilityValue: String {
@@ -107,7 +175,20 @@ struct PlantMonsterTurntableView: View {
         )
     }
 
+    private var isFaceVisible: Bool {
+        frameIndex == 0 || frameIndex == 1 || frameIndex == Self.frameCount - 1
+    }
+
+    private func handleTap() {
+        if isFaceVisible {
+            onTap?()
+        } else {
+            setFrame(0, alwaysPlayHaptic: true)
+        }
+    }
+
     private func step(by delta: Int) {
+        hasExploredTurntable = true
         setFrame(frameIndex + delta, alwaysPlayHaptic: true)
     }
 
@@ -116,7 +197,7 @@ struct PlantMonsterTurntableView: View {
         guard wrapped != frameIndex else { return }
         frameIndex = wrapped
 
-        guard hapticsEnabled, alwaysPlayHaptic || wrapped.isMultiple(of: 2) else { return }
+        guard hapticsEnabled, alwaysPlayHaptic else { return }
         UISelectionFeedbackGenerator().selectionChanged()
     }
 }

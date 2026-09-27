@@ -20,7 +20,7 @@
 "pairing.demo" = "Explore in demo mode";
 "pairing.privacy" = "Bluetooth starts only when you tap the button.";
 
-"turntable.dragHint" = "Drag to see every side";
+"turntable.dragHint" = "Hold and drag to turn";
 "turntable.previous" = "Rotate Plant Monster left";
 "turntable.next" = "Rotate Plant Monster right";
 "turntable.accessibilityLabel" = "Rotatable full Plant Monster product view";
@@ -45,6 +45,9 @@
 "companion.deviceTouchBody" = "The touch sensor on Plant Monster just responded.";
 "companion.petAction" = "Pet Plant Monster";
 "companion.petHint" = "Sends a touch when connected; otherwise previews the interaction.";
+"companion.chapter" = "COMPANION";
+"companion.live" = "LIVE RESPONSE";
+"companion.scrollCare" = "Scroll up to feel its world";
 
 "care.findLight" = "Find the light.";
 "care.lessLight" = "A softer place.";
@@ -74,6 +77,8 @@
 "care.sensor.steady" = "STEADY";
 "care.sensor.sensing" = "SENSING";
 "care.sensor.waiting" = "WAITING";
+"care.chapter" = "SENSE & CARE";
+"care.sensorCarousel" = "Plant Monster environment readings. Swipe horizontally.";
 
 "sensor.temperature" = "TEMPERATURE";
 "sensor.airHumidity" = "AIR HUMIDITY";

@@ -22,41 +22,58 @@ struct MemoriesView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(alignment: .leading, spacing: 0) {
-                Text("memories.eyebrow")
-                    .font(.caption.weight(.semibold))
-                    .tracking(1.4)
-                    .foregroundStyle(Color.pmAubergine.opacity(0.62))
+            ZStack {
+                LinearGradient(
+                    colors: [Color.pmBone, Color.pmPaleSage.opacity(0.62)],
+                    startPoint: .top,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
 
-                Text("memories.title")
-                    .font(.system(size: titleSize, weight: .semibold))
-                    .tracking(-1.2)
-                    .foregroundStyle(Color.pmAubergine)
-                    .padding(.top, 10)
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("memories.eyebrow")
+                        .font(.caption.weight(.semibold))
+                        .tracking(1.4)
+                        .foregroundStyle(Color.pmAubergine.opacity(0.62))
 
-                Picker("memories.filter", selection: $filter) {
-                    ForEach(Filter.allCases) { option in
-                        Text(option.title).tag(option)
+                    Text("memories.title")
+                        .font(.system(size: titleSize, weight: .semibold))
+                        .tracking(-1.2)
+                        .foregroundStyle(Color.pmAubergine)
+                        .padding(.top, 10)
+
+                    Picker("memories.filter", selection: $filter) {
+                        ForEach(Filter.allCases) { option in
+                            Text(option.title).tag(option)
+                        }
                     }
-                }
-                .pickerStyle(.segmented)
-                .padding(.top, 24)
+                    .pickerStyle(.segmented)
+                    .padding(.top, 24)
 
-                List(filteredEvents) { event in
-                    MemoryRow(event: event)
-                        .listRowBackground(Color.clear)
-                        .listRowSeparatorTint(Color.pmAubergine.opacity(0.14))
+                    ScrollView {
+                        LazyVStack(spacing: 12) {
+                            ForEach(filteredEvents) { event in
+                                MemoryRow(event: event)
+                                    .scrollTransition(
+                                        .animated(.easeInOut(duration: 0.32)),
+                                        axis: .vertical
+                                    ) { content, phase in
+                                        content
+                                            .opacity(phase.isIdentity ? 1 : 0.5)
+                                            .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                                    }
+                            }
+                        }
+                        .padding(.vertical, 18)
+                    }
+                    .scrollIndicators(.hidden)
                 }
-                .listStyle(.plain)
-                .scrollContentBackground(.hidden)
-                .padding(.horizontal, -16)
-                .padding(.top, 14)
+                .padding(.horizontal, PMTheme.pagePadding)
+                .padding(.top, 20)
             }
-            .padding(.horizontal, PMTheme.pagePadding)
-            .padding(.top, 20)
-            .background(Color.pmBone.ignoresSafeArea())
             .navigationBarHidden(true)
         }
+        .sensoryFeedback(.selection, trigger: filter)
     }
 
     private var filteredEvents: [MemoryEvent] {
@@ -77,8 +94,8 @@ private struct MemoryRow: View {
     let event: MemoryEvent
 
     var body: some View {
-        HStack(spacing: 16) {
-            OLEDExpressionView(expression: event.expression, width: 82)
+        HStack(spacing: 14) {
+            OLEDExpressionView(expression: event.expression, width: 78)
 
             VStack(alignment: .leading, spacing: 7) {
                 Text(event.date.formatted(date: .omitted, time: .shortened))
@@ -93,12 +110,20 @@ private struct MemoryRow: View {
             Spacer(minLength: 8)
 
             Image(systemName: event.kind.iconName)
-                .font(.body)
-                .foregroundStyle(Color.pmAubergine.opacity(0.68))
+                .font(.subheadline.weight(.semibold))
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(Color.pmAubergine.opacity(0.74))
                 .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
+                .background(Color.pmAubergine.opacity(0.07), in: Circle())
                 .accessibilityHidden(true)
         }
-        .padding(.vertical, 10)
+        .padding(14)
+        .background(Color.pmBone.opacity(0.76), in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.pmAubergine.opacity(0.09), lineWidth: 1)
+        }
+        .shadow(color: Color.pmAubergine.opacity(0.08), radius: 16, y: 8)
         .accessibilityElement(children: .combine)
     }
 }

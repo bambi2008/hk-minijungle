@@ -6,6 +6,7 @@ struct StageSpotlightView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hasEntered = false
     @State private var isBreathing = false
+    var isEngaged = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -52,8 +53,11 @@ struct StageSpotlightView: View {
                     .blur(radius: 13)
                     .offset(y: height * 0.34)
             }
-            .opacity(hasEntered ? (isBreathing ? 0.92 : 0.78) : 0)
-            .scaleEffect(hasEntered ? (isBreathing ? 1.025 : 1) : 0.88, anchor: .bottom)
+            .opacity(hasEntered ? (isEngaged ? 1 : (isBreathing ? 0.92 : 0.78)) : 0)
+            .scaleEffect(
+                hasEntered ? (isEngaged ? 1.06 : (isBreathing ? 1.025 : 1)) : 0.88,
+                anchor: .bottom
+            )
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
@@ -72,6 +76,7 @@ struct StageSpotlightView: View {
                 isBreathing = true
             }
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.22), value: isEngaged)
     }
 }
 

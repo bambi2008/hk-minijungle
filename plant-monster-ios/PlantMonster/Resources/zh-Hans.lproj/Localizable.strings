@@ -20,7 +20,7 @@
 "pairing.demo" = "先体验一下";
 "pairing.privacy" = "只有在你点击按钮后才会启动蓝牙。";
 
-"turntable.dragHint" = "拖动查看全貌";
+"turntable.dragHint" = "按住它，左右拖动";
 "turntable.previous" = "向左转动植灵兽";
 "turntable.next" = "向右转动植灵兽";
 "turntable.accessibilityLabel" = "可转动的完整植灵兽产品视图";
@@ -45,6 +45,9 @@
 "companion.deviceTouchBody" = "植灵兽的触摸感应器刚刚有了反应。";
 "companion.petAction" = "摸摸植灵兽";
 "companion.petHint" = "已连接时发送触摸；未连接时只预览互动效果。";
+"companion.chapter" = "陪伴";
+"companion.live" = "实时回应";
+"companion.scrollCare" = "向上滑，看看它感受到的世界";
 
 "care.findLight" = "去找一点光。";
 "care.lessLight" = "换个柔和的位置。";
@@ -74,6 +77,8 @@
 "care.sensor.steady" = "状态平稳";
 "care.sensor.sensing" = "正在感应";
 "care.sensor.waiting" = "待连接";
+"care.chapter" = "感知与照护";
+"care.sensorCarousel" = "植灵兽环境感应数据，可左右滑动";
 
 "sensor.temperature" = "温度";
 "sensor.airHumidity" = "空气湿度";

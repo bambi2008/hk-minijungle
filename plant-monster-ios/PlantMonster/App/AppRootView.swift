@@ -63,8 +63,11 @@ private struct MainTabView: View {
                 }
                 .tag(2)
         }
-        .toolbarBackground(.ultraThinMaterial, for: .tabBar)
+        .tint(.pmAubergine)
+        .toolbarBackground(.thinMaterial, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
+        .sensoryFeedback(.selection, trigger: selection)
+        .sensoryFeedback(.selection, trigger: careScrollRequest)
     }
 }
 

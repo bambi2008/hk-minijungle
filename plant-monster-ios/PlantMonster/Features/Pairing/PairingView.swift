@@ -6,7 +6,8 @@ struct PairingView: View {
 
     var body: some View {
         ZStack {
-            Color.pmPaleSage.ignoresSafeArea()
+            PMBackgroundView()
+            Color.pmPaleSage.opacity(0.78).ignoresSafeArea()
 
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
@@ -16,7 +17,11 @@ struct PairingView: View {
                         .foregroundStyle(Color.pmAubergine.opacity(0.72))
                         .padding(.top, 20)
 
-                    PlantMonsterTurntableView(hapticsEnabled: model.hapticsEnabled)
+                    ZStack {
+                        StageSpotlightView(isEngaged: isBusy)
+
+                        PlantMonsterTurntableView(hapticsEnabled: model.hapticsEnabled)
+                    }
                         .frame(maxWidth: 360)
                         .frame(maxWidth: .infinity)
                         .padding(.top, 6)
@@ -51,7 +56,7 @@ struct PairingView: View {
                         }
                         .frame(maxWidth: .infinity, minHeight: 54)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PMTactileButtonStyle())
                     .foregroundStyle(Color.pmBone)
                     .background(Color.pmAubergine)
                     .clipShape(RoundedRectangle(cornerRadius: PMTheme.controlCornerRadius, style: .continuous))
@@ -62,6 +67,7 @@ struct PairingView: View {
                         .font(.subheadline.weight(.semibold))
                         .frame(maxWidth: .infinity, minHeight: PMTheme.minimumTapTarget)
                         .padding(.top, 8)
+                        .buttonStyle(PMTactileButtonStyle())
 
                     Text("pairing.privacy")
                         .font(.caption)
