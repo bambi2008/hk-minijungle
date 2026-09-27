@@ -38,20 +38,24 @@ struct AppRootView: View {
 private struct MainTabView: View {
     @State private var selection: Int
     @State private var careScrollRequest: Int
+    private let bypassCareRouting: Bool
     let onForgetDevice: () -> Void
 
     init(onForgetDevice: @escaping () -> Void) {
         self.onForgetDevice = onForgetDevice
         let arguments = ProcessInfo.processInfo.arguments
-        _selection = State(initialValue: arguments.contains("-ui-memories") ? 2 : 0)
-        _careScrollRequest = State(initialValue: arguments.contains("-ui-care") ? 1 : 0)
+        bypassCareRouting = arguments.contains("-ui-care")
+        _selection = State(
+            initialValue: arguments.contains("-ui-memories") ? 2 : (bypassCareRouting ? 1 : 0)
+        )
+        _careScrollRequest = State(initialValue: 0)
     }
 
     private var routedSelection: Binding<Int> {
         Binding(
             get: { selection },
             set: { nextSelection in
-                if nextSelection == 1 {
+                if nextSelection == 1 && !bypassCareRouting {
                     selection = 0
                     careScrollRequest += 1
                 } else {
