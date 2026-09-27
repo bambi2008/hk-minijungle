@@ -113,7 +113,7 @@ struct CompanionView: View {
             .scaleEffect(1 - scrollProgress * 0.08)
             .offset(
                 x: interactionProgress * 4,
-                y: -max(viewport.safeAreaInsets.top * 0.22, 8) + scrollProgress * 24
+                y: -8 + scrollProgress * 24
             )
             .shadow(
                 color: model.isTouchActive ? Color.pmOLEDGreen.opacity(0.28) : .clear,
