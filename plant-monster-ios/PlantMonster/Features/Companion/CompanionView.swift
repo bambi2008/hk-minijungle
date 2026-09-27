@@ -39,6 +39,11 @@ struct CompanionView: View {
                     isTouchActive: model.isTouchActive
                 )
 
+                Color.pmInk
+                    .ignoresSafeArea()
+                    .opacity(hasLeftImmersiveCover ? 0 : 1)
+                    .allowsHitTesting(false)
+
                 ScrollViewReader { proxy in
                     ScrollView {
                         LazyVStack(alignment: .leading, spacing: 0) {
@@ -121,7 +126,7 @@ struct CompanionView: View {
             )
         }
         .frame(maxWidth: .infinity)
-        .frame(height: max(viewport.height, 700))
+        .frame(height: max(viewport.height + 96, 760))
         .clipped()
         .accessibilityLabel(Text("turntable.accessibilityLabel"))
     }
