@@ -7,6 +7,7 @@ struct CompanionView: View {
     @State private var handledCareScrollRequest = 0
     @State private var scrollOffset: CGFloat = 0
     @State private var isTurntableEngaged = false
+    @State private var interactionProgress: CGFloat = 0
     @State private var isScrollCueFloating = false
 
     let onForgetDevice: () -> Void
@@ -22,7 +23,17 @@ struct CompanionView: View {
     var body: some View {
         GeometryReader { viewport in
             ZStack {
-                PMBackgroundView(signalStrength: model.isTouchActive ? 1 : 0.34)
+                PMBackgroundView(
+                    signalStrength: model.isTouchActive ? 1 : 0.34,
+                    interaction: interactionProgress
+                )
+
+                PMLivingAtmosphereView(
+                    interaction: interactionProgress,
+                    scrollProgress: scrollProgress,
+                    intensity: model.isTouchActive ? 1 : (isTurntableEngaged ? 0.78 : 0.36),
+                    isTouchActive: model.isTouchActive
+                )
 
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -86,6 +97,7 @@ struct CompanionView: View {
                 action: { showsDeviceSheet = true }
             )
             .padding(.top, 10)
+            .offset(x: -interactionProgress * 3)
 
             ZStack {
                 if model.isTouchActive {
@@ -97,7 +109,8 @@ struct CompanionView: View {
                     hapticsEnabled: model.hapticsEnabled,
                     controlColor: .white,
                     onTap: model.pet,
-                    onInteractionChanged: { isTurntableEngaged = $0 }
+                    onInteractionChanged: { isTurntableEngaged = $0 },
+                    onInteractionProgress: { interactionProgress = $0 }
                 )
                 .opacity(model.isTouchActive ? 0.2 : 1)
                 .scaleEffect(model.isTouchActive && !reduceMotion ? 0.86 : 1)
@@ -122,6 +135,11 @@ struct CompanionView: View {
                 .pmEditorialTitle(size: 60)
                 .contentTransition(.opacity)
                 .padding(.top, 4)
+                .offset(x: interactionProgress * 11)
+                .shadow(
+                    color: model.isTouchActive ? Color.pmOLEDGreen.opacity(0.34) : .clear,
+                    radius: model.isTouchActive ? 18 : 0
+                )
 
             Text(editorialBody)
                 .font(.system(.caption, design: .monospaced, weight: .medium))
@@ -131,6 +149,7 @@ struct CompanionView: View {
                 .textCase(.uppercase)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
+                .offset(x: interactionProgress * 7)
 
             Button(action: model.pet) {
                 HStack(spacing: 10) {
@@ -156,6 +175,7 @@ struct CompanionView: View {
             .buttonStyle(PMTactileButtonStyle())
             .disabled(model.touchDeliveryState == .sending)
             .padding(.top, 18)
+            .offset(x: -interactionProgress * 5)
 
             Spacer(minLength: 24)
 

@@ -11,6 +11,7 @@ struct PlantMonsterTurntableView: View {
     @GestureState private var dragOffset: CGFloat = 0
     @State private var frameIndex = 0
     @State private var isDragging = false
+    @State private var isBreathing = false
     @State private var dragOriginFrame = 0
     @State private var dragFrameDelta = 0
 
@@ -18,9 +19,12 @@ struct PlantMonsterTurntableView: View {
     var controlColor: Color = .white
     var onTap: (() -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
+    var onInteractionProgress: ((CGFloat) -> Void)?
 
     var body: some View {
         ZStack {
+            StageSpotlightView(isEngaged: isDragging)
+
             PMRadarView(active: isDragging)
                 .padding(28)
 
@@ -75,6 +79,12 @@ struct PlantMonsterTurntableView: View {
         .aspectRatio(1, contentMode: .fit)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hasExploredTurntable)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isDragging)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 3.6).repeatForever(autoreverses: true)) {
+                isBreathing = true
+            }
+        }
     }
 
     private var interactiveProduct: some View {
@@ -84,13 +94,20 @@ struct PlantMonsterTurntableView: View {
             .transaction { transaction in
                 transaction.animation = nil
             }
-            .offset(x: dragOffset * 0.07)
+            .offset(
+                x: dragOffset * 0.07,
+                y: isBreathing && !isDragging && !reduceMotion ? -3 : 1
+            )
             .rotation3DEffect(
                 .degrees(reduceMotion ? 0 : Double(normalizedDrag * 10)),
                 axis: (x: 0, y: 1, z: 0),
                 perspective: 0.48
             )
-            .scaleEffect(isDragging && !reduceMotion ? 1.045 : 1)
+            .scaleEffect(
+                isDragging && !reduceMotion
+                    ? 1.045
+                    : (isBreathing && !reduceMotion ? 1.012 : 1)
+            )
             .shadow(
                 color: isDragging ? Color.pmOLEDGreen.opacity(0.34) : Color.black.opacity(0.58),
                 radius: isDragging ? 32 : 20,
@@ -135,6 +152,9 @@ struct PlantMonsterTurntableView: View {
                 state = value.translation.width
             }
             .onChanged { value in
+                onInteractionProgress?(
+                    reduceMotion ? 0 : max(-1, min(1, value.translation.width / 110))
+                )
                 if !isDragging {
                     isDragging = true
                     dragOriginFrame = frameIndex
@@ -154,6 +174,9 @@ struct PlantMonsterTurntableView: View {
             .onEnded { value in
                 isDragging = false
                 onInteractionChanged?(false)
+                withAnimation(reduceMotion ? nil : .spring(response: 0.52, dampingFraction: 0.72)) {
+                    onInteractionProgress?(0)
+                }
 
                 let projected = value.predictedEndTranslation.width
                 if dragFrameDelta == 0, abs(projected) > 44 {

@@ -5,6 +5,7 @@ struct PMBackgroundView: View {
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
     @State private var isDrifting = false
     var signalStrength: Double = 0.34
+    var interaction: CGFloat = 0
 
     var body: some View {
         ZStack {
@@ -17,7 +18,15 @@ struct PMBackgroundView: View {
                 .contrast(1.2)
                 .opacity(reduceTransparency ? 0.08 : 0.18)
                 .scaleEffect(isDrifting && !reduceMotion ? 1.06 : 1)
-                .offset(x: isDrifting && !reduceMotion ? -16 : 10, y: isDrifting ? 12 : -8)
+                .rotation3DEffect(
+                    .degrees(reduceMotion ? 0 : Double(interaction * 2.4)),
+                    axis: (x: 0, y: 1, z: 0),
+                    perspective: 0.32
+                )
+                .offset(
+                    x: (isDrifting && !reduceMotion ? -16 : 10) + interaction * 15,
+                    y: isDrifting ? 12 : -8
+                )
 
             LinearGradient(
                 colors: [
@@ -35,7 +44,8 @@ struct PMBackgroundView: View {
                     .frame(width: proxy.size.width * 0.78, height: proxy.size.width * 0.78)
                     .blur(radius: reduceTransparency ? 0 : 72)
                     .offset(
-                        x: isDrifting ? proxy.size.width * 0.46 : -proxy.size.width * 0.36,
+                        x: (isDrifting ? proxy.size.width * 0.46 : -proxy.size.width * 0.36)
+                            + interaction * 44,
                         y: isDrifting ? proxy.size.height * 0.18 : proxy.size.height * 0.62
                     )
 
@@ -44,7 +54,8 @@ struct PMBackgroundView: View {
                     .frame(width: proxy.size.width * 0.8, height: proxy.size.width * 0.8)
                     .blur(radius: reduceTransparency ? 0 : 90)
                     .offset(
-                        x: isDrifting ? -proxy.size.width * 0.42 : proxy.size.width * 0.55,
+                        x: (isDrifting ? -proxy.size.width * 0.42 : proxy.size.width * 0.55)
+                            - interaction * 32,
                         y: isDrifting ? proxy.size.height * 0.46 : proxy.size.height * 0.06
                     )
             }
@@ -58,6 +69,7 @@ struct PMBackgroundView: View {
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)
+        .animation(reduceMotion ? nil : .interactiveSpring(response: 0.42, dampingFraction: 0.82), value: interaction)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 12).repeatForever(autoreverses: true)) {
