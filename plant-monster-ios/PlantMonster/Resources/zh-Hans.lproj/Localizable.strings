@@ -72,6 +72,11 @@
 "companion.editorial.unavailableBody" = "连接植灵兽以后再把这份感觉传给它。";
 "companion.touchAction" = "轻触，让它感觉到你";
 "companion.touchActiveAction" = "触摸信号正在回响";
+"companion.wardrobe.eyebrow" = "造型实验室";
+"companion.wardrobe.title" = "给它一点态度。";
+"companion.wardrobe.body" = "选择装扮，再滑回舞台看看它的新造型。";
+"companion.wardrobe.none" = "原生造型";
+"companion.wardrobe.sunglasses" = "明星墨镜";
 "companion.footer" = "你的存在\n会改变它。";
 
 "care.findLight" = "去找一点光。";

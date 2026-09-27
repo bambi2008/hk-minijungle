@@ -12,12 +12,14 @@ struct PlantMonsterTurntableView: View {
     @State private var frameIndex = 0
     @State private var isDragging = false
     @State private var isBreathing = false
+    @State private var hasMadeEntrance = false
     @State private var dragOriginFrame = 0
     @State private var dragFrameDelta = 0
 
     var hapticsEnabled = true
     var controlColor: Color = .white
     var showsChrome = true
+    var accessory: MonsterAccessory = .none
     var onTap: (() -> Void)?
     var onInteractionChanged: ((Bool) -> Void)?
     var onInteractionProgress: ((CGFloat) -> Void)?
@@ -85,7 +87,15 @@ struct PlantMonsterTurntableView: View {
         .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: hasExploredTurntable)
         .animation(reduceMotion ? nil : .easeOut(duration: 0.16), value: isDragging)
         .onAppear {
-            guard !reduceMotion else { return }
+            guard !reduceMotion else {
+                hasMadeEntrance = true
+                return
+            }
+
+            withAnimation(.spring(response: 0.88, dampingFraction: 0.78).delay(0.28)) {
+                hasMadeEntrance = true
+            }
+
             withAnimation(.easeInOut(duration: 3.6).repeatForever(autoreverses: true)) {
                 isBreathing = true
             }
@@ -95,10 +105,7 @@ struct PlantMonsterTurntableView: View {
     private var interactiveProduct: some View {
         let normalizedDrag = max(-1, min(1, dragOffset / 100))
 
-        return turntableFrame
-            .transaction { transaction in
-                transaction.animation = nil
-            }
+        return productComposite
             .offset(
                 x: dragOffset * 0.07,
                 y: isBreathing && !isDragging && !reduceMotion ? -3 : 1
@@ -113,6 +120,9 @@ struct PlantMonsterTurntableView: View {
                     ? 1.045
                     : (isBreathing && !reduceMotion ? 1.012 : 1)
             )
+            .scaleEffect(hasMadeEntrance || reduceMotion ? 1 : 0.76)
+            .opacity(hasMadeEntrance || reduceMotion ? 1 : 0)
+            .offset(y: hasMadeEntrance || reduceMotion ? 0 : 34)
             .shadow(
                 color: isDragging ? Color.pmOLEDGreen.opacity(0.34) : Color.black.opacity(0.58),
                 radius: isDragging ? 32 : 20,
@@ -134,6 +144,24 @@ struct PlantMonsterTurntableView: View {
             }
     }
 
+    private var productComposite: some View {
+        GeometryReader { proxy in
+            let side = min(proxy.size.width, proxy.size.height)
+
+            ZStack {
+                turntableFrame
+
+                MonsterAccessoryOverlay(
+                    accessory: accessory,
+                    frameIndex: frameIndex
+                )
+            }
+            .frame(width: side, height: side)
+            .offset(x: side * frameCenteringOffset)
+            .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: accessory)
+        }
+    }
+
     private var turntableFrame: some View {
         GeometryReader { proxy in
             let side = min(proxy.size.width, proxy.size.height)
@@ -147,6 +175,9 @@ struct PlantMonsterTurntableView: View {
                 .offset(x: -CGFloat(column) * side, y: -CGFloat(row) * side)
         }
         .clipped()
+        .transaction { transaction in
+            transaction.animation = nil
+        }
         .accessibilityHidden(true)
     }
 
@@ -225,6 +256,13 @@ struct PlantMonsterTurntableView: View {
 
     private var isFaceVisible: Bool {
         frameIndex == 0 || frameIndex == 1 || frameIndex == Self.frameCount - 1
+    }
+
+    private var frameCenteringOffset: CGFloat {
+        // The sprite frames have slightly different transparent bounds. These
+        // calibrated values keep the visible creature centered as it turns.
+        let offsets: [CGFloat] = [-0.018, 0.006, -0.007, 0.004, -0.014, 0.016, 0.025, 0.020]
+        return offsets[frameIndex]
     }
 
     private func handleTap() {

@@ -3,6 +3,7 @@ import SwiftUI
 struct CompanionView: View {
     @EnvironmentObject private var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("plantMonster.accessory") private var selectedAccessoryRaw = MonsterAccessory.none.rawValue
     @State private var showsDeviceSheet = false
     @State private var handledCareScrollRequest = 0
     @State private var scrollOffset: CGFloat = 0
@@ -22,6 +23,22 @@ struct CompanionView: View {
 
     private var hasLeftImmersiveCover: Bool {
         scrollOffset < -72
+    }
+
+    private var selectedAccessory: MonsterAccessory {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-sunglasses") {
+            return .sunglasses
+        }
+#endif
+        return MonsterAccessory(rawValue: selectedAccessoryRaw) ?? .none
+    }
+
+    private var accessorySelection: Binding<MonsterAccessory> {
+        Binding(
+            get: { selectedAccessory },
+            set: { selectedAccessoryRaw = $0.rawValue }
+        )
     }
 
     var body: some View {
@@ -110,6 +127,7 @@ struct CompanionView: View {
                 hapticsEnabled: model.hapticsEnabled,
                 controlColor: .white,
                 showsChrome: false,
+                accessory: selectedAccessory,
                 onTap: model.pet,
                 onInteractionChanged: { isTurntableEngaged = $0 },
                 onInteractionProgress: { interactionProgress = $0 }
@@ -187,6 +205,9 @@ struct CompanionView: View {
             .padding(.top, 18)
             .offset(x: -interactionProgress * 5)
 
+            AccessoryWardrobeView(selection: accessorySelection)
+                .padding(.top, 38)
+
             Spacer(minLength: 24)
 
             HStack(spacing: 9) {
@@ -209,6 +230,7 @@ struct CompanionView: View {
             Color.clear
                 .frame(height: 18)
         }
+        .sensoryFeedback(.selection, trigger: selectedAccessoryRaw)
     }
 
     private var editorialHeadline: LocalizedStringKey {
@@ -230,6 +252,87 @@ struct CompanionView: View {
         case .preview: "companion.editorial.previewBody"
         case .unavailable: "companion.editorial.unavailableBody"
         case .idle: "companion.editorial.idleBody"
+        }
+    }
+}
+
+private struct AccessoryWardrobeView: View {
+    @Binding var selection: MonsterAccessory
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Text("03")
+                    .foregroundStyle(Color.pmOLEDGreen)
+
+                Text("companion.wardrobe.eyebrow")
+
+                Rectangle()
+                    .fill(PMTheme.hairline)
+                    .frame(height: 1)
+            }
+            .font(.system(.caption2, design: .monospaced, weight: .semibold))
+            .tracking(1.4)
+
+            Text("companion.wardrobe.title")
+                .font(.system(size: 34, weight: .black))
+                .tracking(-1.2)
+                .textCase(.uppercase)
+                .padding(.top, 18)
+
+            Text("companion.wardrobe.body")
+                .font(.system(.caption, design: .monospaced, weight: .medium))
+                .tracking(1.6)
+                .lineSpacing(4)
+                .foregroundStyle(Color.white.opacity(0.56))
+                .padding(.top, 8)
+
+            HStack(spacing: 10) {
+                ForEach(MonsterAccessory.allCases) { accessory in
+                    Button {
+                        selection = accessory
+                    } label: {
+                        VStack(spacing: 13) {
+                            ZStack(alignment: .topTrailing) {
+                                Image(systemName: accessory.symbolName)
+                                    .font(.system(size: 29, weight: .semibold))
+                                    .foregroundStyle(
+                                        selection == accessory ? Color.pmOLEDGreen : Color.white.opacity(0.8)
+                                    )
+                                    .frame(maxWidth: .infinity, minHeight: 44)
+
+                                if selection == accessory {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.pmOLEDGreen)
+                                }
+                            }
+
+                            Text(accessory.titleKey)
+                                .font(.system(.caption2, design: .monospaced, weight: .semibold))
+                                .tracking(1.1)
+                                .foregroundStyle(Color.white)
+                        }
+                        .padding(14)
+                        .frame(maxWidth: .infinity, minHeight: 112)
+                        .background(
+                            selection == accessory
+                                ? Color.pmOLEDGreen.opacity(0.08)
+                                : Color.white.opacity(0.025)
+                        )
+                        .overlay {
+                            Rectangle()
+                                .stroke(
+                                    selection == accessory ? Color.pmOLEDGreen : PMTheme.hairline,
+                                    lineWidth: 1
+                                )
+                        }
+                    }
+                    .buttonStyle(PMTactileButtonStyle())
+                    .accessibilityAddTraits(selection == accessory ? .isSelected : [])
+                }
+            }
+            .padding(.top, 20)
         }
     }
 }

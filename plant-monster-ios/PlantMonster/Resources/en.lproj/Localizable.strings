@@ -72,6 +72,11 @@
 "companion.editorial.unavailableBody" = "CONNECT PLANT MONSTER BEFORE SENDING THIS FEELING.";
 "companion.touchAction" = "TOUCH — LET IT FEEL YOU";
 "companion.touchActiveAction" = "THE TOUCH SIGNAL IS ECHOING";
+"companion.wardrobe.eyebrow" = "STYLE LAB";
+"companion.wardrobe.title" = "GIVE IT ATTITUDE.";
+"companion.wardrobe.body" = "Choose a look, then return to the stage to see it perform.";
+"companion.wardrobe.none" = "ORIGINAL";
+"companion.wardrobe.sunglasses" = "STAR SHADES";
 "companion.footer" = "PRESENCE\nCHANGES THINGS.";
 
 "care.findLight" = "Find the light.";
