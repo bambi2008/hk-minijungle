@@ -15,6 +15,7 @@ struct CompanionView: View {
     var careScrollRequest = 0
 
     private let careSectionID = "companion-care-section"
+    private let narrativeSectionID = "companion-narrative-section"
 
     private var scrollProgress: CGFloat {
         guard !reduceMotion else { return 0 }
@@ -75,6 +76,7 @@ struct CompanionView: View {
                             immersiveCreatureScene(in: viewport.size)
 
                             companionNarrative
+                                .id(narrativeSectionID)
                                 .padding(.horizontal, PMTheme.pagePadding)
                                 .padding(.top, 28)
 
@@ -92,11 +94,19 @@ struct CompanionView: View {
                                         .scaleEffect(phase.isIdentity ? 1 : 0.96, anchor: .top)
                                 }
                         }
+                        .frame(width: viewport.size.width, alignment: .leading)
                     }
                     .scrollIndicators(.hidden)
                     .coordinateSpace(name: "companionScroll")
                     .onPreferenceChange(CompanionScrollOffsetKey.self) { scrollOffset = $0 }
                     .task(id: careScrollRequest) {
+#if DEBUG
+                        if ProcessInfo.processInfo.arguments.contains("-ui-narrative") {
+                            await Task.yield()
+                            proxy.scrollTo(narrativeSectionID, anchor: .top)
+                            return
+                        }
+#endif
                         guard careScrollRequest > handledCareScrollRequest else { return }
                         handledCareScrollRequest = careScrollRequest
                         await Task.yield()
@@ -230,6 +240,7 @@ struct CompanionView: View {
             Color.clear
                 .frame(height: 18)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .sensoryFeedback(.selection, trigger: selectedAccessoryRaw)
     }
 
@@ -312,6 +323,9 @@ private struct AccessoryWardrobeView: View {
                                 .font(.system(.caption2, design: .monospaced, weight: .semibold))
                                 .tracking(1.1)
                                 .foregroundStyle(Color.white)
+                                .lineLimit(2)
+                                .minimumScaleFactor(0.82)
+                                .multilineTextAlignment(.center)
                         }
                         .padding(14)
                         .frame(maxWidth: .infinity, minHeight: 112)
@@ -334,6 +348,7 @@ private struct AccessoryWardrobeView: View {
             }
             .padding(.top, 20)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

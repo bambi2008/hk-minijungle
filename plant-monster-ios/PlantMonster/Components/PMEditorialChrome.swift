@@ -12,6 +12,8 @@ struct PMEditorialHeader: View {
                 .font(.system(.caption, design: .monospaced, weight: .medium))
                 .tracking(1.2)
                 .foregroundStyle(Color.white.opacity(0.82))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
 
             Spacer(minLength: 8)
 
@@ -21,6 +23,8 @@ struct PMEditorialHeader: View {
                         .font(.system(.caption2, design: .monospaced, weight: .semibold))
                         .tracking(1.05)
                         .foregroundStyle(Color.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.76)
                         .frame(minWidth: 44, minHeight: 44, alignment: .topTrailing)
                 }
                 .buttonStyle(PMTactileButtonStyle())
@@ -35,6 +39,8 @@ struct PMEditorialHeader: View {
                     }
                     Text(status.uppercased())
                         .foregroundStyle(Color.white.opacity(0.58))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
                 }
                 .font(.system(.caption2, design: .monospaced, weight: .medium))
                 .tracking(1.1)
@@ -66,6 +72,9 @@ struct PMEditorialFooter: View {
             Text("PLANT MONSTER")
                 .font(.system(.caption2, design: .monospaced, weight: .medium))
                 .foregroundStyle(Color.white.opacity(0.78))
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+                .layoutPriority(1)
         }
     }
 }

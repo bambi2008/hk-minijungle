@@ -79,7 +79,12 @@ jobs:
           device_type="$(xcrun simctl list devicetypes -j | node -e '
             let input=""; process.stdin.on("data", c => input += c); process.stdin.on("end", () => {
               const types = JSON.parse(input).devicetypes.filter(item => item.name.includes("iPhone"));
-              const preferred = types.find(item => item.name === "iPhone 16 Pro") ?? types[0];
+              const preferred =
+                types.find(item => item.name === "iPhone 16e") ??
+                types.find(item => item.name === "iPhone 16") ??
+                types.find(item => item.name === "iPhone 15") ??
+                types.find(item => item.name === "iPhone 16 Pro") ??
+                types[0];
               if (!preferred) process.exit(1);
               process.stdout.write(preferred.identifier);
             });
@@ -114,6 +119,7 @@ jobs:
 
           capture pairing
           capture companion -ui-testing
+          capture companion-narrative -ui-testing -ui-narrative
           capture companion-touch -ui-testing -ui-touch
           capture companion-sunglasses -ui-testing -ui-sunglasses
           for frame in 2 6; do

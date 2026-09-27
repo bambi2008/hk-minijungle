@@ -2,14 +2,17 @@ import SwiftUI
 
 struct CareView: View {
     var body: some View {
-        ZStack {
-            PMBackgroundView(signalStrength: 0.5)
+        GeometryReader { viewport in
+            ZStack {
+                PMBackgroundView(signalStrength: 0.5)
 
-            ScrollView {
-                CareSectionContent(showsStatus: true)
-                    .padding(.horizontal, PMTheme.pagePadding)
+                ScrollView {
+                    CareSectionContent(showsStatus: true)
+                        .padding(.horizontal, PMTheme.pagePadding)
+                        .frame(width: viewport.size.width, alignment: .leading)
+                }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
         }
         .preferredColorScheme(.dark)
     }
@@ -138,7 +141,13 @@ struct CareSectionContent: View {
                 ForEach(SensorKind.allCases) { sensorButton($0) }
             }
         } else {
-            HStack(spacing: 1) {
+            LazyVGrid(
+                columns: [
+                    GridItem(.flexible(minimum: 0), spacing: 1),
+                    GridItem(.flexible(minimum: 0), spacing: 1),
+                ],
+                spacing: 1
+            ) {
                 ForEach(SensorKind.allCases) { sensorButton($0) }
             }
         }
@@ -158,9 +167,10 @@ struct CareSectionContent: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.68)
                 Text(sensor.label)
-                    .font(.system(size: 9, weight: .medium, design: .monospaced))
+                    .font(.system(.caption2, design: .monospaced, weight: .medium))
                     .tracking(0.5)
                     .lineLimit(2)
+                    .minimumScaleFactor(0.82)
                     .multilineTextAlignment(.center)
             }
             .foregroundStyle(selectedSensor == sensor ? Color.pmInk : Color.white.opacity(0.72))
@@ -242,49 +252,51 @@ private struct EditorialCareStage: View {
     let lightNeedsAttention: Bool
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            Rectangle()
-                .fill(Color.black.opacity(0.5))
-                .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+        GeometryReader { proxy in
+            ZStack(alignment: .topTrailing) {
+                Rectangle()
+                    .fill(Color.black.opacity(0.5))
+                    .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
 
-            LinearGradient(
-                colors: [.clear, Color.white.opacity(lightNeedsAttention ? 0.24 : 0.1), .clear],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
-            .offset(x: scanPosition * 180)
-            .blendMode(.screen)
-            .clipped()
-
-            VStack(alignment: .trailing, spacing: 8) {
-                Image(systemName: lightNeedsAttention ? "sun.min" : "sun.max")
-                    .font(.title2.weight(.light))
-                    .foregroundStyle(lightNeedsAttention ? Color.pmOLEDGreen : Color.white)
-                    .symbolEffect(.pulse, options: .repeating, value: lightNeedsAttention)
-
-                Path { path in
-                    path.move(to: CGPoint(x: 0, y: 0))
-                    path.addLine(to: CGPoint(x: -72, y: 92))
-                }
-                .stroke(
-                    lightNeedsAttention ? Color.pmOLEDGreen.opacity(0.72) : Color.white.opacity(0.2),
-                    style: StrokeStyle(lineWidth: 1, dash: [4, 7])
+                LinearGradient(
+                    colors: [.clear, Color.white.opacity(lightNeedsAttention ? 0.24 : 0.1), .clear],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
                 )
-                .frame(width: 76, height: 96)
-            }
-            .padding(20)
-            .accessibilityHidden(true)
+                .offset(x: scanPosition * 180)
+                .blendMode(.screen)
+                .clipped()
 
-            OLEDExpressionView(
-                expression: expression,
-                width: 286,
-                tint: .white,
-                isActive: lightNeedsAttention
-            )
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .padding(18)
+                VStack(alignment: .trailing, spacing: 8) {
+                    Image(systemName: lightNeedsAttention ? "sun.min" : "sun.max")
+                        .font(.title2.weight(.light))
+                        .foregroundStyle(lightNeedsAttention ? Color.pmOLEDGreen : Color.white)
+                        .symbolEffect(.pulse, options: .repeating, value: lightNeedsAttention)
+
+                    Path { path in
+                        path.move(to: CGPoint(x: 0, y: 0))
+                        path.addLine(to: CGPoint(x: -72, y: 92))
+                    }
+                    .stroke(
+                        lightNeedsAttention ? Color.pmOLEDGreen.opacity(0.72) : Color.white.opacity(0.2),
+                        style: StrokeStyle(lineWidth: 1, dash: [4, 7])
+                    )
+                    .frame(width: 76, height: 96)
+                }
+                .padding(20)
+                .accessibilityHidden(true)
+
+                OLEDExpressionView(
+                    expression: expression,
+                    width: min(286, max(0, proxy.size.width - 36)),
+                    tint: .white,
+                    isActive: lightNeedsAttention
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .padding(18)
+            }
         }
-        .frame(minHeight: 230)
+        .frame(height: 230)
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) {
