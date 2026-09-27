@@ -80,8 +80,8 @@ struct MonsterAccessoryOverlay: View {
         // outer silhouette of the product as the body turns.
         case 0: AccessoryPose(x: -0.010, y: -0.004, horizontalScale: 1, verticalScale: 1, yaw: 0, roll: 0, opacity: 1)
         case 1: AccessoryPose(x: -0.062, y: -0.006, horizontalScale: 0.92, verticalScale: 0.98, yaw: -18, roll: -1.5, opacity: 0.98)
-        case 2: AccessoryPose(x: -0.305, y: -0.002, horizontalScale: 0.50, verticalScale: 0.92, yaw: -60, roll: -2.5, opacity: 0.82)
-        case 6: AccessoryPose(x: 0.305, y: -0.002, horizontalScale: 0.50, verticalScale: 0.92, yaw: 60, roll: 2.5, opacity: 0.82)
+        case 2: AccessoryPose(x: -0.238, y: -0.002, horizontalScale: 0.50, verticalScale: 0.92, yaw: -60, roll: -2.5, opacity: 0.82)
+        case 6: AccessoryPose(x: 0.228, y: -0.002, horizontalScale: 0.50, verticalScale: 0.92, yaw: 60, roll: 2.5, opacity: 0.82)
         case 7: AccessoryPose(x: 0.070, y: -0.006, horizontalScale: 0.92, verticalScale: 0.98, yaw: 18, roll: 1.5, opacity: 0.98)
         default: .hidden
         }

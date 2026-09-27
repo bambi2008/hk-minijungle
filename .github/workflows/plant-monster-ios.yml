@@ -116,7 +116,7 @@ jobs:
           capture companion -ui-testing
           capture companion-touch -ui-testing -ui-touch
           capture companion-sunglasses -ui-testing -ui-sunglasses
-          for frame in 0 1 2 3 4 5 6 7; do
+          for frame in 0 1 2 6 7; do
             capture "companion-sunglasses-${frame}" -ui-testing -ui-sunglasses "-ui-turntable-frame=${frame}"
           done
           capture care -ui-testing -ui-care
