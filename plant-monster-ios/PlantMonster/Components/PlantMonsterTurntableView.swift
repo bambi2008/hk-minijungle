@@ -163,6 +163,7 @@ struct PlantMonsterTurntableView: View {
             }
             .frame(width: side, height: side)
             .offset(x: side * frameCenteringOffset)
+            .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
             .animation(reduceMotion ? nil : .snappy(duration: 0.22), value: accessory)
         }
     }
