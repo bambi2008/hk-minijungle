@@ -7,8 +7,9 @@ struct PairingView: View {
         ZStack {
             PMBackgroundView(signalStrength: isBusy ? 0.82 : 0.36)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
+            GeometryReader { viewport in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
                     PMEditorialHeader(
                         section: "pairing.editorial.section",
                         status: model.connectionLabel,
@@ -37,7 +38,6 @@ struct PairingView: View {
                             controlColor: .white
                         )
                     }
-                    .frame(maxWidth: 390)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 10)
 
@@ -96,10 +96,14 @@ struct PairingView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 26)
                 }
-                .padding(.horizontal, PMTheme.pagePadding)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(
+                        width: max(0, viewport.size.width - (PMTheme.pagePadding * 2)),
+                        alignment: .leading
+                    )
+                    .padding(.horizontal, PMTheme.pagePadding)
+                }
+                .scrollIndicators(.hidden)
             }
-            .scrollIndicators(.hidden)
         }
         .preferredColorScheme(.dark)
     }
