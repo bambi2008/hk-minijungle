@@ -1,5 +1,15 @@
 # Verification status
 
+## Direction A redesign — 2026-10-12
+
+- The selected hardware-companion design replaces the oversized editorial hierarchy with a centred creature stage, graphite/lilac surfaces, rounded panels, compact headings, and consistent 24pt gutters.
+- The background image is constrained to its measured viewport before clipping, addressing the root-container expansion missed by earlier width-only patches.
+- Xcode simulator compilation and all 14 unit tests plus 2 UI tests passed in run `38160503708` (`fea0cbb`). The UI tests exercise evidence expand/collapse, touch, and pairing-control bounds.
+- Nine original Chinese iPhone 16e simulator captures were inspected. Text and cards fit the viewport, but the creature retained obsolete per-frame left-shift compensation. The sprite alpha bounds were measured and the shared model/accessory offsets corrected; final visual confirmation is pending a new run.
+- The first pairing UI test could not enter onboarding because an earlier demo launch persisted paired state. The test now overrides that launch preference and passed on rerun.
+- No new TestFlight release has been made for this redesign at this point. Earlier Builds 39–42 do not contain Direction A.
+- Physical BLE and Core Motion checks remain hardware validation; simulator mock telemetry and journey values are demonstration data.
+
 ## Completed
 
 - GitHub Actions Build 22 compiled with Xcode 26, archived with App Store signing, uploaded to App Store Connect, finished processing, and was assigned to the `Plant Monster Internal` TestFlight group.
@@ -16,7 +26,7 @@
 
 ## Remaining physical-device validation
 
-- Compile the current anthropomorphic-state and Core Motion changes on the macOS/Xcode workflow; Swift/Xcode is unavailable in the Windows workspace.
+- The current anthropomorphic-state and Core Motion changes compiled on the macOS/Xcode workflow; live pedometer behavior still requires a physical iPhone.
 - On a physical iPhone, tap `Start together`, verify the contextual Motion & Fitness prompt, deny/restore permission, background/foreground refresh, live step updates, distance formatting, and midnight rollover behavior.
 - Confirm the step journey remains on-device and does not request Apple Health access.
 
@@ -24,4 +34,4 @@
 - Pair to the ESP32-C3 SuperMini and verify reconnect, live temperature, air humidity, planting-substrate moisture, light, touch, and motion data end to end.
 - Verify valid packets, bad CRC rejection, unavailable substrate moisture, sequence wrap, duplicate acknowledgements, acknowledgement timeout, Bluetooth denied/off, device out of range, and interrupted connection.
 - Run VoiceOver, accessibility Dynamic Type sizes, Reduce Motion, Simplified Chinese, and compact-iPhone layout checks on hardware.
-- Run `PlantMonsterTests` on macOS; the current workflow compiles the app but does not execute the unit-test target.
+- Unit and UI tests run in the current macOS workflow; physical-device accessibility, BLE, and pedometer validation remain separate.

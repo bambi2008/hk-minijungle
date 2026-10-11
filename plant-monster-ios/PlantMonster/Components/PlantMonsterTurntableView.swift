@@ -264,9 +264,11 @@ struct PlantMonsterTurntableView: View {
     }
 
     private var frameCenteringOffset: CGFloat {
-        // The sprite frames have slightly different transparent bounds. These
-        // calibrated values keep the visible creature centered as it turns.
-        let offsets: [CGFloat] = [-0.064, -0.040, -0.053, -0.042, -0.060, -0.030, -0.021, -0.026]
+        // Centre each visible silhouette, not the transparent sprite cell.
+        // Measured from alpha > 100 in the 1774 x 887 sheet (443.5px cells).
+        // The accessory shares this transform so it stays attached when turning.
+        let offsets: [CGFloat] = [-0.010710, 0.011838, -0.005073, 0.008455,
+                                  -0.011838, 0.021984, 0.029876, 0.024239]
         return offsets[frameIndex]
     }
 
