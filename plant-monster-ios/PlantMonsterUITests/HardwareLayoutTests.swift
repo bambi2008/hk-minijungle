@@ -7,7 +7,7 @@ final class HardwareLayoutTests: XCTestCase {
 
     func testPairingControlsStayInsidePhone() {
         let app = XCUIApplication()
-        app.launchArguments = ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["-plantMonster.hasCompletedPairing", "NO", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
         let title = app.staticTexts["pairing.title"]
         let connect = app.buttons["pairing.connect"]
