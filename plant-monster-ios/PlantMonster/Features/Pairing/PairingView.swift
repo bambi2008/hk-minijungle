@@ -96,6 +96,7 @@ struct PairingView: View {
                         .padding(.top, 12)
                         .padding(.bottom, 26)
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, PMTheme.pagePadding)
             }
             .scrollIndicators(.hidden)
