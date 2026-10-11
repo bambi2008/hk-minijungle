@@ -18,4 +18,4 @@ The previous background used an unconstrained scaled-to-fill image inside a root
 
 The preview build captures nine Chinese simulator states. Native UI tests check pairing title and connect-button bounds, evidence expand/collapse and touch interaction. XCTest unit tests verify existing state/protocol logic. Physical Bluetooth, motion permissions and a user-device visual review remain device checks.
 
-Build and visual review results will be recorded in VERIFICATION.md when complete. A passing screenshot capture alone is not interaction verification.
+Build and visual review results are recorded in VERIFICATION.md and DESIGN_A_QA.md. Final run `38164208833` passed compilation, 14 unit tests and 2 UI tests. A passing screenshot capture alone is not interaction verification.
