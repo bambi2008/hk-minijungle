@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct CompanionView: View {
     @EnvironmentObject private var model: AppModel
@@ -10,6 +11,7 @@ struct CompanionView: View {
     @State private var isTurntableEngaged = false
     @State private var interactionProgress: CGFloat = 0
     @State private var isScrollCueFloating = false
+    @State private var showsEvidence = false
 
     let onForgetDevice: () -> Void
     var careScrollRequest = 0
@@ -194,6 +196,12 @@ struct CompanionView: View {
                 .padding(.top, 12)
                 .offset(x: interactionProgress * 7)
 
+            CreatureEvidenceDisclosure(
+                evidence: model.creatureEvidence,
+                isExpanded: $showsEvidence
+            )
+            .padding(.top, 18)
+
             Button(action: model.pet) {
                 HStack(spacing: 10) {
                     Image(systemName: model.isTouchActive ? "wave.3.right" : "hand.tap")
@@ -219,6 +227,9 @@ struct CompanionView: View {
             .disabled(model.touchDeliveryState == .sending)
             .padding(.top, 18)
             .offset(x: -interactionProgress * 5)
+
+            SharedJourneyCard()
+                .padding(.top, 30)
 
             AccessoryWardrobeView(selection: accessorySelection)
                 .padding(.top, 38)
@@ -249,26 +260,235 @@ struct CompanionView: View {
         .sensoryFeedback(.selection, trigger: selectedAccessoryRaw)
     }
 
-    private var editorialHeadline: LocalizedStringKey {
+    private var editorialHeadline: String {
         switch model.touchDeliveryState {
-        case .sending: "companion.editorial.sending"
-        case .delivered, .receivedOnDevice: "companion.editorial.received"
-        case .sentWithoutReply: "companion.editorial.sent"
-        case .preview: "companion.editorial.preview"
-        case .unavailable: "companion.editorial.unavailable"
-        case .idle: "companion.editorial.idle"
+        case .sending: String(localized: "companion.editorial.sending")
+        case .delivered, .receivedOnDevice: String(localized: "companion.editorial.received")
+        case .sentWithoutReply: String(localized: "companion.editorial.sent")
+        case .preview: String(localized: "companion.editorial.preview")
+        case .unavailable: String(localized: "companion.editorial.unavailable")
+        case .idle: model.creatureFeeling.headline
         }
     }
 
-    private var editorialBody: LocalizedStringKey {
+    private var editorialBody: String {
         switch model.touchDeliveryState {
-        case .sending: "companion.editorial.sendingBody"
-        case .delivered, .receivedOnDevice: "companion.editorial.receivedBody"
-        case .sentWithoutReply: "companion.editorial.sentBody"
-        case .preview: "companion.editorial.previewBody"
-        case .unavailable: "companion.editorial.unavailableBody"
-        case .idle: "companion.editorial.idleBody"
+        case .sending: String(localized: "companion.editorial.sendingBody")
+        case .delivered, .receivedOnDevice: String(localized: "companion.editorial.receivedBody")
+        case .sentWithoutReply: String(localized: "companion.editorial.sentBody")
+        case .preview: String(localized: "companion.editorial.previewBody")
+        case .unavailable: String(localized: "companion.editorial.unavailableBody")
+        case .idle: model.creatureFeeling.body
         }
+    }
+}
+
+private struct CreatureEvidenceDisclosure: View {
+    let evidence: [CreatureEvidence]
+    @Binding var isExpanded: Bool
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: "waveform.path.ecg")
+                        .foregroundStyle(Color.pmOLEDGreen)
+                    Text("creature.evidence.action")
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .rotationEffect(.degrees(isExpanded ? 180 : 0))
+                }
+                .font(.system(.caption, design: .monospaced, weight: .semibold))
+                .tracking(1.1)
+                .foregroundStyle(Color.white.opacity(0.82))
+                .frame(minHeight: PMTheme.minimumTapTarget)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(PMTactileButtonStyle())
+            .accessibilityValue(Text(isExpanded ? "creature.evidence.expanded" : "creature.evidence.collapsed"))
+
+            if isExpanded {
+                VStack(spacing: 0) {
+                    ForEach(evidence) { item in
+                        HStack(spacing: 12) {
+                            Image(systemName: item.needsAttention ? "exclamationmark.circle.fill" : item.systemImage)
+                                .foregroundStyle(item.needsAttention ? Color.pmOLEDGreen : Color.white.opacity(0.58))
+                                .frame(width: 24)
+
+                            Text(item.label)
+                                .foregroundStyle(Color.white.opacity(0.58))
+
+                            Spacer(minLength: 8)
+
+                            Text(item.value)
+                                .foregroundStyle(Color.white)
+                                .monospacedDigit()
+                        }
+                        .font(.system(.caption, design: .monospaced, weight: .medium))
+                        .frame(minHeight: 44)
+                        .overlay(alignment: .bottom) {
+                            Rectangle().fill(PMTheme.hairline).frame(height: 1)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+
+                    Text("creature.evidence.disclaimer")
+                        .font(.footnote)
+                        .foregroundStyle(Color.white.opacity(0.48))
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.top, 12)
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .background(Color.white.opacity(0.03))
+        .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+    }
+}
+
+private struct SharedJourneyCard: View {
+    @EnvironmentObject private var journey: SharedJourneyStore
+    @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
+    @AppStorage("plantMonster.sharedJourneyEnabled") private var sharedJourneyEnabled = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 12) {
+                Text("02")
+                    .foregroundStyle(Color.pmOLEDGreen)
+                Text("journey.eyebrow")
+                Rectangle().fill(PMTheme.hairline).frame(height: 1)
+                Image(systemName: "figure.walk")
+                    .foregroundStyle(Color.pmOLEDGreen)
+                    .symbolEffect(.bounce, value: journey.stepsToday)
+            }
+            .font(.system(.caption2, design: .monospaced, weight: .semibold))
+            .tracking(1.3)
+
+            if journey.state == .active {
+                Text(activeHeadline)
+                    .font(.system(size: 34, weight: .black))
+                    .tracking(-1.1)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 18)
+
+                Text(activeBody)
+                    .font(.body)
+                    .foregroundStyle(Color.white.opacity(0.66))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+
+                HStack(spacing: 8) {
+                    ForEach(0..<5, id: \.self) { index in
+                        Image(systemName: "figure.walk")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(index <= journeyChapter ? Color.pmOLEDGreen : Color.white.opacity(0.18))
+                    }
+                }
+                .accessibilityHidden(true)
+                .padding(.top, 16)
+            } else {
+                Text("journey.invitation.title")
+                    .font(.system(size: 34, weight: .black))
+                    .tracking(-1.1)
+                    .padding(.top, 18)
+
+                Text(statusBody)
+                    .font(.body)
+                    .foregroundStyle(Color.white.opacity(0.62))
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, 8)
+
+                Button(action: primaryAction) {
+                    HStack {
+                        Image(systemName: journey.state == .loading ? "ellipsis" : "figure.walk")
+                            .symbolEffect(.pulse, value: journey.state == .loading)
+                        Text(primaryActionTitle)
+                        Spacer()
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                    .tracking(1.1)
+                    .foregroundStyle(Color.pmInk)
+                    .padding(.horizontal, 16)
+                    .frame(maxWidth: .infinity, minHeight: 50)
+                    .background(Color.pmOLEDGreen)
+                }
+                .buttonStyle(PMTactileButtonStyle())
+                .disabled(journey.state == .loading || journey.state == .unavailable)
+                .padding(.top, 18)
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.black.opacity(0.28))
+        .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+        .task {
+            if sharedJourneyEnabled { journey.begin() }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active, sharedJourneyEnabled {
+                journey.begin()
+            }
+        }
+        .accessibilityElement(children: .contain)
+    }
+
+    private var activeHeadline: String {
+        String(
+            format: String(localized: "journey.active.title"),
+            journey.stepsToday.formatted(.number.grouping(.automatic))
+        )
+    }
+
+    private var activeBody: String {
+        guard let meters = journey.distanceMeters else {
+            return String(localized: "journey.active.body.stepsOnly")
+        }
+        let distance = Measurement(value: meters, unit: UnitLength.meters)
+            .formatted(.measurement(width: .abbreviated))
+        return String(format: String(localized: "journey.active.body"), distance)
+    }
+
+    private var journeyChapter: Int {
+        min(journey.stepsToday / 1_000, 4)
+    }
+
+    private var statusBody: LocalizedStringKey {
+        switch journey.state {
+        case .idle: "journey.invitation.body"
+        case .loading: "journey.loading.body"
+        case .denied: "journey.denied.body"
+        case .unavailable: "journey.unavailable.body"
+        case .failed: "journey.failed.body"
+        case .active: "journey.active.body.stepsOnly"
+        }
+    }
+
+    private var primaryActionTitle: LocalizedStringKey {
+        switch journey.state {
+        case .denied: "journey.openSettings"
+        case .failed: "journey.tryAgain"
+        default: "journey.start"
+        }
+    }
+
+    private func primaryAction() {
+        if journey.state == .denied,
+           let url = URL(string: UIApplication.openSettingsURLString) {
+            openURL(url)
+            return
+        }
+        sharedJourneyEnabled = true
+        journey.begin()
     }
 }
 

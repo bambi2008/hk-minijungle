@@ -62,6 +62,14 @@ final class AppModel: ObservableObject {
         return String(localized: "care.comfortable")
     }
 
+    var creatureFeeling: CreatureFeeling {
+        CreatureInterpreter.feeling(for: telemetry)
+    }
+
+    var creatureEvidence: [CreatureEvidence] {
+        CreatureInterpreter.evidence(for: telemetry)
+    }
+
     var careDetail: String {
         if telemetry.temperatureCelsius < 16 { return String(localized: "care.detail.cold") }
         if telemetry.temperatureCelsius > 30 { return String(localized: "care.detail.hot") }
@@ -72,19 +80,19 @@ final class AppModel: ObservableObject {
 
     var motionTitle: String {
         telemetry.isMoving
-            ? String(localized: "motion.moving")
-            : String(localized: "motion.still")
+            ? String(localized: "motion.persona.moving")
+            : String(localized: "motion.persona.still")
     }
 
     var motionDetail: String {
         if telemetry.isMoving {
-            return String(localized: "motion.detectedNow")
+            return String(localized: "motion.evidence.detectedNow")
         }
         guard let lastMotionDetectedAt else {
-            return String(localized: "motion.notDetected")
+            return String(localized: "motion.evidence.notDetected")
         }
         let relative = lastMotionDetectedAt.formatted(.relative(presentation: .named))
-        return String(format: String(localized: "motion.lastDetected"), relative)
+        return String(format: String(localized: "motion.evidence.lastDetected"), relative)
     }
 
     var touchTitleKey: String {
@@ -309,6 +317,7 @@ final class AppModel: ObservableObject {
 
     private func inferredExpression(from telemetry: PlantTelemetry) -> PlantExpression {
         if telemetry.isMoving { return .pickup }
+        if telemetry.substrateMoisturePercent.map({ $0 < 30 }) == true { return .thirsty }
         if telemetry.temperatureCelsius < 16 { return .cold }
         if telemetry.temperatureCelsius > 30 { return .hot }
         if telemetry.lightLux < 150 { return .findLight }

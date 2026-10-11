@@ -7,8 +7,10 @@ Native SwiftUI prototype for 植灵兽 / Plant Monster. It turns an ESP32-C3 Sup
 - Pairing experience that requests Bluetooth only after a user action.
 - Product-first entry and companion screens with an eight-angle, drag-controlled Plant Monster turntable and accessible arrow controls.
 - Companion home with the real 15-expression OLED asset set and a tactile pet response.
-- Care view for temperature, relative air humidity, planting-substrate moisture, light, and motion state.
-- Memories view for touch, light, and motion moments.
+- A creature-state interpreter that speaks first and reveals temperature, relative air humidity, planting-substrate moisture, and light as supporting evidence.
+- Care view with anthropomorphic sensor states, exact readings, and a separate motion-sensor story.
+- An optional, on-device shared journey powered by iPhone step count through Core Motion; no Apple Health access is requested.
+- Memories view for touch, light, motion, and the current day’s shared steps.
 - English and Simplified Chinese localization.
 - CoreBluetooth implementation plus a simulator mock.
 - Dynamic Type, VoiceOver labels, 44-point touch targets, Reduce Motion handling, and optional haptics.
@@ -43,6 +45,7 @@ The repository includes a macOS 26 / Xcode 26 GitHub Actions workflow for unsign
 
 - `rh` is relative **air humidity**, never substrate moisture; `sm` is the separate substrate-moisture reading.
 - The app does not infer watering needs from air humidity.
+- Step access is requested only after the person taps `Start together`, and the value is used as a shared-experience detail rather than a fitness goal.
 - Thresholds in `AppModel` are provisional UI behavior and must be tuned against the final plant, enclosure, and calibrated sensors.
 
 ## Current validation boundary

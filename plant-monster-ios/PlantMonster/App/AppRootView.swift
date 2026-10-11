@@ -117,4 +117,5 @@ private struct MainTabView: View {
     AppRootView()
         .environmentObject(AppModel(client: MockPlantMonsterBLEClient()))
         .environmentObject(AmbientSoundscapeController())
+        .environmentObject(SharedJourneyStore())
 }

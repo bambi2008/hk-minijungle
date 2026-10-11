@@ -30,6 +30,8 @@
 	<string>Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, substrate moisture, light, touch, and motion updates.</string>
 	<key>NSBluetoothPeripheralUsageDescription</key>
 	<string>Plant Monster uses Bluetooth to connect to your creature.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>Plant Monster uses today’s step count to create a shared journey with your creature.</string>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UISupportedInterfaceOrientations</key>

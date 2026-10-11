@@ -24,12 +24,12 @@ struct CareSectionContent: View {
 
         var id: Self { self }
 
-        var label: LocalizedStringKey {
+        var label: String {
             switch self {
-            case .temperature: "sensor.temperature"
-            case .airHumidity: "sensor.airHumidity"
-            case .substrateMoisture: "sensor.substrateMoisture"
-            case .light: "sensor.lightLux"
+            case .temperature: String(localized: "sensor.temperature")
+            case .airHumidity: String(localized: "sensor.airHumidity")
+            case .substrateMoisture: String(localized: "sensor.substrateMoisture")
+            case .light: String(localized: "sensor.lightLux")
             }
         }
 
@@ -61,16 +61,17 @@ struct CareSectionContent: View {
                 .pmEditorialTitle(size: 58)
                 .padding(.top, 18)
 
-            HStack(alignment: .firstTextBaseline, spacing: 10) {
-                Text("12")
-                    .font(.system(size: 30, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.white)
-                    .monospacedDigit()
-                Text("care.minutes")
-                    .font(.system(.headline, design: .monospaced, weight: .medium))
-                    .foregroundStyle(Color.white.opacity(0.84))
+            HStack(spacing: 10) {
+                Image(systemName: "waveform.path.ecg")
+                    .foregroundStyle(Color.pmOLEDGreen)
+                    .symbolEffect(.pulse, options: .repeating)
+                Text("care.bodySignal")
+                    .font(.system(.caption, design: .monospaced, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color.white.opacity(0.78))
             }
-            .padding(.top, 16)
+            .frame(minHeight: PMTheme.minimumTapTarget)
+            .padding(.top, 12)
 
             Text(model.careDetail)
                 .font(.system(.caption, design: .monospaced, weight: .medium))
@@ -158,20 +159,31 @@ struct CareSectionContent: View {
                 Image(systemName: sensor.icon)
                     .font(.title3.weight(.medium))
                     .symbolRenderingMode(.hierarchical)
-                Text(sensorValue(sensor))
-                    .font(.system(.headline, design: .monospaced, weight: .medium))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.68)
-                Text(sensor.label)
-                    .font(.system(.caption2, design: .monospaced, weight: .medium))
-                    .tracking(0.5)
+
+                Text(sensorFeeling(sensor))
+                    .font(.headline)
                     .lineLimit(2)
                     .minimumScaleFactor(0.82)
                     .multilineTextAlignment(.center)
+
+                HStack(spacing: 5) {
+                    Text(sensor.label)
+                    Text("·")
+                    Text(sensorValue(sensor))
+                        .monospacedDigit()
+                }
+                    .font(.system(.caption2, design: .monospaced, weight: .medium))
+                    .tracking(0.5)
+                    .foregroundStyle(
+                        selectedSensor == sensor
+                            ? Color.pmInk.opacity(0.72)
+                            : Color.white.opacity(0.48)
+                    )
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
             }
             .foregroundStyle(selectedSensor == sensor ? Color.pmInk : Color.white.opacity(0.72))
-            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 104 : 118)
+            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 122 : 138)
             .padding(.horizontal, 4)
             .background(selectedSensor == sensor ? Color.pmOLEDGreen : Color.black.opacity(0.32))
             .overlay {
@@ -189,7 +201,7 @@ struct CareSectionContent: View {
                 .frame(width: 2, height: 54)
 
             VStack(alignment: .leading, spacing: 6) {
-                Text(selectedSensor.label)
+                Text(sensorFeeling(selectedSensor))
                     .font(.system(.caption2, design: .monospaced, weight: .semibold))
                     .tracking(1.3)
                     .foregroundStyle(Color.pmOLEDGreen)
@@ -197,6 +209,12 @@ struct CareSectionContent: View {
                     .font(.body)
                     .foregroundStyle(Color.white.opacity(0.78))
                     .fixedSize(horizontal: false, vertical: true)
+
+                Text(evidenceLine(for: selectedSensor))
+                    .font(.system(.caption2, design: .monospaced, weight: .medium))
+                    .foregroundStyle(Color.white.opacity(0.46))
+                    .monospacedDigit()
+                    .padding(.top, 3)
             }
         }
         .contentTransition(.opacity)
@@ -231,6 +249,38 @@ struct CareSectionContent: View {
         case .light:
             lightNeedsAttention ? "care.sensorNarrative.lightAttention" : "care.sensorNarrative.lightSteady"
         }
+    }
+
+    private func sensorFeeling(_ sensor: SensorKind) -> String {
+        switch sensor {
+        case .temperature:
+            if model.telemetry.temperatureCelsius < 16 { return String(localized: "care.feeling.temperatureCold") }
+            if model.telemetry.temperatureCelsius > 30 { return String(localized: "care.feeling.temperatureHot") }
+            return String(localized: "care.feeling.temperatureSteady")
+        case .airHumidity:
+            if model.telemetry.airHumidityPercent < 35 { return String(localized: "care.feeling.airDry") }
+            if model.telemetry.airHumidityPercent > 75 { return String(localized: "care.feeling.airHumid") }
+            return String(localized: "care.feeling.airSteady")
+        case .substrateMoisture:
+            guard let moisture = model.telemetry.substrateMoisturePercent else {
+                return String(localized: "care.feeling.substrateWaiting")
+            }
+            if moisture < 30 { return String(localized: "care.feeling.substrateDry") }
+            if moisture > 75 { return String(localized: "care.feeling.substrateWet") }
+            return String(localized: "care.feeling.substrateSteady")
+        case .light:
+            if model.telemetry.lightLux < 150 { return String(localized: "care.feeling.lightLow") }
+            if model.telemetry.lightLux > 1_200 { return String(localized: "care.feeling.lightBright") }
+            return String(localized: "care.feeling.lightSteady")
+        }
+    }
+
+    private func evidenceLine(for sensor: SensorKind) -> String {
+        String(
+            format: String(localized: "care.evidence.format"),
+            sensor.label,
+            sensorValue(sensor)
+        )
     }
 
     private var temperatureNeedsAttention: Bool {

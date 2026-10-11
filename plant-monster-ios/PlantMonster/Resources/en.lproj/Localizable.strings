@@ -79,11 +79,50 @@
 "companion.wardrobe.sunglasses" = "STAR SHADES";
 "companion.footer" = "PRESENCE\nCHANGES THINGS.";
 
-"care.findLight" = "Find the light.";
-"care.lessLight" = "A softer place.";
-"care.warmUp" = "A little warmer.";
-"care.coolDown" = "Keep it cooler.";
-"care.comfortable" = "It feels settled.";
+"creature.feeling.moving.title" = "Someone picked me up.";
+"creature.feeling.moving.body" = "My world moved for a moment. I’m looking around to see what changed.";
+"creature.feeling.dryFeet.title" = "My feet feel a little thirsty.";
+"creature.feeling.dryFeet.body" = "The substrate is getting dry. Check whether it is time for some care.";
+"creature.feeling.cold.title" = "I’m curling up a little.";
+"creature.feeling.cold.body" = "The air feels cool. I’d like a warmer, steadier place.";
+"creature.feeling.hot.title" = "I’m feeling the heat.";
+"creature.feeling.hot.body" = "The air around me is warm. I’d like space away from heat and direct sun.";
+"creature.feeling.dark.title" = "I’m waiting for a little light.";
+"creature.feeling.dark.body" = "It is dim here. Soft, indirect light would help me feel more awake.";
+"creature.feeling.bright.title" = "This light makes me squint.";
+"creature.feeling.bright.body" = "The light feels intense. I’d like a softer place.";
+"creature.feeling.dryAir.title" = "The air feels a little dry.";
+"creature.feeling.dryAir.body" = "This is the air I breathe. It does not mean the substrate under me is dry.";
+"creature.feeling.humidAir.title" = "The air feels soft today.";
+"creature.feeling.humidAir.body" = "Humidity around me is high. I’m quietly taking it in.";
+"creature.feeling.sleepy.title" = "I’m settling down now.";
+"creature.feeling.sleepy.body" = "It is late, so my movement and light are becoming quieter.";
+"creature.feeling.settled.title" = "I feel good right here.";
+"creature.feeling.settled.body" = "Light, temperature and air feel steady. I can stay here with you.";
+"creature.evidence.action" = "WHY DO I FEEL THIS WAY?";
+"creature.evidence.expanded" = "Sensor evidence expanded";
+"creature.evidence.collapsed" = "Sensor evidence collapsed";
+"creature.evidence.disclaimer" = "These are environmental signals it senses, not a plant-health diagnosis.";
+
+"journey.eyebrow" = "SHARED JOURNEY";
+"journey.invitation.title" = "Take me for a walk.";
+"journey.invitation.body" = "Your iPhone can turn today’s steps into a path we shared. Motion & Fitness access is requested only after you start.";
+"journey.start" = "START TOGETHER";
+"journey.loading.body" = "Listening for today’s footsteps…";
+"journey.denied.body" = "I cannot hear the footsteps yet. You can turn on Motion & Fitness in Settings.";
+"journey.unavailable.body" = "Steps are unavailable on this device. We can still stay here together.";
+"journey.failed.body" = "I missed the footsteps that time. Try once more.";
+"journey.openSettings" = "OPEN SETTINGS";
+"journey.tryAgain" = "LISTEN AGAIN";
+"journey.active.title" = "You carried me for %@ steps today.";
+"journey.active.body" = "We travelled about %@ together. These steps are used only for our shared journey.";
+"journey.active.body.stepsOnly" = "Every step became a small part of the path we shared today.";
+
+"care.findLight" = "I’d like a little light.";
+"care.lessLight" = "I’d like a softer place.";
+"care.warmUp" = "I’d like to feel warmer.";
+"care.coolDown" = "I’d like to cool down.";
+"care.comfortable" = "I feel settled right here.";
 "care.detail.lowLight" = "Move it toward soft, indirect light and check again in a few minutes.";
 "care.detail.bright" = "The light is intense. Try a calmer position away from direct sun.";
 "care.detail.cold" = "The air around it is cool. Find a stable place away from drafts.";
@@ -98,6 +137,7 @@
 "care.signal.liveValue" = "Right now";
 "care.signal.liveDetail" = "Its sensors are quietly keeping watch";
 "care.minutes" = "min";
+"care.bodySignal" = "THIS IS HOW ITS BODY FEELS RIGHT NOW";
 "care.nextCheck" = "Until the next check";
 "care.environmentTitle" = "The world around it";
 "care.environmentDetail" = "Four sensors, updating continuously";
@@ -119,11 +159,26 @@
 "care.sensorNarrative.substrate" = "This is moisture around the roots, measured separately from air humidity.";
 "care.sensorNarrative.lightAttention" = "The light needs a change. Follow the guide above and check back in a few minutes.";
 "care.sensorNarrative.lightSteady" = "The light is soft and steady enough to stay here.";
+"care.feeling.temperatureCold" = "Feeling cold";
+"care.feeling.temperatureHot" = "Feeling warm";
+"care.feeling.temperatureSteady" = "Warm and settled";
+"care.feeling.airDry" = "Breathing dry air";
+"care.feeling.airHumid" = "The air feels soft";
+"care.feeling.airSteady" = "Breathing easily";
+"care.feeling.substrateWaiting" = "Cannot feel below yet";
+"care.feeling.substrateDry" = "Thirsty feet";
+"care.feeling.substrateWet" = "Wet underfoot";
+"care.feeling.substrateSteady" = "Comfortably damp";
+"care.feeling.lightLow" = "Waiting for light";
+"care.feeling.lightBright" = "Squinting at the light";
+"care.feeling.lightSteady" = "Bright-eyed";
+"care.evidence.format" = "SENSOR EVIDENCE · %@ %@";
 
 "sensor.temperature" = "TEMPERATURE";
 "sensor.airHumidity" = "AIR HUMIDITY";
 "sensor.substrateMoisture" = "SUBSTRATE MOISTURE";
 "sensor.lightLux" = "LIGHT · LUX";
+"sensor.waiting" = "WAITING";
 
 "motion.sensorLabel" = "MOTION SENSOR";
 "motion.moving" = "Being moved";
@@ -131,6 +186,11 @@
 "motion.detectedNow" = "Movement detected just now";
 "motion.notDetected" = "No movement detected since connecting";
 "motion.lastDetected" = "Last detected: %@";
+"motion.persona.moving" = "Someone just picked me up.";
+"motion.persona.still" = "I’m resting quietly here.";
+"motion.evidence.detectedNow" = "MOTION SENSOR · MOVEMENT DETECTED JUST NOW";
+"motion.evidence.notDetected" = "MOTION SENSOR · NO MOVEMENT SINCE CONNECTING";
+"motion.evidence.lastDetected" = "MOTION SENSOR · LAST DETECTED: %@";
 
 "memories.eyebrow" = "SMALL MOMENTS";
 "memories.title" = "You were here.";
@@ -146,6 +206,8 @@
 "memories.deleteSelected" = "DELETE SELECTED MEMORIES";
 "memories.empty" = "It is quiet here. Touch Plant Monster or remember a moment in Care.";
 "memories.tapToClose" = "TAP TO CLOSE";
+"memories.journey.title" = "You carried me for %@ steps today";
+"memories.journey.body" = "A path that belongs only to today";
 "memory.sawLight" = "Found a softer light";
 "memory.savedLight" = "Saved this light";
 "memory.youWereHere" = "You were here";

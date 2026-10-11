@@ -79,11 +79,50 @@
 "companion.wardrobe.sunglasses" = "明星墨镜";
 "companion.footer" = "你的存在\n会改变它。";
 
-"care.findLight" = "去找一点光。";
-"care.lessLight" = "换个柔和的位置。";
-"care.warmUp" = "再暖一点。";
-"care.coolDown" = "让它凉快些。";
-"care.comfortable" = "它待得很安稳。";
+"creature.feeling.moving.title" = "刚才有人抱起我。";
+"creature.feeling.moving.body" = "我感觉世界晃了一下，正在看看发生了什么。";
+"creature.feeling.dryFeet.title" = "我的脚底有点渴。";
+"creature.feeling.dryFeet.body" = "种植基质正在变干，看看是不是到了照护它的时候。";
+"creature.feeling.cold.title" = "我有点缩成一团了。";
+"creature.feeling.cold.body" = "周围偏凉，我想待在一个更稳定、更暖和的位置。";
+"creature.feeling.hot.title" = "这里让我有点发热。";
+"creature.feeling.hot.body" = "周围温度偏高，我想离开闷热和直射光。";
+"creature.feeling.dark.title" = "我在等一束光。";
+"creature.feeling.dark.body" = "这里有点暗，柔和的散射光会让我更精神。";
+"creature.feeling.bright.title" = "亮得让我眯起眼睛。";
+"creature.feeling.bright.body" = "光线有些强，我想退到更柔和的位置。";
+"creature.feeling.dryAir.title" = "空气有点干。";
+"creature.feeling.dryAir.body" = "这是我正在呼吸的环境，不代表脚下的种植基质也干。";
+"creature.feeling.humidAir.title" = "空气软绵绵的。";
+"creature.feeling.humidAir.body" = "周围空气湿度偏高，我正在安静地感受它。";
+"creature.feeling.sleepy.title" = "我准备安静下来了。";
+"creature.feeling.sleepy.body" = "已经很晚了，我会把动作和光都慢慢放轻。";
+"creature.feeling.settled.title" = "我现在待得很舒服。";
+"creature.feeling.settled.body" = "光、温度和空气都很平稳，我可以在这里陪着你。";
+"creature.evidence.action" = "为什么我会这样？";
+"creature.evidence.expanded" = "已展开感应依据";
+"creature.evidence.collapsed" = "已收起感应依据";
+"creature.evidence.disclaimer" = "这些是它感受到的环境信号，不是植物健康诊断。";
+
+"journey.eyebrow" = "共同经历";
+"journey.invitation.title" = "带我出去走走。";
+"journey.invitation.body" = "开启后，iPhone 会把今天的步数变成我们共同经过的路。只有点击开始时才会请求“运动与健身”权限。";
+"journey.start" = "一起出发";
+"journey.loading.body" = "正在听见今天的脚步……";
+"journey.denied.body" = "我还听不到脚步。你可以到系统设置里重新开启“运动与健身”。";
+"journey.unavailable.body" = "这部设备暂时不能提供步数，我们可以继续安静地待在这里。";
+"journey.failed.body" = "刚才没有读到步数，再试一次就好。";
+"journey.openSettings" = "打开系统设置";
+"journey.tryAgain" = "再听一次";
+"journey.active.title" = "你今天带我走了 %@ 步。";
+"journey.active.body" = "我们一起经过了大约 %@。这些脚步只用来记录共同经历。";
+"journey.active.body.stepsOnly" = "每一步都变成了我们今天共同拥有的一小段路。";
+
+"care.findLight" = "我想找一点光。";
+"care.lessLight" = "我想去柔和一点的地方。";
+"care.warmUp" = "我想再暖一点。";
+"care.coolDown" = "我想凉快一些。";
+"care.comfortable" = "我在这里待得很安稳。";
 "care.detail.lowLight" = "把它移到柔和的散射光附近，几分钟后再看看。";
 "care.detail.bright" = "这里的光有些强，试试离开直射阳光。";
 "care.detail.cold" = "周围空气偏凉，换到温度稳定、没有穿堂风的位置。";
@@ -98,6 +137,7 @@
 "care.signal.liveValue" = "此刻";
 "care.signal.liveDetail" = "感应器正在持续陪伴它";
 "care.minutes" = "分钟";
+"care.bodySignal" = "这是它此刻的身体感受";
 "care.nextCheck" = "下一次复查";
 "care.environmentTitle" = "它周围的环境";
 "care.environmentDetail" = "四项感应正在持续更新";
@@ -119,11 +159,26 @@
 "care.sensorNarrative.substrate" = "这是根系附近种植基质的湿度，与空气湿度分别测量。";
 "care.sensorNarrative.lightAttention" = "光照需要调整；跟随上方光线指引，再过几分钟回来看看。";
 "care.sensorNarrative.lightSteady" = "当前光线温和，适合继续待在这里。";
+"care.feeling.temperatureCold" = "有点冷";
+"care.feeling.temperatureHot" = "有点热";
+"care.feeling.temperatureSteady" = "暖暖的";
+"care.feeling.airDry" = "呼吸有点干";
+"care.feeling.airHumid" = "空气软绵绵";
+"care.feeling.airSteady" = "呼吸很舒服";
+"care.feeling.substrateWaiting" = "还没感觉到脚下";
+"care.feeling.substrateDry" = "脚底有点渴";
+"care.feeling.substrateWet" = "脚下湿漉漉";
+"care.feeling.substrateSteady" = "脚下还润润的";
+"care.feeling.lightLow" = "在等一束光";
+"care.feeling.lightBright" = "亮得眯起眼睛";
+"care.feeling.lightSteady" = "眼睛亮亮的";
+"care.evidence.format" = "感应依据 · %@ %@";
 
 "sensor.temperature" = "温度";
 "sensor.airHumidity" = "空气湿度";
 "sensor.substrateMoisture" = "基质湿度";
 "sensor.lightLux" = "光照 · LUX";
+"sensor.waiting" = "待连接";
 
 "motion.sensorLabel" = "运动感应器";
 "motion.moving" = "正在被移动";
@@ -131,6 +186,11 @@
 "motion.detectedNow" = "刚刚检测到移动";
 "motion.notDetected" = "连接以来还没有检测到移动";
 "motion.lastDetected" = "上次检测：%@";
+"motion.persona.moving" = "刚才有人抱起我。";
+"motion.persona.still" = "我正在安静地待着。";
+"motion.evidence.detectedNow" = "运动感应器 · 刚刚检测到移动";
+"motion.evidence.notDetected" = "运动感应器 · 连接以来没有检测到移动";
+"motion.evidence.lastDetected" = "运动感应器 · 上次检测：%@";
 
 "memories.eyebrow" = "微小的时刻";
 "memories.title" = "你来过这里。";
@@ -146,6 +206,8 @@
 "memories.deleteSelected" = "删除选中的记忆";
 "memories.empty" = "这里还很安静。触摸植灵兽，或在照护页记住一刻。";
 "memories.tapToClose" = "轻触收起";
+"memories.journey.title" = "你今天带我走了 %@ 步";
+"memories.journey.body" = "一段只属于今天的共同路程";
 "memory.sawLight" = "找到了更柔和的光";
 "memory.savedLight" = "记住了这里的光";
 "memory.youWereHere" = "你来过这里";

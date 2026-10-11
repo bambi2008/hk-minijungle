@@ -17,6 +17,7 @@ struct MemoriesView: View {
     }
 
     @EnvironmentObject private var model: AppModel
+    @EnvironmentObject private var journey: SharedJourneyStore
     @State private var filter: Filter = .today
     @State private var isEditing = false
     @State private var selectedIDs = Set<UUID>()
@@ -40,6 +41,34 @@ struct MemoriesView: View {
                     .foregroundStyle(Color.white.opacity(0.5))
                     .textCase(.uppercase)
                     .padding(.top, 8)
+
+                if journey.state == .active {
+                    HStack(spacing: 14) {
+                        Image(systemName: "figure.walk")
+                            .font(.title2.weight(.semibold))
+                            .foregroundStyle(Color.pmOLEDGreen)
+                            .frame(width: 44, height: 44)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(
+                                String(
+                                    format: String(localized: "memories.journey.title"),
+                                    journey.stepsToday.formatted(.number.grouping(.automatic))
+                                )
+                            )
+                            .font(.headline)
+                            .foregroundStyle(Color.white)
+
+                            Text("memories.journey.body")
+                                .font(.caption)
+                                .foregroundStyle(Color.white.opacity(0.54))
+                        }
+
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.vertical, 14)
+                    .accessibilityElement(children: .combine)
+                }
 
                 Rectangle()
                     .fill(PMTheme.hairline)

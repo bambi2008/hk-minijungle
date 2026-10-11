@@ -1,0 +1,3 @@
+"NSBluetoothAlwaysUsageDescription" = "Plant Monster uses Bluetooth to connect to your creature and receive temperature, air humidity, substrate moisture, light, touch and motion updates.";
+"NSBluetoothPeripheralUsageDescription" = "Plant Monster uses Bluetooth to connect to your creature.";
+"NSMotionUsageDescription" = "Plant Monster uses today’s step count to create a shared journey with your creature.";
