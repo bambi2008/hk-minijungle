@@ -8,6 +8,7 @@ struct PMBackgroundView: View {
     var interaction: CGFloat = 0
 
     var body: some View {
+        GeometryReader { viewport in
         ZStack {
             Color.pmInk
 
@@ -16,7 +17,9 @@ struct PMBackgroundView: View {
                 .scaledToFill()
                 .saturation(0)
                 .contrast(1.2)
-                .opacity(reduceTransparency ? 0.08 : 0.18)
+                .opacity(reduceTransparency ? 0 : 0.03)
+                .frame(width: viewport.size.width, height: viewport.size.height)
+                .clipped()
                 .scaleEffect(isDrifting && !reduceMotion ? 1.06 : 1)
                 .rotation3DEffect(
                     .degrees(reduceMotion ? 0 : Double(interaction * 2.4)),
@@ -30,7 +33,7 @@ struct PMBackgroundView: View {
 
             LinearGradient(
                 colors: [
-                    Color.black.opacity(0.34),
+                    Color.pmAubergine.opacity(0.28),
                     Color.pmInk.opacity(0.74),
                     Color.black.opacity(0.92)
                 ],
@@ -66,6 +69,9 @@ struct PMBackgroundView: View {
                 startPoint: .center,
                 endPoint: .bottom
             )
+        }
+        .frame(width: viewport.size.width, height: viewport.size.height)
+        .clipped()
         }
         .ignoresSafeArea()
         .accessibilityHidden(true)

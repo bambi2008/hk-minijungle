@@ -9,7 +9,7 @@ struct PairingView: View {
 
             GeometryReader { viewport in
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .center, spacing: 0) {
                     PMEditorialHeader(
                         section: "pairing.editorial.section",
                         status: model.connectionLabel,
@@ -19,27 +19,25 @@ struct PairingView: View {
                     .padding(.top, 10)
 
                     Text("pairing.editorial.headline")
-                        .pmEditorialTitle(size: 60)
+                        .accessibilityIdentifier("pairing.title")
+                        .pmEditorialTitle(size: 32)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 18)
 
                     Text("pairing.editorial.subtitle")
-                        .font(.system(.caption2, design: .monospaced, weight: .medium))
-                        .tracking(2.3)
+                        .font(.subheadline)
                         .foregroundStyle(Color.white.opacity(0.52))
-                        .textCase(.uppercase)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.top, 9)
 
                     ZStack {
-                        PMRadarView(active: isBusy)
-                            .padding(16)
-
                         PlantMonsterTurntableView(
                             hapticsEnabled: model.hapticsEnabled,
                             controlColor: .white
                         )
                     }
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 10)
+                    .frame(width: min(viewport.size.width - PMTheme.pagePadding * 2, viewport.size.height * 0.47))
+                    .padding(.top, 24)
 
                     VStack(spacing: 8) {
                         HStack(spacing: 8) {
@@ -77,14 +75,14 @@ struct PairingView: View {
                             Spacer()
                             Image(systemName: "arrow.right")
                         }
-                        .font(.system(.caption, design: .monospaced, weight: .bold))
-                        .tracking(1.3)
+                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color.pmInk)
                         .padding(.horizontal, 18)
                         .frame(maxWidth: .infinity, minHeight: 56)
-                        .background(Color.pmOLEDGreen)
+                        .background(Color.pmLilac, in: Capsule())
                     }
                     .buttonStyle(PMTactileButtonStyle())
+                    .accessibilityIdentifier("pairing.connect")
                     .disabled(isBusy)
                     .padding(.top, 22)
 

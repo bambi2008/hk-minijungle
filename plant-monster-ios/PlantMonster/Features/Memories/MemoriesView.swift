@@ -27,19 +27,18 @@ struct MemoriesView: View {
         ZStack {
             PMBackgroundView(signalStrength: 0.24)
 
+            GeometryReader { viewport in
             VStack(alignment: .leading, spacing: 0) {
                 header
                     .padding(.top, 10)
 
                 Text(todayHeadline)
-                    .pmEditorialTitle(size: 57)
+                    .pmEditorialTitle(size: 32)
                     .padding(.top, 16)
 
                 Text("memories.editorial.subtitle")
-                    .font(.system(.caption2, design: .monospaced, weight: .medium))
-                    .tracking(2.4)
+                    .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.5))
-                    .textCase(.uppercase)
                     .padding(.top, 8)
 
                 if journey.state == .active {
@@ -66,7 +65,9 @@ struct MemoriesView: View {
 
                         Spacer(minLength: 0)
                     }
-                    .padding(.vertical, 14)
+                    .padding(16)
+                    .pmHardwarePanel()
+                    .padding(.top, 20)
                     .accessibilityElement(children: .combine)
                 }
 
@@ -79,7 +80,7 @@ struct MemoriesView: View {
                     emptyState
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 0) {
+                        LazyVStack(spacing: 12) {
                             ForEach(filteredEvents) { event in
                                 Button {
                                     handleEventTap(event)
@@ -120,7 +121,9 @@ struct MemoriesView: View {
                 filterBar
                     .padding(.vertical, 12)
             }
+            .frame(width: max(0, viewport.size.width - PMTheme.pagePadding * 2))
             .padding(.horizontal, PMTheme.pagePadding)
+            }
         }
         .preferredColorScheme(.dark)
         .sensoryFeedback(.selection, trigger: filter)
@@ -232,8 +235,8 @@ private struct EditorialMemoryRow: View {
             HStack(spacing: 14) {
                 OLEDExpressionView(
                     expression: event.expression,
-                    width: 126,
-                    tint: .white,
+                    width: 84,
+                    tint: .pmOLEDGreen,
                     isActive: isSelected
                 )
 
@@ -242,9 +245,8 @@ private struct EditorialMemoryRow: View {
                         .font(.system(.caption, design: .monospaced, weight: .medium))
                         .foregroundStyle(Color.white.opacity(0.82))
                         .monospacedDigit()
-                    Text(event.title.uppercased())
-                        .font(.system(.caption2, design: .monospaced, weight: .medium))
-                        .tracking(1.1)
+                    Text(event.title)
+                        .font(.subheadline.weight(.medium))
                         .foregroundStyle(Color.white.opacity(0.58))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -259,7 +261,7 @@ private struct EditorialMemoryRow: View {
                 .foregroundStyle(isSelected ? Color.pmOLEDGreen : Color.white.opacity(0.74))
                 .frame(width: 44, height: 44)
             }
-            .padding(.vertical, 14)
+            .padding(16)
 
             if isExpanded {
                 HStack {
@@ -275,7 +277,7 @@ private struct EditorialMemoryRow: View {
                 .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .overlay(alignment: .bottom) { Rectangle().fill(PMTheme.hairline).frame(height: 1) }
+        .pmHardwarePanel()
         .contentShape(Rectangle())
         .animation(.easeInOut(duration: 0.2), value: isExpanded)
         .accessibilityElement(children: .combine)

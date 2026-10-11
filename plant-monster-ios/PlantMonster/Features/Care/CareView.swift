@@ -5,11 +5,14 @@ struct CareView: View {
         ZStack {
             PMBackgroundView(signalStrength: 0.5)
 
+            GeometryReader { viewport in
             ScrollView {
                 CareSectionContent(showsStatus: true)
+                    .frame(width: max(0, viewport.size.width - PMTheme.pagePadding * 2))
                     .padding(.horizontal, PMTheme.pagePadding)
             }
             .scrollIndicators(.hidden)
+            }
         }
         .preferredColorScheme(.dark)
     }
@@ -58,7 +61,7 @@ struct CareSectionContent: View {
             .padding(.top, showsStatus ? 10 : 0)
 
             Text(model.careHeadline)
-                .pmEditorialTitle(size: 58)
+                .pmEditorialTitle(size: 30)
                 .padding(.top, 18)
 
             HStack(spacing: 10) {
@@ -66,19 +69,16 @@ struct CareSectionContent: View {
                     .foregroundStyle(Color.pmOLEDGreen)
                     .symbolEffect(.pulse, options: .repeating)
                 Text("care.bodySignal")
-                    .font(.system(.caption, design: .monospaced, weight: .semibold))
-                    .tracking(1.2)
+                    .font(.caption)
                     .foregroundStyle(Color.white.opacity(0.78))
             }
             .frame(minHeight: PMTheme.minimumTapTarget)
             .padding(.top, 12)
 
             Text(model.careDetail)
-                .font(.system(.caption, design: .monospaced, weight: .medium))
-                .tracking(1.8)
-                .lineSpacing(5)
+                .font(.subheadline)
+                .lineSpacing(4)
                 .foregroundStyle(Color.white.opacity(0.56))
-                .textCase(.uppercase)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 10)
 
@@ -120,7 +120,7 @@ struct CareSectionContent: View {
                 .foregroundStyle(Color.pmInk)
                 .padding(.horizontal, 18)
                 .frame(maxWidth: .infinity, minHeight: 54)
-                .background(Color.pmOLEDGreen)
+                .background(Color.pmLilac, in: Capsule())
             }
             .buttonStyle(PMTactileButtonStyle())
             .padding(.top, 24)
@@ -141,10 +141,10 @@ struct CareSectionContent: View {
         } else {
             LazyVGrid(
                 columns: [
-                    GridItem(.flexible(minimum: 0), spacing: 1),
-                    GridItem(.flexible(minimum: 0), spacing: 1),
+                    GridItem(.flexible(minimum: 0), spacing: 12),
+                    GridItem(.flexible(minimum: 0), spacing: 12),
                 ],
-                spacing: 1
+                spacing: 12
             ) {
                 ForEach(SensorKind.allCases) { sensorButton($0) }
             }
@@ -176,18 +176,19 @@ struct CareSectionContent: View {
                     .tracking(0.5)
                     .foregroundStyle(
                         selectedSensor == sensor
-                            ? Color.pmInk.opacity(0.72)
+                            ? Color.white.opacity(0.68)
                             : Color.white.opacity(0.48)
                     )
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
-            .foregroundStyle(selectedSensor == sensor ? Color.pmInk : Color.white.opacity(0.72))
-            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 122 : 138)
+            .foregroundStyle(selectedSensor == sensor ? Color.pmLilac : Color.white.opacity(0.72))
+            .frame(maxWidth: .infinity, minHeight: dynamicTypeSize.isAccessibilitySize ? 122 : 124)
             .padding(.horizontal, 4)
-            .background(selectedSensor == sensor ? Color.pmOLEDGreen : Color.black.opacity(0.32))
+            .background(selectedSensor == sensor ? Color.pmLilac.opacity(0.12) : Color.pmSurface)
+            .clipShape(RoundedRectangle(cornerRadius: 22))
             .overlay {
-                Rectangle().stroke(PMTheme.hairline, lineWidth: selectedSensor == sensor ? 0 : 1)
+                RoundedRectangle(cornerRadius: 22).stroke(selectedSensor == sensor ? Color.pmLilac.opacity(0.65) : PMTheme.hairline, lineWidth: 1)
             }
         }
         .buttonStyle(PMTactileButtonStyle())
@@ -301,9 +302,8 @@ private struct EditorialCareStage: View {
     var body: some View {
         GeometryReader { proxy in
             ZStack(alignment: .topTrailing) {
-                Rectangle()
-                    .fill(Color.black.opacity(0.5))
-                    .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(Color.pmSurface)
 
                 LinearGradient(
                     colors: [.clear, Color.white.opacity(lightNeedsAttention ? 0.24 : 0.1), .clear],
@@ -335,15 +335,16 @@ private struct EditorialCareStage: View {
 
                 OLEDExpressionView(
                     expression: expression,
-                    width: min(286, max(0, proxy.size.width - 36)),
-                    tint: .white,
+                    width: min(220, max(0, proxy.size.width - 48)),
+                    tint: .pmOLEDGreen,
                     isActive: lightNeedsAttention
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
                 .padding(18)
             }
         }
-        .frame(height: 230)
+        .frame(height: 180)
+        .clipShape(RoundedRectangle(cornerRadius: 24))
         .onAppear {
             guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 3.4).repeatForever(autoreverses: true)) {

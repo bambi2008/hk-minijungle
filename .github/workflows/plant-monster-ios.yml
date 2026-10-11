@@ -71,6 +71,7 @@ jobs:
           fi
 
       - name: Capture editorial visual QA screens
+        timeout-minutes: 20
         shell: bash
         run: |
           set -euo pipefail
@@ -112,7 +113,7 @@ jobs:
             local name="$1"
             shift
             xcrun simctl terminate "$udid" com.hkminijungle.plantmonster >/dev/null 2>&1 || true
-            xcrun simctl launch "$udid" com.hkminijungle.plantmonster "$@"
+            xcrun simctl launch "$udid" com.hkminijungle.plantmonster "$@" -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
             sleep 4
             xcrun simctl io "$udid" screenshot "$RUNNER_TEMP/plant-monster-visual-qa/${name}.png"
           }
@@ -128,6 +129,15 @@ jobs:
           capture care -ui-testing -ui-care-section
           test "$(stat -f%z "$RUNNER_TEMP/plant-monster-visual-qa/care.png")" -gt 100000
           capture memories -ui-testing -ui-memories
+
+          xcodebuild test \
+            -project PlantMonster.xcodeproj \
+            -scheme PlantMonster \
+            -destination "platform=iOS Simulator,id=$udid" \
+            -parallel-testing-enabled NO \
+            -only-testing:PlantMonsterTests \
+            -only-testing:PlantMonsterUITests \
+            CODE_SIGNING_ALLOWED=NO
 
       - name: Upload editorial visual QA screens
         uses: actions/upload-artifact@v4

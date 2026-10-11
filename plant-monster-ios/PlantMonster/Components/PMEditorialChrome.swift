@@ -7,10 +7,10 @@ struct PMEditorialHeader: View {
     var action: (() -> Void)?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             Text(section)
-                .font(.system(.caption, design: .monospaced, weight: .medium))
-                .tracking(1.2)
+                .font(.subheadline.weight(.semibold))
+                .tracking(0.2)
                 .foregroundStyle(Color.white.opacity(0.82))
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
@@ -20,12 +20,13 @@ struct PMEditorialHeader: View {
             if let actionTitle, let action {
                 Button(action: action) {
                     Text(actionTitle)
-                        .font(.system(.caption2, design: .monospaced, weight: .semibold))
-                        .tracking(1.05)
-                        .foregroundStyle(Color.white)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.pmLilac)
                         .lineLimit(1)
                         .minimumScaleFactor(0.76)
-                        .frame(minWidth: 44, minHeight: 44, alignment: .topTrailing)
+                        .padding(.horizontal, 16)
+                        .frame(minWidth: 44, minHeight: 44)
+                        .background(Color.white.opacity(0.06), in: Capsule())
                 }
                 .buttonStyle(PMTactileButtonStyle())
             } else {

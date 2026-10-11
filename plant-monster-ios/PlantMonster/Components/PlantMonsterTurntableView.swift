@@ -243,8 +243,8 @@ struct PlantMonsterTurntableView: View {
                 .font(.caption.weight(.bold))
                 .foregroundStyle(controlColor.opacity(0.82))
                 .frame(width: PMTheme.minimumTapTarget, height: PMTheme.minimumTapTarget)
-                .overlay {
-                    Rectangle().stroke(PMTheme.hairline, lineWidth: 1)
+                .background {
+                    Circle().fill(Color.white.opacity(0.06))
                 }
         }
         .buttonStyle(PMTactileButtonStyle())

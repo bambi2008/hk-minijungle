@@ -66,3 +66,23 @@ targets:
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.hkminijungle.plantmonster.tests
+  PlantMonsterUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    sources:
+      - path: PlantMonsterUITests
+    dependencies:
+      - target: PlantMonster
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.hkminijungle.plantmonster.uitests
+        TEST_TARGET_NAME: PlantMonster
+schemes:
+  PlantMonster:
+    build:
+      targets:
+        PlantMonster: all
+    test:
+      targets:
+        - PlantMonsterTests
+        - PlantMonsterUITests

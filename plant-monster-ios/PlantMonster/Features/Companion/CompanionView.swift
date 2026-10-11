@@ -52,13 +52,6 @@ struct CompanionView: View {
                     interaction: interactionProgress
                 )
 
-                PMLivingAtmosphereView(
-                    interaction: interactionProgress,
-                    scrollProgress: scrollProgress,
-                    intensity: model.isTouchActive ? 1 : (isTurntableEngaged ? 0.78 : 0.36),
-                    isTouchActive: model.isTouchActive
-                )
-
                 Color.pmInk
                     .ignoresSafeArea()
                     .opacity(hasLeftImmersiveCover ? 0 : 1)
@@ -87,14 +80,6 @@ struct CompanionView: View {
                                 .padding(.horizontal, PMTheme.pagePadding)
                                 .padding(.top, 26)
                                 .padding(.bottom, 46)
-                                .scrollTransition(
-                                    .animated(.easeInOut(duration: 0.34)),
-                                    axis: .vertical
-                                ) { content, phase in
-                                    content
-                                        .opacity(phase.isIdentity ? 1 : 0.22)
-                                        .scaleEffect(phase.isIdentity ? 1 : 0.96, anchor: .top)
-                                }
                         }
                         .frame(width: viewport.size.width, alignment: .leading)
                     }
@@ -138,7 +123,10 @@ struct CompanionView: View {
 
     private func immersiveCreatureScene(in viewport: CGSize) -> some View {
         ZStack {
-            Color.pmInk
+            RadialGradient(
+                colors: [Color.pmAubergine.opacity(0.26), Color.pmInk],
+                center: .center, startRadius: 0, endRadius: viewport.width * 0.7
+            )
 
             PlantMonsterTurntableView(
                 hapticsEnabled: model.hapticsEnabled,
@@ -149,19 +137,18 @@ struct CompanionView: View {
                 onInteractionChanged: { isTurntableEngaged = $0 },
                 onInteractionProgress: { interactionProgress = $0 }
             )
-            .frame(width: min(viewport.width * 0.96, 470))
+            .frame(width: min(viewport.width * 0.82, 420))
             .scaleEffect(1 - scrollProgress * 0.08)
             .offset(
-                x: interactionProgress * 4,
-                y: -8 + scrollProgress * 24
+                x: 0,
+                y: scrollProgress * 16
             )
             .shadow(
                 color: model.isTouchActive ? Color.pmOLEDGreen.opacity(0.28) : .clear,
                 radius: 42
             )
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: max(viewport.height + 96, 760))
+        .frame(width: viewport.width, height: viewport.height)
         .clipped()
         .accessibilityLabel(Text("turntable.accessibilityLabel"))
     }
@@ -174,27 +161,23 @@ struct CompanionView: View {
                 actionTitle: "editorial.settings",
                 action: { showsDeviceSheet = true }
             )
-            .offset(x: -interactionProgress * 3)
 
             Text(editorialHeadline)
-                .pmEditorialTitle(size: 60)
+                .accessibilityIdentifier("companion.feeling")
+                .pmEditorialTitle(size: 32)
                 .contentTransition(.opacity)
-                .padding(.top, 34)
-                .offset(x: interactionProgress * 11)
+                .padding(.top, 24)
                 .shadow(
                     color: model.isTouchActive ? Color.pmOLEDGreen.opacity(0.34) : .clear,
                     radius: model.isTouchActive ? 18 : 0
                 )
 
             Text(editorialBody)
-                .font(.system(.caption, design: .monospaced, weight: .medium))
-                .tracking(2.2)
-                .lineSpacing(5)
-                .foregroundStyle(Color.white.opacity(0.58))
-                .textCase(.uppercase)
+                .font(.subheadline)
+                .lineSpacing(4)
+                .foregroundStyle(Color.white.opacity(0.64))
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 12)
-                .offset(x: interactionProgress * 7)
 
             CreatureEvidenceDisclosure(
                 evidence: model.creatureEvidence,
@@ -214,25 +197,21 @@ struct CompanionView: View {
                         )
                     )
                 }
-                .font(.system(.caption, design: .monospaced, weight: .semibold))
-                .tracking(1.3)
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(model.isTouchActive ? Color.pmInk : Color.white)
                 .frame(maxWidth: .infinity, minHeight: 50)
-                .background(model.isTouchActive ? Color.pmOLEDGreen : Color.white.opacity(0.04))
-                .overlay {
-                    Rectangle().stroke(model.isTouchActive ? Color.pmOLEDGreen : PMTheme.hairline, lineWidth: 1)
-                }
+                .background(model.isTouchActive ? Color.pmOLEDGreen : Color.pmSurface, in: Capsule())
             }
             .buttonStyle(PMTactileButtonStyle())
+            .accessibilityIdentifier("companion.touch")
             .disabled(model.touchDeliveryState == .sending)
             .padding(.top, 18)
-            .offset(x: -interactionProgress * 5)
 
             SharedJourneyCard()
-                .padding(.top, 30)
+                .padding(.top, 20)
 
             AccessoryWardrobeView(selection: accessorySelection)
-                .padding(.top, 38)
+                .padding(.top, 28)
 
             Spacer(minLength: 24)
 
@@ -303,12 +282,13 @@ private struct CreatureEvidenceDisclosure: View {
                         .rotationEffect(.degrees(isExpanded ? 180 : 0))
                 }
                 .font(.system(.caption, design: .monospaced, weight: .semibold))
-                .tracking(1.1)
+                .tracking(0.2)
                 .foregroundStyle(Color.white.opacity(0.82))
                 .frame(minHeight: PMTheme.minimumTapTarget)
                 .contentShape(Rectangle())
             }
             .buttonStyle(PMTactileButtonStyle())
+            .accessibilityIdentifier("companion.evidence")
             .accessibilityValue(Text(isExpanded ? "creature.evidence.expanded" : "creature.evidence.collapsed"))
 
             if isExpanded {
@@ -348,8 +328,7 @@ private struct CreatureEvidenceDisclosure: View {
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
-        .background(Color.white.opacity(0.03))
-        .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+        .pmHardwarePanel()
     }
 }
 
@@ -362,8 +341,8 @@ private struct SharedJourneyCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                Text("02")
-                    .foregroundStyle(Color.pmOLEDGreen)
+                Image(systemName: "figure.walk")
+                    .foregroundStyle(Color.pmLilac)
                 Text("journey.eyebrow")
                 Rectangle().fill(PMTheme.hairline).frame(height: 1)
                 Image(systemName: "figure.walk")
@@ -371,17 +350,16 @@ private struct SharedJourneyCard: View {
                     .symbolEffect(.bounce, value: journey.stepsToday)
             }
             .font(.system(.caption2, design: .monospaced, weight: .semibold))
-            .tracking(1.3)
+            .tracking(0.4)
 
             if journey.state == .active {
                 Text(activeHeadline)
-                    .font(.system(size: 34, weight: .black))
-                    .tracking(-1.1)
+                    .font(.title2.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 18)
 
                 Text(activeBody)
-                    .font(.body)
+                    .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.66))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 8)
@@ -397,12 +375,11 @@ private struct SharedJourneyCard: View {
                 .padding(.top, 16)
             } else {
                 Text("journey.invitation.title")
-                    .font(.system(size: 34, weight: .black))
-                    .tracking(-1.1)
+                    .font(.title2.weight(.semibold))
                     .padding(.top, 18)
 
                 Text(statusBody)
-                    .font(.body)
+                    .font(.subheadline)
                     .foregroundStyle(Color.white.opacity(0.62))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 8)
@@ -420,7 +397,7 @@ private struct SharedJourneyCard: View {
                     .foregroundStyle(Color.pmInk)
                     .padding(.horizontal, 16)
                     .frame(maxWidth: .infinity, minHeight: 50)
-                    .background(Color.pmOLEDGreen)
+                    .background(Color.pmLilac, in: Capsule())
                 }
                 .buttonStyle(PMTactileButtonStyle())
                 .disabled(journey.state == .loading || journey.state == .unavailable)
@@ -429,8 +406,7 @@ private struct SharedJourneyCard: View {
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.black.opacity(0.28))
-        .overlay { Rectangle().stroke(PMTheme.hairline, lineWidth: 1) }
+        .pmHardwarePanel()
         .task {
             if sharedJourneyEnabled { journey.begin() }
         }
@@ -498,8 +474,8 @@ private struct AccessoryWardrobeView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 12) {
-                Text("03")
-                    .foregroundStyle(Color.pmOLEDGreen)
+                Image(systemName: "eyeglasses")
+                    .foregroundStyle(Color.pmLilac)
 
                 Text("companion.wardrobe.eyebrow")
 
@@ -511,14 +487,11 @@ private struct AccessoryWardrobeView: View {
             .tracking(1.4)
 
             Text("companion.wardrobe.title")
-                .font(.system(size: 34, weight: .black))
-                .tracking(-1.2)
-                .textCase(.uppercase)
+                .font(.title2.weight(.semibold))
                 .padding(.top, 18)
 
             Text("companion.wardrobe.body")
-                .font(.system(.caption, design: .monospaced, weight: .medium))
-                .tracking(1.6)
+                .font(.subheadline)
                 .lineSpacing(4)
                 .foregroundStyle(Color.white.opacity(0.56))
                 .padding(.top, 8)
@@ -559,8 +532,9 @@ private struct AccessoryWardrobeView: View {
                                 ? Color.pmOLEDGreen.opacity(0.08)
                                 : Color.white.opacity(0.025)
                         )
+                        .clipShape(RoundedRectangle(cornerRadius: 20))
                         .overlay {
-                            Rectangle()
+                            RoundedRectangle(cornerRadius: 20)
                                 .stroke(
                                     selection == accessory ? Color.pmOLEDGreen : PMTheme.hairline,
                                     lineWidth: 1

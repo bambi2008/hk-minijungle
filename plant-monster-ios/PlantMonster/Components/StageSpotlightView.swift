@@ -123,7 +123,7 @@ struct StageSpotlightView: View {
                             y: height * sparkleYs[index]
                         )
                         .scaleEffect(sparklesVisible ? 1 : 0.2)
-                        .opacity(sparklesVisible ? (isRoaming ? 0.72 : 0.9) : 0)
+                        .opacity(0)
                 }
 
                 Circle()
